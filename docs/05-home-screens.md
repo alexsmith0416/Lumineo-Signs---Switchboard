@@ -1,6 +1,12 @@
 # 05 — Home Screens (per group)
 
-Each role lands on a tailored home screen. **Everyone** gets the universal widgets (announcements, birthdays, photo reel, events). **Role-specific** widgets ride on top.
+Each role lands on a tailored home screen. **Everyone** gets the universal widgets (announcements, birthdays, photo reel, events) **plus the splash KPI strip and the Days Since Lost Time safety counter**. **Role-specific** widgets ride on top.
+
+> 📄 Detailed visual + Power Fx specs:
+> - **Splash KPIs + Days Since Lost Time** → [08-splash-screen-spec.md](./08-splash-screen-spec.md)
+> - **Weather card** (Installation job cards) → [09-weather-card-spec.md](./09-weather-card-spec.md)
+> - **Crew/Truck badge "2M 1T"** (every job card) → [10-crew-truck-indicator-spec.md](./10-crew-truck-indicator-spec.md)
+> - **Full widget catalog** (MVP + Phase 6) → [11-widget-recommendations.md](./11-widget-recommendations.md)
 
 ## Universal widgets (every home screen)
 

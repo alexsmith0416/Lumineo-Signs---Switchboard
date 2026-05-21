@@ -17,6 +17,14 @@
 | `Opportunity` | Sales Hub | Pre-Job; converts into a Job when Won |
 | `Announcement` | Switchboard (Ops only edit) | Per-group home-screen messages |
 | `Event` | Switchboard | Holidays, company events, deadlines |
+| `SafetyMetric` | Switchboard (Ops only edit) | Singleton row: current Days Since Lost Time streak + record |
+| `SafetyIncident` | Switchboard | History of safety incidents, drives counter resets |
+| `KpiSnapshot` | Switchboard (system) | Precomputed KPI rows for fast splash loads |
+| `CrewAssignment` | Switchboard / Weekly Scheduler | Crew + truck + equipment per Task; drives 2M 1T badge |
+| `WeatherCache` | Switchboard | Cached daily weather by ZIP, dodges API quota |
+| `Spotlight` | Switchboard (Ops only edit) | Weekly featured employee or project (Phase 6) |
+| `Suggestion` | Switchboard | Employee suggestion box submissions (Phase 6) |
+| `SystemConfig` | Switchboard (Ops only) | Per-sub-app `enabled` flag + `maintenanceMessage` |
 
 ## Virtual tables (read from BC, no copy)
 
@@ -137,6 +145,90 @@ Event
 ├─ startDate
 ├─ endDate
 └─ audience
+
+SafetyMetric (singleton "current" row + history)
+├─ id (PK)
+├─ currentStreakStartDate (date)
+├─ longestStreakDays (int)
+├─ longestStreakEndDate (date)
+└─ updatedAt
+
+SafetyIncident
+├─ id (PK)
+├─ incidentDate (date)
+├─ description (text)
+├─ category (Lost-Time | Recordable | Near-Miss | First-Aid)
+├─ employeeInvolved → UserProfile (optional)
+├─ daysStreakAtIncident (int)
+└─ loggedBy → UserProfile
+
+KpiSnapshot
+├─ id (PK)
+├─ key (string, e.g. "revenue_this_week")
+├─ audience (Operations | Sales | Production | Installation | Shipping | All)
+├─ label (string, "Revenue This Week")
+├─ value (decimal)
+├─ valueFormat (currency | int | hours | percent)
+├─ deltaValue (decimal)
+├─ deltaDirection (up | down | flat)
+├─ deltaIsGood (bool)
+├─ sparkline (string — CSV last 7 points)
+├─ computedAt (datetime)
+└─ link (string — optional deep-link)
+
+CrewAssignment
+├─ id (PK)
+├─ taskId → Task
+├─ persons (int)
+├─ trucks (int)
+├─ cranes (int, optional)
+├─ lifts (int, optional)
+├─ buckets (int, optional)
+├─ source (Auto-BC | Manual)
+├─ overrideReason (text)
+├─ assignedPersons (collection → UserProfile)
+├─ assignedTrucks (collection)
+├─ computedAt (datetime)
+└─ updatedBy → UserProfile
+
+WeatherCache
+├─ id (PK)
+├─ zip (string, 5 chars)
+├─ forDate (date)
+├─ tempHigh (int, °F)
+├─ tempLow (int, °F)
+├─ condition (Sunny | Partly Cloudy | Cloudy | Rain | T-Storm | Snow | Wind)
+├─ conditionIcon (string — OpenWeather code)
+├─ precipPct (int)
+├─ windMph (int)
+├─ windDir (string)
+├─ alerts (json)
+├─ fetchedAt (datetime)
+└─ source (OpenWeather | NOAA | manual)
+
+Spotlight (Phase 6)
+├─ id (PK)
+├─ kind (Employee | Project)
+├─ title
+├─ body (rich text)
+├─ heroImage (file)
+├─ featureFrom (date)
+├─ featureTo (date)
+└─ linkedRecordId (UserProfile or Job)
+
+Suggestion (Phase 6)
+├─ id (PK)
+├─ submittedBy → UserProfile (optional if anonymous)
+├─ body (text)
+├─ status (New | Reviewing | Planned | Done | Declined)
+├─ category (Process | Tooling | Safety | Culture | Other)
+└─ submittedAt
+
+SystemConfig
+├─ appKey (PK, e.g. "weeklyScheduler")
+├─ enabled (bool)
+├─ maintenanceMessage (text)
+└─ updatedAt
 ```
 
 ## Why polymorphic Photo
