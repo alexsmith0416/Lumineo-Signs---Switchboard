@@ -27,14 +27,24 @@ export default function SplashScreen({ role }: Props) {
 
   return (
     <main className="splash">
-      <DaysCounter safety={safetyMetric} />
-      <KpiStrip kpis={kpis} />
-      {visibleAnnouncements.map((a) => (
-        <AnnouncementCard key={a.id} announcement={a} />
-      ))}
-      <BirthdayStrip birthdays={birthdays} />
+      <section className="glance" aria-label="At-a-glance">
+        <DaysCounter safety={safetyMetric} />
+        <KpiStrip kpis={kpis} />
+      </section>
+
       <AppLauncher tiles={appTiles} role={role} />
+
+      {visibleAnnouncements.length > 0 && (
+        <div className="announcements">
+          {visibleAnnouncements.map((a) => (
+            <AnnouncementCard key={a.id} announcement={a} />
+          ))}
+        </div>
+      )}
+
       <RoleWidgets role={role} />
+
+      <BirthdayStrip birthdays={birthdays} />
       <PhotoReel photos={photos} />
     </main>
   );

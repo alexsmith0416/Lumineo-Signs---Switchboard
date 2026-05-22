@@ -5,25 +5,15 @@ interface Props {
 }
 
 export default function DaysCounter({ safety }: Props) {
-  const padded = String(safety.currentStreakDays).padStart(3, "0");
-  const digits = padded.split("");
-
   return (
-    <div className="days">
-      <span className="days__badge">Safety</span>
-      <div className="days__digits">
-        {digits.map((d, i) => (
-          <div key={i} className="days__digit">
-            {d}
-          </div>
-        ))}
+    <div className="safety" title={`Last reset ${safety.lastResetDate}`}>
+      <div className="safety__head">
+        <span className="safety__label">Days since lost time</span>
+        <span className="safety__pill">Safety</span>
       </div>
-      <div className="days__text">
-        <h2 className="days__title">DAYS SINCE LOST TIME</h2>
-        <div className="days__subtitle">
-          Previous record: <strong>{safety.longestStreakDays} days</strong>
-          {" · "}Last reset {safety.lastResetDate}
-        </div>
+      <div className="safety__value">{safety.currentStreakDays}</div>
+      <div className="safety__sub">
+        Record <strong>{safety.longestStreakDays}</strong>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
-node_modules
-dist
-.vite
 *.log
-.DS_Store
 *.tsbuildinfo
+.DS_Store
+.vite
+dist
+node_modules
+preview.html

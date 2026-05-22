@@ -23,37 +23,54 @@ export default function Header({ user, role, onChangeRole }: Props) {
   }, [open]);
 
   return (
-    <header className="header">
-      <div className="header__brand">
-        <div className="header__logo">LS</div>
-        <div className="header__brand-text">
-          <span className="header__brand-name">LUMINEO SIGNS</span>
-          <span className="header__brand-sub">Switchboard</span>
+    <header className="hdr">
+      <div className="hdr__brand">
+        <div className="hdr__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+            <g stroke="white" strokeWidth="2" strokeLinecap="round">
+              <line x1="12" y1="3"  x2="12" y2="7"  />
+              <line x1="12" y1="17" x2="12" y2="21" />
+              <line x1="3"  y1="12" x2="7"  y2="12" />
+              <line x1="17" y1="12" x2="21" y2="12" />
+              <line x1="5.6"  y1="5.6"  x2="8.4"  y2="8.4"  />
+              <line x1="15.6" y1="15.6" x2="18.4" y2="18.4" />
+              <line x1="5.6"  y1="18.4" x2="8.4"  y2="15.6" />
+              <line x1="15.6" y1="8.4"  x2="18.4" y2="5.6"  />
+            </g>
+            <circle cx="12" cy="12" r="2.4" fill="white" />
+          </svg>
         </div>
+        <div className="hdr__brand-text">
+          <span className="hdr__brand-name">LUMINEO SIGNS</span>
+          <span className="hdr__brand-sub">SWITCHBOARD</span>
+        </div>
+        <div className="hdr__divider" />
+        <span className="hdr__view-title">Home · {role}</span>
       </div>
 
-      <div className="header__right">
-        <span className="header__demo-pill">Demo · role switch</span>
+      <div className="hdr__right">
+        <button type="button" className="hdr__btn hdr__btn--ghost">Help</button>
+        <button type="button" className="hdr__btn hdr__btn--red">+ New</button>
 
-        <div className="header__roleswitcher" ref={ref}>
+        <div className="hdr__user" ref={ref}>
           <button
             type="button"
-            className="header__roleswitcher-trigger"
+            className="hdr__user-trigger"
             onClick={() => setOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={open}
           >
-            <div className="header__avatar">{user.initials}</div>
-            <div className="header__userblock">
-              <span className="header__username">{user.name}</span>
-              <span className="header__userrole">{role}</span>
+            <div className="hdr__avatar">{user.initials}</div>
+            <div className="hdr__userblock">
+              <span className="hdr__username">{user.name}</span>
+              <span className="hdr__userrole">{role}</span>
             </div>
-            <span className="header__caret">▾</span>
+            <span className="hdr__caret">▾</span>
           </button>
 
           {open && (
-            <div className="header__roleswitcher-menu" role="menu">
-              <div className="header__roleswitcher-menu-header">Switch role</div>
+            <div className="hdr__menu" role="menu">
+              <div className="hdr__menu-header">Switch role · demo</div>
               {ROLES.map((r) => {
                 const u = usersByRole[r];
                 const active = r === role;
@@ -61,18 +78,16 @@ export default function Header({ user, role, onChangeRole }: Props) {
                   <button
                     key={r}
                     type="button"
-                    className={`header__roleswitcher-option ${active ? "is-active" : ""}`}
+                    className={`hdr__menu-option ${active ? "is-active" : ""}`}
                     onClick={() => {
                       onChangeRole(r);
                       setOpen(false);
                     }}
                   >
-                    <div className="header__roleswitcher-option-avatar">{u.initials}</div>
-                    <div className="header__userblock">
-                      <span className="header__username">{r}</span>
-                      <span className="header__userrole" style={{ color: "var(--lum-gray-500)" }}>
-                        {u.name}
-                      </span>
+                    <div className="hdr__menu-avatar">{u.initials}</div>
+                    <div className="hdr__menu-text">
+                      <span className="hdr__menu-role">{r}</span>
+                      <span className="hdr__menu-name">{u.name}</span>
                     </div>
                   </button>
                 );
