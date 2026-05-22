@@ -338,24 +338,33 @@ button {
   gap: 6px;
 }
 
-/* KPI grid — EXPLICIT 2-col on phone (minmax 0 1fr lets columns shrink
-   below child content width so long labels truncate cleanly). */
+/* KPI grid — plain flex with explicit 50% width children. Avoids CSS Grid
+   edge cases that some Android browsers handle inconsistently. */
 .kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   width: 100%;
   max-width: 100%;
 }
 
-/* Tablet+: 4-col KPI grid (or 3 if only 3 KPIs) */
+.kpi-grid > .kpi {
+  flex: 0 0 calc(50% - 3px);   /* exactly half row, minus half gap */
+  width: calc(50% - 3px);      /* belt-and-braces explicit width */
+  min-width: 0;
+  max-width: calc(50% - 3px);
+}
+
+/* Tablet+: 4 KPIs per row */
 @media (min-width: 600px) {
-  .kpi-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .kpi-grid > .kpi {
+    flex: 0 0 calc(25% - 4.5px);
+    width: calc(25% - 4.5px);
+    max-width: calc(25% - 4.5px);
   }
 }
 
-/* Wider viewports: lay safety + KPI grid side by side instead of stacked */
+/* Wider viewports: safety + KPI strip side-by-side */
 @media (min-width: 720px) {
   .glance {
     flex-direction: row;
