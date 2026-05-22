@@ -347,14 +347,18 @@ button {
 }
 
 .kpi-grid > .kpi {
-  display: inline-block;
+  /* inline-flex: flows inline (wraps when row full) BUT children stack
+     as flex column inside. Plain inline-block clobbered the inner
+     flex-direction: column and put label/value/delta on one line. */
+  display: inline-flex;
+  flex-direction: column;
   vertical-align: top;
   width: var(--kpi-w, calc(50% - 3px));
   max-width: var(--kpi-w, calc(50% - 3px));
   min-width: 0;
   margin-right: 6px;
   margin-bottom: 6px;
-  font-size: 13px;       /* restore — inline-block whitespace fix zeroed it */
+  font-size: 13px;       /* restore — font-size: 0 on parent zeroed it */
 }
 
 .kpi-grid > .kpi:nth-child(2n) {
@@ -526,7 +530,8 @@ button {
 }
 
 .applauncher > .apptile {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
   vertical-align: top;
   width: var(--tile-w, calc(50% - 6px));
   max-width: var(--tile-w, calc(50% - 6px));
