@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import type { ScheduleLine } from "../engine/types";
+import { useLivePreview } from "../hooks/useLivePreview";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
@@ -127,18 +128,23 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           </label>
         </div>
 
+        <PreviewPane
+          startInput={startDate}
+          hours={Number(overrideHours)}
+          employeeId={employeeId}
+          useStore={useStore}
+          currentEnd={line.endDateTime}
+        />
         {employee && (
           <div
             style={{
-              padding: 12,
+              padding: "0 12px 12px",
               fontSize: 11,
               color: "var(--text-tertiary)",
-              borderTop: "1px solid var(--border)",
             }}
           >
-            Effective hours: {(Number(overrideHours) / (employee.productivityRate || 1)).toFixed(2)}h
-            at {Math.round(employee.productivityRate * 100)}% productivity ·
-            current end {format(line.endDateTime, "EEE MMM d HH:mm")}
+            {Math.round(employee.productivityRate * 100)}% productivity ·
+            standard {employee.standardHoursPerDay}h/day
           </div>
         )}
 
@@ -164,6 +170,54 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface PreviewPaneProps {
+  startInput: string;
+  hours: number;
+  employeeId: string;
+  useStore: UseScheduleStore;
+  currentEnd: Date;
+}
+
+function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd }: PreviewPaneProps) {
+  const start = startInput ? new Date(startInput) : null;
+  const preview = useLivePreview(
+    start,
+    hours,
+    null,
+    employeeId,
+    useStore,
+  );
+  const changedEnd =
+    preview.end && preview.end.getTime() !== currentEnd.getTime();
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        background: "var(--bg-secondary)",
+        borderTop: "1px solid var(--border)",
+        fontSize: 12,
+      }}
+    >
+      <div style={{ color: "var(--text-secondary)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
+        Predicted
+      </div>
+      {preview.end ? (
+        <>
+          <div>
+            End{changedEnd && <span style={{ color: "var(--lumineo-red)", marginLeft: 6, fontSize: 10 }}>changed</span>}:{" "}
+            <strong>{format(preview.end, "EEE MMM d HH:mm")}</strong>
+          </div>
+          <div style={{ color: "var(--text-tertiary)", fontSize: 11, marginTop: 2 }}>
+            {preview.effectiveHours.toFixed(2)}h scheduled · was {format(currentEnd, "MMM d HH:mm")}
+          </div>
+        </>
+      ) : (
+        <div style={{ color: "var(--text-tertiary)" }}>Enter a valid start and hours.</div>
+      )}
     </div>
   );
 }

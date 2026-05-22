@@ -6,6 +6,7 @@ import type { ScheduleKindMeta } from "../services/data-source";
 import type { UseScheduleStore } from "../store/schedule-store";
 import JobCard from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
+import WeekSummary from "./WeekSummary";
 
 interface CalendarViewProps {
   useStore: UseScheduleStore;
@@ -92,9 +93,22 @@ export default function CalendarView({
   const peopleNoun = (count: number) =>
     `${count} ${count === 1 ? kindMeta.resourceLabel.toLowerCase() : kindMeta.resourceLabelPlural.toLowerCase()}`;
 
+  const context = {
+    employees,
+    departments,
+    schedule,
+    workHours: useStore.getState().workHours,
+    overtime: useStore.getState().overtime,
+  };
+
   return (
     <div>
       {bannerSlot}
+      <WeekSummary
+        context={context}
+        weekStart={weekStart}
+        resourceLabelPlural={kindMeta.resourceLabelPlural}
+      />
       <div className="calendar-toolbar">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))}>‹ Prev</button>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>

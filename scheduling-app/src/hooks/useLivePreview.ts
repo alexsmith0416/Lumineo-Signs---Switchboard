@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { calculateEndTime } from "../engine/time-walker";
-import { useScheduleStore } from "../store/schedule-store";
+import { useScheduleStore, type UseScheduleStore } from "../store/schedule-store";
 
 interface LivePreview {
   start: Date | null;
@@ -13,9 +13,13 @@ export function useLivePreview(
   estimatedHours: number,
   overrideHours: number | null,
   employeeId: string | null,
+  useStore: UseScheduleStore = useScheduleStore,
 ): LivePreview {
-  const employees = useScheduleStore((s) => s.employees);
-  const context = useScheduleStore((s) => s.getContext());
+  const employees = useStore((s) => s.employees);
+  const departments = useStore((s) => s.departments);
+  const schedule = useStore((s) => s.schedule);
+  const workHours = useStore((s) => s.workHours);
+  const overtime = useStore((s) => s.overtime);
 
   return useMemo(() => {
     if (!start || !employeeId) {
@@ -27,7 +31,13 @@ export function useLivePreview(
     const rawHours = overrideHours ?? estimatedHours;
     const rate = emp.productivityRate === 0 ? 1 : emp.productivityRate;
     const eff = rawHours / rate;
-    const end = calculateEndTime(start, eff, emp, context);
+    const end = calculateEndTime(start, eff, emp, {
+      employees,
+      departments,
+      schedule,
+      workHours,
+      overtime,
+    });
     return { start, end, effectiveHours: eff };
-  }, [start, estimatedHours, overrideHours, employeeId, employees, context]);
+  }, [start, estimatedHours, overrideHours, employeeId, employees, departments, schedule, workHours, overtime]);
 }
