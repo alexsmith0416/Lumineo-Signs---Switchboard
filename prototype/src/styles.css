@@ -45,10 +45,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 13px;
   line-height: 1.45;
-  /* overflow-x: clip prevents horizontal overflow WITHOUT creating a scroll
-     container — unlike overflow-x: hidden which on some Android browsers
-     breaks vertical scrolling. */
-  overflow-x: clip;
+  /* Body-only overflow-x: hidden is the most reliable pattern for clipping
+     horizontal overflow without breaking vertical scrolling on Android. */
+  overflow-x: hidden;
+  width: 100%;
 }
 
 button {
