@@ -14,41 +14,6 @@ function formatValue(k: Kpi): string {
   return k.value.toLocaleString();
 }
 
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return null;
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const width = 280;
-  const height = 40;
-  const step = width / (values.length - 1);
-  const points = values
-    .map((v, i) => {
-      const x = i * step;
-      const y = height - ((v - min) / range) * height;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-
-  return (
-    <svg
-      className="kpi__sparkline"
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <polyline
-        fill="none"
-        stroke="var(--lum-navy)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points}
-      />
-    </svg>
-  );
-}
-
 function DeltaBadge({ k }: { k: Kpi }) {
   if (!k.deltaDirection || k.valueFormat === "text") return null;
   const arrow = k.deltaDirection === "up" ? "▲" : k.deltaDirection === "down" ? "▼" : "▬";
@@ -68,7 +33,7 @@ function DeltaBadge({ k }: { k: Kpi }) {
 
 export default function KpiStrip({ kpis }: Props) {
   return (
-    <>
+    <div className="kpi-grid">
       {kpis.map((k) => {
         const isText = k.valueFormat === "text";
         return (
@@ -78,10 +43,9 @@ export default function KpiStrip({ kpis }: Props) {
               {formatValue(k)}
             </span>
             <DeltaBadge k={k} />
-            <Sparkline values={k.sparkline} />
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
