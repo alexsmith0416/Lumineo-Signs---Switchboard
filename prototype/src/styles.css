@@ -1214,3 +1214,155 @@ button {
   font-weight: 700;
   text-decoration: none;
 }
+
+/* ============ Phone (<= 700px) — shrink everything to fit ============ */
+@media (max-width: 700px) {
+  body { font-size: 12px; }
+
+  /* Header — drop view title + Help button, shrink logo + avatar */
+  .hdr {
+    height: 56px;
+    padding: 0 10px;
+  }
+  .hdr__brand { gap: 10px; min-width: 0; }
+  .hdr__logo { width: 30px; height: 30px; }
+  .hdr__logo svg { width: 18px; height: 18px; }
+  .hdr__brand-name { font-size: 11px; letter-spacing: 0.7px; }
+  .hdr__brand-sub  { font-size: 9px; letter-spacing: 0.9px; }
+  .hdr__divider,
+  .hdr__view-title,
+  .hdr__btn--ghost,
+  .hdr__userblock,
+  .hdr__caret {
+    display: none;
+  }
+  .hdr__btn { padding: 5px 10px; font-size: 11px; }
+  .hdr__user-trigger { padding: 3px 4px; gap: 0; }
+  .hdr__avatar { width: 28px; height: 28px; font-size: 10px; }
+
+  /* Splash — tighter padding + gaps */
+  .splash {
+    padding: 10px 10px 24px;
+    gap: 12px;
+  }
+
+  /* Glance — 2-col grid, safety spans full row, no horizontal scroll */
+  .glance {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    overflow-x: visible;
+  }
+  .safety {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+  .safety__value { font-size: 22px; }
+  .safety__label { font-size: 9px; }
+  .safety__sub   { font-size: 10px; }
+
+  .kpi {
+    min-width: 0;
+    min-height: 60px;
+    padding: 7px 10px;
+  }
+  .kpi__value { font-size: 17px; }
+  .kpi__value--text { font-size: 10px; }
+  .kpi__label { font-size: 8px; letter-spacing: 0.5px; }
+  .kpi__delta { font-size: 9px; }
+
+  /* If the last KPI is at an odd position (3 KPIs, 5 KPIs, …), span 2 cols
+     so we don't leave a half-empty trailing row. */
+  .glance .kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* App launcher — 2 cols, smaller tiles */
+  .applauncher {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .apptile {
+    padding: 12px 10px 10px;
+    min-height: 84px;
+    gap: 6px;
+  }
+  .apptile__emoji { font-size: 22px; }
+  .apptile__label { font-size: 12px; }
+  .apptile__badge {
+    top: 7px;
+    right: 7px;
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+
+  /* Role widgets — 1 col, tighter cards */
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+  .role-grid__span-2 { grid-column: span 1; }
+  .widget { padding: 10px 12px; gap: 8px; }
+  .widget__title { font-size: 11px; letter-spacing: 0.6px; }
+  .widget__subtitle { font-size: 9px; }
+  .widget__action { font-size: 10px; padding: 3px 8px; }
+
+  .listwidget__row { padding: 7px 0; gap: 8px; }
+  .listwidget__icon { width: 22px; height: 22px; font-size: 12px; }
+  .listwidget__primary { font-size: 11px; }
+  .listwidget__secondary { font-size: 10px; }
+  .listwidget__badge { font-size: 8px; padding: 1px 6px; }
+  .listwidget__meta { font-size: 9px; }
+
+  .barlist { gap: 8px; }
+  .barlist__label { font-size: 11px; }
+  .barlist__value { font-size: 10px; }
+  .barlist__track { height: 7px; }
+
+  .checklist__row { font-size: 11px; padding: 3px 0; }
+  .checklist__check { width: 16px; height: 16px; font-size: 10px; }
+  .checklist__summary { font-size: 10px; padding: 5px 8px; }
+  .checklist__req { font-size: 8px; }
+
+  .route { gap: 6px; }
+  .route__stop { padding: 8px 10px; gap: 10px; }
+  .route__order { width: 24px; height: 24px; font-size: 11px; }
+  .route__customer { font-size: 12px; }
+  .route__addr { font-size: 10px; }
+  .route__meta { font-size: 9px; gap: 8px; }
+  .route__status { font-size: 8px; padding: 1px 6px; }
+
+  /* Announcements + birthdays + photos + section labels — tighten */
+  .announcements { gap: 6px; }
+  .announcement { padding: 8px 12px; gap: 8px; }
+  .announcement__icon { font-size: 14px; }
+  .announcement__body { font-size: 11px; }
+  .announcement__dismiss { width: 18px; height: 18px; font-size: 12px; }
+
+  .birthdays { padding: 8px 10px; gap: 8px; }
+  .birthdays__title { font-size: 9px; letter-spacing: 0.8px; }
+  .birthday { padding: 2px 8px 2px 2px; gap: 5px; }
+  .birthday__avatar { width: 20px; height: 20px; font-size: 9px; }
+  .birthday__name { font-size: 10px; }
+  .birthday__when { font-size: 10px; }
+
+  .photoreel { padding: 10px; }
+  .photoreel__head { margin-bottom: 8px; }
+  .photoreel__title { font-size: 11px; }
+  .photoreel__see-all { font-size: 10px; }
+  .photo { flex: 0 0 150px; height: 96px; padding: 8px; }
+  .photo__caption { font-size: 10px; }
+  .photo__by { font-size: 9px; }
+
+  .section-label { font-size: 9px; letter-spacing: 1px; }
+}
+
+/* ============ Tiny phones (<= 380px) — squeeze further ============ */
+@media (max-width: 380px) {
+  .splash { padding: 8px 8px 20px; }
+  .kpi__value { font-size: 16px; }
+  .safety__value { font-size: 20px; }
+  .apptile { padding: 10px 8px; min-height: 78px; }
+  .apptile__label { font-size: 11px; }
+}
