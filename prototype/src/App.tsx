@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V10 — inline-flex";
+const BUILD_TAG = "V11 — debug colors";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -78,6 +78,17 @@ function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
   }, []);
   const kpiW =
     pinnedTo != null ? Math.floor((Math.max(pinnedTo - 20, 240) - 6) / 2) : "?";
+
+  // Count actual rendered .kpi DOM nodes — confirms how many React rendered
+  const [kpiCount, setKpiCount] = useState<number>(0);
+  useEffect(() => {
+    const tick = setInterval(() => {
+      const n = document.querySelectorAll(".kpi-grid > .kpi").length;
+      setKpiCount(n);
+    }, 200);
+    return () => clearInterval(tick);
+  }, []);
+
   return (
     <div
       style={{
@@ -97,7 +108,7 @@ function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
         {dims.dpr}
       </div>
       <div>
-        pinned={pinnedTo ?? "?"}px · kpi-w={kpiW}px
+        pinned={pinnedTo ?? "?"}px · kpi-w={kpiW}px · kpi-count={kpiCount}
       </div>
       <div style={{ opacity: 0.85 }}>UA: {dims.ua}</div>
     </div>
