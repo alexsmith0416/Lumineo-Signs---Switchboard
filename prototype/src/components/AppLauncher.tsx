@@ -8,13 +8,17 @@ interface Props {
 
 export default function AppLauncher({ tiles, role, itemWidth }: Props) {
   const visible = tiles.filter((t) => t.audience.includes(role));
-  const widthStyle: React.CSSProperties = itemWidth
-    ? { width: `${itemWidth}px`, maxWidth: `${itemWidth}px` }
+  const gridStyle: React.CSSProperties = itemWidth
+    ? {
+        display: "grid",
+        gridTemplateColumns: `${itemWidth}px ${itemWidth}px`,
+        gap: "12px",
+      }
     : {};
   return (
     <>
       <div className="section-label">Apps</div>
-      <div className="applauncher">
+      <div className="applauncher" style={gridStyle}>
         {visible.map((t) => (
           <button
             key={t.key}
@@ -22,7 +26,6 @@ export default function AppLauncher({ tiles, role, itemWidth }: Props) {
             className={`apptile ${!t.enabled ? "is-disabled" : ""}`}
             disabled={!t.enabled}
             title={`Launch ${t.label}`}
-            style={widthStyle}
           >
             <span className="apptile__emoji" aria-hidden="true">
               {t.emoji}

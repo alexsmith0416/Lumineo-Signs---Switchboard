@@ -37,20 +37,26 @@ function DeltaBadge({ k }: { k: Kpi }) {
 const DEBUG_COLORS = ["#1971c2", "#2f9e44", "#e8590c", "#9c36b5"];
 
 export default function KpiStrip({ kpis, itemWidth }: Props) {
+  // Force a real 2-col grid via inline style with explicit pixel template.
+  // Grid auto-placement automatically creates new rows when items overflow
+  // the explicit columns — no wrap dependency on flex/float behavior.
+  const gridStyle: React.CSSProperties = itemWidth
+    ? {
+        display: "grid",
+        gridTemplateColumns: `${itemWidth}px ${itemWidth}px`,
+        gap: "6px",
+      }
+    : {};
   return (
-    <div className="kpi-grid" data-kpi-count={kpis.length}>
+    <div className="kpi-grid" data-kpi-count={kpis.length} style={gridStyle}>
       {kpis.map((k, i) => {
         const isText = k.valueFormat === "text";
-        const widthStyle: React.CSSProperties = itemWidth
-          ? { width: `${itemWidth}px`, maxWidth: `${itemWidth}px` }
-          : {};
         return (
           <div
             key={k.key}
             className="kpi"
             tabIndex={0}
             style={{
-              ...widthStyle,
               outline: `3px solid ${DEBUG_COLORS[i % DEBUG_COLORS.length]}`,
             }}
           >
