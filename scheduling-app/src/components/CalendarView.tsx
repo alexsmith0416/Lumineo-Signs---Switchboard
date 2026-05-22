@@ -172,6 +172,7 @@ export default function CalendarView({
                           key={line.id}
                           line={line}
                           department={departments.get(line.departmentId)}
+                          employee={employees.get(line.employeeId)}
                           conflicts={conflicts}
                           readOnly={readOnly}
                           onClick={() => {
@@ -207,12 +208,13 @@ export default function CalendarView({
 interface DraggableJobProps {
   line: ScheduleLine;
   department: Department | undefined;
+  employee: Employee | undefined;
   conflicts: Conflict[];
   readOnly: boolean;
   onClick: () => void;
 }
 
-function DraggableJob({ line, department, conflicts, readOnly, onClick }: DraggableJobProps) {
+function DraggableJob({ line, department, employee, conflicts, readOnly, onClick }: DraggableJobProps) {
   return (
     <div
       draggable={!readOnly && !line.isLocked}
@@ -225,7 +227,7 @@ function DraggableJob({ line, department, conflicts, readOnly, onClick }: Dragga
       }}
       style={{ cursor: readOnly || line.isLocked ? "pointer" : "grab" }}
     >
-      <JobCard line={line} department={department} conflicts={conflicts} />
+      <JobCard line={line} department={department} employee={employee} conflicts={conflicts} />
     </div>
   );
 }
