@@ -346,7 +346,7 @@ button {
 
 /* ============ Safety chip (compact, branded) ============ */
 .safety {
-  flex: 1 1 150px;
+  flex: 1 1 130px;
   min-width: 0;
   background: var(--navy);
   color: white;
@@ -412,7 +412,7 @@ button {
 
 /* ============ KPI chip (compact, in same row as safety) ============ */
 .kpi {
-  flex: 1 1 120px;
+  flex: 1 1 110px;
   min-width: 0;
   background: var(--card);
   border: 1px solid var(--border);
@@ -478,22 +478,13 @@ button {
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
+/* auto-fit lets the grid pack as many 130px+ columns as fit; on
+   narrow phones it becomes 2-col, on wider screens it becomes
+   3 / 4 / 5-col automatically — no media query needed. */
 .applauncher {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
-}
-
-@media (max-width: 1024px) {
-  .applauncher {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
-  .applauncher {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .apptile {
@@ -756,24 +747,17 @@ button {
   opacity: 0.75;
 }
 
-/* ============ Role widgets — grid ============ */
+/* ============ Role widgets — auto-fit grid, no media query gating ============ */
 .role-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+/* When the grid resolves to multiple columns this widget spans 2;
+   at single-column widths span 2 collapses to 1 automatically. */
 .role-grid__span-2 {
   grid-column: span 2;
-}
-
-@media (max-width: 800px) {
-  .role-grid {
-    grid-template-columns: 1fr;
-  }
-  .role-grid__span-2 {
-    grid-column: span 1;
-  }
 }
 
 /* ============ Widget card ============ */
@@ -1208,8 +1192,10 @@ button {
   text-decoration: none;
 }
 
-/* ============ Phone (<= 700px) — shrink everything to fit ============ */
-@media (max-width: 700px) {
+/* ============ Compact layout — applied at <= 1100px so it catches phones,
+   landscape phones, and small tablets regardless of what the device viewer
+   reports as the CSS viewport width. ============ */
+@media (max-width: 1100px) {
   body { font-size: 12px; }
 
   /* Header — drop view title + Help button, shrink logo + avatar */
@@ -1261,11 +1247,9 @@ button {
   .kpi__label { font-size: 8px; letter-spacing: 0.5px; }
   .kpi__delta { font-size: 9px; }
 
-  /* App launcher — 2 cols, smaller tiles */
-  .applauncher {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
+  /* App launcher — auto-fit on the base style handles col count;
+     just tighten the tiles. */
+  .applauncher { gap: 8px; }
   .apptile {
     padding: 12px 10px 10px;
     min-height: 84px;
@@ -1280,11 +1264,7 @@ button {
     padding: 1px 6px;
   }
 
-  /* Role widgets — 1 col, tighter cards */
-  .role-grid {
-    grid-template-columns: 1fr;
-  }
-  .role-grid__span-2 { grid-column: span 1; }
+  /* Role widgets — auto-fit handles col count; just shrink internals */
   .widget { padding: 10px 12px; gap: 8px; }
   .widget__title { font-size: 11px; letter-spacing: 0.6px; }
   .widget__subtitle { font-size: 9px; }
