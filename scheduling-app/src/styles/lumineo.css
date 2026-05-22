@@ -1,0 +1,476 @@
+:root {
+  --lumineo-navy: #141464;
+  --lumineo-red: #e8151b;
+  --label-bg: #e8ebf5;
+  --input-bg: #f2f4f8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f8fa;
+  --bg-tertiary: #eef0f4;
+  --border: #e1e4ea;
+  --text-primary: #1a1d23;
+  --text-secondary: #5a6172;
+  --text-tertiary: #8b91a0;
+  --dept-metal-bg: #bed7ff;
+  --dept-metal-text: #042c53;
+  --dept-paint-bg: #fac775;
+  --dept-paint-text: #633806;
+  --dept-assembly-bg: #cecbf6;
+  --dept-assembly-text: #26215c;
+  --dept-vinyl-bg: #c8e6d4;
+  --dept-vinyl-text: #04342c;
+  --scenario-amber-1: #fcd34d;
+  --scenario-amber-2: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ============ App shell ============ */
+
+.app-shell {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: 200px 1fr;
+  grid-template-areas:
+    "header header"
+    "sidebar main";
+  height: 100vh;
+}
+
+.app-header {
+  grid-area: header;
+  background: var(--lumineo-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+}
+
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--lumineo-red);
+  color: #fff;
+  padding: 4px 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.app-header__logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.app-header__logo-text .lumineo { font-size: 14px; }
+.app-header__logo-text .signs { font-size: 9px; letter-spacing: 1.5px; opacity: 0.9; }
+
+.app-header__title {
+  font-size: 16px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.app-header__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.app-header__action {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lumineo-red);
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.app-header__action:hover { filter: brightness(1.1); }
+
+.app-sidebar {
+  grid-area: sidebar;
+  background: var(--bg-tertiary);
+  border-right: 1px solid var(--border);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-sidebar__item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 10px 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.app-sidebar__item--active {
+  background: var(--bg-primary);
+  border-left-color: var(--lumineo-navy);
+  color: var(--lumineo-navy);
+}
+
+.app-sidebar__divider {
+  margin: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.app-sidebar__section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+  padding: 4px 16px;
+}
+
+.app-main {
+  grid-area: main;
+  overflow: auto;
+  background: var(--bg-primary);
+  padding: 16px;
+}
+
+/* ============ Calendar ============ */
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-toolbar button {
+  background: var(--lumineo-navy);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.calendar-toolbar__label {
+  font-weight: 500;
+}
+
+.calendar-toolbar__spacer { flex: 1; }
+
+.calendar-grid {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.calendar-header-row {
+  display: grid;
+  grid-template-columns: 140px repeat(7, 1fr);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.calendar-header-cell {
+  padding: 8px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+
+.calendar-header-cell--weekend {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.dept-section {
+  border-bottom: 1px solid var(--border);
+}
+
+.dept-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+}
+
+.employee-row {
+  display: grid;
+  grid-template-columns: 140px repeat(7, 1fr);
+  border-bottom: 1px solid var(--bg-tertiary);
+  min-height: 56px;
+}
+
+.employee-row:last-child { border-bottom: none; }
+
+.employee-row__name {
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.employee-row__name .productivity {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.employee-row__day {
+  border-right: 1px solid var(--bg-tertiary);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+
+.employee-row__day--weekend {
+  background: var(--bg-secondary);
+}
+
+.employee-row__day--empty:hover {
+  background: var(--bg-tertiary);
+  cursor: pointer;
+}
+
+.job-card {
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 10px;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.job-card__job-no { font-weight: 600; font-size: 10px; }
+.job-card__customer { font-size: 11px; font-weight: 500; }
+.job-card__desc { font-size: 9px; opacity: 0.85; }
+.job-card__icons {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  gap: 3px;
+  font-size: 10px;
+}
+
+/* ============ Forms / Add Job panel ============ */
+
+.slide-over {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0,0,0,0.25);
+  z-index: 50;
+}
+
+.slide-over__panel {
+  width: 480px;
+  background: var(--bg-primary);
+  height: 100%;
+  box-shadow: -4px 0 18px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  background: var(--lumineo-navy);
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-field {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-field__label {
+  background: var(--label-bg);
+  padding: 8px 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+}
+
+.form-field__input,
+.form-field__select {
+  background: var(--input-bg);
+  border: none;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.form-field__input:focus,
+.form-field__select:focus {
+  border: 1px solid var(--lumineo-navy);
+  margin: -1px;
+}
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+
+.btn-primary {
+  background: var(--lumineo-navy);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--lumineo-navy);
+  border: 1px solid var(--lumineo-navy);
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-danger {
+  background: var(--lumineo-red);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* ============ Scenario ============ */
+
+.scenario-banner {
+  background: linear-gradient(135deg, var(--scenario-amber-1), var(--scenario-amber-2));
+  color: #4b2c00;
+  padding: 8px 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scenario-banner button {
+  background: rgba(0,0,0,0.15);
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.scenario-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-tertiary);
+}
+
+.scenario-empty h2 { color: var(--text-primary); margin-bottom: 8px; }
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+.scenario-changes {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.scenario-change-row {
+  background: var(--bg-primary);
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.impact-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.impact-card h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+
+.impact-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.impact-stat .value { font-weight: 600; }
+.impact-stat .value.good { color: #2e7d32; }
+.impact-stat .value.bad { color: var(--lumineo-red); }
+
+/* ============ Misc ============ */
+
+.empty-state {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.loading {
+  padding: 16px;
+  color: var(--text-secondary);
+}
+
+.error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: var(--lumineo-red);
+  border-radius: 4px;
+}
