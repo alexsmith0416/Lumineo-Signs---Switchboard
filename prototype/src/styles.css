@@ -326,24 +326,13 @@ button {
   margin: 4px 0 -2px;
 }
 
-/* ============ Glance strip — single horizontal row, scrolls on narrow ============ */
+/* ============ Glance strip — wraps to multiple rows when narrow ============ */
 .glance {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: stretch;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-  padding-bottom: 2px;
-}
-
-.glance::-webkit-scrollbar {
-  height: 6px;
-}
-
-.glance::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius-pill);
+  overflow: visible;
 }
 
 /* Let .kpis pass its children directly into the .glance flex row */
@@ -353,8 +342,8 @@ button {
 
 /* ============ Safety chip (compact, branded) ============ */
 .safety {
-  flex: 1 1 0;
-  min-width: 150px;
+  flex: 1 1 150px;
+  min-width: 0;
   background: var(--navy);
   color: white;
   border-radius: var(--radius);
@@ -365,7 +354,7 @@ button {
   gap: 1px;
   position: relative;
   box-shadow: var(--shadow-1);
-  min-height: 72px;
+  min-height: 64px;
 }
 
 .safety__head {
@@ -419,8 +408,8 @@ button {
 
 /* ============ KPI chip (compact, in same row as safety) ============ */
 .kpi {
-  flex: 1 1 0;
-  min-width: 130px;
+  flex: 1 1 120px;
+  min-width: 0;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -433,7 +422,7 @@ button {
   transition: border-color 0.12s ease;
   cursor: pointer;
   overflow: hidden;
-  min-height: 72px;
+  min-height: 64px;
 }
 
 .kpi:hover {
@@ -1246,16 +1235,11 @@ button {
     gap: 12px;
   }
 
-  /* Glance — 2-col grid, safety spans full row, no horizontal scroll */
-  .glance {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    overflow-x: visible;
-  }
+  /* Glance — flex-wrap on the base style handles wrapping at any width;
+     just shrink the chip sizes and fonts on phone. */
+  .glance { gap: 6px; }
   .safety {
-    grid-column: 1 / -1;
-    min-width: 0;
+    flex-basis: 100%;       /* safety spans full top row on phone */
     min-height: 60px;
     padding: 8px 12px;
   }
@@ -1264,7 +1248,7 @@ button {
   .safety__sub   { font-size: 10px; }
 
   .kpi {
-    min-width: 0;
+    flex-basis: calc(50% - 3px);   /* exactly 2 KPIs per row on phone */
     min-height: 60px;
     padding: 7px 10px;
   }
@@ -1272,12 +1256,6 @@ button {
   .kpi__value--text { font-size: 10px; }
   .kpi__label { font-size: 8px; letter-spacing: 0.5px; }
   .kpi__delta { font-size: 9px; }
-
-  /* If the last KPI is at an odd position (3 KPIs, 5 KPIs, …), span 2 cols
-     so we don't leave a half-empty trailing row. */
-  .glance .kpi:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
 
   /* App launcher — 2 cols, smaller tiles */
   .applauncher {
