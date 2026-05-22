@@ -1,8 +1,11 @@
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek } from "date-fns";
-import { dataverseService } from "../services/dataverse";
 import { shiftTask, updateDuration } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
+import { productionDataSource } from "../services/dataverse";
+import { installationDataSource } from "../services/installation-data";
+import { shippingDataSource } from "../services/shipping-data";
+import type { ScheduleDataSource } from "../services/data-source";
 import type {
   Conflict,
   Department,
@@ -13,7 +16,8 @@ import type {
   WorkHoursOverride,
 } from "../engine/types";
 
-interface ScheduleStoreState {
+export interface ScheduleStoreState {
+  dataSource: ScheduleDataSource;
   weekStart: Date;
   loading: boolean;
   error: string | null;
@@ -35,6 +39,7 @@ interface ScheduleStoreState {
   ) => Promise<void>;
   updateTaskHours: (lineId: string, overrideHours: number) => Promise<void>;
   addScheduleLine: (line: ScheduleLine) => Promise<void>;
+  deleteScheduleLine: (lineId: string) => Promise<void>;
   setWeekStart: (date: Date) => void;
 }
 
@@ -48,115 +53,143 @@ function buildContext(state: ScheduleStoreState): ScheduleContext {
   };
 }
 
-export const useScheduleStore = create<ScheduleStoreState>((set, get) => ({
-  weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
-  loading: false,
-  error: null,
-  employees: new Map(),
-  departments: new Map(),
-  schedule: [],
-  workHours: [],
-  overtime: [],
-  conflicts: [],
+export type UseScheduleStore = UseBoundStore<StoreApi<ScheduleStoreState>>;
 
-  setWeekStart: (date) => {
-    set({ weekStart: startOfWeek(date, { weekStartsOn: 1 }) });
-  },
+export function createScheduleStore(
+  dataSource: ScheduleDataSource,
+): UseScheduleStore {
+  return create<ScheduleStoreState>((set, get) => ({
+    dataSource,
+    weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
+    loading: false,
+    error: null,
+    employees: new Map(),
+    departments: new Map(),
+    schedule: [],
+    workHours: [],
+    overtime: [],
+    conflicts: [],
 
-  loadWeek: async (weekStart) => {
-    const start = startOfWeek(weekStart ?? get().weekStart, { weekStartsOn: 1 });
-    const end = endOfWeek(addDays(start, 6), { weekStartsOn: 1 });
-    set({ loading: true, error: null, weekStart: start });
-    try {
-      const [departments, employees, schedule, workHours, overtime] = await Promise.all([
-        dataverseService.loadDepartments(),
-        dataverseService.loadEmployees(),
-        dataverseService.loadScheduleLines(start, end),
-        dataverseService.loadWorkHours(start, end),
-        dataverseService.loadOvertimeOverrides(start, end),
-      ]);
-      const empMap = new Map(employees.map((e) => [e.id, e]));
-      const deptMap = new Map(departments.map((d) => [d.id, d]));
-      const ctx: ScheduleContext = {
-        employees: empMap,
-        departments: deptMap,
-        schedule,
-        workHours,
-        overtime,
-      };
-      set({
-        employees: empMap,
-        departments: deptMap,
-        schedule,
-        workHours,
-        overtime,
-        conflicts: detectConflicts(ctx),
-        loading: false,
+    setWeekStart: (date) => {
+      set({ weekStart: startOfWeek(date, { weekStartsOn: 1 }) });
+    },
+
+    loadWeek: async (weekStart) => {
+      const start = startOfWeek(weekStart ?? get().weekStart, { weekStartsOn: 1 });
+      const end = endOfWeek(addDays(start, 6), { weekStartsOn: 1 });
+      set({ loading: true, error: null, weekStart: start });
+      try {
+        const ds = get().dataSource;
+        const [departments, employees, schedule, workHours, overtime] = await Promise.all([
+          ds.loadDepartments(),
+          ds.loadEmployees(),
+          ds.loadScheduleLines(start, end),
+          ds.loadWorkHours(start, end),
+          ds.loadOvertimeOverrides(start, end),
+        ]);
+        const empMap = new Map(employees.map((e) => [e.id, e]));
+        const deptMap = new Map(departments.map((d) => [d.id, d]));
+        const ctx: ScheduleContext = {
+          employees: empMap,
+          departments: deptMap,
+          schedule,
+          workHours,
+          overtime,
+        };
+        set({
+          employees: empMap,
+          departments: deptMap,
+          schedule,
+          workHours,
+          overtime,
+          conflicts: detectConflicts(ctx),
+          loading: false,
+        });
+      } catch (err) {
+        set({ loading: false, error: err instanceof Error ? err.message : String(err) });
+      }
+    },
+
+    getContext: () => buildContext(get()),
+
+    shiftTaskAndCommit: async (lineId, newStart, newEmployeeId, cascade = true) => {
+      const state = get();
+      const ctx = buildContext(state);
+      const result = shiftTask(ctx, lineId, newStart, newEmployeeId, {
+        cascade,
+        previewOnly: false,
       });
-    } catch (err) {
-      set({ loading: false, error: err instanceof Error ? err.message : String(err) });
-    }
-  },
 
-  getContext: () => buildContext(get()),
+      const movedSet = new Set(result.moved);
+      const ds = state.dataSource;
+      await Promise.all(
+        result.context.schedule
+          .filter((line) => movedSet.has(line.id))
+          .map((line) =>
+            ds.updateScheduleLine(line.id, {
+              startDateTime: line.startDateTime,
+              endDateTime: line.endDateTime,
+              employeeId: line.employeeId,
+              departmentId: line.departmentId,
+            }),
+          ),
+      );
 
-  shiftTaskAndCommit: async (lineId, newStart, newEmployeeId, cascade = true) => {
-    const ctx = buildContext(get());
-    const result = shiftTask(ctx, lineId, newStart, newEmployeeId, {
-      cascade,
-      previewOnly: false,
-    });
+      set({
+        schedule: result.context.schedule,
+        conflicts: result.conflicts,
+      });
+    },
 
-    const movedSet = new Set(result.moved);
-    await Promise.all(
-      result.context.schedule
-        .filter((line) => movedSet.has(line.id))
-        .map((line) =>
-          dataverseService.updateScheduleLine(line.id, {
-            startDateTime: line.startDateTime,
-            endDateTime: line.endDateTime,
-            employeeId: line.employeeId,
-            departmentId: line.departmentId,
-          }),
-        ),
-    );
+    updateTaskHours: async (lineId, overrideHours) => {
+      const state = get();
+      const ctx = buildContext(state);
+      const result = updateDuration(ctx, lineId, overrideHours, true);
+      const movedSet = new Set(result.moved);
 
-    set({
-      schedule: result.context.schedule,
-      conflicts: result.conflicts,
-    });
-  },
+      const ds = state.dataSource;
+      await Promise.all(
+        result.context.schedule
+          .filter((line) => movedSet.has(line.id) || line.id === lineId)
+          .map((line) =>
+            ds.updateScheduleLine(line.id, {
+              startDateTime: line.startDateTime,
+              endDateTime: line.endDateTime,
+              overrideHours: line.overrideHours,
+            }),
+          ),
+      );
 
-  updateTaskHours: async (lineId, overrideHours) => {
-    const ctx = buildContext(get());
-    const result = updateDuration(ctx, lineId, overrideHours, true);
-    const movedSet = new Set(result.moved);
+      set({
+        schedule: result.context.schedule,
+        conflicts: result.conflicts,
+      });
+    },
 
-    await Promise.all(
-      result.context.schedule
-        .filter((line) => movedSet.has(line.id) || line.id === lineId)
-        .map((line) =>
-          dataverseService.updateScheduleLine(line.id, {
-            startDateTime: line.startDateTime,
-            endDateTime: line.endDateTime,
-            overrideHours: line.overrideHours,
-          }),
-        ),
-    );
+    addScheduleLine: async (line) => {
+      const ds = get().dataSource;
+      const created = await ds.createScheduleLine(line);
+      const next = [...get().schedule, created];
+      const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
+      set({
+        schedule: next,
+        conflicts: detectConflicts(ctx),
+      });
+    },
 
-    set({
-      schedule: result.context.schedule,
-      conflicts: result.conflicts,
-    });
-  },
+    deleteScheduleLine: async (lineId) => {
+      const ds = get().dataSource;
+      await ds.deleteScheduleLine(lineId);
+      const next = get().schedule.filter((l) => l.id !== lineId);
+      const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
+      set({
+        schedule: next,
+        conflicts: detectConflicts(ctx),
+      });
+    },
+  }));
+}
 
-  addScheduleLine: async (line) => {
-    const created = await dataverseService.createScheduleLine(line);
-    const next = [...get().schedule, created];
-    const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
-    set({
-      schedule: next,
-      conflicts: detectConflicts(ctx),
-    });
-  },
-}));
+export const useScheduleStore = createScheduleStore(productionDataSource);
+export const useInstallationStore = createScheduleStore(installationDataSource);
+export const useShippingStore = createScheduleStore(shippingDataSource);

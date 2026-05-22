@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { cloneContext } from "../engine/cascade";
 import { commitScenario, computeImpact, runScenario } from "../engine/scenarios";
-import { dataverseService } from "../services/dataverse";
+import { productionDataSource } from "../services/dataverse";
 import type { ImpactMetrics } from "../engine/scenarios";
 import type {
   ScenarioChange,
@@ -67,9 +67,9 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     await Promise.all(
       patches.map((p) => {
         if (p.isInsert) {
-          return dataverseService.createScheduleLine(p.changes as any);
+          return productionDataSource.createScheduleLine(p.changes as any);
         }
-        return dataverseService.updateScheduleLine(p.lineId, p.changes);
+        return productionDataSource.updateScheduleLine(p.lineId, p.changes);
       }),
     );
     set({ active: false, base: null, changes: [], result: null, impact: null });

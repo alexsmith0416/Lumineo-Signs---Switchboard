@@ -27,14 +27,20 @@ App.tsx (sidebar nav)
          cascade · conflicts · scenarios
                   │
        Services  ◄┘
-         dataverseService   (Power SDK — stubbed)
-         bcService          (BC analytics — stubbed)
+         data-source.ts       ScheduleDataSource interface + factory
+         dataverse.ts         productionDataSource (Power SDK — stubbed)
+         installation-data.ts installationDataSource
+         shipping-data.ts     shippingDataSource
+         bc.ts                BC analytics (stubbed)
          planning-line-mapping
          auto-schedule
                   │
        Stores (Zustand)
-         useScheduleStore   (live)
-         useScenarioStore   (sandbox)
+         createScheduleStore(dataSource) — factory
+         useScheduleStore       (production)
+         useInstallationStore   (installation)
+         useShippingStore       (shipping)
+         useScenarioStore       (sandbox — production-bound)
 ```
 
 ## Tech stack
@@ -122,8 +128,8 @@ The dev server boots with mock data; everything is reactive but persists only in
 - M3 (ALE-81) — Engine live · cascade is implemented; calendar currently passes `cascade=false` per M2 acceptance — flip to `true` for M3
 - M4 (ALE-82) — Add Job Panel · all three modes (single / multi / auto) implemented against mocks
 - M5 (ALE-83) — Scenario Sandbox · workspace + diff + impact + commit implemented
-- M6 (ALE-84) — Installation · stub view
-- M7 (ALE-85) — Shipping · stub view
+- M6 (ALE-84) — Installation · live calendar against mock crews + install lines using the same engine
+- M7 (ALE-85) — Shipping · live calendar against mock trucks + shipping lines using the same engine
 - M8 (ALE-86) — Polish & rollout · not started
 
 ## Known gaps to address

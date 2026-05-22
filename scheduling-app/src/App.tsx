@@ -1,6 +1,8 @@
 import { useState } from "react";
 import AppHeader from "./components/AppHeader";
 import ProductionCalendar from "./components/ProductionCalendar";
+import InstallationCalendar from "./components/InstallationCalendar";
+import ShippingCalendar from "./components/ShippingCalendar";
 import ScenarioSandbox from "./components/ScenarioSandbox";
 
 type View = "production" | "installation" | "shipping" | "scenario";
@@ -51,18 +53,8 @@ export default function App() {
 
       <main className="app-main">
         {view === "production" && <ProductionCalendar />}
-        {view === "installation" && (
-          <div className="empty-state">
-            <h2>Installation Schedule</h2>
-            <p>Stub view — M6 turns this into a live crews/installs calendar.</p>
-          </div>
-        )}
-        {view === "shipping" && (
-          <div className="empty-state">
-            <h2>Shipping Schedule</h2>
-            <p>Stub view — M7 brings drivers, trucks, and destinations.</p>
-          </div>
-        )}
+        {view === "installation" && <InstallationCalendar />}
+        {view === "shipping" && <ShippingCalendar />}
         {view === "scenario" && <ScenarioSandbox />}
       </main>
     </div>

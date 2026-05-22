@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { useScheduleStore } from "../store/schedule-store";
-import { dataverseService } from "../services/dataverse";
+import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import type { ScheduleLine } from "../engine/types";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
   onClose: () => void;
+  useStore?: UseScheduleStore;
 }
 
-export default function EditJobPanel({ line, onClose }: EditJobPanelProps) {
-  const employees = useScheduleStore((s) => s.employees);
-  const updateTaskHours = useScheduleStore((s) => s.updateTaskHours);
-  const shiftTaskAndCommit = useScheduleStore((s) => s.shiftTaskAndCommit);
-  const loadWeek = useScheduleStore((s) => s.loadWeek);
+export default function EditJobPanel({ line, onClose, useStore = useScheduleStore }: EditJobPanelProps) {
+  const employees = useStore((s) => s.employees);
+  const dataSource = useStore((s) => s.dataSource);
+  const updateTaskHours = useStore((s) => s.updateTaskHours);
+  const shiftTaskAndCommit = useStore((s) => s.shiftTaskAndCommit);
+  const loadWeek = useStore((s) => s.loadWeek);
+  const deleteScheduleLine = useStore((s) => s.deleteScheduleLine);
 
   const [overrideHours, setOverrideHours] = useState(
     line.overrideHours?.toString() ?? line.estimatedHours.toString(),
@@ -42,7 +44,7 @@ export default function EditJobPanel({ line, onClose }: EditJobPanelProps) {
         await shiftTaskAndCommit(line.id, newStart, employeeId, true);
       }
       if (isLocked !== line.isLocked) {
-        await dataverseService.updateScheduleLine(line.id, { isLocked });
+        await dataSource.updateScheduleLine(line.id, { isLocked });
         await loadWeek();
       }
       onClose();
@@ -54,8 +56,7 @@ export default function EditJobPanel({ line, onClose }: EditJobPanelProps) {
   const onDelete = async () => {
     setBusy(true);
     try {
-      await dataverseService.deleteScheduleLine(line.id);
-      await loadWeek();
+      await deleteScheduleLine(line.id);
       onClose();
     } finally {
       setBusy(false);
