@@ -25,6 +25,8 @@
 | `Spotlight` | Switchboard (Ops only edit) | Weekly featured employee or project (Phase 6) |
 | `Suggestion` | Switchboard | Employee suggestion box submissions (Phase 6) |
 | `SystemConfig` | Switchboard (Ops only) | Per-sub-app `enabled` flag + `maintenanceMessage` |
+| `PendingBCWrites` | All apps (write-only) | Queue of BC-bound writes accumulated during the Airtable-bridge interim. Drained when BC API access lands. See [doc 13](13-airtable-bridge-mapping.md). |
+| `SyncLog` | System | Diagnostic log for AirtableMirror_Sync and future BCSync flows; ≤7 day retention. |
 
 ## Virtual tables (read from BC, no copy)
 
@@ -229,7 +231,37 @@ SystemConfig
 ├─ enabled (bool)
 ├─ maintenanceMessage (text)
 └─ updatedAt
+
+PendingBCWrites (interim queue; drained when BC API lands)
+├─ id (PK)
+├─ entityType (Job | Task | TimeEntry | Photo | Opportunity | SignSpec)
+├─ entityId (string — the Dataverse row id of the source record)
+├─ operation (CreateSalesQuote | ConvertQuoteToOrder | MarkOrderShipped
+│             | TriggerInvoicing | CreatePurchaseOrder | UpdateSalesOrderLine
+│             | PostTimeEntries | ...)
+├─ payload (json — the BC-shaped body ready to POST)
+├─ status (Pending | InFlight | Posted | Failed | Skipped)
+├─ attempts (int)
+├─ lastAttemptAt (datetime)
+├─ lastError (text)
+├─ bcRef (text — BC's returned identifier on success)
+├─ createdAt (datetime)
+└─ createdBy → UserProfile
+
+SyncLog
+├─ id (PK)
+├─ flow (string — "AirtableMirror_Sync" | "BCSync" | "PendingBCWrites_Drain")
+├─ startedAt (datetime)
+├─ finishedAt (datetime)
+├─ rowsProcessed (int)
+├─ rowsFailed (int)
+├─ errorSummary (text — JSON list of {recordId, field, message})
+└─ runId (string — Power Automate run identifier)
 ```
+
+## Interim data source — Airtable bridge
+
+Until BC API admin access is granted, the operational tables (`Job`, `Task`, `CrewAssignment`) are populated by a Power Automate flow that mirrors the manually-maintained Airtable base `"LNI Production Schedule"` into Dataverse every 15 minutes. Apps still read/write only to Dataverse. Writes that need to reach BC are queued in `PendingBCWrites` and drained when the BC API arrives. Full field-by-field mapping, decomposition rules, and switch-over plan: **[doc 13 — Airtable Bridge](13-airtable-bridge-mapping.md)**.
 
 ## Why polymorphic Photo
 

@@ -35,18 +35,19 @@
 
 5. [docs/03-permissions-and-roles.md](docs/03-permissions-and-roles.md) — Entra ID + Dataverse role mapping
 6. [docs/04-dataverse-schema.md](docs/04-dataverse-schema.md) — shared tables + Business Central integration
+7. [docs/13-airtable-bridge-mapping.md](docs/13-airtable-bridge-mapping.md) — **interim** Airtable → Dataverse mirror until BC API access lands
 
 ### Switchboard (master shell)
 
-7. [docs/05-home-screens.md](docs/05-home-screens.md) — per-group home screen specs (KPIs, widgets, recommendations)
-8. [docs/08-splash-screen-spec.md](docs/08-splash-screen-spec.md) — splash visual + KPI strip + Days Since Lost Time counter
-9. [docs/09-weather-card-spec.md](docs/09-weather-card-spec.md) — weather chip for Installation
-10. [docs/10-crew-truck-indicator-spec.md](docs/10-crew-truck-indicator-spec.md) — 2M 1T crew/truck badge
-11. [docs/11-widget-recommendations.md](docs/11-widget-recommendations.md) — full widget catalog (MVP + Phase 6)
+8. [docs/05-home-screens.md](docs/05-home-screens.md) — per-group home screen specs (KPIs, widgets, recommendations)
+9. [docs/08-splash-screen-spec.md](docs/08-splash-screen-spec.md) — splash visual + KPI strip + Days Since Lost Time counter
+10. [docs/09-weather-card-spec.md](docs/09-weather-card-spec.md) — weather chip for Installation
+11. [docs/10-crew-truck-indicator-spec.md](docs/10-crew-truck-indicator-spec.md) — 2M 1T crew/truck badge
+12. [docs/11-widget-recommendations.md](docs/11-widget-recommendations.md) — full widget catalog (MVP + Phase 6)
 
 ### Sub-apps
 
-12. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
+13. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
 
 ## Linear hub
 
