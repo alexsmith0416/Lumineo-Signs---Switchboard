@@ -68,7 +68,7 @@ function DeltaBadge({ k }: { k: Kpi }) {
 
 export default function KpiStrip({ kpis }: Props) {
   return (
-    <div className={`kpis ${kpis.length === 3 ? "is-3" : ""}`}>
+    <>
       {kpis.map((k) => {
         const isText = k.valueFormat === "text";
         return (
@@ -82,6 +82,6 @@ export default function KpiStrip({ kpis }: Props) {
           </div>
         );
       })}
-    </div>
+    </>
   );
 }

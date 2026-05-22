@@ -339,11 +339,6 @@ button {
   overflow: visible;
 }
 
-/* Let .kpis pass its children directly into the .glance flex row */
-.glance .kpis {
-  display: contents;
-}
-
 /* ============ Safety chip (compact, branded) ============ */
 .safety {
   flex: 1 1 130px;
