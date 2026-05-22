@@ -4,29 +4,16 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V7 — JS width pin";
+const BUILD_TAG = "V8 — pixel widths";
 
-/**
- * Some Android contexts (e.g. Brave opening content:// URLs) ignore the
- * viewport meta tag and render the page at a default desktop CSS width
- * (e.g. 1311px) while the visible screen is much narrower. CSS media
- * queries match against the layout viewport, so they "work" — but the
- * actual rendered layout overflows the screen.
- *
- * Detect the mismatch and force the app's root container to the visible
- * screen width. CSS percentages inside then refer to the constrained
- * width rather than the inflated layout viewport.
- */
+/** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
   const [w, setW] = useState<number | null>(null);
-
   useEffect(() => {
     const compute = () => {
       const docW = document.documentElement.clientWidth;
       const innerW = window.innerWidth;
       const screenW = window.screen?.width ?? innerW;
-      // If JS innerWidth is way wider than the document/screen width, use
-      // the smaller. Otherwise use innerWidth (the normal case).
       const trueW =
         innerW > docW * 1.5 || innerW > screenW * 1.5
           ? Math.min(docW, screenW)
@@ -41,8 +28,31 @@ function useActualScreenWidth(): number | null {
       window.removeEventListener("orientationchange", compute);
     };
   }, []);
-
   return w;
+}
+
+/**
+ * Set explicit pixel-width CSS variables fed by the detected screen width.
+ * Avoids percentage-based widths which were misbehaving on Brave Android
+ * when the layout viewport (innerWidth) differs from the visual viewport.
+ */
+function useLayoutVars(screenW: number | null): void {
+  useEffect(() => {
+    if (screenW == null) return;
+    const root = document.documentElement.style;
+
+    // Splash content area = screen - 2*splash-padding (10px each = 20px total)
+    const contentW = Math.max(screenW - 20, 240);
+    // 2-up KPI + 6px gap
+    const kpiW = Math.floor((contentW - 6) / 2);
+    // 2-up app tile + 12px gap
+    const tileW = Math.floor((contentW - 12) / 2);
+
+    root.setProperty("--app-w", `${screenW}px`);
+    root.setProperty("--content-w", `${contentW}px`);
+    root.setProperty("--kpi-w", `${kpiW}px`);
+    root.setProperty("--tile-w", `${tileW}px`);
+  }, [screenW]);
 }
 
 function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
@@ -66,7 +76,8 @@ function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-
+  const kpiW =
+    pinnedTo != null ? Math.floor((Math.max(pinnedTo - 20, 240) - 6) / 2) : "?";
   return (
     <div
       style={{
@@ -83,7 +94,10 @@ function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
       <div style={{ fontWeight: 800, letterSpacing: 0.5 }}>BUILD {BUILD_TAG}</div>
       <div>
         innerW={dims.inner} · docW={dims.docW} · screenW={dims.screen} · dpr=
-        {dims.dpr} · pinned={pinnedTo ?? "?"}px
+        {dims.dpr}
+      </div>
+      <div>
+        pinned={pinnedTo ?? "?"}px · kpi-w={kpiW}px
       </div>
       <div style={{ opacity: 0.85 }}>UA: {dims.ua}</div>
     </div>
@@ -94,9 +108,8 @@ export default function App() {
   const [role, setRole] = useState<Role>("Operations");
   const user = usersByRole[role];
   const screenW = useActualScreenWidth();
+  useLayoutVars(screenW);
 
-  // Pin the entire app to the detected screen width so layout can't extend
-  // beyond the visible viewport even when the browser misreports innerWidth.
   const pinStyle: React.CSSProperties = screenW
     ? {
         width: `${screenW}px`,

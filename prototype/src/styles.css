@@ -338,8 +338,10 @@ button {
   gap: 6px;
 }
 
-/* KPI grid — plain flex with explicit 50% width children. Avoids CSS Grid
-   edge cases that some Android browsers handle inconsistently. */
+/* KPI grid — explicit pixel widths from JS-fed CSS variables.
+   --kpi-w is set by useLayoutVars() based on detected screen width.
+   When the var isn't set yet (initial render), fall back to calc with
+   percentages. */
 .kpi-grid {
   display: flex;
   flex-wrap: wrap;
@@ -349,22 +351,24 @@ button {
 }
 
 .kpi-grid > .kpi {
-  flex: 0 0 calc(50% - 3px);   /* exactly half row, minus half gap */
-  width: calc(50% - 3px);      /* belt-and-braces explicit width */
+  width: var(--kpi-w, calc(50% - 3px));
+  flex: 0 0 var(--kpi-w, calc(50% - 3px));
+  max-width: var(--kpi-w, calc(50% - 3px));
   min-width: 0;
-  max-width: calc(50% - 3px);
 }
 
-/* Tablet+: 4 KPIs per row */
+/* Tablet+: 4 KPIs per row — only when there's enough physical width.
+   With pixel-based --kpi-w from JS, this won't fire on phones; on real
+   tablets we still rely on the media query because screenW will be wide. */
 @media (min-width: 600px) {
   .kpi-grid > .kpi {
-    flex: 0 0 calc(25% - 4.5px);
     width: calc(25% - 4.5px);
+    flex: 0 0 calc(25% - 4.5px);
     max-width: calc(25% - 4.5px);
   }
 }
 
-/* Wider viewports: safety + KPI strip side-by-side */
+/* Wider viewports: safety + KPI grid side-by-side */
 @media (min-width: 720px) {
   .glance {
     flex-direction: row;
@@ -510,13 +514,19 @@ button {
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
-/* auto-fit lets the grid pack as many 130px+ columns as fit; on
-   narrow phones it becomes 2-col, on wider screens it becomes
-   3 / 4 / 5-col automatically — no media query needed. */
+/* Use plain flex with JS-fed --tile-w pixel widths so the layout stays
+   2-up on phone (no auto-fit ambiguity). Falls back to percent calc
+   before JS runs. */
 .applauncher {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.applauncher > .apptile {
+  width: var(--tile-w, calc(50% - 6px));
+  flex: 0 0 var(--tile-w, calc(50% - 6px));
+  max-width: var(--tile-w, calc(50% - 6px));
+  min-width: 0;
 }
 
 .apptile {
