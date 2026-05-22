@@ -37,6 +37,7 @@
 6. [docs/04-dataverse-schema.md](docs/04-dataverse-schema.md) — shared tables + Business Central integration
 7. [docs/13-airtable-bridge-mapping.md](docs/13-airtable-bridge-mapping.md) — **interim** Airtable → Dataverse mirror until BC API access lands
 8. [docs/14-bc-write-operations.md](docs/14-bc-write-operations.md) — payload schemas for the 7 queued BC write operations
+9. [docs/15-launch-contract.md](docs/15-launch-contract.md) — Switchboard ↔ sub-app `Launch()` URL/JSON contract
 
 ### Switchboard (master shell)
 
