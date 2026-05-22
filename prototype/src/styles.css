@@ -326,87 +326,90 @@ button {
   margin: 4px 0 -2px;
 }
 
-/* ============ Glance row (Safety + KPIs in one row) ============ */
+/* ============ Glance strip — single horizontal row, scrolls on narrow ============ */
 .glance {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 12px;
+  display: flex;
+  gap: 8px;
   align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding-bottom: 2px;
 }
 
-@media (max-width: 900px) {
-  .glance {
-    grid-template-columns: 1fr;
-  }
+.glance::-webkit-scrollbar {
+  height: 6px;
 }
 
-/* ============ Safety card (compact) ============ */
+.glance::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-pill);
+}
+
+/* Let .kpis pass its children directly into the .glance flex row */
+.glance .kpis {
+  display: contents;
+}
+
+/* ============ Safety chip (compact, branded) ============ */
 .safety {
+  flex: 1 1 0;
+  min-width: 150px;
   background: var(--navy);
   color: white;
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
+  justify-content: center;
+  gap: 1px;
   position: relative;
-  overflow: hidden;
   box-shadow: var(--shadow-1);
-}
-
-.safety::before {
-  content: "";
-  position: absolute;
-  top: -30%;
-  right: -20%;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  pointer-events: none;
+  min-height: 72px;
 }
 
 .safety__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: relative;
+  gap: 6px;
 }
 
 .safety__label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.72);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .safety__pill {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   background: var(--red);
   color: white;
-  padding: 2px 7px;
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
+  flex-shrink: 0;
 }
 
 .safety__value {
-  font-size: 52px;
+  font-size: 28px;
   font-weight: 800;
-  line-height: 1;
-  letter-spacing: -1.5px;
+  line-height: 1.05;
+  letter-spacing: -0.8px;
   font-variant-numeric: tabular-nums;
-  position: relative;
 }
 
 .safety__sub {
-  font-size: 11px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.2px;
-  position: relative;
 }
 
 .safety__sub strong {
@@ -414,81 +417,63 @@ button {
   font-weight: 700;
 }
 
-/* ============ KPI Strip ============ */
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.kpis.is-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-@media (max-width: 1100px) {
-  .kpis,
-  .kpis.is-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
-  .kpis,
-  .kpis.is-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* ============ KPI chip (compact, in same row as safety) ============ */
 .kpi {
+  flex: 1 1 0;
+  min-width: 130px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: center;
+  gap: 1px;
   position: relative;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  transition: border-color 0.12s ease;
   cursor: pointer;
   overflow: hidden;
-  min-height: 84px;
+  min-height: 72px;
 }
 
 .kpi:hover {
   border-color: var(--navy);
-  box-shadow: var(--shadow-1);
+}
+
+.kpi__label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi__value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
   line-height: 1.1;
 }
 
 .kpi__value--text {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--navy);
-}
-
-.kpi__label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  line-height: 1.2;
+  white-space: normal;
 }
 
 .kpi__delta {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
+  gap: 2px;
+  font-size: 10px;
   font-weight: 700;
-  margin-top: 1px;
 }
 
 .kpi__delta.is-good { color: var(--green); }
@@ -496,13 +481,7 @@ button {
 .kpi__delta.is-flat { color: var(--text-dim); }
 
 .kpi__sparkline {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 26px;
-  opacity: 0.18;
-  pointer-events: none;
+  display: none;
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
