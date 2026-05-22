@@ -13,6 +13,7 @@ import AnnouncementCard from "./AnnouncementCard";
 import BirthdayStrip from "./BirthdayStrip";
 import AppLauncher from "./AppLauncher";
 import PhotoReel from "./PhotoReel";
+import RoleWidgets from "./RoleWidgets";
 
 interface Props {
   role: Role;
@@ -33,6 +34,7 @@ export default function SplashScreen({ role }: Props) {
       ))}
       <BirthdayStrip birthdays={birthdays} />
       <AppLauncher tiles={appTiles} role={role} />
+      <RoleWidgets role={role} />
       <PhotoReel photos={photos} />
     </main>
   );
