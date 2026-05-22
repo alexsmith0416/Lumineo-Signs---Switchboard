@@ -338,27 +338,31 @@ button {
   gap: 6px;
 }
 
-/* KPI grid — inline-block layout. Rock-solid cross-browser wrap behavior.
-   --kpi-w is set by useLayoutVars() based on detected screen width. */
+/* KPI grid — FLOAT-based layout. Floats wrap automatically when items
+   don't fit horizontally. Bulletproof across every browser including the
+   weird Android content:// render contexts. */
 .kpi-grid {
-  font-size: 0;          /* eliminate inline-block whitespace gaps */
   width: 100%;
   max-width: 100%;
 }
 
+.kpi-grid::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
 .kpi-grid > .kpi {
-  /* inline-flex: flows inline (wraps when row full) BUT children stack
-     as flex column inside. Plain inline-block clobbered the inner
-     flex-direction: column and put label/value/delta on one line. */
-  display: inline-flex;
+  /* Keep internal flex column for label/value/delta stacking */
+  display: flex;
   flex-direction: column;
-  vertical-align: top;
+  float: left;
   width: var(--kpi-w, calc(50% - 3px));
   max-width: var(--kpi-w, calc(50% - 3px));
   min-width: 0;
   margin-right: 6px;
   margin-bottom: 6px;
-  font-size: 13px;       /* restore — font-size: 0 on parent zeroed it */
+  box-sizing: border-box;
 }
 
 .kpi-grid > .kpi:nth-child(2n) {
@@ -522,23 +526,28 @@ button {
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
-/* Same inline-block treatment as kpi-grid for reliable wrapping. */
+/* Same float-based layout as kpi-grid */
 .applauncher {
-  font-size: 0;
   width: 100%;
   max-width: 100%;
 }
 
+.applauncher::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
 .applauncher > .apptile {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  vertical-align: top;
+  float: left;
   width: var(--tile-w, calc(50% - 6px));
   max-width: var(--tile-w, calc(50% - 6px));
   min-width: 0;
   margin-right: 12px;
   margin-bottom: 12px;
-  font-size: 13px;
+  box-sizing: border-box;
 }
 
 .applauncher > .apptile:nth-child(2n) {

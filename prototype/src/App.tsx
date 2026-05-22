@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V11 — debug colors";
+const BUILD_TAG = "V12 — floats";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
