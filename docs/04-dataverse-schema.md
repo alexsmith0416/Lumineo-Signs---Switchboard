@@ -27,6 +27,8 @@
 | `SystemConfig` | Switchboard (Ops only) | Per-sub-app `enabled` flag + `maintenanceMessage` |
 | `PendingBCWrites` | All apps (write-only) | Queue of BC-bound writes accumulated during the Airtable-bridge interim. Drained when BC API access lands. See [doc 13](13-airtable-bridge-mapping.md). |
 | `SyncLog` | System | Diagnostic log for AirtableMirror_Sync and future BCSync flows; ≤7 day retention. |
+| `LaunchContext` | Switchboard (write), all sub-apps (read+consume) | Overflow store for sub-app launch context when payload exceeds URL budget. See [doc 15](15-launch-contract.md). |
+| `LaunchLog` | Switchboard (system) | Audit + analytics of every sub-app launch; feeds KpiSnapshot for tile-usage stats. See [doc 15](15-launch-contract.md). |
 
 ## Virtual tables (read from BC, no copy)
 
@@ -257,6 +259,26 @@ SyncLog
 ├─ rowsFailed (int)
 ├─ errorSummary (text — JSON list of {recordId, field, message})
 └─ runId (string — Power Automate run identifier)
+
+LaunchContext (overflow store when sub-app launch context exceeds URL budget — see doc 15)
+├─ id (PK)
+├─ targetApp (string — sub-app key, e.g. "ProjectScheduler")
+├─ payload (json, ≤32 KB — the full context object)
+├─ createdAt (datetime)
+├─ createdBy → UserProfile
+└─ consumedAt (datetime, nullable — set by sub-app after read; daily GC ≥24h)
+
+LaunchLog (audit + analytics of every Switchboard → sub-app launch — see doc 15)
+├─ id (PK)
+├─ userEmail (string)
+├─ impersonatedBy (string, nullable — set only on Ops-impersonated launches)
+├─ role (string — the effective role for the launch)
+├─ targetApp (string)
+├─ action (string, nullable — context.action verb if present)
+├─ contextSize (int — chars of encoded context)
+├─ usedContextRef (bool — true if payload was overflowed to LaunchContext)
+├─ launchedAt (datetime)
+└─ source (string — "tile" | "deep-link" | "chain" | "notification")
 ```
 
 ## Interim data source — Airtable bridge

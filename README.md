@@ -50,6 +50,7 @@
 ### Sub-apps
 
 14. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
+15. [docs/16-pcf-wrapping-contract.md](docs/16-pcf-wrapping-contract.md) — wrapping the three existing React apps as PCF controls
 
 ## Linear hub
 
