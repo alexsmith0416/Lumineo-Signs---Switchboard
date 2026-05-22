@@ -338,23 +338,27 @@ button {
   gap: 6px;
 }
 
-/* KPI grid — explicit pixel widths from JS-fed CSS variables.
-   --kpi-w is set by useLayoutVars() based on detected screen width.
-   When the var isn't set yet (initial render), fall back to calc with
-   percentages. */
+/* KPI grid — inline-block layout. Rock-solid cross-browser wrap behavior.
+   --kpi-w is set by useLayoutVars() based on detected screen width. */
 .kpi-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  font-size: 0;          /* eliminate inline-block whitespace gaps */
   width: 100%;
   max-width: 100%;
 }
 
 .kpi-grid > .kpi {
+  display: inline-block;
+  vertical-align: top;
   width: var(--kpi-w, calc(50% - 3px));
-  flex: 0 0 var(--kpi-w, calc(50% - 3px));
   max-width: var(--kpi-w, calc(50% - 3px));
   min-width: 0;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;       /* restore — inline-block whitespace fix zeroed it */
+}
+
+.kpi-grid > .kpi:nth-child(2n) {
+  margin-right: 0;
 }
 
 /* Tablet+: 4 KPIs per row — only when there's enough physical width.
@@ -514,19 +518,26 @@ button {
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
-/* Use plain flex with JS-fed --tile-w pixel widths so the layout stays
-   2-up on phone (no auto-fit ambiguity). Falls back to percent calc
-   before JS runs. */
+/* Same inline-block treatment as kpi-grid for reliable wrapping. */
 .applauncher {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  font-size: 0;
+  width: 100%;
+  max-width: 100%;
 }
+
 .applauncher > .apptile {
+  display: inline-block;
+  vertical-align: top;
   width: var(--tile-w, calc(50% - 6px));
-  flex: 0 0 var(--tile-w, calc(50% - 6px));
   max-width: var(--tile-w, calc(50% - 6px));
   min-width: 0;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.applauncher > .apptile:nth-child(2n) {
+  margin-right: 0;
 }
 
 .apptile {
@@ -789,18 +800,41 @@ button {
   opacity: 0.75;
 }
 
-/* ============ Role widgets — auto-fit grid, no media query gating ============ */
+/* ============ Role widgets — flex column on phone, 2-col on desktop ============ */
+/* Plain flex column avoids auto-fit grid which Brave Android evaluates
+   against the inflated layout viewport instead of the pinned container. */
 .role-grid {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
-/* When the grid resolves to multiple columns this widget spans 2;
-   at single-column widths span 2 collapses to 1 automatically. */
-.role-grid__span-2 {
-  grid-column: span 2;
+.role-grid > .widget {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
+
+/* On real desktop (when viewport is genuinely wide), switch to 2-col */
+@media (min-width: 900px) {
+  .role-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .role-grid > .widget {
+    width: calc(50% - 6px);
+    flex: 0 0 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+  }
+  .role-grid > .widget.role-grid__span-2 {
+    width: 100%;
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Defunct on phone — neutralized by the base width:100% rule above */
+.role-grid__span-2 { /* intentionally empty at base; targeted in @media */ }
 
 /* ============ Widget card ============ */
 .widget {
