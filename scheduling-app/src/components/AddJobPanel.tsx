@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
 import { useScheduleStore } from "../store/schedule-store";
-import { proposeSchedule, type ProposedSlot } from "../services/auto-schedule";
+import { proposeSchedule } from "../services/auto-schedule";
 import type { ScheduleLine } from "../engine/types";
 
 interface AddJobPanelProps {
@@ -19,64 +19,57 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
   const [mode, setMode] = useState<Mode>("single");
   const [checkedLines, setCheckedLines] = useState<Set<number>>(new Set());
   const [singleLineNo, setSingleLineNo] = useState<number | null>(null);
-  const [proposed, setProposed] = useState<ProposedSlot[] | null>(null);
 
   const employees = useScheduleStore((s) => s.employees);
   const departments = useScheduleStore((s) => s.departments);
-  const getContext = useScheduleStore((s) => s.getContext);
+  const scheduleState = useScheduleStore((s) => s.schedule);
+  const workHoursState = useScheduleStore((s) => s.workHours);
+  const overtimeState = useScheduleStore((s) => s.overtime);
   const addScheduleLine = useScheduleStore((s) => s.addScheduleLine);
 
-  const employeesByDept = useMemo(() => {
-    const out = new Map<string, typeof employees extends Map<string, infer V> ? V[] : never>();
-    for (const e of employees.values()) {
-      const list = out.get(e.departmentId) ?? [];
-      list.push(e);
-      out.set(e.departmentId, list);
+  const targetLineNos = useMemo(() => {
+    if (!selected) return new Set<number>();
+    if (mode === "single") {
+      return new Set<number>(singleLineNo !== null ? [singleLineNo] : []);
     }
-    return out;
-  }, [employees]);
+    if (mode === "multi") return new Set<number>(checkedLines);
+    return new Set<number>(selected.mappedLines.map((l) => l.lineNo));
+  }, [selected, mode, singleLineNo, checkedLines]);
 
-  const runAutoSchedule = () => {
-    if (!selected) return;
-    const ctx = getContext();
-    const slots = proposeSchedule(
+  const predictedSlots = useMemo(() => {
+    if (!selected || targetLineNos.size === 0) return null;
+    const ctx = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+    const targets = selected.mappedLines.filter((l) => targetLineNos.has(l.lineNo));
+    const preferred =
+      initialEmployeeId && mode !== "auto"
+        ? Object.fromEntries(
+            [...employees.values()]
+              .filter((e) => e.id === initialEmployeeId)
+              .map((e) => [e.departmentId, e.id]),
+          )
+        : undefined;
+    return proposeSchedule(
       {
         jobNo: selected.job.jobNo,
         customerName: selected.job.customerName,
         promisedDate: new Date(selected.job.promisedDate),
       },
-      selected.mappedLines,
+      targets,
       ctx,
-      { earliestStart: initialStart },
+      { earliestStart: initialStart, preferredEmployeeIds: preferred },
     );
-    setProposed(slots);
-  };
+  }, [selected, targetLineNos, employees, departments, scheduleState, workHoursState, overtimeState, initialStart, initialEmployeeId, mode]);
 
   const commit = async () => {
-    if (!selected) return;
-    const ctx = getContext();
-    const targets =
-      mode === "single"
-        ? selected.mappedLines.filter((l) => l.lineNo === singleLineNo)
-        : mode === "multi"
-          ? selected.mappedLines.filter((l) => checkedLines.has(l.lineNo))
-          : selected.mappedLines;
+    if (!selected || !predictedSlots) return;
 
-    const slotsToUse =
-      mode === "auto" && proposed
-        ? proposed
-        : proposeSchedule(
-            {
-              jobNo: selected.job.jobNo,
-              customerName: selected.job.customerName,
-              promisedDate: new Date(selected.job.promisedDate),
-            },
-            targets,
-            ctx,
-            { earliestStart: initialStart },
-          );
-
-    for (const slot of slotsToUse) {
+    for (const slot of predictedSlots) {
       if (!slot.employeeId || !slot.departmentId) continue;
       const newLine: ScheduleLine = {
         id: `line-${selected.job.jobNo}-${slot.lineNo}-${Date.now()}`,
@@ -112,7 +105,6 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
             onChange={(e) => {
               setQuery(e.target.value);
               setSelected(null);
-              setProposed(null);
             }}
             autoFocus
           />
@@ -156,10 +148,7 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
                 <button
                   className={mode === "auto" ? "btn-primary" : "btn-secondary"}
                   style={{ flex: 1 }}
-                  onClick={() => {
-                    setMode("auto");
-                    runAutoSchedule();
-                  }}
+                  onClick={() => setMode("auto")}
                 >
                   Auto-schedule
                 </button>
@@ -168,13 +157,8 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {selected.mappedLines.map((line) => {
                   const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
-                  const proposedSlot = proposed?.find((p) => p.lineNo === line.lineNo);
-                  const isCurrent =
-                    mode === "single"
-                      ? singleLineNo === line.lineNo
-                      : mode === "multi"
-                        ? checkedLines.has(line.lineNo)
-                        : true;
+                  const proposedSlot = predictedSlots?.find((p) => p.lineNo === line.lineNo);
+                  const isCurrent = targetLineNos.has(line.lineNo);
                   return (
                     <li
                       key={line.lineNo}

@@ -3,7 +3,14 @@ import { effectiveHours, getDayCapacity, getHoursUsedOnDay } from "./capacity";
 import type { Employee, ScheduleContext, ScheduleLine } from "./types";
 
 const DAY_START_HOUR = 8;
+const DAY_END_HOUR = 16;
 const MAX_DAYS_LOOKAHEAD = 365;
+
+function rollToNextWorkday(cursor: Date): Date {
+  const next = startOfDay(addDays(cursor, 1));
+  next.setHours(DAY_START_HOUR, 0, 0, 0);
+  return next;
+}
 
 export function calculateEndTime(
   start: Date,
@@ -18,37 +25,48 @@ export function calculateEndTime(
   let cursor = new Date(start);
   let dayCount = 0;
 
+  // Snap a pre-shift-start cursor up to the business-day start.
+  if (cursor.getHours() < DAY_START_HOUR) {
+    cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+  }
+
   while (remaining > 0 && dayCount < MAX_DAYS_LOOKAHEAD) {
+    const hoursOfDay = cursor.getHours() + cursor.getMinutes() / 60;
+    if (hoursOfDay >= DAY_END_HOUR) {
+      cursor = rollToNextWorkday(cursor);
+      dayCount++;
+      continue;
+    }
+
     const dayCapacity = getDayCapacity(employee, cursor, ctx);
     if (dayCapacity <= 0) {
-      cursor = startOfDay(addDays(cursor, 1));
-      cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+      cursor = rollToNextWorkday(cursor);
       dayCount++;
       continue;
     }
 
     const used = getHoursUsedOnDay(employee.id, cursor, ctx.schedule, ignoreLineId);
-    const free = Math.max(0, dayCapacity - used);
+    const freeCapacity = Math.max(0, dayCapacity - used);
+    const hoursUntilDayEnd = DAY_END_HOUR - hoursOfDay;
+    const available = Math.min(freeCapacity, hoursUntilDayEnd);
 
-    if (free <= 0) {
-      cursor = startOfDay(addDays(cursor, 1));
-      cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+    if (available <= 0) {
+      cursor = rollToNextWorkday(cursor);
       dayCount++;
       continue;
     }
 
-    if (remaining <= free) {
-      const hoursToday = remaining;
-      const endHour = cursor.getHours() + Math.floor(hoursToday);
-      const endMinute = cursor.getMinutes() + Math.round((hoursToday % 1) * 60);
+    if (remaining <= available) {
+      const endHours = hoursOfDay + remaining;
+      const endHour = Math.floor(endHours);
+      const endMinute = Math.round((endHours - endHour) * 60);
       const result = new Date(cursor);
       result.setHours(endHour, endMinute, 0, 0);
       return result;
     }
 
-    remaining -= free;
-    cursor = startOfDay(addDays(cursor, 1));
-    cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+    remaining -= available;
+    cursor = rollToNextWorkday(cursor);
     dayCount++;
   }
 

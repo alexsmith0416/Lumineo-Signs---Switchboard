@@ -2,6 +2,8 @@ import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek } from "date-fns";
 import { shiftTask, updateDuration } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
+import { calculateEndTime } from "../engine/time-walker";
+import { effectiveHours } from "../engine/capacity";
 import { productionDataSource } from "../services/dataverse";
 import { installationDataSource } from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
@@ -89,17 +91,34 @@ export function createScheduleStore(
         ]);
         const empMap = new Map(employees.map((e) => [e.id, e]));
         const deptMap = new Map(departments.map((d) => [d.id, d]));
-        const ctx: ScheduleContext = {
+        const ctxForNormalize: ScheduleContext = {
           employees: empMap,
           departments: deptMap,
           schedule,
           workHours,
           overtime,
         };
+        // Reconcile stored end times with engine math — handles drift from
+        // schema changes (new productivityRate column) and legacy rows.
+        const normalized = schedule.map((line) => {
+          const emp = empMap.get(line.employeeId);
+          if (!emp) return line;
+          const engineEnd = calculateEndTime(
+            line.startDateTime,
+            effectiveHours(line, emp),
+            emp,
+            ctxForNormalize,
+            line.id,
+          );
+          return engineEnd.getTime() === line.endDateTime.getTime()
+            ? line
+            : { ...line, endDateTime: engineEnd };
+        });
+        const ctx: ScheduleContext = { ...ctxForNormalize, schedule: normalized };
         set({
           employees: empMap,
           departments: deptMap,
-          schedule,
+          schedule: normalized,
           workHours,
           overtime,
           conflicts: detectConflicts(ctx),

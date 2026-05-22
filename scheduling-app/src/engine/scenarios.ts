@@ -51,7 +51,7 @@ export function runScenario(
           extraHours: change.extraHours,
           costMultiplier: change.costMultiplier ?? 1.5,
         });
-        rebuildEndTimes(scenario, movedLineIds);
+        rebuildEndTimesForEmployee(scenario, change.employeeId, movedLineIds);
         break;
       }
       case "enable-weekends": {
@@ -59,7 +59,7 @@ export function runScenario(
         if (emp) {
           scenario.employees.set(change.employeeId, { ...emp, worksWeekends: true });
         }
-        rebuildEndTimes(scenario, movedLineIds);
+        rebuildEndTimesForEmployee(scenario, change.employeeId, movedLineIds);
         break;
       }
       case "insert-rush-job": {
@@ -110,13 +110,15 @@ export function runScenario(
   };
 }
 
-function rebuildEndTimes(
+function rebuildEndTimesForEmployee(
   ctx: ScheduleContext,
+  employeeId: string,
   movedLineIds: Set<string>,
 ): void {
+  const emp = ctx.employees.get(employeeId);
+  if (!emp) return;
   for (const line of ctx.schedule) {
-    const emp = ctx.employees.get(line.employeeId);
-    if (!emp) continue;
+    if (line.employeeId !== employeeId) continue;
     const newEnd = calculateEndTime(
       line.startDateTime,
       effectiveHours(line, emp),

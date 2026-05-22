@@ -1,29 +1,43 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { useScenarioStore } from "../../store/scenario-store";
+import { useScheduleStore } from "../../store/schedule-store";
 import OvertimeForm from "./forms/OvertimeForm";
 import WeekendsForm from "./forms/WeekendsForm";
 import ShiftTaskForm from "./forms/ShiftTaskForm";
 import RushJobForm from "./forms/RushJobForm";
+import type { Employee, ScheduleLine } from "../../engine/types";
 
 type ChangeKind = "overtime" | "weekends" | "shift" | "rush" | null;
 
-function describeChange(change: ReturnType<typeof useScenarioStore.getState>["changes"][number]): string {
+function describeChange(
+  change: ReturnType<typeof useScenarioStore.getState>["changes"][number],
+  employees: Map<string, Employee>,
+  schedule: ScheduleLine[],
+): string {
+  const empName = (id: string) => employees.get(id)?.name ?? id;
+  const lineLabel = (id: string) => {
+    const l = schedule.find((s) => s.id === id);
+    return l ? `${l.jobNo} · ${l.planningLineDescription}` : id;
+  };
   switch (change.type) {
     case "shift-task":
-      return `Shift task ${change.lineId} → ${change.newStart.toLocaleString()}`;
+      return `Move "${lineLabel(change.lineId)}" → ${format(change.newStart, "EEE MMM d HH:mm")}${change.newEmployeeId ? ` (${empName(change.newEmployeeId)})` : ""}`;
     case "update-duration":
-      return `Set task ${change.lineId} to ${change.overrideHours}h`;
+      return `Set "${lineLabel(change.lineId)}" to ${change.overrideHours}h`;
     case "add-overtime":
-      return `+${change.extraHours}h OT for ${change.employeeId} on ${change.date}`;
+      return `+${change.extraHours}h OT for ${empName(change.employeeId)} on ${format(new Date(change.date), "EEE MMM d")}`;
     case "enable-weekends":
-      return `Enable weekends for ${change.employeeId}`;
+      return `Enable weekends for ${empName(change.employeeId)}`;
     case "insert-rush-job":
-      return `Insert rush job ${change.jobNo} (${change.tasks.length} tasks)`;
+      return `Insert rush job ${change.jobNo} (${change.tasks.length} tasks for ${change.customerName})`;
   }
 }
 
 export default function ChangeBuilder() {
   const { changes, removeChange } = useScenarioStore();
+  const employees = useScheduleStore((s) => s.employees);
+  const schedule = useScheduleStore((s) => s.schedule);
   const [active, setActive] = useState<ChangeKind>(null);
 
   if (active) {
@@ -51,7 +65,7 @@ export default function ChangeBuilder() {
       )}
       {changes.map((c, i) => (
         <div key={i} className="scenario-change-row">
-          <span style={{ flex: 1, fontSize: 12 }}>{describeChange(c)}</span>
+          <span style={{ flex: 1, fontSize: 12 }}>{describeChange(c, employees, schedule)}</span>
           <button className="btn-secondary" onClick={() => removeChange(i)}>
             Remove
           </button>
