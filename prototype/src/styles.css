@@ -37,8 +37,6 @@ html, body, #root {
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   color: var(--text);
   background: var(--bg);
-  max-width: 100vw;
-  overflow-x: hidden;
 }
 
 body {
@@ -47,6 +45,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 13px;
   line-height: 1.45;
+  /* overflow-x: clip prevents horizontal overflow WITHOUT creating a scroll
+     container — unlike overflow-x: hidden which on some Android browsers
+     breaks vertical scrolling. */
+  overflow-x: clip;
 }
 
 button {
@@ -62,8 +64,7 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: 100vw;
-  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* ============ Header (matches LNI Production Schedule) ============ */
@@ -337,13 +338,21 @@ button {
   gap: 6px;
 }
 
-/* KPI grid: ALWAYS a multi-column grid. Columns auto-fit between 100px min
-   and 1fr max — at 411px viewport this gives 3 columns of ~125px each,
-   at desktop it gives 4 columns equal-sized. */
+/* KPI grid — EXPLICIT 2-col on phone (minmax 0 1fr lets columns shrink
+   below child content width so long labels truncate cleanly). */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Tablet+: 4-col KPI grid (or 3 if only 3 KPIs) */
+@media (min-width: 600px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 /* Wider viewports: lay safety + KPI grid side by side instead of stacked */
