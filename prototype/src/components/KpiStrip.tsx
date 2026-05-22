@@ -2,6 +2,7 @@ import type { Kpi } from "../types";
 
 interface Props {
   kpis: Kpi[];
+  itemWidth?: number | null;
 }
 
 function formatValue(k: Kpi): string {
@@ -35,17 +36,23 @@ function DeltaBadge({ k }: { k: Kpi }) {
 // render and where they end up in the layout. Remove once layout works.
 const DEBUG_COLORS = ["#1971c2", "#2f9e44", "#e8590c", "#9c36b5"];
 
-export default function KpiStrip({ kpis }: Props) {
+export default function KpiStrip({ kpis, itemWidth }: Props) {
   return (
     <div className="kpi-grid" data-kpi-count={kpis.length}>
       {kpis.map((k, i) => {
         const isText = k.valueFormat === "text";
+        const widthStyle: React.CSSProperties = itemWidth
+          ? { width: `${itemWidth}px`, maxWidth: `${itemWidth}px` }
+          : {};
         return (
           <div
             key={k.key}
             className="kpi"
             tabIndex={0}
-            style={{ outline: `3px solid ${DEBUG_COLORS[i % DEBUG_COLORS.length]}` }}
+            style={{
+              ...widthStyle,
+              outline: `3px solid ${DEBUG_COLORS[i % DEBUG_COLORS.length]}`,
+            }}
           >
             <span className="kpi__label">
               [{i + 1}] {k.label}

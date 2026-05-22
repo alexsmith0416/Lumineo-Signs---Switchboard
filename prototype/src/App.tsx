@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V12 — floats";
+const BUILD_TAG = "V13 — inline widths";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -121,6 +121,13 @@ export default function App() {
   const screenW = useActualScreenWidth();
   useLayoutVars(screenW);
 
+  // Compute exact pixel widths to pass as inline-style props down the tree.
+  // CSS-variable approach didn't reach the renderer in Brave WebView; inline
+  // styles always take precedence and bypass any cascade weirdness.
+  const contentW = screenW ? Math.max(screenW - 20, 240) : null;
+  const kpiW = contentW ? Math.floor((contentW - 6) / 2) : null;
+  const tileW = contentW ? Math.floor((contentW - 12) / 2) : null;
+
   const pinStyle: React.CSSProperties = screenW
     ? {
         width: `${screenW}px`,
@@ -134,7 +141,7 @@ export default function App() {
     <div className="app" style={pinStyle}>
       <DebugBanner pinnedTo={screenW} />
       <Header user={user} role={role} onChangeRole={setRole} />
-      <SplashScreen role={role} />
+      <SplashScreen role={role} kpiWidth={kpiW} tileWidth={tileW} />
       <div className="footer">
         Switchboard prototype · role-switch demo · mocked data
       </div>
