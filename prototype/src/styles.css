@@ -330,18 +330,16 @@ button {
   margin: 4px 0 -2px;
 }
 
-/* ============ Glance strip — wraps to multiple rows when narrow ============ */
+/* ============ Glance strip — CSS Grid auto-fit, reflows at any width ============ */
 .glance {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
   align-items: stretch;
-  overflow: visible;
 }
 
 /* ============ Safety chip (compact, branded) ============ */
 .safety {
-  flex: 1 1 130px;
   min-width: 0;
   background: var(--navy);
   color: white;
@@ -407,7 +405,6 @@ button {
 
 /* ============ KPI chip (compact, in same row as safety) ============ */
 .kpi {
-  flex: 1 1 110px;
   min-width: 0;
   background: var(--card);
   border: 1px solid var(--border);
@@ -1220,11 +1217,13 @@ button {
     gap: 12px;
   }
 
-  /* Glance — flex-wrap on the base style handles wrapping at any width;
-     just shrink the chip sizes and fonts on phone. */
-  .glance { gap: 6px; }
+  /* Glance — narrow override: 2-col grid, safety spans top row */
+  .glance {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
   .safety {
-    flex-basis: 100%;       /* safety spans full top row on phone */
+    grid-column: 1 / -1;
     min-height: 60px;
     padding: 8px 12px;
   }
@@ -1233,9 +1232,15 @@ button {
   .safety__sub   { font-size: 10px; }
 
   .kpi {
-    flex-basis: calc(50% - 3px);   /* exactly 2 KPIs per row on phone */
     min-height: 60px;
     padding: 7px 10px;
+  }
+  /* Glance children: safety(1), kpi1(2), kpi2(3), kpi3(4), kpi4(5).
+     2-col grid with safety spanning row 1. For 3 KPIs, the last kpi is
+     at position 4 (even) — it'd be orphaned in row 3 col 1; span it to
+     fill the row. For 4 KPIs, last is at position 5 (odd), no orphan. */
+  .glance .kpi:last-child:nth-child(even) {
+    grid-column: 1 / -1;
   }
   .kpi__value { font-size: 17px; }
   .kpi__value--text { font-size: 10px; }
