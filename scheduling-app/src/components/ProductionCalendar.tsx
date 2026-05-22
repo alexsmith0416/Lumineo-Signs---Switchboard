@@ -5,6 +5,7 @@ import { dayKey, isWeekend } from "../engine/capacity";
 import type { Department, Employee, ScheduleLine } from "../engine/types";
 import JobCard from "./JobCard";
 import AddJobPanel from "./AddJobPanel";
+import EditJobPanel from "./EditJobPanel";
 
 interface ProductionCalendarProps {
   readOnly?: boolean;
@@ -28,6 +29,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot }: Pro
     start?: Date;
     employeeId?: string;
   } | null>(null);
+  const [editLineId, setEditLineId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadWeek();
@@ -66,7 +68,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot }: Pro
     if (!lineId) return;
     const newStart = new Date(day);
     newStart.setHours(8, 0, 0, 0);
-    await shiftTaskAndCommit(lineId, newStart, employeeId, false);
+    await shiftTaskAndCommit(lineId, newStart, employeeId, true);
   };
 
   if (loading) return <div className="loading">Loading schedule…</div>;
@@ -148,6 +150,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot }: Pro
                           department={departments.get(line.departmentId)}
                           conflicts={conflicts}
                           readOnly={readOnly}
+                          onClick={() => setEditLineId(line.id)}
                         />
                       ))}
                     </div>
@@ -166,6 +169,11 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot }: Pro
           onClose={() => setAddJobContext(null)}
         />
       )}
+      {editLineId && (() => {
+        const editing = schedule.find((l) => l.id === editLineId);
+        if (!editing) return null;
+        return <EditJobPanel line={editing} onClose={() => setEditLineId(null)} />;
+      })()}
     </div>
   );
 }
@@ -175,16 +183,21 @@ interface DraggableJobProps {
   department: Department | undefined;
   conflicts: ReturnType<typeof useScheduleStore.getState>["conflicts"];
   readOnly: boolean;
+  onClick: () => void;
 }
 
-function DraggableJob({ line, department, conflicts, readOnly }: DraggableJobProps) {
+function DraggableJob({ line, department, conflicts, readOnly, onClick }: DraggableJobProps) {
   return (
     <div
       draggable={!readOnly && !line.isLocked}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/lineId", line.id);
       }}
-      style={{ cursor: readOnly || line.isLocked ? "default" : "grab" }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      style={{ cursor: readOnly || line.isLocked ? "pointer" : "grab" }}
     >
       <JobCard line={line} department={department} conflicts={conflicts} />
     </div>

@@ -112,29 +112,37 @@ export function shiftTask(
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     let changedThisPass = false;
 
-    const sameEmpQueue = work.schedule
-      .filter((l) => l.employeeId === target.employeeId && l.id !== target.id && !l.isLocked)
-      .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+    const byEmployee = new Map<string, ScheduleLine[]>();
+    for (const l of work.schedule) {
+      const arr = byEmployee.get(l.employeeId) ?? [];
+      arr.push(l);
+      byEmployee.set(l.employeeId, arr);
+    }
 
-    let lastEnd = target.endDateTime;
-    for (const next of sameEmpQueue) {
-      if (next.startDateTime < lastEnd) {
-        next.startDateTime = new Date(lastEnd);
-        const nEmp = work.employees.get(next.employeeId);
-        if (nEmp) {
-          next.endDateTime = calculateEndTime(
-            next.startDateTime,
-            effectiveHours(next, nEmp),
-            nEmp,
-            work,
-            next.id,
-          );
+    for (const queue of byEmployee.values()) {
+      queue.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+      let lastEnd: Date | null = null;
+      for (const task of queue) {
+        if (lastEnd && task.startDateTime < lastEnd) {
+          if (task.id !== target.id && !task.isLocked) {
+            task.startDateTime = new Date(lastEnd);
+            const tEmp = work.employees.get(task.employeeId);
+            if (tEmp) {
+              task.endDateTime = calculateEndTime(
+                task.startDateTime,
+                effectiveHours(task, tEmp),
+                tEmp,
+                work,
+                task.id,
+              );
+            }
+            moved.add(task.id);
+            changedThisPass = true;
+          }
         }
-        moved.add(next.id);
-        changedThisPass = true;
-        lastEnd = next.endDateTime;
-      } else {
-        lastEnd = next.endDateTime > lastEnd ? next.endDateTime : lastEnd;
+        if (!lastEnd || task.endDateTime > lastEnd) {
+          lastEnd = task.endDateTime;
+        }
       }
     }
 
