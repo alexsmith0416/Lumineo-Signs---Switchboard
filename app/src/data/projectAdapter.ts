@@ -48,13 +48,34 @@ function dataverseProjectRepo(table: PowerProviderTable<DataverseColumns>): Proj
   };
 }
 
-export const activeProjectRepo: ProjectRepo = (() => {
+// Same lazy-getter pattern as the SignSpec adapter — `projectRepo`
+// re-exports `activeProjectRepo` while also defining `localProjectRepo`, so
+// resolving eagerly at module init would TDZ in the production bundle.
+let _cached: ProjectRepo | null = null;
+function getActiveRepo(): ProjectRepo {
+  if (_cached) return _cached;
   const provider = typeof window !== "undefined" ? window.PowerProvider : undefined;
   const table = provider?.tables?.SignProjects;
   if (table) {
     // eslint-disable-next-line no-console
     console.info("[Sign Builder Pro] connected to Dataverse table SignProjects");
-    return dataverseProjectRepo(table);
+    _cached = dataverseProjectRepo(table);
+  } else {
+    _cached = localProjectRepo;
   }
-  return localProjectRepo;
-})();
+  return _cached;
+}
+
+export const activeProjectRepo: ProjectRepo = {
+  list:   ()   => getActiveRepo().list(),
+  save:   (p)  => getActiveRepo().save(p),
+  load:   (id) => getActiveRepo().load(id),
+  remove: (id) => getActiveRepo().remove(id),
+};
+
+// Also surface the lazy getter for the Header backend-detection probe,
+// which needs to know *which* repo would be active without actually
+// touching it.
+export function detectProjectBackend(): "dataverse" | "local" {
+  return getActiveRepo() === localProjectRepo ? "local" : "dataverse";
+}

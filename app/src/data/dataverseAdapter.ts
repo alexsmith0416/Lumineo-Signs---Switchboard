@@ -156,17 +156,32 @@ function dataverseRepo(table: PowerProviderTable<DataverseColumns>): SignSpecRep
   };
 }
 
-// Pick the active repo once at module load. The Power Apps host injects
-// PowerProvider before our bundle runs, so this is stable per session.
-export const activeRepo: SignSpecRepo = (() => {
+// Pick the active repo on first use, not at module-init. Resolving at init
+// is what `dataverseService` would prefer, but `dataverseService` re-exports
+// `activeRepo` AND defines `localSignSpecRepo` — running the picker eagerly
+// causes a TDZ ReferenceError in the production bundle (circular import).
+// The lazy-getter pattern means both modules finish loading before the
+// fallback ever runs.
+let _cached: SignSpecRepo | null = null;
+function getActiveRepo(): SignSpecRepo {
+  if (_cached) return _cached;
   const provider = typeof window !== "undefined" ? window.PowerProvider : undefined;
   const table = provider?.tables?.SignSpecifications;
   if (table) {
     // eslint-disable-next-line no-console
     console.info("[Sign Builder Pro] connected to Dataverse table SignSpecifications");
-    return dataverseRepo(table);
+    _cached = dataverseRepo(table);
+  } else {
+    // eslint-disable-next-line no-console
+    console.info("[Sign Builder Pro] no Power Apps SDK detected — using localStorage dev fallback");
+    _cached = localSignSpecRepo;
   }
-  // eslint-disable-next-line no-console
-  console.info("[Sign Builder Pro] no Power Apps SDK detected — using localStorage dev fallback");
-  return localSignSpecRepo;
-})();
+  return _cached;
+}
+
+export const activeRepo: SignSpecRepo = {
+  list:   ()       => getActiveRepo().list(),
+  save:   (s)      => getActiveRepo().save(s),
+  load:   (id)     => getActiveRepo().load(id),
+  remove: (id)     => getActiveRepo().remove(id),
+};
