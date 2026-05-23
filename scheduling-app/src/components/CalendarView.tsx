@@ -308,8 +308,19 @@ export default function CalendarView({
       />
       <div className="calendar-toolbar">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))}>‹ Prev</button>
-        <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
+        <button
+          className="calendar-toolbar__today"
+          onClick={() => setWeekStart(new Date())}
+          disabled={
+            startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
+            startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
+          }
+          title="Jump back to this week"
+        >
+          Today
+        </button>
         <button onClick={() => setWeekStart(addDays(weekStart, 7))}>Next ›</button>
+        <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
         <div className="calendar-toolbar__spacer" />
         {toolbarExtras}
         {addAction}

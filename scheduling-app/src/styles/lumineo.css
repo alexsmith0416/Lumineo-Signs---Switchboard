@@ -187,6 +187,16 @@ input, select, textarea {
 
 .calendar-toolbar__spacer { flex: 1; }
 
+.calendar-toolbar__today {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+}
+.calendar-toolbar__today:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .calendar-grid {
   border: 1px solid var(--border);
   border-radius: 6px;
