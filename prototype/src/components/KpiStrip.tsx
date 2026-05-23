@@ -3,6 +3,7 @@ import type { Kpi } from "../types";
 interface Props {
   kpis: Kpi[];
   itemWidth?: number | null;
+  cols?: number;
 }
 
 function formatValue(k: Kpi): string {
@@ -32,15 +33,15 @@ function DeltaBadge({ k }: { k: Kpi }) {
   );
 }
 
-export default function KpiStrip({ kpis, itemWidth }: Props) {
-  // Force a real 2-col grid via inline style with explicit pixel template.
+export default function KpiStrip({ kpis, itemWidth, cols = 2 }: Props) {
+  // Force a real N-col grid via inline style with explicit pixel template.
   // Grid auto-placement automatically creates new rows when items overflow
-  // the explicit columns — no wrap dependency on flex/float behavior.
+  // the explicit columns.
   const gridStyle: React.CSSProperties = itemWidth
     ? {
         display: "grid",
-        gridTemplateColumns: `${itemWidth}px ${itemWidth}px`,
-        gap: "6px",
+        gridTemplateColumns: Array(cols).fill(`${itemWidth}px`).join(" "),
+        gap: "8px",
       }
     : {};
   return (

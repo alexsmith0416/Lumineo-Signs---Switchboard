@@ -4,15 +4,16 @@ interface Props {
   tiles: AppTile[];
   role: Role;
   itemWidth?: number | null;
+  cols?: number;
 }
 
-export default function AppLauncher({ tiles, role, itemWidth }: Props) {
+export default function AppLauncher({ tiles, role, itemWidth, cols = 2 }: Props) {
   const visible = tiles.filter((t) => t.audience.includes(role));
   const gridStyle: React.CSSProperties = itemWidth
     ? {
         display: "grid",
-        gridTemplateColumns: `${itemWidth}px ${itemWidth}px`,
-        gap: "12px",
+        gridTemplateColumns: Array(cols).fill(`${itemWidth}px`).join(" "),
+        gap: "8px",
       }
     : {};
   return (

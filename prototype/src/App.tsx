@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V15 — full width pin";
+const BUILD_TAG = "V16 — adaptive cols";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -122,11 +122,19 @@ export default function App() {
   useLayoutVars(screenW);
 
   // Compute exact pixel widths to pass as inline-style props down the tree.
-  // CSS-variable approach didn't reach the renderer in Brave WebView; inline
-  // styles always take precedence and bypass any cascade weirdness.
+  // Column count adapts to available width — landscape phone (~800px) gets
+  // 4-up KPIs and 4-up apps, portrait (~400px) gets 2-up.
   const contentW = screenW ? Math.max(screenW - 20, 240) : null;
-  const kpiW = contentW ? Math.floor((contentW - 6) / 2) : null;
-  const tileW = contentW ? Math.floor((contentW - 12) / 2) : null;
+  const kpiGap = 8;
+  const tileGap = 8;
+  const kpiCols = contentW ? (contentW >= 560 ? 4 : 2) : 2;
+  const tileCols = contentW ? (contentW >= 560 ? 5 : 2) : 2;
+  const kpiW = contentW
+    ? Math.floor((contentW - kpiGap * (kpiCols - 1)) / kpiCols)
+    : null;
+  const tileW = contentW
+    ? Math.floor((contentW - tileGap * (tileCols - 1)) / tileCols)
+    : null;
 
   const pinStyle: React.CSSProperties = screenW
     ? {
@@ -141,7 +149,14 @@ export default function App() {
     <div className="app" style={pinStyle}>
       <DebugBanner pinnedTo={screenW} />
       <Header user={user} role={role} onChangeRole={setRole} />
-      <SplashScreen role={role} kpiWidth={kpiW} tileWidth={tileW} contentW={contentW} />
+      <SplashScreen
+        role={role}
+        kpiWidth={kpiW}
+        kpiCols={kpiCols}
+        tileWidth={tileW}
+        tileCols={tileCols}
+        contentW={contentW}
+      />
       <div className="footer">
         Switchboard prototype · role-switch demo · mocked data
       </div>

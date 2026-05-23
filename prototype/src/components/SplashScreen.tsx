@@ -18,11 +18,20 @@ import RoleWidgets from "./RoleWidgets";
 interface Props {
   role: Role;
   kpiWidth: number | null;
+  kpiCols: number;
   tileWidth: number | null;
+  tileCols: number;
   contentW: number | null;
 }
 
-export default function SplashScreen({ role, kpiWidth, tileWidth, contentW }: Props) {
+export default function SplashScreen({
+  role,
+  kpiWidth,
+  kpiCols,
+  tileWidth,
+  tileCols,
+  contentW,
+}: Props) {
   const kpis = kpisByRole[role];
   const visibleAnnouncements = announcements.filter(
     (a) => a.audience === "All" || a.audience === role,
@@ -50,10 +59,10 @@ export default function SplashScreen({ role, kpiWidth, tileWidth, contentW }: Pr
     <main className="splash" style={splashStyle}>
       <section className="glance" aria-label="At-a-glance" style={fullStyle}>
         <DaysCounter safety={safetyMetric} />
-        <KpiStrip kpis={kpis} itemWidth={kpiWidth} />
+        <KpiStrip kpis={kpis} itemWidth={kpiWidth} cols={kpiCols} />
       </section>
 
-      <AppLauncher tiles={appTiles} role={role} itemWidth={tileWidth} />
+      <AppLauncher tiles={appTiles} role={role} itemWidth={tileWidth} cols={tileCols} />
 
       {visibleAnnouncements.length > 0 && (
         <div className="announcements" style={fullStyle}>
