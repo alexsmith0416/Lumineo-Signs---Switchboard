@@ -15,18 +15,35 @@ import PhotoChecklist from "./PhotoChecklist";
 interface Props {
   role: Role;
   containerWidth: number | null;
+  widgetWidth: number | null;
+  widgetCols: number;
 }
 
-export default function RoleWidgets({ role, containerWidth }: Props) {
-  // Force the role-grid to a single explicit-pixel column so widgets inside
-  // can't extend past the viewport in Brave's WebView.
-  const gridStyle: React.CSSProperties = containerWidth
-    ? {
-        display: "grid",
-        gridTemplateColumns: `${containerWidth}px`,
-        gap: "12px",
-      }
-    : {};
+export default function RoleWidgets({
+  role,
+  containerWidth,
+  widgetWidth,
+  widgetCols,
+}: Props) {
+  // Build the inline grid template from JS-computed pixel widths so layout
+  // works regardless of how the browser resolves percentages. On phone:
+  // single column of contentW. On desktop: N columns of widgetW each.
+  const gridStyle: React.CSSProperties =
+    widgetWidth && widgetCols > 0
+      ? {
+          display: "grid",
+          gridTemplateColumns: Array(widgetCols)
+            .fill(`${widgetWidth}px`)
+            .join(" "),
+          gap: "12px",
+        }
+      : containerWidth
+        ? {
+            display: "grid",
+            gridTemplateColumns: `${containerWidth}px`,
+            gap: "12px",
+          }
+        : {};
 
   switch (role) {
     case "Operations":

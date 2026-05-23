@@ -21,6 +21,8 @@ interface Props {
   kpiCols: number;
   tileWidth: number | null;
   tileCols: number;
+  widgetWidth: number | null;
+  widgetCols: number;
   contentW: number | null;
 }
 
@@ -30,6 +32,8 @@ export default function SplashScreen({
   kpiCols,
   tileWidth,
   tileCols,
+  widgetWidth,
+  widgetCols,
   contentW,
 }: Props) {
   const kpis = kpisByRole[role];
@@ -72,7 +76,12 @@ export default function SplashScreen({
         </div>
       )}
 
-      <RoleWidgets role={role} containerWidth={contentW} />
+      <RoleWidgets
+        role={role}
+        containerWidth={contentW}
+        widgetWidth={widgetWidth}
+        widgetCols={widgetCols}
+      />
 
       <BirthdayStrip birthdays={birthdays} containerWidth={contentW} />
       <PhotoReel photos={photos} containerWidth={contentW} />

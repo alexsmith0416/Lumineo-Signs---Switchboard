@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V20 — logo+text scale";
+const BUILD_TAG = "V21 — desktop layout";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -121,19 +121,31 @@ export default function App() {
   const screenW = useActualScreenWidth();
   useLayoutVars(screenW);
 
-  // Compute exact pixel widths to pass as inline-style props down the tree.
-  // Column count adapts to available width — landscape phone (~800px) gets
-  // 4-up KPIs and 4-up apps, portrait (~400px) gets 2-up.
-  const contentW = screenW ? Math.max(screenW - 20, 240) : null;
+  // Cap the content area at a comfortable max so a 1920px+ desktop screen
+  // gets centered content with generous side margins instead of stretching
+  // edge-to-edge.
+  const SPLASH_MAX = 1280;
+  const contentW = screenW
+    ? Math.min(Math.max(screenW - 20, 240), SPLASH_MAX)
+    : null;
+  const isDesktop = contentW != null && contentW >= 900;
+
   const kpiGap = 8;
   const tileGap = 8;
+  const widgetGap = 12;
+
   const kpiCols = contentW ? (contentW >= 560 ? 4 : 2) : 2;
   const tileCols = contentW ? (contentW >= 560 ? 5 : 2) : 2;
+  const roleGridCols = isDesktop ? 2 : 1;
+
   const kpiW = contentW
     ? Math.floor((contentW - kpiGap * (kpiCols - 1)) / kpiCols)
     : null;
   const tileW = contentW
     ? Math.floor((contentW - tileGap * (tileCols - 1)) / tileCols)
+    : null;
+  const widgetW = contentW
+    ? Math.floor((contentW - widgetGap * (roleGridCols - 1)) / roleGridCols)
     : null;
 
   const pinStyle: React.CSSProperties = screenW
@@ -155,6 +167,8 @@ export default function App() {
         kpiCols={kpiCols}
         tileWidth={tileW}
         tileCols={tileCols}
+        widgetWidth={widgetW}
+        widgetCols={roleGridCols}
         contentW={contentW}
       />
       <div className="footer">

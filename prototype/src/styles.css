@@ -758,37 +758,25 @@ button {
   opacity: 0.75;
 }
 
-/* ============ Role widgets — flex column on phone, 2-col on desktop ============ */
-/* Plain flex column avoids auto-fit grid which Brave Android evaluates
-   against the inflated layout viewport instead of the pinned container. */
+/* ============ Role widgets ============ */
+/* Column count + widget widths are set inline by RoleWidgets via
+   JS-computed pixel values so layout doesn't depend on the browser
+   correctly resolving percentage references. */
 .role-grid {
-  display: flex;
-  flex-direction: column;
+  /* base default — overridden inline */
+  display: grid;
   gap: 12px;
 }
 
 .role-grid > .widget {
-  width: 100%;
-  max-width: 100%;
   min-width: 0;
 }
 
-/* On real desktop (when viewport is genuinely wide), switch to 2-col */
-@media (min-width: 900px) {
-  .role-grid {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .role-grid > .widget {
-    width: calc(50% - 6px);
-    flex: 0 0 calc(50% - 6px);
-    max-width: calc(50% - 6px);
-  }
-  .role-grid > .widget.role-grid__span-2 {
-    width: 100%;
-    flex-basis: 100%;
-    max-width: 100%;
-  }
+/* When the inline grid is multi-column, widgets with this class span all
+   columns (used for Department load, Need help?, etc.). In single-column
+   mode, span 2 collapses to 1 automatically. */
+.role-grid__span-2 {
+  grid-column: 1 / -1;
 }
 
 /* Defunct on phone — neutralized by the base width:100% rule above */
