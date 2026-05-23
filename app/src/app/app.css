@@ -695,6 +695,126 @@
   background: var(--lum-green);
 }
 
+/* ============ Spec reference image ============ */
+.sbp-refimage {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  border: 1px solid var(--lum-gray-200);
+  border-radius: var(--lum-radius);
+  padding: 14px;
+  box-shadow: var(--lum-shadow-sm);
+}
+
+.sbp-refimage__thumb-wrap {
+  position: relative;
+}
+
+.sbp-refimage__thumb {
+  width: 144px;
+  height: 108px;
+  border-radius: var(--lum-radius-sm);
+  background: var(--lum-gray-50);
+  border: 1px solid var(--lum-gray-200);
+  overflow: hidden;
+  padding: 0;
+  cursor: zoom-in;
+  display: block;
+  transition: all 0.15s ease;
+}
+
+.sbp-refimage__thumb:hover {
+  border-color: var(--lum-navy);
+  transform: translateY(-1px);
+  box-shadow: var(--lum-shadow-md);
+}
+
+.sbp-refimage__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sbp-refimage__hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sbp-refimage__hint-text {
+  font-size: 11px;
+  color: var(--lum-gray-500);
+}
+
+/* ============ Full-screen modal overlay ============ */
+.sbp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 5, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  animation: sbp-modal-in 0.15s ease;
+}
+
+@keyframes sbp-modal-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sbp-modal__close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease;
+}
+
+.sbp-modal__close:hover {
+  background: rgba(255,255,255,0.22);
+}
+
+.sbp-modal__figure {
+  margin: 0;
+  max-width: min(1080px, 95vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.sbp-modal__img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: var(--lum-radius);
+  background: white;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+}
+
+.sbp-modal__caption {
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-align: center;
+  max-width: 60ch;
+}
+
 /* ============ Misc ============ */
 .sbp-empty {
   padding: 48px 24px;

@@ -63,14 +63,16 @@ export type SignSpec = {
   // step 9
   mounting: MountingCode;
 
-  // steps 10/11/12 — cabinet-mount only
-  poleType: string;
+  // steps 10/11/12 — MN/PS/PP only
+  poleType: string;          // "New Pole" | "Existing Pole" | "No Pole"
   poleDiameter: string;
   poleMaterial: string;
-  footingType: string;
+  footingType: string;       // "New Footing / Excavation" | "Existing Footing"
+  footingDepth: string;      // depth in inches
   footingMethod: string;
-  electrical: string;
+  electrical: string;        // "New Conduit Required" | "Existing Conduit" | "No Electrical"
   conduitSize: string;
+  panelLocation: string;
 
   // notes + routing
   notes: string;
@@ -106,9 +108,11 @@ export function emptySignSpec(): SignSpec {
     poleDiameter: "",
     poleMaterial: "",
     footingType: "",
+    footingDepth: "",
     footingMethod: "",
     electrical: "",
     conduitSize: "",
+    panelLocation: "",
     notes: "",
     departments: "",
   };

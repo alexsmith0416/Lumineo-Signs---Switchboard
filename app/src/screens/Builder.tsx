@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSpec } from "../app/SpecContext";
-import { SIGN_TYPES, getSignType, isLetter, isPan } from "../domain/signTypes";
+import { SIGN_TYPES, getSignType, isLetter, isPan, POLE_FOOTING_TYPES } from "../domain/signTypes";
+import type { SignTypeCode } from "../domain/signTypes";
 import { Banner } from "../ui/Banner";
 import { Step1SignType } from "../builder/steps/Step1SignType";
 import { Step1bFabrication } from "../builder/steps/Step1bFabrication";
@@ -13,7 +14,11 @@ import { Step6bRoutedBacker } from "../builder/steps/Step6bRoutedBacker";
 import { Step7Finish } from "../builder/steps/Step7Finish";
 import { Step8Vinyl } from "../builder/steps/Step8Vinyl";
 import { Step9Mounting } from "../builder/steps/Step9Mounting";
+import { Step10Pole } from "../builder/steps/Step10Pole";
+import { Step11Footing } from "../builder/steps/Step11Footing";
+import { Step12Electrical } from "../builder/steps/Step12Electrical";
 import { SpecSummary } from "../builder/SpecSummary";
+import { SpecReferenceImage } from "../builder/SpecReferenceImage";
 
 export function Builder() {
   const { spec, recent, loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml } = useSpec();
@@ -149,6 +154,18 @@ export function Builder() {
           {spec.faceType && !spec.outsourced ? <Step7Finish /> : null}
           {spec.faceType ? <Step8Vinyl /> : null}
           {spec.faceType ? <Step9Mounting /> : null}
+
+          {/* Steps 10/11/12 — ground-mount cabinets only (MN/PS/PP), once mounting is set */}
+          {POLE_FOOTING_TYPES.includes(spec.signTypeCode as SignTypeCode) && spec.mounting ? (
+            <>
+              <Step10Pole />
+              <Step11Footing />
+              <Step12Electrical />
+            </>
+          ) : null}
+
+          {/* Spec reference image — once a face type is picked */}
+          {spec.faceType ? <SpecReferenceImage /> : null}
 
           {!spec.signTypeCode ? (
             <div className="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>

@@ -195,6 +195,13 @@ export function SpecProvider({ children }: { children: ReactNode }) {
       ["VINYL",       liveSpec.vinyl || "—"],
       ["VINYL COLOR", liveSpec.vinylColor || "—"],
       ["MOUNTING",    liveSpec.mounting || "—"],
+      // Pole / footing / electrical only printed for ground-mount cabinets.
+      ["POLE",        liveSpec.poleType || "—"],
+      ["POLE SPEC",   [liveSpec.poleDiameter, liveSpec.poleMaterial].filter(Boolean).join(" · ") || "—"],
+      ["FOOTING",     liveSpec.footingType || "—"],
+      ["FOOTING SPEC", [liveSpec.footingDepth ? `${liveSpec.footingDepth}in` : "", liveSpec.footingMethod].filter(Boolean).join(" · ") || "—"],
+      ["ELECTRICAL",  liveSpec.electrical || "—"],
+      ["ELECTRICAL SPEC", [liveSpec.conduitSize, liveSpec.panelLocation].filter(Boolean).join(" · ") || "—"],
       ["DEPARTMENTS", liveSpec.departments || "—"],
       ["NOTES",       liveSpec.notes || "—"],
     ];
