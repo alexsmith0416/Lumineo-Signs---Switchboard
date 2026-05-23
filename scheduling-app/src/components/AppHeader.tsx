@@ -1,10 +1,25 @@
 interface AppHeaderProps {
   title: string;
+  onMenu?: () => void;
 }
 
-export default function AppHeader({ title }: AppHeaderProps) {
+export default function AppHeader({ title, onMenu }: AppHeaderProps) {
   return (
     <header className="app-header">
+      {onMenu && (
+        <button
+          className="app-header__menu"
+          aria-label="Open menu"
+          onClick={onMenu}
+          type="button"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <line x1="4" y1="7" x2="20" y2="7" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="17" x2="20" y2="17" />
+          </svg>
+        </button>
+      )}
       <div className="app-header__logo">
         <div className="app-header__logo-text">
           <span className="lumineo">LUMINEO</span>

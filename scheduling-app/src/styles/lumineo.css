@@ -57,10 +57,10 @@ input, select, textarea {
 .app-shell {
   display: grid;
   grid-template-rows: 48px 1fr;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 1fr;
   grid-template-areas:
-    "header header"
-    "sidebar main";
+    "header"
+    "main";
   height: 100vh;
 }
 
@@ -71,7 +71,22 @@ input, select, textarea {
   display: flex;
   align-items: center;
   padding: 0 12px;
-  gap: 16px;
+  gap: 12px;
+}
+
+.app-header__menu {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.app-header__menu:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .app-header__logo {
@@ -119,42 +134,100 @@ input, select, textarea {
 
 .app-header__action:hover { filter: brightness(1.1); }
 
-.app-sidebar {
-  grid-area: sidebar;
-  background: var(--bg-tertiary);
-  border-right: 1px solid var(--border);
-  padding: 12px 0;
-  display: flex;
-  flex-direction: column;
+/* ============ Nav drawer (hamburger menu) ============ */
+
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 100, 0.32);
+  z-index: 200;
+  animation: nav-drawer-fade 0.18s ease-out;
 }
 
-.app-sidebar__item {
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 86vw;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  animation: nav-drawer-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 201;
+}
+
+.nav-drawer__header {
+  background: var(--lumineo-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  min-height: 48px;
+}
+
+.nav-drawer__close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.nav-drawer__close:hover { background: rgba(255, 255, 255, 0.12); }
+
+.nav-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.nav-drawer__group { padding: 6px 0; }
+
+.nav-drawer__group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding: 6px 18px 4px;
+  font-weight: 600;
+}
+
+.nav-drawer__item {
+  display: block;
+  width: 100%;
   background: transparent;
   border: none;
   text-align: left;
-  padding: 10px 16px;
-  color: var(--text-primary);
+  padding: 11px 18px;
+  font-size: 14px;
   font-weight: 500;
+  color: var(--text-primary);
   border-left: 3px solid transparent;
+  cursor: pointer;
 }
-
-.app-sidebar__item--active {
-  background: var(--bg-primary);
+.nav-drawer__item:hover {
+  background: var(--bg-tertiary);
+}
+.nav-drawer__item--active {
+  background: var(--bg-tertiary);
   border-left-color: var(--lumineo-navy);
   color: var(--lumineo-navy);
+  font-weight: 700;
 }
 
-.app-sidebar__divider {
-  margin: 8px 12px;
-  border-top: 1px solid var(--border);
+@keyframes nav-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
-.app-sidebar__section-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-tertiary);
-  padding: 4px 16px;
+@keyframes nav-drawer-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 .app-main {
@@ -200,11 +273,9 @@ input, select, textarea {
 .calendar-grid {
   border: 1px solid var(--border);
   border-radius: 6px;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: auto;
   background: var(--bg-primary);
   position: relative;
-  -webkit-overflow-scrolling: touch;
 }
 
 .calendar-header-row {
@@ -243,19 +314,24 @@ input, select, textarea {
 
 .dept-header {
   font-weight: 600;
-  /* Colored bar — height set by inner label's padding. */
+  /* Background color is set via inline style per-department. The label
+     inside repeats the color via its own inline style so the sticky
+     left chip carries a solid color, not transparent. */
 }
 
 .dept-header__label {
   position: sticky;
   left: 0;
   z-index: 5;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: inherit;
-  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
+  padding: 6px 14px;
+  /* background-color comes from inline style; never inherit */
+  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18);
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
+  min-width: 140px;
+  box-sizing: border-box;
 }
 
 .employee-row {
@@ -657,19 +733,21 @@ input, select, textarea {
   body { font-size: 12px; }
 
   .app-shell {
-    grid-template-rows: 44px auto 1fr;
+    grid-template-rows: 44px 1fr;
     grid-template-columns: 1fr;
     grid-template-areas:
       "header"
-      "sidebar"
       "main";
     height: 100vh;
   }
 
   .app-header {
     height: 44px;
-    padding: 0 8px;
+    padding: 0 6px;
     gap: 8px;
+  }
+  .app-header__menu {
+    padding: 4px;
   }
   .app-header__logo { padding: 3px 7px; }
   .app-header__logo-text .lumineo { font-size: 12px; }
@@ -685,43 +763,6 @@ input, select, textarea {
     width: 28px;
     height: 28px;
     font-size: 14px;
-  }
-
-  /* Sidebar becomes a horizontal tab strip that scrolls left/right. */
-  .app-sidebar {
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 6px 8px;
-    gap: 4px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-secondary);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .app-sidebar::-webkit-scrollbar { display: none; }
-  .app-sidebar__section-label { display: none; }
-  .app-sidebar__divider {
-    width: 1px;
-    height: 22px;
-    margin: 0 4px;
-    border-top: none;
-    border-left: 1px solid var(--border);
-    align-self: center;
-  }
-  .app-sidebar__item {
-    padding: 6px 10px;
-    border-left: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .app-sidebar__item--active {
-    background: var(--bg-primary);
-    border-left-color: transparent;
-    border-bottom-color: var(--lumineo-navy);
   }
 
   .app-main {

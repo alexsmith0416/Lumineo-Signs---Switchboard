@@ -345,7 +345,7 @@ export default function CalendarView({
         {grouped.map(({ dept, emps }) => (
           <div key={dept.id} className="dept-section">
             <div className="dept-header" style={{ background: dept.color }}>
-              <div className="dept-header__label">
+              <div className="dept-header__label" style={{ background: dept.color }}>
                 <span>{dept.name}</span>
                 <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
                   flow {dept.flowOrder} · {peopleNoun(emps.length)}

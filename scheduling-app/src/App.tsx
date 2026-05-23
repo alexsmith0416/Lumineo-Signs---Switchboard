@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppHeader from "./components/AppHeader";
+import NavDrawer from "./components/NavDrawer";
 import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
 import ShippingCalendar from "./components/ShippingCalendar";
@@ -16,48 +17,29 @@ const VIEW_TITLES: Record<View, string> = {
   monthly: "Monthly Install Plan",
 };
 
+const NAV_ITEMS = [
+  { id: "production", label: "Production", group: "Schedules" },
+  { id: "installation", label: "Installation", group: "Schedules" },
+  { id: "shipping", label: "Shipping", group: "Schedules" },
+  { id: "monthly", label: "Monthly Plan", group: "Planning" },
+  { id: "scenario", label: "Scenarios", group: "Planning" },
+];
+
 export default function App() {
   const [view, setView] = useState<View>("production");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div className="app-shell">
-      <AppHeader title={VIEW_TITLES[view]} />
+      <AppHeader title={VIEW_TITLES[view]} onMenu={() => setDrawerOpen(true)} />
 
-      <nav className="app-sidebar">
-        <div className="app-sidebar__section-label">Schedules</div>
-        <button
-          className={`app-sidebar__item${view === "production" ? " app-sidebar__item--active" : ""}`}
-          onClick={() => setView("production")}
-        >
-          Production
-        </button>
-        <button
-          className={`app-sidebar__item${view === "installation" ? " app-sidebar__item--active" : ""}`}
-          onClick={() => setView("installation")}
-        >
-          Installation
-        </button>
-        <button
-          className={`app-sidebar__item${view === "shipping" ? " app-sidebar__item--active" : ""}`}
-          onClick={() => setView("shipping")}
-        >
-          Shipping
-        </button>
-        <div className="app-sidebar__divider" />
-        <div className="app-sidebar__section-label">Planning</div>
-        <button
-          className={`app-sidebar__item${view === "monthly" ? " app-sidebar__item--active" : ""}`}
-          onClick={() => setView("monthly")}
-        >
-          Monthly Plan
-        </button>
-        <button
-          className={`app-sidebar__item${view === "scenario" ? " app-sidebar__item--active" : ""}`}
-          onClick={() => setView("scenario")}
-        >
-          Scenarios
-        </button>
-      </nav>
+      <NavDrawer
+        open={drawerOpen}
+        current={view}
+        items={NAV_ITEMS}
+        onSelect={(id) => setView(id as View)}
+        onClose={() => setDrawerOpen(false)}
+      />
 
       <main className="app-main">
         {view === "production" && (

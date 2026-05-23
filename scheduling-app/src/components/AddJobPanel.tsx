@@ -1,31 +1,39 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
-import { useScheduleStore } from "../store/schedule-store";
+import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import { proposeSchedule } from "../services/auto-schedule";
+import { calculateEndTime } from "../engine/time-walker";
+import { effectiveHours } from "../engine/capacity";
 import type { ScheduleLine } from "../engine/types";
 
 interface AddJobPanelProps {
   onClose: () => void;
   initialStart?: Date;
   initialEmployeeId?: string;
+  useStore?: UseScheduleStore;
 }
 
 type Mode = "single" | "multi" | "auto";
 
-export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }: AddJobPanelProps) {
+export default function AddJobPanel({
+  onClose,
+  initialStart,
+  initialEmployeeId,
+  useStore = useScheduleStore,
+}: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
   const [mode, setMode] = useState<Mode>("single");
   const [checkedLines, setCheckedLines] = useState<Set<number>>(new Set());
   const [singleLineNo, setSingleLineNo] = useState<number | null>(null);
 
-  const employees = useScheduleStore((s) => s.employees);
-  const departments = useScheduleStore((s) => s.departments);
-  const scheduleState = useScheduleStore((s) => s.schedule);
-  const workHoursState = useScheduleStore((s) => s.workHours);
-  const overtimeState = useScheduleStore((s) => s.overtime);
-  const addScheduleLine = useScheduleStore((s) => s.addScheduleLine);
+  const employees = useStore((s) => s.employees);
+  const departments = useStore((s) => s.departments);
+  const scheduleState = useStore((s) => s.schedule);
+  const workHoursState = useStore((s) => s.workHours);
+  const overtimeState = useStore((s) => s.overtime);
+  const addScheduleLine = useStore((s) => s.addScheduleLine);
 
   const targetLineNos = useMemo(() => {
     if (!selected) return new Set<number>();
@@ -67,12 +75,78 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
   }, [selected, targetLineNos, employees, departments, scheduleState, workHoursState, overtimeState, initialStart, initialEmployeeId, mode]);
 
   const commit = async () => {
-    if (!selected || !predictedSlots) return;
+    if (!selected) return;
 
+    const targets =
+      mode === "single" && singleLineNo !== null
+        ? selected.mappedLines.filter((l) => l.lineNo === singleLineNo)
+        : mode === "multi"
+          ? selected.mappedLines.filter((l) => checkedLines.has(l.lineNo))
+          : selected.mappedLines;
+
+    if (targets.length === 0) return;
+
+    const ctxForEngine = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+
+    // Cell-click flow (single/multi mode with a preset employee): respect
+    // the clicked resource verbatim. Skip proposeSchedule's department
+    // matching — useful for installation/shipping where the resource's
+    // "department" is a base location, not a flow step that maps from a BC
+    // planning-line keyword.
+    if (initialEmployeeId && mode !== "auto") {
+      const emp = employees.get(initialEmployeeId);
+      if (!emp) return;
+
+      let cursor = initialStart ? new Date(initialStart) : new Date();
+      if (cursor.getHours() < 8) cursor.setHours(8, 0, 0, 0);
+
+      for (const line of targets) {
+        const tempLine: ScheduleLine = {
+          id: "tmp",
+          jobNo: selected.job.jobNo,
+          customerName: selected.job.customerName,
+          planningLineDescription: line.description,
+          startDateTime: cursor,
+          endDateTime: cursor,
+          estimatedHours: line.estimatedHours,
+          overrideHours: null,
+          employeeId: initialEmployeeId,
+          departmentId: emp.departmentId,
+          customerDueDate: new Date(selected.job.promisedDate),
+          isLocked: false,
+          jobSequence: line.lineNo,
+        };
+        const end = calculateEndTime(
+          cursor,
+          effectiveHours(tempLine, emp),
+          emp,
+          ctxForEngine,
+        );
+
+        const newLine: ScheduleLine = {
+          ...tempLine,
+          id: `line-${selected.job.jobNo}-${line.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          endDateTime: end,
+        };
+        await addScheduleLine(newLine);
+        cursor = new Date(end);
+      }
+      onClose();
+      return;
+    }
+
+    // Auto-mode (or no preset employee): use the proposed-schedule output.
+    if (!predictedSlots) return;
     for (const slot of predictedSlots) {
       if (!slot.employeeId || !slot.departmentId) continue;
       const newLine: ScheduleLine = {
-        id: `line-${selected.job.jobNo}-${slot.lineNo}-${Date.now()}`,
+        id: `line-${selected.job.jobNo}-${slot.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         jobNo: selected.job.jobNo,
         customerName: selected.job.customerName,
         planningLineDescription: slot.description,
@@ -80,7 +154,7 @@ export default function AddJobPanel({ onClose, initialStart, initialEmployeeId }
         endDateTime: slot.end,
         estimatedHours: slot.estimatedHours,
         overrideHours: null,
-        employeeId: initialEmployeeId && mode !== "auto" ? initialEmployeeId : slot.employeeId,
+        employeeId: slot.employeeId,
         departmentId: slot.departmentId,
         customerDueDate: new Date(selected.job.promisedDate),
         isLocked: false,

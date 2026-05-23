@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { addDays } from "date-fns";
 import {
   useInstallationStoreNEK,
   useInstallationStoreWK,
 } from "../store/schedule-store";
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
+import AddJobPanel from "./AddJobPanel";
 
 export const MONTHLY_INSTALL_GOAL = 1_100_000;
 
@@ -15,8 +17,13 @@ export default function InstallationCalendar() {
   const [showInvoice, setShowInvoice] = useState(true);
   const [showWeather, setShowWeather] = useState(true);
   const [showCrew, setShowCrew] = useState(true);
+  const [addJobContext, setAddJobContext] = useState<{
+    start?: Date;
+    employeeId?: string;
+  } | null>(null);
 
   const useStore = region === "WK" ? useInstallationStoreWK : useInstallationStoreNEK;
+  const weekStart = useStore((s) => s.weekStart);
 
   // Ensure both stores have loaded so the combined billing stat can be
   // computed accurately regardless of which region is currently displayed.
@@ -79,21 +86,43 @@ export default function InstallationCalendar() {
   );
 
   return (
-    <CalendarView
-      useStore={useStore}
-      kindMeta={{
-        ...KIND_META.installation,
-        title: `Installation Scheduling · ${region}`,
-      }}
-      cardLayout="stacked"
-      showInvoice={showInvoice}
-      showCrewBadge={showCrew}
-      showWeather={showWeather}
-      showBillingStats={showInvoice}
-      monthlyGoal={showInvoice ? MONTHLY_INSTALL_GOAL : undefined}
-      combinedBillingThisWeek={showInvoice ? combinedThisWeek : undefined}
-      toolbarExtras={toolbar}
-    />
+    <>
+      <CalendarView
+        useStore={useStore}
+        kindMeta={{
+          ...KIND_META.installation,
+          title: `Installation Scheduling · ${region}`,
+        }}
+        cardLayout="stacked"
+        showInvoice={showInvoice}
+        showCrewBadge={showCrew}
+        showWeather={showWeather}
+        showBillingStats={showInvoice}
+        monthlyGoal={showInvoice ? MONTHLY_INSTALL_GOAL : undefined}
+        combinedBillingThisWeek={showInvoice ? combinedThisWeek : undefined}
+        toolbarExtras={toolbar}
+        addAction={
+          <button
+            onClick={() =>
+              setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
+            }
+          >
+            + Add Job
+          </button>
+        }
+        onEmptyCellClick={({ start, employeeId }) =>
+          setAddJobContext({ start, employeeId })
+        }
+      />
+      {addJobContext && (
+        <AddJobPanel
+          initialStart={addJobContext.start}
+          initialEmployeeId={addJobContext.employeeId}
+          onClose={() => setAddJobContext(null)}
+          useStore={useStore}
+        />
+      )}
+    </>
   );
 }
 
