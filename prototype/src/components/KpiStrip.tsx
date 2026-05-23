@@ -32,10 +32,6 @@ function DeltaBadge({ k }: { k: Kpi }) {
   );
 }
 
-// DEBUG: temporary border colors per index so we can see if all KPIs
-// render and where they end up in the layout. Remove once layout works.
-const DEBUG_COLORS = ["#1971c2", "#2f9e44", "#e8590c", "#9c36b5"];
-
 export default function KpiStrip({ kpis, itemWidth }: Props) {
   // Force a real 2-col grid via inline style with explicit pixel template.
   // Grid auto-placement automatically creates new rows when items overflow
@@ -48,21 +44,12 @@ export default function KpiStrip({ kpis, itemWidth }: Props) {
       }
     : {};
   return (
-    <div className="kpi-grid" data-kpi-count={kpis.length} style={gridStyle}>
-      {kpis.map((k, i) => {
+    <div className="kpi-grid" style={gridStyle}>
+      {kpis.map((k) => {
         const isText = k.valueFormat === "text";
         return (
-          <div
-            key={k.key}
-            className="kpi"
-            tabIndex={0}
-            style={{
-              outline: `3px solid ${DEBUG_COLORS[i % DEBUG_COLORS.length]}`,
-            }}
-          >
-            <span className="kpi__label">
-              [{i + 1}] {k.label}
-            </span>
+          <div key={k.key} className="kpi" tabIndex={0}>
+            <span className="kpi__label">{k.label}</span>
             <span className={`kpi__value ${isText ? "kpi__value--text" : ""}`}>
               {formatValue(k)}
             </span>

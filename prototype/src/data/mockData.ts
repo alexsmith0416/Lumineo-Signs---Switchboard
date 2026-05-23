@@ -30,10 +30,10 @@ export const safetyMetric: SafetyMetric = {
 
 export const kpisByRole: Record<Role, Kpi[]> = {
   Operations: [
-    { key: "revenue_this_week",  label: "Revenue This Week",  value: 84200,  valueFormat: "currency", delta: 12, deltaDirection: "up",   deltaIsGood: true,  sparkline: [62, 68, 71, 76, 73, 79, 84] },
-    { key: "open_jobs",          label: "Open Jobs",          value: 17,     valueFormat: "int",      delta: 2,  deltaDirection: "up",   deltaIsGood: false, sparkline: [14, 15, 15, 16, 16, 17, 17] },
-    { key: "jobs_at_risk",       label: "Jobs At Risk",       value: 3,      valueFormat: "int",      delta: 1,  deltaDirection: "up",   deltaIsGood: false, sparkline: [1, 2, 2, 2, 3, 3, 3] },
-    { key: "hours_logged_today", label: "Hours Today",        value: 142,    valueFormat: "hours",    delta: 6,  deltaDirection: "down", deltaIsGood: false, sparkline: [148, 151, 145, 152, 149, 148, 142] },
+    { key: "dip_avg_days",      label: "Avg Days Job Open (DIP)",  value: 32,       valueFormat: "int",      delta: 3,  deltaDirection: "down", deltaIsGood: true,  sparkline: [38, 36, 35, 34, 33, 33, 32] },
+    { key: "value_open_jobs",   label: "Value of Open Jobs",        value: 1247800,  valueFormat: "currency", delta: 8,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [980, 1020, 1080, 1140, 1180, 1210, 1248] },
+    { key: "gm_pct_april",      label: "GM % — April",              value: 34.2,     valueFormat: "percent",  delta: 2,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [30, 31, 32, 33, 33.5, 34, 34.2] },
+    { key: "gm_pct_ytd",        label: "GM % — YTD",                value: 31.8,     valueFormat: "percent",  delta: 1,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [29, 29.5, 30, 30.5, 31, 31.5, 31.8] },
   ],
   Sales: [
     { key: "my_open_opportunities", label: "My Opportunities", value: 11,     valueFormat: "int",      delta: 3,  deltaDirection: "up", deltaIsGood: true, sparkline: [6, 7, 8, 9, 9, 10, 11] },

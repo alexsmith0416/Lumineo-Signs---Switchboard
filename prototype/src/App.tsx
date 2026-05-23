@@ -4,7 +4,7 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V14 — explicit grid";
+const BUILD_TAG = "V15 — full width pin";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -141,7 +141,7 @@ export default function App() {
     <div className="app" style={pinStyle}>
       <DebugBanner pinnedTo={screenW} />
       <Header user={user} role={role} onChangeRole={setRole} />
-      <SplashScreen role={role} kpiWidth={kpiW} tileWidth={tileW} />
+      <SplashScreen role={role} kpiWidth={kpiW} tileWidth={tileW} contentW={contentW} />
       <div className="footer">
         Switchboard prototype · role-switch demo · mocked data
       </div>

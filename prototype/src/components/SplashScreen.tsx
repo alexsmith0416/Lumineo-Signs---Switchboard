@@ -19,17 +19,36 @@ interface Props {
   role: Role;
   kpiWidth: number | null;
   tileWidth: number | null;
+  contentW: number | null;
 }
 
-export default function SplashScreen({ role, kpiWidth, tileWidth }: Props) {
+export default function SplashScreen({ role, kpiWidth, tileWidth, contentW }: Props) {
   const kpis = kpisByRole[role];
   const visibleAnnouncements = announcements.filter(
     (a) => a.audience === "All" || a.audience === role,
   );
 
+  // Force every direct child of .splash to be exactly contentW pixels wide
+  // via a single-column grid. Combined with the explicit pixel widths inside
+  // KpiStrip/AppLauncher, this means nothing inside .splash can overflow
+  // horizontally regardless of how the Brave WebView resolves widths.
+  const splashStyle: React.CSSProperties = contentW
+    ? {
+        display: "grid",
+        gridTemplateColumns: `${contentW}px`,
+        gap: "12px",
+        margin: "0 auto",
+        padding: "10px 0 24px",
+      }
+    : {};
+
+  const fullStyle: React.CSSProperties = contentW
+    ? { width: `${contentW}px`, maxWidth: `${contentW}px` }
+    : {};
+
   return (
-    <main className="splash">
-      <section className="glance" aria-label="At-a-glance">
+    <main className="splash" style={splashStyle}>
+      <section className="glance" aria-label="At-a-glance" style={fullStyle}>
         <DaysCounter safety={safetyMetric} />
         <KpiStrip kpis={kpis} itemWidth={kpiWidth} />
       </section>
@@ -37,17 +56,17 @@ export default function SplashScreen({ role, kpiWidth, tileWidth }: Props) {
       <AppLauncher tiles={appTiles} role={role} itemWidth={tileWidth} />
 
       {visibleAnnouncements.length > 0 && (
-        <div className="announcements">
+        <div className="announcements" style={fullStyle}>
           {visibleAnnouncements.map((a) => (
             <AnnouncementCard key={a.id} announcement={a} />
           ))}
         </div>
       )}
 
-      <RoleWidgets role={role} />
+      <RoleWidgets role={role} containerWidth={contentW} />
 
-      <BirthdayStrip birthdays={birthdays} />
-      <PhotoReel photos={photos} />
+      <BirthdayStrip birthdays={birthdays} containerWidth={contentW} />
+      <PhotoReel photos={photos} containerWidth={contentW} />
     </main>
   );
 }

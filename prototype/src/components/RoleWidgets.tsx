@@ -14,15 +14,26 @@ import PhotoChecklist from "./PhotoChecklist";
 
 interface Props {
   role: Role;
+  containerWidth: number | null;
 }
 
-export default function RoleWidgets({ role }: Props) {
+export default function RoleWidgets({ role, containerWidth }: Props) {
+  // Force the role-grid to a single explicit-pixel column so widgets inside
+  // can't extend past the viewport in Brave's WebView.
+  const gridStyle: React.CSSProperties = containerWidth
+    ? {
+        display: "grid",
+        gridTemplateColumns: `${containerWidth}px`,
+        gap: "12px",
+      }
+    : {};
+
   switch (role) {
     case "Operations":
       return (
         <>
           <div className="section-label">Operations dashboard</div>
-          <div className="role-grid role-grid--ops">
+          <div className="role-grid role-grid--ops" style={gridStyle}>
             <WidgetCard title="Department load" subtitle="hours scheduled this week" className="role-grid__span-2">
               <BarList rows={opsWidgets.deptLoad} />
             </WidgetCard>
@@ -40,7 +51,7 @@ export default function RoleWidgets({ role }: Props) {
       return (
         <>
           <div className="section-label">Sales dashboard</div>
-          <div className="role-grid role-grid--sales">
+          <div className="role-grid role-grid--sales" style={gridStyle}>
             <WidgetCard title="My pipeline" subtitle="by stage · count + value">
               <BarList rows={salesWidgets.pipeline} />
             </WidgetCard>
@@ -61,7 +72,7 @@ export default function RoleWidgets({ role }: Props) {
       return (
         <>
           <div className="section-label">Today on the floor</div>
-          <div className="role-grid role-grid--prod">
+          <div className="role-grid role-grid--prod" style={gridStyle}>
             <WidgetCard title="Today's tasks" subtitle="tap to clock in" action="My week">
               <ListWidget items={productionWidgets.todaysTasks} />
             </WidgetCard>
@@ -79,7 +90,7 @@ export default function RoleWidgets({ role }: Props) {
       return (
         <>
           <div className="section-label">Today's route</div>
-          <div className="role-grid role-grid--install">
+          <div className="role-grid role-grid--install" style={gridStyle}>
             <WidgetCard title="Today's stops" subtitle="tap for maps + job detail" action="Open in maps" className="role-grid__span-2">
               <RouteWidget stops={installationWidgets.route} />
             </WidgetCard>
@@ -97,7 +108,7 @@ export default function RoleWidgets({ role }: Props) {
       return (
         <>
           <div className="section-label">Shipping floor</div>
-          <div className="role-grid role-grid--ship">
+          <div className="role-grid role-grid--ship" style={gridStyle}>
             <WidgetCard title="Ready-to-ship queue" subtitle={`${shippingWidgets.readyToShip.length} crates staged`} action="Print labels">
               <ListWidget items={shippingWidgets.readyToShip} />
             </WidgetCard>

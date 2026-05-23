@@ -2,11 +2,15 @@ import type { Photo } from "../types";
 
 interface Props {
   photos: Photo[];
+  containerWidth?: number | null;
 }
 
-export default function PhotoReel({ photos }: Props) {
+export default function PhotoReel({ photos, containerWidth }: Props) {
+  const wrapStyle: React.CSSProperties = containerWidth
+    ? { width: `${containerWidth}px`, maxWidth: `${containerWidth}px` }
+    : {};
   return (
-    <section className="photoreel" aria-label="Recent completions">
+    <section className="photoreel" aria-label="Recent completions" style={wrapStyle}>
       <div className="photoreel__head">
         <span className="photoreel__title">Recent completions</span>
         <button type="button" className="photoreel__see-all">

@@ -2,11 +2,15 @@ import type { Birthday } from "../types";
 
 interface Props {
   birthdays: Birthday[];
+  containerWidth?: number | null;
 }
 
-export default function BirthdayStrip({ birthdays }: Props) {
+export default function BirthdayStrip({ birthdays, containerWidth }: Props) {
+  const wrapStyle: React.CSSProperties = containerWidth
+    ? { width: `${containerWidth}px`, maxWidth: `${containerWidth}px` }
+    : {};
   return (
-    <div className="birthdays">
+    <div className="birthdays" style={wrapStyle}>
       <span className="birthdays__title">
         <span aria-hidden="true">🎂</span> Upcoming birthdays
       </span>
