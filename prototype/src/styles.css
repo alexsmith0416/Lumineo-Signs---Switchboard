@@ -92,11 +92,13 @@ button {
 .hdr__logo {
   width: 36px;
   height: 36px;
-  background: var(--red);
+  /* SVG inside paints the red square + transparent ray cutouts directly.
+     No background here — the header navy shows through the ray cutouts. */
   border-radius: var(--radius-sm);
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   flex-shrink: 0;
 }
 

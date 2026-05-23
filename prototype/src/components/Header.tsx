@@ -26,18 +26,20 @@ export default function Header({ user, role, onChangeRole }: Props) {
     <header className="hdr">
       <div className="hdr__brand">
         <div className="hdr__logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-            <g stroke="white" strokeWidth="2" strokeLinecap="round">
-              <line x1="12" y1="3"  x2="12" y2="7"  />
-              <line x1="12" y1="17" x2="12" y2="21" />
-              <line x1="3"  y1="12" x2="7"  y2="12" />
-              <line x1="17" y1="12" x2="21" y2="12" />
-              <line x1="5.6"  y1="5.6"  x2="8.4"  y2="8.4"  />
-              <line x1="15.6" y1="15.6" x2="18.4" y2="18.4" />
-              <line x1="5.6"  y1="18.4" x2="8.4"  y2="15.6" />
-              <line x1="15.6" y1="8.4"  x2="18.4" y2="5.6"  />
-            </g>
-            <circle cx="12" cy="12" r="2.4" fill="white" />
+          {/* Red square with ray-shaped transparent cutouts (evenodd fill).
+              Whatever color sits behind the logo shows through the rays. */}
+          <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <path
+              fill="#E8151B"
+              fillRule="evenodd"
+              d="M0,0 H100 V100 H0 Z
+                 M25,75 L22,0 L28,0 Z
+                 M25,75 L34,0 L46,0 Z
+                 M25,75 L54,0 L70,0 Z
+                 M25,75 L82,0 L100,7 L100,0 Z
+                 M25,75 L100,18 L100,40 Z
+                 M25,75 L100,52 L100,76 Z"
+            />
           </svg>
         </div>
         <div className="hdr__brand-text">
