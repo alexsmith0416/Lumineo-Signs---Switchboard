@@ -44,20 +44,20 @@ export function Gallery() {
         <h2 style={{ margin: 0, fontSize: 22, color: "var(--lum-navy)" }}>All saved specs</h2>
       </div>
 
-      <div className="lum-card" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+      <div className="lum-card" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <input
           type="search"
           className="lum-input"
           placeholder="Search by customer, project, or code…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 2 }}
+          style={{ flex: "2 1 220px", minWidth: 140 }}
         />
         <select
           className="lum-select"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          style={{ flex: 1 }}
+          style={{ flex: "1 1 160px", minWidth: 120 }}
         >
           <option value="">All sign types</option>
           {SIGN_TYPES.map((t) => (

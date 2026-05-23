@@ -32,10 +32,9 @@ export function Dashboard() {
     <main className="lum-page">
       <section className="sbp-hero">
         <div className="sbp-hero__eyebrow">Sign Builder Pro</div>
-        <h1 className="sbp-hero__title">Configure a commercial sign spec in minutes.</h1>
+        <h1 className="sbp-hero__title">Build. Spec. Deliver.</h1>
         <p className="sbp-hero__subtitle">
-          Pick a sign type, step through the cascade, and the product code assembles itself.
-          Saves write straight back to the Sign Specifications table in Dataverse.
+          Configure commercial sign specs for individual orders or full projects — fast.
         </p>
         <div className="sbp-hero__ctas">
           <button
@@ -43,14 +42,14 @@ export function Dashboard() {
             className="sbp-hero__cta is-red"
             onClick={() => { clearAll(); navigate("/builder"); }}
           >
-            + New Sign Spec
+            🪧 New Individual Sign
           </button>
           <button
             type="button"
             className="sbp-hero__cta is-outline"
-            onClick={() => navigate("/gallery")}
+            onClick={() => navigate("/projects")}
           >
-            Browse Gallery
+            📁 New Project
           </button>
         </div>
       </section>
@@ -86,7 +85,7 @@ export function Dashboard() {
           {loadingRecent ? (
             <div className="sbp-list__empty">Loading…</div>
           ) : recent.length === 0 ? (
-            <div className="sbp-list__empty">No specs yet — start one from the hero.</div>
+            <div className="sbp-list__empty">No signs yet — get started above.</div>
           ) : (
             recent.slice(0, 6).map((s) => {
               const t = getSignType(s.signTypeCode || "");

@@ -22,6 +22,9 @@
   box-shadow: var(--lum-shadow-md);
 }
 
+/* (sbp-hero mobile overrides live in the consolidated responsive block at
+   the bottom of the file so the cascade lets them win.) */
+
 .sbp-hero::before {
   content: "";
   position: absolute;
@@ -116,9 +119,7 @@
   gap: 16px;
 }
 
-@media (max-width: 800px) {
-  .sbp-kpis { grid-template-columns: 1fr; }
-}
+/* (sbp-kpis collapse to 1 column on mobile — see bottom of file.) */
 
 .sbp-kpi__value {
   font-size: 32px;
@@ -234,9 +235,7 @@
   gap: 16px;
 }
 
-@media (max-width: 900px) {
-  .sbp-twocol { grid-template-columns: 1fr; }
-}
+/* (sbp-twocol collapses on mobile — see bottom of file.) */
 
 /* ============ Builder layout ============ */
 .sbp-builder {
@@ -245,10 +244,7 @@
   min-height: calc(100vh - var(--lum-chrome-height));
 }
 
-@media (max-width: 900px) {
-  .sbp-builder { grid-template-columns: 1fr; }
-  .sbp-sidebar { display: none; }
-}
+/* (sbp-builder + sbp-sidebar mobile overrides — see bottom of file.) */
 
 .sbp-sidebar {
   background: var(--lum-navy-deep);
@@ -408,6 +404,7 @@
   position: sticky;
   top: var(--lum-chrome-height);
   z-index: 5;
+  flex-wrap: wrap;
 }
 
 .sbp-topbar__title {
@@ -418,6 +415,8 @@
   letter-spacing: 1.2px;
   white-space: nowrap;
 }
+
+/* (sbp-topbar mobile wrap — see bottom of file.) */
 
 .sbp-topbar__field {
   display: flex;
@@ -967,6 +966,8 @@
   background: var(--lum-gray-50);
 }
 
+/* (sbp-projects mobile overrides — see bottom of file.) */
+
 .sbp-projects__header {
   display: flex;
   flex-direction: column;
@@ -977,6 +978,25 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.sbp-projects__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sbp-projects__header-text {
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.sbp-projects__header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .sbp-projects__empty {
@@ -994,4 +1014,67 @@
   background: white;
   border: 1px dashed var(--lum-gray-200);
   border-radius: var(--lum-radius);
+}
+
+/* ============ Responsive overrides ============
+   Consolidated at the bottom of the file so source-order cascade lets every
+   `display: none` / column collapse beat the base rule that came above. */
+@media (max-width: 900px) {
+  .sbp-twocol { grid-template-columns: 1fr; }
+
+  /* Builder workspace — sidebar hides on mobile, form fills the screen. */
+  .sbp-builder { grid-template-columns: 1fr; }
+  .sbp-sidebar { display: none; }
+
+  /* Builder top bar — wrap the inputs onto multiple rows. */
+  .sbp-topbar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .sbp-topbar__title { flex: 1 1 100%; }
+  .sbp-topbar__input { min-width: 140px; flex: 1 1 220px; }
+  .sbp-topbar__actions {
+    margin-left: 0;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Projects — stack the rail above the detail pane. */
+  .sbp-projects { grid-template-columns: 1fr; }
+  .sbp-projects__list {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--lum-gray-200);
+  }
+}
+
+@media (max-width: 800px) {
+  .sbp-kpis { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .sbp-hero { padding: 24px 20px; }
+  .sbp-hero__title { font-size: 28px; }
+  .sbp-hero__ctas { flex-wrap: wrap; }
+  .sbp-hero__cta { flex: 1 1 100%; justify-content: center; }
+
+  .sbp-projects__detail { padding: 16px; }
+
+  /* Builder form pane padding shrinks. */
+  .sbp-form__scroll { padding: 16px 16px 48px; }
+
+  /* List rows: stack the left content + right cluster vertically so action
+     buttons + pills don't push off the right edge of the viewport. */
+  .sbp-list__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .sbp-list__row-right {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .sbp-list__chevron { display: none; }
+
 }

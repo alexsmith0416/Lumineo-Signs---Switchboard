@@ -85,6 +85,13 @@ input, select, textarea {
   gap: 24px;
 }
 
+@media (max-width: 700px) {
+  .lum-page {
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
 /* ============ Header (navy sticky bar) ============
    Sign Builder Pro / LNI Production Schedule pattern — Lumineo's working
    sub-apps use the navy header so they read as the active app inside the
@@ -175,6 +182,7 @@ input, select, textarea {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 /* ─── Role-switcher trigger (adapted for navy header — translucent border) */
@@ -260,6 +268,47 @@ input, select, textarea {
   padding: 5px 10px;
   border-radius: 6px;
   letter-spacing: 0.5px;
+}
+
+/* ─── Header mobile breakpoints (placed AFTER base rules so the cascade
+       lets display:none win at narrow viewports). At <900px the brand
+       sub-label disappears and nav becomes horizontally scrollable so links
+       don't get clipped. At <600px the role-switcher collapses to just the
+       avatar so the header stays one row at phone widths. */
+@media (max-width: 900px) {
+  .lum-header {
+    padding: 0 14px;
+    gap: 10px;
+  }
+  .lum-header__brand { padding-right: 12px; }
+  .lum-header__divider { margin: 0 10px; }
+  .lum-header__left {
+    flex: 1;
+    min-width: 0;
+  }
+  .lum-header__nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none; /* Firefox */
+  }
+  .lum-header__nav::-webkit-scrollbar { display: none; }
+  .lum-header__navlink {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .lum-header__brand-sub { display: none; }
+}
+
+@media (max-width: 600px) {
+  .lum-header__divider { display: none; }
+  .lum-header__roleswitcher-trigger {
+    padding: 4px;
+    gap: 0;
+  }
+  .lum-header__userblock,
+  .lum-header__caret,
+  .lum-header__demo-pill,
+  .lum-header__spec-badge { display: none; }
 }
 
 /* ============ Cards ============ */

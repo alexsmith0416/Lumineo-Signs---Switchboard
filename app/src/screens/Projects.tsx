@@ -175,8 +175,8 @@ export function Projects() {
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div>
+                  <div className="sbp-projects__header-row">
+                    <div className="sbp-projects__header-text">
                       <span className="lum-section-label">Project</span>
                       <h2 style={{ margin: 0, fontSize: 22, color: "var(--lum-navy)" }}>
                         {active.name || "Untitled project"}
@@ -187,7 +187,7 @@ export function Projects() {
                         </p>
                       ) : null}
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div className="sbp-projects__header-actions">
                       <button type="button" className="lum-btn is-ghost" onClick={() => setEditing(active)}>
                         Edit
                       </button>
@@ -231,7 +231,7 @@ export function Projects() {
               )}
             </div>
 
-            <div className="sbp-kpis" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <div className="sbp-kpis">
               <div className="lum-card"><div className="sbp-kpi__value">{projectSigns.length}</div><div className="sbp-kpi__label">Signs</div></div>
               <div className="lum-card"><div className="sbp-kpi__value">{totalUnits}</div><div className="sbp-kpi__label">Total Units</div></div>
               <div className="lum-card">
