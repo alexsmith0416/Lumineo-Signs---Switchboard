@@ -1,0 +1,406 @@
+/*
+ * lumineo-ui — shared design tokens + primitive component CSS used across the
+ * Lumineo code-app fleet (Switchboard, Sign Builder Pro, LNI Production
+ * Schedule). Values lifted verbatim from prototype/src/styles.css in the
+ * Switchboard repo so all three apps render identically.
+ */
+
+:root {
+  --lum-navy: #141464;
+  --lum-navy-light: #2a2a8a;
+  --lum-navy-bg: #e8eaf5;
+  --lum-navy-deep: #080828;
+  --lum-red: #E8151B;
+  --lum-red-soft: #ffe4e5;
+  --lum-green: #0F6E56;
+  --lum-green-soft: #d8efe7;
+  --lum-amber: #F2994A;
+  --lum-amber-soft: #fdebd5;
+
+  --lum-gray-50: #f7f8fa;
+  --lum-gray-100: #eef0f4;
+  --lum-gray-200: #dde0e8;
+  --lum-gray-300: #c4c9d4;
+  --lum-gray-500: #8b91a3;
+  --lum-gray-700: #4a4f5e;
+  --lum-text: #1a1a2e;
+
+  --lum-radius: 12px;
+  --lum-radius-sm: 8px;
+  --lum-radius-lg: 16px;
+
+  --lum-shadow-sm: 0 1px 2px rgba(20, 20, 100, 0.06), 0 1px 3px rgba(20, 20, 100, 0.04);
+  --lum-shadow-md: 0 4px 8px rgba(20, 20, 100, 0.06), 0 2px 4px rgba(20, 20, 100, 0.05);
+  --lum-shadow-lg: 0 12px 24px rgba(20, 20, 100, 0.08), 0 4px 8px rgba(20, 20, 100, 0.05);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+  color: var(--lum-text);
+  background: var(--lum-gray-50);
+}
+
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* All numeric/KPI values use tabular figures across the fleet. */
+.lum-num { font-variant-numeric: tabular-nums; }
+
+/* ============ Page container ============ */
+.lum-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ============ Header (shared across all code apps) ============ */
+.lum-header {
+  background: white;
+  border-bottom: 1px solid var(--lum-gray-200);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.lum-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lum-header__logo {
+  width: 44px;
+  height: 44px;
+  background: var(--lum-red);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -1px;
+  box-shadow: var(--lum-shadow-sm);
+}
+
+.lum-header__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.lum-header__brand-name {
+  font-weight: 800;
+  color: var(--lum-navy);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.lum-header__brand-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--lum-gray-500);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.lum-header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lum-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lum-header__navlink {
+  padding: 8px 14px;
+  border-radius: var(--lum-radius);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lum-gray-700);
+  text-decoration: none;
+  position: relative;
+  transition: all 0.12s ease;
+}
+
+.lum-header__navlink:hover {
+  background: var(--lum-navy-bg);
+  color: var(--lum-navy);
+}
+
+.lum-header__navlink.is-active {
+  color: var(--lum-navy);
+  background: var(--lum-navy-bg);
+}
+
+.lum-header__navlink.is-active::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -2px;
+  height: 2px;
+  background: var(--lum-red);
+  border-radius: 2px;
+}
+
+.lum-header__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--lum-navy);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.lum-header__userblock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.lum-header__username {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--lum-text);
+}
+
+.lum-header__userrole {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lum-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lum-header__spec-badge {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lum-navy);
+  background: var(--lum-navy-bg);
+  padding: 6px 10px;
+  border-radius: var(--lum-radius-sm);
+  letter-spacing: 0.5px;
+}
+
+/* ============ Cards ============ */
+.lum-card {
+  background: white;
+  border: 1px solid var(--lum-gray-200);
+  border-radius: var(--lum-radius);
+  padding: 18px;
+  box-shadow: var(--lum-shadow-sm);
+}
+
+.lum-card.is-clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lum-card.is-clickable:hover {
+  border-color: var(--lum-navy);
+  box-shadow: var(--lum-shadow-md);
+  transform: translateY(-1px);
+}
+
+/* ============ Section label ============ */
+.lum-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lum-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+/* ============ Pills / badges ============ */
+.lum-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: var(--lum-navy-bg);
+  color: var(--lum-navy);
+  white-space: nowrap;
+}
+
+.lum-pill.is-red    { background: var(--lum-red-soft);   color: var(--lum-red); }
+.lum-pill.is-green  { background: var(--lum-green-soft); color: var(--lum-green); }
+.lum-pill.is-amber  { background: var(--lum-amber-soft); color: #a85613; }
+.lum-pill.is-navy   { background: var(--lum-navy);       color: white; }
+.lum-pill.is-muted  { background: var(--lum-gray-100);   color: var(--lum-gray-700); }
+
+/* ============ Buttons ============ */
+.lum-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--lum-radius);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+  background: white;
+  color: var(--lum-text);
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.lum-btn:hover { box-shadow: var(--lum-shadow-sm); }
+
+.lum-btn.is-primary {
+  background: var(--lum-navy);
+  color: white;
+}
+.lum-btn.is-primary:hover { background: var(--lum-navy-light); }
+
+.lum-btn.is-danger {
+  background: var(--lum-red);
+  color: white;
+}
+.lum-btn.is-danger:hover { filter: brightness(1.05); }
+
+.lum-btn.is-ghost {
+  background: transparent;
+  border-color: var(--lum-gray-200);
+  color: var(--lum-navy);
+}
+.lum-btn.is-ghost:hover {
+  border-color: var(--lum-navy);
+  background: var(--lum-navy-bg);
+}
+
+.lum-btn.is-toggle {
+  background: white;
+  border-color: var(--lum-gray-200);
+  color: var(--lum-gray-700);
+  flex: 1;
+  padding: 10px 12px;
+}
+
+.lum-btn.is-toggle.is-active {
+  background: var(--lum-navy);
+  border-color: var(--lum-navy);
+  color: white;
+  box-shadow: var(--lum-shadow-sm);
+}
+
+.lum-btn[disabled],
+.lum-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============ Inputs ============ */
+.lum-input,
+.lum-select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--lum-radius-sm);
+  border: 1px solid var(--lum-gray-200);
+  background: white;
+  font-size: 13px;
+  color: var(--lum-text);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.lum-input:focus,
+.lum-select:focus {
+  outline: none;
+  border-color: var(--lum-navy);
+  box-shadow: 0 0 0 3px rgba(20, 20, 100, 0.12);
+}
+
+.lum-input[disabled],
+.lum-select[disabled] {
+  background: var(--lum-gray-50);
+  color: var(--lum-gray-500);
+}
+
+.lum-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lum-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+/* ============ Warning banners ============ */
+.lum-banner {
+  padding: 10px 14px;
+  border-radius: var(--lum-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 4px solid;
+}
+
+.lum-banner.is-amber {
+  background: var(--lum-amber-soft);
+  color: #8a4612;
+  border-left-color: var(--lum-amber);
+}
+
+.lum-banner.is-red {
+  background: var(--lum-red-soft);
+  color: #931217;
+  border-left-color: var(--lum-red);
+}
+
+.lum-banner.is-info {
+  background: var(--lum-navy-bg);
+  color: var(--lum-navy);
+  border-left-color: var(--lum-navy);
+}
