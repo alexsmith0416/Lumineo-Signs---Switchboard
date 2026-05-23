@@ -5,6 +5,7 @@ import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store
 import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
+import { CUSTOM_CARD_PRESETS, type CustomCardPreset } from "../data/custom-card-presets";
 import type { ScheduleLine } from "../engine/types";
 
 interface AddJobPanelProps {
@@ -15,6 +16,7 @@ interface AddJobPanelProps {
 }
 
 type Mode = "single" | "multi" | "auto";
+type CardKind = "bc" | "custom";
 
 export default function AddJobPanel({
   onClose,
@@ -27,6 +29,15 @@ export default function AddJobPanel({
   const [mode, setMode] = useState<Mode>("single");
   const [checkedLines, setCheckedLines] = useState<Set<number>>(new Set());
   const [singleLineNo, setSingleLineNo] = useState<number | null>(null);
+
+  // Custom card state
+  const [cardKind, setCardKind] = useState<CardKind>("bc");
+  const [customTitle, setCustomTitle] = useState("");
+  const [customNotes, setCustomNotes] = useState("");
+  const [customBg, setCustomBg] = useState("#CCCCCC");
+  const [customFg, setCustomFg] = useState("#1a1d23");
+  const [customHours, setCustomHours] = useState(8);
+  const [customEmployeeId, setCustomEmployeeId] = useState<string>(initialEmployeeId ?? "");
 
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
@@ -165,11 +176,97 @@ export default function AddJobPanel({
     onClose();
   };
 
+  const applyPreset = (preset: CustomCardPreset) => {
+    setCustomTitle(preset.label);
+    setCustomBg(preset.bgColor);
+    setCustomFg(preset.textColor);
+    setCustomHours(preset.defaultHours);
+  };
+
+  const commitCustom = async () => {
+    if (!customTitle || !customEmployeeId) return;
+    const emp = employees.get(customEmployeeId);
+    if (!emp) return;
+
+    const ctxForEngine = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+
+    let start = initialStart ? new Date(initialStart) : new Date();
+    if (start.getHours() < 8) start.setHours(8, 0, 0, 0);
+
+    const tempLine: ScheduleLine = {
+      id: "tmp",
+      jobNo: customTitle,
+      customerName: customTitle,
+      planningLineDescription: customNotes,
+      startDateTime: start,
+      endDateTime: start,
+      estimatedHours: customHours,
+      overrideHours: null,
+      employeeId: customEmployeeId,
+      departmentId: emp.departmentId,
+      customerDueDate: null,
+      isLocked: false,
+      jobSequence: 0,
+      isCustom: true,
+      customColor: customBg,
+      customTextColor: customFg,
+    };
+    const end = calculateEndTime(
+      start,
+      effectiveHours(tempLine, emp),
+      emp,
+      ctxForEngine,
+    );
+
+    await addScheduleLine({
+      ...tempLine,
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      endDateTime: end,
+    });
+    onClose();
+  };
+
   return (
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">Add Job</div>
 
+        {/* Kind toggle: BC Job (search) vs Custom Card (block out time) */}
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            padding: 10,
+            background: "var(--bg-secondary)",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <button
+            type="button"
+            className={cardKind === "bc" ? "btn-primary" : "btn-secondary"}
+            style={{ flex: 1, padding: "8px 12px" }}
+            onClick={() => setCardKind("bc")}
+          >
+            BC Job
+          </button>
+          <button
+            type="button"
+            className={cardKind === "custom" ? "btn-primary" : "btn-secondary"}
+            style={{ flex: 1, padding: "8px 12px" }}
+            onClick={() => setCardKind("custom")}
+          >
+            Custom Card
+          </button>
+        </div>
+
+        {cardKind === "bc" && (
+        <>
         <div style={{ padding: 12 }}>
           <input
             className="form-field__input"
@@ -272,6 +369,191 @@ export default function AddJobPanel({
             </div>
           </>
         )}
+        </>
+        )}
+
+        {cardKind === "custom" && (
+          <div style={{ padding: 12, overflowY: "auto" }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--text-secondary)",
+                fontWeight: 600,
+                marginBottom: 8,
+              }}
+            >
+              Quick pick
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 6,
+                marginBottom: 16,
+              }}
+            >
+              {CUSTOM_CARD_PRESETS.map((p) => {
+                const active = customTitle === p.label && customBg === p.bgColor;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => applyPreset(p)}
+                    style={{
+                      background: p.bgColor,
+                      color: p.textColor,
+                      padding: "10px 12px",
+                      border: active ? "2px solid var(--lumineo-navy)" : "2px solid transparent",
+                      borderRadius: 5,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--text-secondary)",
+                fontWeight: 600,
+                marginBottom: 8,
+              }}
+            >
+              Build your own
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Title</div>
+              <input
+                className="form-field__input"
+                placeholder="e.g. PTO, Training, etc."
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Color</div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "4px 8px",
+                  background: "var(--input-bg)",
+                }}
+              >
+                <input
+                  type="color"
+                  value={customBg}
+                  onChange={(e) => setCustomBg(e.target.value)}
+                  style={{ width: 40, height: 28, border: "none", cursor: "pointer" }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    padding: "6px 10px",
+                    background: customBg,
+                    color: customFg,
+                    borderRadius: 4,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {customTitle || "Preview"}
+                </div>
+                <input
+                  type="color"
+                  value={customFg}
+                  onChange={(e) => setCustomFg(e.target.value)}
+                  style={{ width: 40, height: 28, border: "none", cursor: "pointer" }}
+                  title="Text color"
+                />
+              </div>
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Hours</div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  padding: "4px 8px",
+                  background: "var(--input-bg)",
+                  alignItems: "center",
+                }}
+              >
+                <input
+                  type="number"
+                  min="0.25"
+                  step="0.25"
+                  className="form-field__input"
+                  style={{ flex: "0 0 80px", padding: "4px 6px" }}
+                  value={customHours}
+                  onChange={(e) => setCustomHours(Number(e.target.value) || 0)}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ padding: "4px 8px", fontSize: 11 }}
+                  onClick={() => setCustomHours(8)}
+                >
+                  Full day (8h)
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ padding: "4px 8px", fontSize: 11 }}
+                  onClick={() => setCustomHours(40)}
+                >
+                  Full week (40h)
+                </button>
+              </div>
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Resource</div>
+              <select
+                className="form-field__select"
+                value={customEmployeeId}
+                onChange={(e) => setCustomEmployeeId(e.target.value)}
+              >
+                <option value="">Choose…</option>
+                {[...employees.values()].map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Notes</div>
+              <input
+                className="form-field__input"
+                placeholder="(optional)"
+                value={customNotes}
+                onChange={(e) => setCustomNotes(e.target.value)}
+              />
+            </div>
+
+            {initialStart && (
+              <div style={{ marginTop: 8, color: "var(--text-tertiary)", fontSize: 11 }}>
+                Starts {format(initialStart, "EEE MMM d HH:mm")}
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ flex: 1 }} />
         <div style={{ padding: 12, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
@@ -282,11 +564,13 @@ export default function AddJobPanel({
             className="btn-primary"
             style={{ flex: 1 }}
             disabled={
-              !selected ||
-              (mode === "single" && singleLineNo === null) ||
-              (mode === "multi" && checkedLines.size === 0)
+              cardKind === "bc"
+                ? !selected ||
+                  (mode === "single" && singleLineNo === null) ||
+                  (mode === "multi" && checkedLines.size === 0)
+                : !customTitle || !customEmployeeId || customHours <= 0
             }
-            onClick={commit}
+            onClick={cardKind === "bc" ? commit : commitCustom}
           >
             Schedule
           </button>

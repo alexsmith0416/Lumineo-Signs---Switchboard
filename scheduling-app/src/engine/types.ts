@@ -46,6 +46,14 @@ export interface ScheduleLine {
   crewBuckets?: number | null;
   installZip?: string | null;
   region?: string | null;
+
+  // Optional: marks a non-BC card used to block out time (PTO, Holiday,
+  // Maintenance, etc.). When `isCustom` is true the card uses
+  // `customColor`/`customTextColor` for its background/text instead of
+  // the department palette, and renders a simplified layout.
+  isCustom?: boolean;
+  customColor?: string | null;
+  customTextColor?: string | null;
 }
 
 export interface WorkHoursOverride {

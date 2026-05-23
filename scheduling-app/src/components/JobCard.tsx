@@ -37,6 +37,16 @@ function deptStyle(dept: Department | undefined): { bg: string; text: string } {
   return { bg, text: textMap[bg] ?? "#1a1d23" };
 }
 
+function cardStyle(line: ScheduleLine, dept: Department | undefined): { bg: string; text: string } {
+  if (line.isCustom && line.customColor) {
+    return {
+      bg: line.customColor,
+      text: line.customTextColor || "#1a1d23",
+    };
+  }
+  return deptStyle(dept);
+}
+
 const HOVER_DELAY_MS = 250;
 
 export default function JobCard({
@@ -49,7 +59,7 @@ export default function JobCard({
   showWeather = false,
   layout = "compact",
 }: JobCardProps) {
-  const style = deptStyle(department);
+  const style = cardStyle(line, department);
   const lineConflicts = conflicts.filter(
     (c) => c.lineId === line.id || c.relatedLineId === line.id,
   );
@@ -77,16 +87,22 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={open}
         onMouseLeave={close}
       >
-        <div className="job-card__header">
-          <span className="job-card__job-no">{line.jobNo}</span>
-          <span className="job-card__customer">{line.customerName}</span>
-        </div>
-        <div className="job-card__desc">{line.planningLineDescription}</div>
+        {line.isCustom ? (
+          <div className="job-card__custom-title">{line.customerName || line.jobNo}</div>
+        ) : (
+          <div className="job-card__header">
+            <span className="job-card__job-no">{line.jobNo}</span>
+            <span className="job-card__customer">{line.customerName}</span>
+          </div>
+        )}
+        {line.planningLineDescription && (
+          <div className="job-card__desc">{line.planningLineDescription}</div>
+        )}
         {(showCrewBadge || showWeather || showInvoice) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}

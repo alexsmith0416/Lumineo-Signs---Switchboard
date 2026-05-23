@@ -554,6 +554,18 @@ input, select, textarea {
   margin-top: 1px;
 }
 
+/* Custom cards (PTO / Holiday / Maintenance / etc.) — a single bold
+   title block on the colored background. */
+.job-card--custom .job-card__custom-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ============ Forms / Add Job panel ============ */
 
 .slide-over {
