@@ -645,10 +645,12 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 14px;
+  /* Column layout: title row on top, scrollable chip strip below.
+     Avoids overlap when chips can't shrink (white-space: nowrap) and
+     the * { min-width: 0 } rule collapses the list in a flex row. */
   display: flex;
-  align-items: center;
-  gap: 12px;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .birthdays__title {
@@ -666,6 +668,13 @@ button {
 .birthdays__list {
   display: flex;
   gap: 8px;
+  overflow-x: auto;
+  /* Prevent chips from shrinking — they have nowrap text inside */
+  scrollbar-width: thin;
+}
+
+.birthdays__list > .birthday {
+  flex-shrink: 0;
 }
 
 .birthday {
