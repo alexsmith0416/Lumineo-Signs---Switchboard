@@ -495,6 +495,102 @@
     font-weight: 800;
   }
 
+  /* ===== Grand total card ===== */
+  .grand-total {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 14px rgba(20, 20, 100, 0.22);
+  }
+  .grand-total .gt-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.85;
+  }
+  .grand-total .gt-range {
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 2px;
+    opacity: 0.95;
+  }
+  .grand-total .gt-right { text-align: right; }
+  .grand-total .gt-hours {
+    font-size: 26px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .grand-total .gt-sub {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+
+  /* ===== Offline / queued banner ===== */
+  .offline-banner {
+    background: #fff8e1;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 14px 0;
+  }
+  .offline-banner .icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #fde68a;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .offline-banner .text { flex: 1; min-width: 0; }
+  .offline-banner .t1 {
+    font-size: 12px;
+    font-weight: 800;
+    color: #92400e;
+  }
+  .offline-banner .t2 {
+    font-size: 11px;
+    color: #92400e;
+    margin-top: 2px;
+  }
+  .offline-banner .count-chip {
+    background: #92400e;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  /* Offline tag in header */
+  .header .offline-tag {
+    background: #fde68a;
+    color: #92400e;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+
   /* ===== Date chips ===== */
   .chip-row {
     display: flex;
@@ -1177,7 +1273,7 @@
               <span class="live"><span class="dot"></span>Clocked In</span>
             </div>
             <div class="jobname">Riverstone Plaza — Main Pylon</div>
-            <div class="task">Task 30 — Paint · PL 30-10 (Topcoat)</div>
+            <div class="task">Task 30 — Paint</div>
             <div class="elapsed">3:42:18</div>
             <div class="divider"></div>
             <div class="meta-row">
@@ -1236,20 +1332,6 @@
             </button>
             <button class="quick">
               <div class="icon-circle">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </div>
-              <span class="label">Notify Supervisor</span>
-              <span class="sub">Question or block</span>
-            </button>
-            <button class="quick">
-              <div class="icon-circle">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-              </div>
-              <span class="label">SharePoint</span>
-              <span class="sub">Job folders</span>
-            </button>
-            <button class="quick">
-              <div class="icon-circle">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
               </div>
               <span class="label">Today's Total</span>
@@ -1295,7 +1377,7 @@
   </div>
 
   <!-- ========================================================== -->
-  <!-- SCREEN 2: PUNCH IN (Job → Task → Planning Line cascade)     -->
+  <!-- SCREEN 2: PUNCH IN (Job → Task select)                       -->
   <!-- ========================================================== -->
   <div>
     <div class="phone">
@@ -1324,7 +1406,7 @@
 
       <div class="body">
         <div class="section">
-          <div class="section-label">Job → Task → Planning Line</div>
+          <div class="section-label">Job → Task</div>
 
           <!-- Step 1: Job (DONE) -->
           <div class="cascade-step done">
@@ -1343,29 +1425,12 @@
             </div>
           </div>
 
-          <!-- Step 2: Task (DONE) -->
-          <div class="cascade-step done">
-            <div class="step-head">
-              <div style="display:flex; align-items:center;">
-                <span class="step-no">✓</span>
-                <span class="step-title">Task</span>
-              </div>
-              <span class="step-status">Selected</span>
-            </div>
-            <div class="step-body">
-              <div class="selected-pill">
-                <span class="k">TASK 30</span>
-                <span class="v">Paint</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Planning Line (ACTIVE) -->
+          <!-- Step 2: Task (ACTIVE) -->
           <div class="cascade-step active">
             <div class="step-head">
               <div style="display:flex; align-items:center;">
-                <span class="step-no">3</span>
-                <span class="step-title">Planning Line</span>
+                <span class="step-no">2</span>
+                <span class="step-title">Task</span>
               </div>
               <span class="step-status">Choose one</span>
             </div>
@@ -1373,24 +1438,31 @@
               <div class="option-list">
                 <div class="option-row">
                   <div>
-                    <div class="name">PL 30-05 · Prep &amp; Mask</div>
-                    <div class="meta">Est. 1.5 h · Remaining 0.5 h</div>
+                    <div class="name">Task 10 · Survey</div>
+                    <div class="meta">Est. 2 h · Remaining 0 h</div>
                   </div>
-                  <div class="qty">0.5 h</div>
-                </div>
-                <div class="option-row selected">
-                  <div>
-                    <div class="name">PL 30-10 · Topcoat</div>
-                    <div class="meta">Est. 4 h · Remaining 3 h</div>
-                  </div>
-                  <div class="qty">3 h</div>
+                  <div class="qty">Done</div>
                 </div>
                 <div class="option-row">
                   <div>
-                    <div class="name">PL 30-15 · Clearcoat</div>
-                    <div class="meta">Est. 2 h · Remaining 2 h</div>
+                    <div class="name">Task 20 · Assembly</div>
+                    <div class="meta">Est. 8 h · Remaining 0 h</div>
                   </div>
-                  <div class="qty">2 h</div>
+                  <div class="qty">Done</div>
+                </div>
+                <div class="option-row selected">
+                  <div>
+                    <div class="name">Task 30 · Paint</div>
+                    <div class="meta">Est. 7.5 h · Remaining 5.5 h</div>
+                  </div>
+                  <div class="qty">5.5 h</div>
+                </div>
+                <div class="option-row">
+                  <div>
+                    <div class="name">Task 40 · Install</div>
+                    <div class="meta">Est. 6 h · Remaining 6 h</div>
+                  </div>
+                  <div class="qty">6 h</div>
                 </div>
               </div>
             </div>
@@ -1413,7 +1485,7 @@
 
           <button class="btn btn-primary" style="width:100%; margin-top: 14px; height: 52px; font-size: 15px; box-shadow: 0 4px 12px rgba(232,21,27,0.25);">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
-            Start Punch — 24-1187 / 30 / 30-10
+            Start Punch — 24-1187 / Task 30
           </button>
           <div style="text-align:center; font-size:11px; color: var(--gray-500); margin-top: 8px; padding-bottom: 14px;">
             Auto clock-out at 8:00 PM if you forget
@@ -1423,7 +1495,7 @@
       <div class="home-indicator"><span></span></div>
     </div>
     <div class="phone-label">Punch In — Cascade Select
-      <span class="sub">scrPunchIn — Job → Task → Planning Line with switch-job logic</span>
+      <span class="sub">scrPunchIn — Job → Task with switch-job logic</span>
     </div>
   </div>
 
@@ -1461,8 +1533,8 @@
                 <span class="v">24-1187 — Riverstone Plaza</span>
               </div>
               <div class="row">
-                <span class="k">Task / Planning Line</span>
-                <span class="v">30 — Paint / 30-10</span>
+                <span class="k">Task</span>
+                <span class="v">Task 30 — Paint</span>
               </div>
               <div class="row">
                 <span class="k">Elapsed</span>
@@ -1723,6 +1795,20 @@
           </div>
         </div>
 
+        <!-- Grand total card -->
+        <div class="section">
+          <div class="grand-total">
+            <div class="gt-left">
+              <div class="gt-label">This Week Total</div>
+              <div class="gt-range">Mon May 19 – Sun May 25</div>
+            </div>
+            <div class="gt-right">
+              <div class="gt-hours">20:13</div>
+              <div class="gt-sub">3 days · 5 punches</div>
+            </div>
+          </div>
+        </div>
+
         <div class="section">
           <div class="history-card">
             <div class="day-header">
@@ -1731,7 +1817,7 @@
             </div>
             <div class="history-row">
               <div class="l">
-                <div class="jno">24-1187 · T30 · PL 30-10</div>
+                <div class="jno">24-1187 · Task 30</div>
                 <div class="jn">Riverstone Plaza — Paint</div>
                 <div class="time">10:32 AM – <em>now</em></div>
               </div>
@@ -1742,7 +1828,7 @@
             </div>
             <div class="history-row">
               <div class="l">
-                <div class="jno">24-0942 · T50</div>
+                <div class="jno">24-0942 · Task 50</div>
                 <div class="jn">Lakeside Dental — Monument</div>
                 <div class="time">6:15 AM – 7:00 AM</div>
               </div>
@@ -1762,7 +1848,7 @@
             </div>
             <div class="history-row">
               <div class="l">
-                <div class="jno">24-1187 · T20 · PL 20-05</div>
+                <div class="jno">24-1187 · Task 20</div>
                 <div class="jn">Riverstone — Assembly</div>
                 <div class="time">1:14 PM – 5:32 PM</div>
               </div>
@@ -1773,7 +1859,7 @@
             </div>
             <div class="history-row">
               <div class="l">
-                <div class="jno">24-1024 · T40</div>
+                <div class="jno">24-1024 · Task 40</div>
                 <div class="jn">Northgate Mall — Install</div>
                 <div class="time">7:00 AM – 12:56 PM</div>
               </div>
@@ -1792,7 +1878,7 @@
             </div>
             <div class="history-row">
               <div class="l">
-                <div class="jno">24-1187 · T20</div>
+                <div class="jno">24-1187 · Task 20</div>
                 <div class="jn">Riverstone — Assembly</div>
                 <div class="time">7:02 AM – 3:14 PM</div>
               </div>
@@ -1954,7 +2040,7 @@
           <div class="job-card">
             <div class="top-row">
               <div>
-                <div class="jno">MIKE-OL · 24-1187 / T30 / 30-10</div>
+                <div class="jno">MIKE-OL · 24-1187 / Task 30</div>
                 <div class="name">Riverstone Plaza — Paint</div>
                 <div class="meta">10:32 AM → 2:14 PM · 3 h 42 m · ✓ Task complete</div>
               </div>
@@ -1964,7 +2050,7 @@
           <div class="job-card">
             <div class="top-row">
               <div>
-                <div class="jno">JEN-OL · 24-1024 / T40</div>
+                <div class="jno">JEN-OL · 24-1024 / Task 40</div>
                 <div class="name">Northgate Mall — Install</div>
                 <div class="meta">7:00 AM → 12:56 PM · 5 h 56 m</div>
               </div>
@@ -1974,7 +2060,7 @@
           <div class="job-card">
             <div class="top-row">
               <div>
-                <div class="jno">MIKE-OL · 24-0942 / T50</div>
+                <div class="jno">MIKE-OL · 24-0942 / Task 50</div>
                 <div class="name">Lakeside Dental — Monument</div>
                 <div class="meta">6:15 AM → 7:00 AM · 0 h 45 m</div>
               </div>
@@ -2006,6 +2092,131 @@
     </div>
   </div>
 
+  <!-- ========================================================== -->
+  <!-- SCREEN 9: OFFLINE MODE (queued punches & photos)             -->
+  <!-- ========================================================== -->
+  <div>
+    <div class="phone">
+      <div class="header">
+        <div class="logo-block">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </div>
+        <div class="brand">
+          <span class="b1">LUMINEO SIGNS</span>
+          <span class="b2">TIME &amp; PHOTO</span>
+        </div>
+        <span class="offline-tag">Offline</span>
+        <button class="home-btn">
+          <svg viewBox="0 0 24 24" fill="white"><path d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5z"/></svg>
+        </button>
+      </div>
+
+      <div class="body">
+        <!-- Greeting -->
+        <div class="greeting">
+          <div class="hi">Hi, Mike 👋</div>
+          <div class="meta">Saturday, May 23 · 2:14 PM</div>
+        </div>
+
+        <!-- Offline banner -->
+        <div class="offline-banner">
+          <div class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0"/></svg>
+          </div>
+          <div class="text">
+            <div class="t1">You're offline</div>
+            <div class="t2">Punches &amp; photos are saved on this device.</div>
+          </div>
+          <span class="count-chip">3 queued</span>
+        </div>
+
+        <!-- Active punch (still works offline) -->
+        <div class="section">
+          <div class="section-label">Active Punch</div>
+          <div class="punch-card">
+            <div class="row">
+              <span class="jobno">JOB 24-1187</span>
+              <span class="live"><span class="dot"></span>Clocked In · Local</span>
+            </div>
+            <div class="jobname">Riverstone Plaza — Main Pylon</div>
+            <div class="task">Task 30 — Paint</div>
+            <div class="elapsed">3:42:18</div>
+            <div class="divider"></div>
+            <div class="meta-row">
+              <div>
+                <div class="k">Clock In</div>
+                <div class="v">10:32 AM</div>
+              </div>
+              <div>
+                <div class="k">Sync</div>
+                <div class="v">Pending</div>
+              </div>
+            </div>
+            <button class="clockout">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 7v5l3 2"/>
+              </svg>
+              Clock Out (will sync)
+            </button>
+          </div>
+        </div>
+
+        <!-- Queue list -->
+        <div class="section" style="padding-bottom: 14px;">
+          <div class="section-label">Waiting to Sync</div>
+          <div class="history-card">
+            <div class="history-row">
+              <div class="l">
+                <div class="jno">
+                  Punch · 24-0942 · Task 50
+                  <span class="status-pill pending" style="margin-left:6px;">Queued</span>
+                </div>
+                <div class="jn">Lakeside Dental — Monument</div>
+                <div class="time">6:15 AM – 7:00 AM · 0:45</div>
+              </div>
+            </div>
+            <div class="history-row">
+              <div class="l">
+                <div class="jno">
+                  Punch · 24-1187 · Task 20
+                  <span class="status-pill pending" style="margin-left:6px;">Queued</span>
+                </div>
+                <div class="jn">Riverstone Plaza — Assembly</div>
+                <div class="time">7:02 AM – 10:28 AM · 3:26 · ✓ Task done</div>
+              </div>
+            </div>
+            <div class="history-row">
+              <div class="l">
+                <div class="jno">
+                  Photo · 24-1187 · Survey
+                  <span class="status-pill pending" style="margin-left:6px;">Queued</span>
+                </div>
+                <div class="jn">1.4 MB · taken 2:08 PM</div>
+                <div class="time">📍 GPS · 42.36, -71.06</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary" style="width:100%; margin-top: 10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Retry Sync Now
+          </button>
+          <div style="text-align:center; font-size:11px; color: var(--gray-500); margin-top: 8px;">
+            Auto-syncs when connection returns.
+          </div>
+        </div>
+      </div>
+      <div class="home-indicator"><span></span></div>
+    </div>
+    <div class="phone-label">Offline Mode
+      <span class="sub">scrDashboard — IndexedDB queue, auto-sync on reconnect</span>
+    </div>
+  </div>
+
 </div>
 
 <!-- ===== Legend / Spec ===== -->
@@ -2028,13 +2239,14 @@
       <h3>Screens covered</h3>
       <ul>
         <li><code>scrDashboard</code> — Home / Today</li>
-        <li><code>scrPunchIn</code> — cascade selector</li>
+        <li><code>scrPunchIn</code> — Job → Task</li>
         <li>Clock-out modal w/ "Completed Task"</li>
         <li><code>scrCapture</code> — camera + categories</li>
         <li><code>scrGallery</code> — per-job photos</li>
-        <li><code>scrHistory</code> — date-grouped punches</li>
+        <li><code>scrHistory</code> — punches w/ range total</li>
         <li><code>scrEditRequest</code> — supervisor email</li>
         <li><code>scrAdminExport</code> — Admin CSV export</li>
+        <li>Offline Mode — queued punches/photos</li>
       </ul>
     </div>
     <div>
@@ -2051,10 +2263,12 @@
       <h3>What's Time & Photo-specific</h3>
       <ul>
         <li>Live elapsed-time card with pulsing dot</li>
-        <li>Job → Task → Planning Line cascade (BC linkage)</li>
+        <li>Job → Task selector (no Planning Line picked by employee)</li>
         <li>Switch-job logic with "Completed previous task" inline checkbox</li>
         <li>Clock-out modal with "Completed Current Task" decision</li>
         <li>Photo categories simplified to <strong>Survey</strong> / <strong>Completion</strong></li>
+        <li>Grand total at top of History — totals the active range (Today / Week / Pay Period / Custom)</li>
+        <li><strong>Offline mode</strong> — IndexedDB queue (Dexie), GPS-stamped, auto-syncs on reconnect (Linear <code>ALE-69</code>)</li>
         <li>Pending-punches admin view with CSV export (Phase 1 interim)</li>
       </ul>
     </div>
