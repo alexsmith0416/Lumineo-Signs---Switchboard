@@ -270,6 +270,27 @@ input, select, textarea {
   cursor: default;
 }
 
+/* Add Job button — brand red, always pinned right of the toolbar even
+   when the toolbar wraps onto multiple lines on smaller screens. */
+.btn-add-job {
+  background: var(--lumineo-red) !important;
+  color: #fff !important;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(232, 21, 27, 0.18);
+}
+.btn-add-job:hover {
+  filter: brightness(1.08);
+}
+
 .calendar-grid {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -299,7 +320,7 @@ input, select, textarea {
   left: 0;
   z-index: 5;
   background: var(--bg-secondary);
-  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
+  border-right: 1px solid var(--border);
 }
 
 .calendar-header-cell--weekend {
@@ -328,8 +349,6 @@ input, select, textarea {
   gap: 6px;
   padding: 6px 14px;
   /* background-color comes from inline style; never inherit */
-  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18);
-  border-right: 1px solid rgba(0, 0, 0, 0.07);
   min-width: 140px;
   box-sizing: border-box;
 }
@@ -355,7 +374,6 @@ input, select, textarea {
   position: sticky;
   left: 0;
   z-index: 5;
-  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
 }
 
 .employee-row__name .productivity {

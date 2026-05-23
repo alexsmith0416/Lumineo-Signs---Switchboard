@@ -103,6 +103,7 @@ export default function InstallationCalendar() {
         toolbarExtras={toolbar}
         addAction={
           <button
+            className="btn-add-job"
             onClick={() =>
               setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
             }

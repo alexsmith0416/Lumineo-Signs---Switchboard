@@ -19,6 +19,7 @@ export default function ShippingCalendar() {
         kindMeta={KIND_META.shipping}
         addAction={
           <button
+            className="btn-add-job"
             onClick={() =>
               setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
             }

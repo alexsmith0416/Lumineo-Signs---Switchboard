@@ -29,6 +29,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         supportsScenarioSandbox={true}
         addAction={
           <button
+            className="btn-add-job"
             onClick={() =>
               setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
             }
