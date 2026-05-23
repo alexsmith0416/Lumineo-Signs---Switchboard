@@ -36,6 +36,8 @@ type SpecContextValue = {
   loadSpec: (s: SignSpec) => void;
   clearAll: () => void;
   saveSpec: () => Promise<void>;
+  duplicateSpec: (s: SignSpec) => void;
+  deleteSpec: (id: string) => Promise<void>;
   exportSpecHtml: () => void;
   copyProductCode: () => void;
 };
@@ -203,6 +205,30 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     }
   }, [liveSpec]);
 
+  // Duplicate creates a fresh, unsaved spec preloaded with the source's
+  // cascade so the user can re-customise a similar build without retyping.
+  const duplicateSpec = useCallback((s: SignSpec) => {
+    setSpec({
+      ...s,
+      id: undefined,
+      status: "Draft",
+      // Project / customer typically belong to the original quote; clear so
+      // the duplicate is obviously a separate record.
+      customerName: "",
+      projectName: "",
+    });
+    setSaveStatus("idle");
+  }, []);
+
+  const deleteSpec = useCallback(async (id: string) => {
+    await signSpecs.remove(id);
+    const all = await signSpecs.list();
+    setRecent(all);
+    // If the currently-loaded spec is the one being deleted, snap the form
+    // back to a blank slate so the user isn't editing a ghost record.
+    setSpec((cur) => (cur.id === id ? emptySignSpec() : cur));
+  }, []);
+
   const copyProductCode = useCallback(() => {
     if (!liveSpec.productCode) return;
     try {
@@ -285,6 +311,8 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     loadSpec,
     clearAll,
     saveSpec,
+    duplicateSpec,
+    deleteSpec,
     exportSpecHtml,
     copyProductCode,
   };

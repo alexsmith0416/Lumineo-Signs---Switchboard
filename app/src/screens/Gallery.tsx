@@ -4,12 +4,14 @@ import { useSpec } from "../app/SpecContext";
 import { Pill } from "../ui/Pill";
 import { statusTone } from "../ui/specStatus";
 import { SIGN_TYPES, getSignType } from "../domain/signTypes";
+import type { SignSpec } from "../domain/SignSpec";
 
 export function Gallery() {
   const navigate = useNavigate();
-  const { recent, loadSpec } = useSpec();
+  const { recent, loadSpec, duplicateSpec, deleteSpec } = useSpec();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   const filtered = recent.filter((s) => {
     if (typeFilter && s.signTypeCode !== typeFilter) return false;
@@ -19,6 +21,21 @@ export function Gallery() {
       .filter(Boolean)
       .some((v) => v.toLowerCase().includes(q));
   });
+
+  function edit(s: SignSpec) {
+    loadSpec(s);
+    navigate("/builder");
+  }
+
+  function duplicate(s: SignSpec) {
+    duplicateSpec(s);
+    navigate("/builder");
+  }
+
+  async function confirmDelete(id: string) {
+    setConfirming(null);
+    await deleteSpec(id);
+  }
 
   return (
     <main className="lum-page">
@@ -58,25 +75,66 @@ export function Gallery() {
         ) : (
           filtered.map((s) => {
             const t = getSignType(s.signTypeCode || "");
+            const isConfirming = confirming === s.id;
             return (
-              <button
-                key={s.id}
-                type="button"
-                className="sbp-list__row"
-                onClick={() => { loadSpec(s); navigate("/builder"); }}
-              >
-                <div className="sbp-list__row-main">
+              <div key={s.id} className="sbp-list__row" style={{ cursor: "default" }}>
+                <button
+                  type="button"
+                  className="sbp-gallery-row__main"
+                  onClick={() => edit(s)}
+                  title="Edit spec"
+                >
                   <span className="sbp-list__row-title">{s.projectName || s.productCode || "Untitled"}</span>
                   <span className="sbp-list__row-meta">
                     {s.customerName ? `${s.customerName} · ` : ""}{t?.name ?? "—"} · Qty {s.quantity}
                   </span>
-                </div>
+                </button>
                 <div className="sbp-list__row-right">
                   <Pill tone="navy">{s.productCode || "—"}</Pill>
                   <Pill tone={statusTone(s.status)}>{s.status}</Pill>
-                  <span className="sbp-list__chevron">›</span>
+                  {isConfirming ? (
+                    <>
+                      <button
+                        type="button"
+                        className="lum-btn is-danger"
+                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        onClick={() => s.id && confirmDelete(s.id)}
+                      >
+                        Confirm delete
+                      </button>
+                      <button
+                        type="button"
+                        className="lum-btn is-ghost"
+                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        onClick={() => setConfirming(null)}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="lum-btn is-ghost"
+                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        onClick={() => duplicate(s)}
+                        title="Duplicate as a new draft"
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        className="lum-btn is-ghost"
+                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        onClick={() => s.id && setConfirming(s.id)}
+                        title="Delete spec"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })
         )}
