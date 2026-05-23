@@ -1,10 +1,13 @@
 import { NavLink } from "react-router-dom";
 import type { LaunchContext } from "../app/launchParams";
+import { detectDataBackend } from "../data/dataverseAdapter";
 
 type HeaderProps = {
   launch: LaunchContext;
   productCode?: string;
 };
+
+const BACKEND = detectDataBackend();
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
@@ -53,6 +56,14 @@ export function Header({ launch, productCode }: HeaderProps) {
             {productCode}
           </span>
         ) : null}
+        <span
+          className={"lum-header__backend is-" + BACKEND}
+          title={BACKEND === "dataverse"
+            ? "Connected to Sign Specifications table in Dataverse"
+            : "Local dev mode — saves go to localStorage until pac code push connects to Dataverse"}
+        >
+          {BACKEND === "dataverse" ? "● Dataverse" : "● Dev"}
+        </span>
         <div className="lum-header__avatar" aria-hidden>
           {initials || "U"}
         </div>

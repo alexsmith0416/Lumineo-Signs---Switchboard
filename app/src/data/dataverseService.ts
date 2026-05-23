@@ -55,6 +55,10 @@ export const localSignSpecRepo: SignSpecRepo = {
   },
 };
 
-// Single export the screens import. Swap to a Dataverse-backed repo here once
-// the Power Apps SDK client is wired in `pac code init`.
-export const signSpecs: SignSpecRepo = localSignSpecRepo;
+// The active repo is selected once at module load by `dataverseAdapter`:
+// Dataverse when the Power Apps SDK injects PowerProvider, localStorage
+// otherwise. Components import `signSpecs` and stay backend-agnostic.
+//
+// Re-exported here so the import path (`../data/dataverseService`) stays
+// stable for every screen — flipping the implementation is one file edit.
+export { activeRepo as signSpecs } from "./dataverseAdapter";

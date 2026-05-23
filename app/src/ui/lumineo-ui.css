@@ -223,6 +223,25 @@ input, select, textarea {
   letter-spacing: 0.5px;
 }
 
+.lum-header__backend {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.lum-header__backend.is-dataverse {
+  background: var(--lum-green-soft);
+  color: var(--lum-green);
+}
+
+.lum-header__backend.is-local {
+  background: var(--lum-amber-soft);
+  color: #8a4612;
+}
+
 /* ============ Cards ============ */
 .lum-card {
   background: white;
