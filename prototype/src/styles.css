@@ -338,39 +338,13 @@ button {
   gap: 6px;
 }
 
-/* KPI grid — FLOAT-based layout. Floats wrap automatically when items
-   don't fit horizontally. Bulletproof across every browser including the
-   weird Android content:// render contexts. */
+/* KPI grid — column count + widths + gap controlled by inline style in
+   React (KpiStrip), so the Brave WebView wide-layout-viewport issue
+   doesn't confuse the layout. CSS just provides defaults. */
 .kpi-grid {
   width: 100%;
   max-width: 100%;
 }
-
-.kpi-grid::after {
-  content: "";
-  display: block;
-  clear: both;
-}
-
-.kpi-grid > .kpi {
-  /* Keep internal flex column for label/value/delta stacking */
-  display: flex;
-  flex-direction: column;
-  float: left;
-  width: var(--kpi-w, calc(50% - 3px));
-  max-width: var(--kpi-w, calc(50% - 3px));
-  min-width: 0;
-  margin-right: 6px;
-  margin-bottom: 6px;
-  box-sizing: border-box;
-}
-
-.kpi-grid > .kpi:nth-child(2n) {
-  margin-right: 0;
-}
-
-/* Column count + widths now controlled in JS via inline style so the
-   Brave WebView wide-layout-viewport issue doesn't confuse the layout. */
 
 /* ============ Safety chip (compact, branded) ============ */
 .safety {
@@ -504,32 +478,10 @@ button {
 }
 
 /* ============ App Launcher (prominent — main thing) ============ */
-/* Same float-based layout as kpi-grid */
+/* Layout (cols, widths, gap) controlled inline by AppLauncher in React. */
 .applauncher {
   width: 100%;
   max-width: 100%;
-}
-
-.applauncher::after {
-  content: "";
-  display: block;
-  clear: both;
-}
-
-.applauncher > .apptile {
-  display: flex;
-  flex-direction: column;
-  float: left;
-  width: var(--tile-w, calc(50% - 6px));
-  max-width: var(--tile-w, calc(50% - 6px));
-  min-width: 0;
-  margin-right: 12px;
-  margin-bottom: 12px;
-  box-sizing: border-box;
-}
-
-.applauncher > .apptile:nth-child(2n) {
-  margin-right: 0;
 }
 
 .apptile {
