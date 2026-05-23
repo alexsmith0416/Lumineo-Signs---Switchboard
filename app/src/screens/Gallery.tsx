@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
 import { Pill } from "../ui/Pill";
+import { statusTone } from "../ui/specStatus";
 import { SIGN_TYPES, getSignType } from "../domain/signTypes";
 
 export function Gallery() {
@@ -72,6 +73,7 @@ export function Gallery() {
                 </div>
                 <div className="sbp-list__row-right">
                   <Pill tone="navy">{s.productCode || "—"}</Pill>
+                  <Pill tone={statusTone(s.status)}>{s.status}</Pill>
                   <span className="sbp-list__chevron">›</span>
                 </div>
               </button>

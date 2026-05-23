@@ -42,8 +42,25 @@ type SpecContextValue = {
 
 const SpecCtx = createContext<SpecContextValue | null>(null);
 
+// Drafts auto-persist to localStorage so a refresh doesn't blow up unsaved
+// work. Cleared on Save and on Clear.
+const DRAFT_KEY = "signbuilderpro.draft.v1";
+
+function loadDraft(): SignSpec | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // The shape moves with the SignSpec type — emptySignSpec() supplies any
+    // newly-added fields so old drafts merge forward cleanly.
+    return { ...emptySignSpec(), ...parsed };
+  } catch {
+    return null;
+  }
+}
+
 export function SpecProvider({ children }: { children: ReactNode }) {
-  const [spec, setSpec] = useState<SignSpec>(() => emptySignSpec());
+  const [spec, setSpec] = useState<SignSpec>(() => loadDraft() ?? emptySignSpec());
   const [recent, setRecent] = useState<SignSpec[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SpecContextValue["saveStatus"]>("idle");
@@ -68,6 +85,16 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Persist the draft whenever the spec changes. Skipping when nothing has
+  // been entered yet keeps the storage key off the wire for first-time users.
+  useEffect(() => {
+    if (!spec.signTypeCode && !spec.customerName && !spec.projectName) {
+      localStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(spec)); } catch { /* quota — ignore */ }
+  }, [spec]);
 
   const update = useCallback((patch: Partial<SignSpec>) => {
     setSpec((s) => ({ ...s, ...patch }));
@@ -149,6 +176,7 @@ export function SpecProvider({ children }: { children: ReactNode }) {
   const clearAll = useCallback(() => {
     setSpec(emptySignSpec());
     setSaveStatus("idle");
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
   }, []);
 
   const saveSpec = useCallback(async () => {
@@ -163,6 +191,13 @@ export function SpecProvider({ children }: { children: ReactNode }) {
       const all = await signSpecs.list();
       setRecent(all);
       setSaveStatus("saved");
+      // Once persisted to Dataverse / the repo, the unsaved-draft key is no
+      // longer the source of truth — drop it and revert the button label to
+      // "Save Spec" after 2s.
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      window.setTimeout(() => {
+        setSaveStatus((s) => (s === "saved" ? "idle" : s));
+      }, 2000);
     } catch {
       setSaveStatus("error");
     }

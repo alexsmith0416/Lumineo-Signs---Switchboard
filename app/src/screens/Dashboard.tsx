@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
 import { Pill } from "../ui/Pill";
+import { statusTone } from "../ui/specStatus";
 import { getSignType } from "../domain/signTypes";
 
 export function Dashboard() {
@@ -89,9 +90,6 @@ export function Dashboard() {
           ) : (
             recent.slice(0, 6).map((s) => {
               const t = getSignType(s.signTypeCode || "");
-              const lightTone =
-                s.illumination === "IL" || s.illumination === "EL" ? "amber" : "muted";
-              const paintTone = s.finish === "P" ? "green" : "muted";
               return (
                 <button
                   key={s.id}
@@ -106,10 +104,11 @@ export function Dashboard() {
                     </span>
                   </div>
                   <div className="sbp-list__row-right">
-                    {s.finish === "P" ? <Pill tone={paintTone}>Painted</Pill> : null}
+                    {s.finish === "P" ? <Pill tone="green">Painted</Pill> : null}
                     {s.illumination === "IL" || s.illumination === "EL"
-                      ? <Pill tone={lightTone}>Lighted</Pill>
+                      ? <Pill tone="amber">Lighted</Pill>
                       : null}
+                    <Pill tone={statusTone(s.status)}>{s.status}</Pill>
                     <span className="sbp-list__chevron">›</span>
                   </div>
                 </button>

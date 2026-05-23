@@ -35,9 +35,11 @@ and mirrored in `app/src/domain/SignSpec.ts`.
 | Pole Diameter          | lum_polediameter          | Single line text | |
 | Pole Material          | lum_polematerial          | Single line text | |
 | Footing Type           | lum_footingtype           | Single line text | |
+| Footing Depth (in)     | lum_footingdepth          | Single line text | Depth in inches, free text |
 | Footing Method         | lum_footingmethod         | Single line text | |
 | Electrical             | lum_electrical            | Single line text | |
 | Conduit Size           | lum_conduitsize           | Single line text | |
+| Panel Location         | lum_panellocation         | Single line text | Free text — e.g. "Exterior NE corner" |
 | Departments            | lum_departments           | Single line text | Routing label, auto-calculated |
 | Outsourced             | lum_outsourced            | Two options      | false default |
 | Notes                  | lum_notes                 | Multiline text   | |

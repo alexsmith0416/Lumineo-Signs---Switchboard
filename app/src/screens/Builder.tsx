@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSpec } from "../app/SpecContext";
+import { useLaunchParams } from "../app/launchParams";
 import { SIGN_TYPES, getSignType, isLetter, isPan, POLE_FOOTING_TYPES } from "../domain/signTypes";
 import type { SignTypeCode } from "../domain/signTypes";
 import { Banner } from "../ui/Banner";
@@ -19,11 +20,25 @@ import { Step11Footing } from "../builder/steps/Step11Footing";
 import { Step12Electrical } from "../builder/steps/Step12Electrical";
 import { SpecSummary } from "../builder/SpecSummary";
 import { SpecReferenceImage } from "../builder/SpecReferenceImage";
+import { statusTone } from "../ui/specStatus";
 
 export function Builder() {
   const { spec, recent, loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml } = useSpec();
+  const { specId } = useLaunchParams();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [deepLinked, setDeepLinked] = useState(false);
+
+  // Deep-link from Switchboard / Project Scheduler: ?specId=... preloads a
+  // saved spec on first mount. Runs once per specId, after recent has loaded.
+  useEffect(() => {
+    if (!specId || deepLinked || recent.length === 0) return;
+    const target = recent.find((s) => s.id === specId);
+    if (target) {
+      loadSpec(target);
+      setDeepLinked(true);
+    }
+  }, [specId, recent, deepLinked, loadSpec]);
 
   const filtered = useMemo(() => recent.filter((s) => {
     if (typeFilter && s.signTypeCode !== typeFilter) return false;
@@ -67,7 +82,12 @@ export function Builder() {
                 onClick={() => loadSpec(s)}
                 title={`${s.customerName || ""} ${s.projectName || ""}`.trim()}
               >
-                <span className="sbp-sidebar__item-code">{s.productCode || "(no code)"}</span>
+                <div className="sbp-sidebar__item-head">
+                  <span className="sbp-sidebar__item-code">{s.productCode || "(no code)"}</span>
+                  <span className={`sbp-sidebar__item-status is-${statusTone(s.status)}`}>
+                    {s.status}
+                  </span>
+                </div>
                 <span className="sbp-sidebar__item-meta">
                   {s.projectName || s.customerName || getSignType(s.signTypeCode || "")?.name || "—"}
                 </span>

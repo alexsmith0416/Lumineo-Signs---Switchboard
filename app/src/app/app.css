@@ -337,6 +337,41 @@
   text-overflow: ellipsis;
 }
 
+.sbp-sidebar__item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sbp-sidebar__item-status {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sbp-sidebar__item-status.is-green {
+  background: rgba(15, 110, 86, 0.32);
+  color: #b9eed8;
+}
+
+.sbp-sidebar__item-status.is-amber {
+  background: rgba(242, 153, 74, 0.28);
+  color: #fbd2a5;
+}
+
+.sbp-sidebar__item-status.is-navy {
+  background: rgba(232, 21, 27, 0.28);
+  color: #ffd2d3;
+}
+
 .sbp-sidebar__empty {
   font-size: 12px;
   color: rgba(255,255,255,0.4);

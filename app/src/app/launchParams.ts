@@ -9,6 +9,8 @@ import { useLocation } from "react-router-dom";
 export type LaunchContext = {
   userEmail: string;
   role: string;
+  /** Spec to preload on Builder mount — typically passed from Project Scheduler. */
+  specId: string;
 };
 
 export function useLaunchParams(): LaunchContext {
@@ -18,6 +20,7 @@ export function useLaunchParams(): LaunchContext {
     return {
       userEmail: p.get("userEmail") ?? "",
       role: p.get("role") ?? "",
+      specId: p.get("specId") ?? "",
     };
   }, [search]);
 }
