@@ -242,7 +242,7 @@
 .sbp-builder {
   display: grid;
   grid-template-columns: 300px 1fr;
-  min-height: calc(100vh - 73px);
+  min-height: calc(100vh - var(--lum-chrome-height));
 }
 
 @media (max-width: 900px) {
@@ -259,9 +259,9 @@
   gap: 16px;
   border-right: 1px solid rgba(255,255,255,0.06);
   position: sticky;
-  top: 73px;
+  top: var(--lum-chrome-height);
   align-self: start;
-  max-height: calc(100vh - 73px);
+  max-height: calc(100vh - var(--lum-chrome-height));
   overflow-y: auto;
 }
 
@@ -406,7 +406,7 @@
   align-items: center;
   gap: 14px;
   position: sticky;
-  top: 73px;
+  top: var(--lum-chrome-height);
   z-index: 5;
 }
 
@@ -887,7 +887,7 @@
 .sbp-projects {
   display: grid;
   grid-template-columns: 320px 1fr;
-  min-height: calc(100vh - 73px);
+  min-height: calc(100vh - var(--lum-chrome-height));
   gap: 0;
 }
 
@@ -903,9 +903,9 @@
   flex-direction: column;
   gap: 6px;
   position: sticky;
-  top: 73px;
+  top: var(--lum-chrome-height);
   align-self: start;
-  max-height: calc(100vh - 73px);
+  max-height: calc(100vh - var(--lum-chrome-height));
   overflow-y: auto;
 }
 

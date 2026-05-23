@@ -32,6 +32,13 @@
   --lum-shadow-sm: 0 1px 2px rgba(20, 20, 100, 0.06), 0 1px 3px rgba(20, 20, 100, 0.04);
   --lum-shadow-md: 0 4px 8px rgba(20, 20, 100, 0.06), 0 2px 4px rgba(20, 20, 100, 0.05);
   --lum-shadow-lg: 0 12px 24px rgba(20, 20, 100, 0.08), 0 4px 8px rgba(20, 20, 100, 0.05);
+
+  /* Combined height of the sticky header + sub-nav strip. Anything that
+     pins itself below the chrome (sidebars, second-row toolbars) should
+     reference this rather than hard-code pixel values. */
+  --lum-header-height: 73px;
+  --lum-subnav-height: 44px;
+  --lum-chrome-height: 117px;
 }
 
 * { box-sizing: border-box; }
@@ -140,42 +147,26 @@ input, select, textarea {
   gap: 16px;
 }
 
-.lum-header__nav {
+/* ─── Role-switcher trigger (matches Switchboard prototype lcl_Header) ── */
+.lum-header__roleswitcher {
+  position: relative;
+}
+
+.lum-header__roleswitcher-trigger {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.lum-header__navlink {
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   border-radius: var(--lum-radius);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--lum-gray-700);
-  text-decoration: none;
-  position: relative;
+  border: 1px solid var(--lum-gray-200);
+  background: white;
   transition: all 0.12s ease;
+  cursor: pointer;
 }
 
-.lum-header__navlink:hover {
+.lum-header__roleswitcher-trigger:hover {
+  border-color: var(--lum-navy);
   background: var(--lum-navy-bg);
-  color: var(--lum-navy);
-}
-
-.lum-header__navlink.is-active {
-  color: var(--lum-navy);
-  background: var(--lum-navy-bg);
-}
-
-.lum-header__navlink.is-active::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: -2px;
-  height: 2px;
-  background: var(--lum-red);
-  border-radius: 2px;
 }
 
 .lum-header__avatar {
@@ -212,6 +203,23 @@ input, select, textarea {
   letter-spacing: 0.5px;
 }
 
+.lum-header__caret {
+  font-size: 10px;
+  color: var(--lum-gray-500);
+  margin-left: 4px;
+}
+
+.lum-header__demo-pill {
+  background: var(--lum-amber);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .lum-header__spec-badge {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12px;
@@ -223,23 +231,44 @@ input, select, textarea {
   letter-spacing: 0.5px;
 }
 
-.lum-header__backend {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  text-transform: uppercase;
+/* ─── Sub-nav strip — sits directly below the header so the header itself
+       reads identical to Switchboard, while sub-app navigation lives in a
+       quieter secondary bar. */
+.lum-subnav {
+  background: white;
+  border-bottom: 1px solid var(--lum-gray-200);
+  position: sticky;
+  top: var(--lum-header-height);
+  z-index: 9;
 }
 
-.lum-header__backend.is-dataverse {
-  background: var(--lum-green-soft);
-  color: var(--lum-green);
+.lum-subnav__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 28px;
+  display: flex;
+  gap: 4px;
 }
 
-.lum-header__backend.is-local {
-  background: var(--lum-amber-soft);
-  color: #8a4612;
+.lum-subnav__link {
+  padding: 12px 14px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lum-gray-500);
+  text-decoration: none;
+  position: relative;
+  transition: color 0.12s ease;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap the parent's border so the active accent sits flush */
+}
+
+.lum-subnav__link:hover {
+  color: var(--lum-navy);
+}
+
+.lum-subnav__link.is-active {
+  color: var(--lum-navy);
+  border-bottom-color: var(--lum-red);
 }
 
 /* ============ Cards ============ */
