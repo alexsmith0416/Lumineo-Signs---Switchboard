@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { differenceInMinutes, format } from "date-fns";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import { effectiveHours } from "../engine/capacity";
+import { lookupZip } from "../services/zip-geo";
 import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 
@@ -127,13 +128,14 @@ interface JobTooltipProps {
 }
 
 function JobTooltip({ line, department, employee, conflicts, anchorRect, deptStyle }: JobTooltipProps) {
-  const TOOLTIP_W = 280;
+  const TOOLTIP_W = 300;
+  const TOOLTIP_H_ESTIMATE = 360;
   const margin = 8;
   // Prefer above the card; fall back below if no room.
-  const placeAbove = anchorRect.top > 320;
+  const placeAbove = anchorRect.top > TOOLTIP_H_ESTIMATE + margin;
   const top = placeAbove
-    ? Math.max(margin, anchorRect.top - margin - 240)
-    : Math.min(window.innerHeight - 240 - margin, anchorRect.bottom + margin);
+    ? Math.max(margin, anchorRect.top - margin - TOOLTIP_H_ESTIMATE)
+    : Math.min(window.innerHeight - TOOLTIP_H_ESTIMATE - margin, anchorRect.bottom + margin);
   const left = Math.min(
     window.innerWidth - TOOLTIP_W - margin,
     Math.max(margin, anchorRect.left + anchorRect.width / 2 - TOOLTIP_W / 2),
@@ -219,6 +221,46 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
             label="Resource"
             value={`${employee.name} · ${Math.round(employee.productivityRate * 100)}% · ${employee.standardHoursPerDay}h/day`}
           />
+        )}
+
+        {line.installZip && (() => {
+          const geo = lookupZip(line.installZip);
+          return (
+            <Row
+              label="Location"
+              value={
+                geo ? (
+                  <>
+                    {geo.city}, {geo.state}{" "}
+                    <span style={{ color: "var(--text-tertiary)" }}>{line.installZip}</span>
+                  </>
+                ) : (
+                  <span style={{ color: "var(--text-tertiary)" }}>ZIP {line.installZip}</span>
+                )
+              }
+            />
+          );
+        })()}
+
+        {line.installZip && (
+          <div style={{ marginTop: 8 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+                marginBottom: 4,
+              }}
+            >
+              Weather
+            </div>
+            <WeatherChip
+              zip={line.installZip}
+              forDate={line.startDateTime}
+              size="expanded"
+            />
+          </div>
         )}
 
         {line.customerDueDate && (
