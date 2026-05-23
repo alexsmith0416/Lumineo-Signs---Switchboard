@@ -8,6 +8,7 @@ function getOptions(signType: string): { value: FaceTypeCode; label: string }[] 
     return [
       { value: "AT", label: "Aluminum Trim Cap (Letter standard)" },
       { value: "PT", label: "Plex Face / Trim Cap" },
+      { value: "CU", label: "Custom…" },
     ];
   }
   if (signType === "EM") {
@@ -19,11 +20,12 @@ function getOptions(signType: string): { value: FaceTypeCode; label: string }[] 
     { value: "RFPB", label: "Routed Face — Push-Back Backer" },
     { value: "RFPT", label: "Routed Face — Push-Through" },
     { value: "DF",   label: "Direct Print / Digital Face" },
+    { value: "CU",   label: "Custom…" },
   ];
 }
 
 export function Step6FaceType() {
-  const { spec, setFaceType } = useSpec();
+  const { spec, setFaceType, update } = useSpec();
   const options = getOptions(spec.signTypeCode || "");
 
   return (
@@ -40,6 +42,15 @@ export function Step6FaceType() {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        {spec.faceType === "CU" ? (
+          <input
+            className="lum-input"
+            style={{ marginTop: 10 }}
+            value={spec.faceTypeCustom}
+            onChange={(e) => update({ faceTypeCustom: e.target.value })}
+            placeholder="Describe the custom face type…"
+          />
+        ) : null}
       </div>
     </div>
   );

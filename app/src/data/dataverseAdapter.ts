@@ -12,28 +12,8 @@
 import type { SignSpec } from "../domain/SignSpec";
 import type { SignSpecRepo } from "./dataverseService";
 import { localSignSpecRepo } from "./dataverseService";
-
-type DataverseColumns = Record<string, string | number | boolean | null>;
-
-type PowerProviderTable<T extends DataverseColumns> = {
-  list(): Promise<T[]>;
-  create(row: T): Promise<T>;
-  update(id: string, row: Partial<T>): Promise<T>;
-  retrieve(id: string): Promise<T | null>;
-  delete(id: string): Promise<void>;
-};
-
-type PowerProviderShape = {
-  tables: {
-    SignSpecifications?: PowerProviderTable<DataverseColumns>;
-  };
-};
-
-declare global {
-  interface Window {
-    PowerProvider?: PowerProviderShape;
-  }
-}
+import type { DataverseColumns, PowerProviderTable } from "./powerProvider";
+import "./powerProvider"; // side-effect: registers window.PowerProvider type
 
 export type DataBackend = "dataverse" | "local";
 
@@ -49,24 +29,30 @@ function toRow(spec: SignSpec): DataverseColumns {
   return {
     lum_productcode:     spec.productCode,
     lum_customername:    spec.customerName,
-    lum_projectname:     spec.projectName,
-    lum_quantity:        spec.quantity,
-    lum_signtypecode:    spec.signTypeCode,
-    lum_faces:           spec.faces,
-    lum_illumination:    spec.illumination,
-    lum_ledcolorcode:    spec.ledColor,
-    lum_facetypecode:    spec.faceType,
-    lum_finishcode:      spec.finish,
-    lum_paintcolor:      spec.paintColor,
-    lum_vinylcode:       spec.vinyl,
-    lum_vinylcolor:      spec.vinylColor,
-    lum_vinylhex:        spec.vinylHex,
-    lum_mountingcode:    spec.mounting,
-    lum_heightin:        spec.heightIn ? Number(spec.heightIn) : null,
-    lum_widthin:         spec.widthIn  ? Number(spec.widthIn)  : null,
-    lum_depthin:         spec.depthIn  ? Number(spec.depthIn)  : null,
-    lum_backertype:      spec.backerType,
-    lum_backercolor:     spec.backerColor,
+    lum_name:                 spec.name,
+    lum_signprojectid:        spec.projectId ?? null,
+    lum_projectname:          spec.projectName,
+    lum_quantity:             spec.quantity,
+    lum_signtypecode:         spec.signTypeCode,
+    lum_faces:                spec.faces,
+    lum_illumination:         spec.illumination,
+    lum_ledcolorcode:         spec.ledColor,
+    lum_facetypecode:         spec.faceType,
+    lum_facetypecustom:       spec.faceTypeCustom,
+    lum_finishcode:           spec.finish,
+    lum_finishcustom:         spec.finishCustom,
+    lum_paintcolor:           spec.paintColor,
+    lum_vinylcode:            spec.vinyl,
+    lum_vinylcolor:           spec.vinylColor,
+    lum_vinylhex:             spec.vinylHex,
+    lum_mountingcode:         spec.mounting,
+    lum_mountingcustom:       spec.mountingCustom,
+    lum_heightin:             spec.heightIn ? Number(spec.heightIn) : null,
+    lum_widthin:              spec.widthIn  ? Number(spec.widthIn)  : null,
+    lum_depthin:              spec.depthIn  ? Number(spec.depthIn)  : null,
+    lum_backertype:           spec.backerType,
+    lum_backertypecustom:     spec.backerTypeCustom,
+    lum_backercolor:          spec.backerColor,
     lum_poletype:        spec.poleType,
     lum_polediameter:    spec.poleDiameter,
     lum_polematerial:    spec.poleMaterial,
@@ -85,28 +71,34 @@ function toRow(spec: SignSpec): DataverseColumns {
 
 function fromRow(row: DataverseColumns): SignSpec {
   return {
-    id:            String(row.signspecificationid ?? row.id ?? ""),
-    productCode:   String(row.lum_productcode ?? ""),
-    customerName:  String(row.lum_customername ?? ""),
-    projectName:   String(row.lum_projectname ?? ""),
-    quantity:      Number(row.lum_quantity ?? 1),
-    signTypeCode:  (String(row.lum_signtypecode ?? "")) as SignSpec["signTypeCode"],
-    faces:         (String(row.lum_faces ?? "")) as SignSpec["faces"],
-    illumination:  (String(row.lum_illumination ?? "")) as SignSpec["illumination"],
-    ledColor:      (String(row.lum_ledcolorcode ?? "WH")) as SignSpec["ledColor"],
-    faceType:      (String(row.lum_facetypecode ?? "")) as SignSpec["faceType"],
-    finish:        (String(row.lum_finishcode ?? "")) as SignSpec["finish"],
-    paintColor:    String(row.lum_paintcolor ?? ""),
-    vinyl:         (String(row.lum_vinylcode ?? "")) as SignSpec["vinyl"],
-    vinylColor:    String(row.lum_vinylcolor ?? ""),
-    vinylHex:      String(row.lum_vinylhex ?? ""),
-    digitalRef:    "",
-    mounting:      (String(row.lum_mountingcode ?? "")) as SignSpec["mounting"],
-    heightIn:      row.lum_heightin == null ? "" : String(row.lum_heightin),
-    widthIn:       row.lum_widthin  == null ? "" : String(row.lum_widthin),
-    depthIn:       row.lum_depthin  == null ? "" : String(row.lum_depthin),
-    backerType:    (String(row.lum_backertype ?? "")) as SignSpec["backerType"],
-    backerColor:   String(row.lum_backercolor ?? ""),
+    id:               String(row.signspecificationid ?? row.id ?? ""),
+    productCode:      String(row.lum_productcode ?? ""),
+    name:             String(row.lum_name ?? ""),
+    projectId:        row.lum_signprojectid ? String(row.lum_signprojectid) : undefined,
+    customerName:     String(row.lum_customername ?? ""),
+    projectName:      String(row.lum_projectname ?? ""),
+    quantity:         Number(row.lum_quantity ?? 1),
+    signTypeCode:     (String(row.lum_signtypecode ?? "")) as SignSpec["signTypeCode"],
+    faces:            (String(row.lum_faces ?? "")) as SignSpec["faces"],
+    illumination:     (String(row.lum_illumination ?? "")) as SignSpec["illumination"],
+    ledColor:         (String(row.lum_ledcolorcode ?? "WH")) as SignSpec["ledColor"],
+    faceType:         (String(row.lum_facetypecode ?? "")) as SignSpec["faceType"],
+    faceTypeCustom:   String(row.lum_facetypecustom ?? ""),
+    finish:           (String(row.lum_finishcode ?? "")) as SignSpec["finish"],
+    finishCustom:     String(row.lum_finishcustom ?? ""),
+    paintColor:       String(row.lum_paintcolor ?? ""),
+    vinyl:            (String(row.lum_vinylcode ?? "")) as SignSpec["vinyl"],
+    vinylColor:       String(row.lum_vinylcolor ?? ""),
+    vinylHex:         String(row.lum_vinylhex ?? ""),
+    digitalRef:       "",
+    mounting:         (String(row.lum_mountingcode ?? "")) as SignSpec["mounting"],
+    mountingCustom:   String(row.lum_mountingcustom ?? ""),
+    heightIn:         row.lum_heightin == null ? "" : String(row.lum_heightin),
+    widthIn:          row.lum_widthin  == null ? "" : String(row.lum_widthin),
+    depthIn:          row.lum_depthin  == null ? "" : String(row.lum_depthin),
+    backerType:       (String(row.lum_backertype ?? "")) as SignSpec["backerType"],
+    backerTypeCustom: String(row.lum_backertypecustom ?? ""),
+    backerColor:      String(row.lum_backercolor ?? ""),
     poleType:      String(row.lum_poletype ?? ""),
     poleDiameter:  String(row.lum_polediameter ?? ""),
     poleMaterial:  String(row.lum_polematerial ?? ""),

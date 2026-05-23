@@ -8,10 +8,10 @@ import type { SignTypeCode } from "./signTypes";
 export type Illumination = "" | "IL" | "EL" | "NI";
 export type Faces = "" | "SF" | "DF" | "NA";
 export type LEDColor = "WH" | "RD" | "BL" | "GR" | "RGB";
-export type FaceTypeCode = "" | "AT" | "PT" | "RFPB" | "RFPT" | "DF" | "EM";
-export type FinishCode = "" | "P" | "RWB" | "RWM" | "OEM";
+export type FaceTypeCode = "" | "AT" | "PT" | "RFPB" | "RFPT" | "DF" | "EM" | "CU";
+export type FinishCode = "" | "P" | "RWB" | "RWM" | "OEM" | "CU";
 export type VinylTypeCode = "" | "CV" | "DV" | "FX" | "NV";
-export type MountingCode = "" | "WB" | "RB" | "FM" | "RM" | "FB" | "DM" | "RW";
+export type MountingCode = "" | "WB" | "RB" | "FM" | "RM" | "FB" | "DM" | "RW" | "CU";
 export type BackerType = "" | "FP" | "PT" | "CU";
 
 export type SignSpecStatus = "Draft" | "Submitted" | "Approved" | "Built";
@@ -21,6 +21,10 @@ export type SignSpec = {
   id?: string;
   productCode: string;
   status: SignSpecStatus;
+  /** Optional belongs-to link; signs created outside a Project workspace have no projectId. */
+  projectId?: string;
+  /** Short human label — replaces "New Sign" when the user types one in. Independent of customerName/projectName. */
+  name: string;
 
   // header inputs
   customerName: string;
@@ -45,13 +49,16 @@ export type SignSpec = {
   // step 5
   ledColor: LEDColor;
 
-  // step 6 / 6B
+  // step 6 / 6B — custom face / backer free-text active when codes are "CU"-style
   faceType: FaceTypeCode;
+  faceTypeCustom: string;
   backerType: BackerType;
+  backerTypeCustom: string;
   backerColor: string;
 
   // step 7
   finish: FinishCode;
+  finishCustom: string;
   paintColor: string;
 
   // step 8
@@ -62,6 +69,7 @@ export type SignSpec = {
 
   // step 9
   mounting: MountingCode;
+  mountingCustom: string;
 
   // steps 10/11/12 — MN/PS/PP only
   poleType: string;          // "New Pole" | "Existing Pole" | "No Pole"
@@ -83,6 +91,7 @@ export function emptySignSpec(): SignSpec {
   return {
     productCode: "",
     status: "Draft",
+    name: "",
     customerName: "",
     projectName: "",
     quantity: 1,
@@ -95,15 +104,19 @@ export function emptySignSpec(): SignSpec {
     illumination: "",
     ledColor: "WH",
     faceType: "",
+    faceTypeCustom: "",
     backerType: "",
+    backerTypeCustom: "",
     backerColor: "",
     finish: "",
+    finishCustom: "",
     paintColor: "",
     vinyl: "",
     vinylColor: "",
     vinylHex: "",
     digitalRef: "",
     mounting: "",
+    mountingCustom: "",
     poleType: "",
     poleDiameter: "",
     poleMaterial: "",

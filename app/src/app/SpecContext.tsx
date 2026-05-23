@@ -13,10 +13,12 @@ import {
   type ReactNode,
 } from "react";
 import type { SignSpec } from "../domain/SignSpec";
+import type { Project } from "../domain/Project";
 import { emptySignSpec } from "../domain/SignSpec";
 import { assembleProductCode, calculateDepartments } from "../domain/productCode";
 import { isLetter, isPan } from "../domain/signTypes";
 import { signSpecs } from "../data/dataverseService";
+import { projects as projectRepo } from "../data/projectRepo";
 
 type SpecContextValue = {
   spec: SignSpec;
@@ -24,6 +26,10 @@ type SpecContextValue = {
   loadingRecent: boolean;
   saveStatus: "idle" | "saving" | "saved" | "error";
   codeCopied: boolean;
+
+  /** All saved projects, refreshed after save/delete. */
+  projects: Project[];
+  loadingProjects: boolean;
 
   update: (patch: Partial<SignSpec>) => void;
   setSignType: (code: SignSpec["signTypeCode"]) => void;
@@ -35,11 +41,16 @@ type SpecContextValue = {
 
   loadSpec: (s: SignSpec) => void;
   clearAll: () => void;
+  /** Start a new spec, optionally pre-bound to a project. */
+  newSpec: (projectId?: string, projectName?: string) => void;
   saveSpec: () => Promise<void>;
   duplicateSpec: (s: SignSpec) => void;
   deleteSpec: (id: string) => Promise<void>;
   exportSpecHtml: () => void;
   copyProductCode: () => void;
+
+  saveProject: (p: Project) => Promise<Project>;
+  deleteProject: (id: string) => Promise<void>;
 };
 
 const SpecCtx = createContext<SpecContextValue | null>(null);
@@ -65,6 +76,8 @@ export function SpecProvider({ children }: { children: ReactNode }) {
   const [spec, setSpec] = useState<SignSpec>(() => loadDraft() ?? emptySignSpec());
   const [recent, setRecent] = useState<SignSpec[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
   const [saveStatus, setSaveStatus] = useState<SpecContextValue["saveStatus"]>("idle");
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -75,14 +88,19 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     departments: calculateDepartments(spec),
   }), [spec]);
 
-  // Load recent on mount.
+  // Load recent + projects on mount.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const all = await signSpecs.list();
+      const [allSpecs, allProjects] = await Promise.all([
+        signSpecs.list(),
+        projectRepo.list(),
+      ]);
       if (!cancelled) {
-        setRecent(all);
+        setRecent(allSpecs);
+        setProjects(allProjects);
         setLoadingRecent(false);
+        setLoadingProjects(false);
       }
     })();
     return () => { cancelled = true; };
@@ -148,7 +166,9 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     setSpec((s) => ({
       ...s,
       faceType: v,
+      faceTypeCustom: v === "CU" ? s.faceTypeCustom : "",
       backerType: "",
+      backerTypeCustom: "",
       backerColor: "",
       vinyl: "",
       vinylColor: "",
@@ -179,6 +199,34 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     setSpec(emptySignSpec());
     setSaveStatus("idle");
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+  }, []);
+
+  // Start a blank spec, optionally pre-bound to a project. Used from the
+  // Projects workspace "+ New Sign" button so saves automatically belong to
+  // the right project.
+  const newSpec = useCallback((projectId?: string, projectName?: string) => {
+    const fresh = emptySignSpec();
+    if (projectId)  fresh.projectId  = projectId;
+    if (projectName) fresh.projectName = projectName;
+    setSpec(fresh);
+    setSaveStatus("idle");
+  }, []);
+
+  const saveProject = useCallback(async (p: Project) => {
+    const saved = await projectRepo.save(p);
+    const all = await projectRepo.list();
+    setProjects(all);
+    return saved;
+  }, []);
+
+  const deleteProject = useCallback(async (id: string) => {
+    await projectRepo.remove(id);
+    const [allProjects, allSpecs] = await Promise.all([
+      projectRepo.list(),
+      signSpecs.list(),
+    ]);
+    setProjects(allProjects);
+    setRecent(allSpecs);
   }, []);
 
   const saveSpec = useCallback(async () => {
@@ -299,6 +347,8 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     spec: liveSpec,
     recent,
     loadingRecent,
+    projects,
+    loadingProjects,
     saveStatus,
     codeCopied,
     update,
@@ -310,11 +360,14 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     setVinylSwatch,
     loadSpec,
     clearAll,
+    newSpec,
     saveSpec,
     duplicateSpec,
     deleteSpec,
     exportSpecHtml,
     copyProductCode,
+    saveProject,
+    deleteProject,
   };
 
   return <SpecCtx.Provider value={value}>{children}</SpecCtx.Provider>;

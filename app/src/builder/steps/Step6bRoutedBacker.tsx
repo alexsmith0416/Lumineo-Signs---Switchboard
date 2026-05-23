@@ -26,16 +26,30 @@ export function Step6bRoutedBacker() {
       </div>
       <div className="sbp-step__body">
         <div className="sbp-step__twocol">
-          <select
-            className="lum-select"
-            value={spec.backerType}
-            onChange={(e) => update({ backerType: (e.target.value || "") as BackerType })}
-          >
-            <option value="">Select…</option>
-            {BACKER_TYPES.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <div>
+            <select
+              className="lum-select"
+              value={spec.backerType}
+              onChange={(e) => {
+                const v = (e.target.value || "") as BackerType;
+                update({ backerType: v, backerTypeCustom: v === "CU" ? spec.backerTypeCustom : "" });
+              }}
+            >
+              <option value="">Select…</option>
+              {BACKER_TYPES.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {spec.backerType === "CU" ? (
+              <input
+                className="lum-input"
+                style={{ marginTop: 8 }}
+                value={spec.backerTypeCustom}
+                onChange={(e) => update({ backerTypeCustom: e.target.value })}
+                placeholder="Describe the custom backer material…"
+              />
+            ) : null}
+          </div>
           <select
             className="lum-select"
             value={spec.backerColor}

@@ -12,6 +12,7 @@ const BACKEND = detectDataBackend();
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
   { to: "/builder", label: "Builder" },
+  { to: "/projects", label: "Projects" },
   { to: "/gallery", label: "Gallery" },
   { to: "/reports", label: "Reports" },
 ];

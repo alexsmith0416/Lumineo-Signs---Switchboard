@@ -24,7 +24,7 @@ import { SpecReferenceImage } from "../builder/SpecReferenceImage";
 import { statusTone } from "../ui/specStatus";
 
 export function Builder() {
-  const { spec, recent, loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml } = useSpec();
+  const { spec, recent, projects, loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml } = useSpec();
   const { specId } = useLaunchParams();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -100,7 +100,18 @@ export function Builder() {
 
       <section className="sbp-form">
         <div className="sbp-topbar">
-          <span className="sbp-topbar__title">New Specification</span>
+          <span className="sbp-topbar__title">
+            {spec.id ? "Edit Spec" : "New Spec"}
+          </span>
+          <div className="sbp-topbar__field sbp-topbar__input">
+            <span className="sbp-topbar__field-label">Sign Name</span>
+            <input
+              className="lum-input"
+              value={spec.name}
+              onChange={(e) => update({ name: e.target.value })}
+              placeholder="e.g. Main Entry Cabinet"
+            />
+          </div>
           <div className="sbp-topbar__field sbp-topbar__input">
             <span className="sbp-topbar__field-label">Customer</span>
             <input
@@ -112,12 +123,20 @@ export function Builder() {
           </div>
           <div className="sbp-topbar__field sbp-topbar__input">
             <span className="sbp-topbar__field-label">Project</span>
-            <input
-              className="lum-input"
-              value={spec.projectName}
-              onChange={(e) => update({ projectName: e.target.value })}
-              placeholder="Project name"
-            />
+            <select
+              className="lum-select"
+              value={spec.projectId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || undefined;
+                const proj = projects.find((p) => p.id === id);
+                update({ projectId: id, projectName: proj?.name ?? "" });
+              }}
+            >
+              <option value="">— None / standalone —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name || "Untitled"}</option>
+              ))}
+            </select>
           </div>
           <div className="sbp-topbar__field sbp-topbar__qty">
             <span className="sbp-topbar__field-label">Qty</span>

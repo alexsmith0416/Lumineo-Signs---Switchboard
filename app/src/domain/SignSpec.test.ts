@@ -6,12 +6,13 @@ describe("emptySignSpec", () => {
     const spec = emptySignSpec();
     // Strings must be the empty string, not undefined.
     const stringKeys: (keyof typeof spec)[] = [
-      "productCode", "customerName", "projectName",
+      "productCode", "name", "customerName", "projectName",
       "signTypeCode", "faces", "illumination",
-      "faceType", "finish", "paintColor",
+      "faceType", "faceTypeCustom", "finish", "finishCustom", "paintColor",
       "vinyl", "vinylColor", "vinylHex", "digitalRef",
-      "mounting", "heightIn", "widthIn", "depthIn",
-      "backerType", "backerColor",
+      "mounting", "mountingCustom",
+      "heightIn", "widthIn", "depthIn",
+      "backerType", "backerTypeCustom", "backerColor",
       "poleType", "poleDiameter", "poleMaterial",
       "footingType", "footingDepth", "footingMethod",
       "electrical", "conduitSize", "panelLocation",

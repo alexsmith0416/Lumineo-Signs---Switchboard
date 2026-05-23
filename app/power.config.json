@@ -8,6 +8,11 @@
       "logicalName": "lum_signspecification",
       "displayName": "Sign Specifications",
       "alias": "SignSpecifications"
+    },
+    {
+      "logicalName": "lum_signproject",
+      "displayName": "Sign Projects",
+      "alias": "SignProjects"
     }
   ],
   "launchParams": ["userEmail", "role"]

@@ -1,18 +1,39 @@
-// Seed a handful of sample specs the first time the app runs in dev so the
-// Dashboard and Builder sidebar show realistic content instead of empty
-// states. No-op once the user has saved anything.
+// Seed a handful of sample specs + projects the first time the app runs in
+// dev so the Dashboard, Builder sidebar, and Projects screen show realistic
+// content instead of empty states. No-op once the user has saved anything.
 
 import type { SignSpec } from "../domain/SignSpec";
+import type { Project } from "../domain/Project";
 import { emptySignSpec } from "../domain/SignSpec";
 import { localSignSpecRepo } from "./dataverseService";
+import { localProjectRepo } from "./projectRepo";
 
-const SEED: SignSpec[] = [
+const SEED_PROJECTS: Project[] = [
+  {
+    id: "proj-westview",
+    name: "Westview Medical — Main Entry",
+    customerName: "Westview Medical",
+    notes: "Install scheduled for Q3. Cabinet + wayfinding bundle.",
+    createdAt: "2026-05-01T00:00:00.000Z",
+  },
+  {
+    id: "proj-lakeside",
+    name: "Lakeside Office Park — Phase 1",
+    customerName: "Lakeside Office Park",
+    notes: "Monument + tenant directory + parking.",
+    createdAt: "2026-05-10T00:00:00.000Z",
+  },
+];
+
+const SEED_SIGNS: SignSpec[] = [
   {
     ...emptySignSpec(),
     id: "seed-wc-1",
+    name: "Main Entry Cabinet",
+    projectId: "proj-westview",
     productCode: "WC-DF-IL-RFPB-P-CV-WB-WH",
     customerName: "Westview Medical",
-    projectName: "Main Entry Cabinet",
+    projectName: "Westview Medical — Main Entry",
     quantity: 2,
     signTypeCode: "WC",
     faces: "DF",
@@ -34,9 +55,11 @@ const SEED: SignSpec[] = [
   {
     ...emptySignSpec(),
     id: "seed-mn-1",
+    name: "North Entrance Monument",
+    projectId: "proj-lakeside",
     productCode: "MN-SF-EL-AT-P-CV-FM-WH",
     customerName: "Lakeside Office Park",
-    projectName: "Monument — North Entrance",
+    projectName: "Lakeside Office Park — Phase 1",
     quantity: 1,
     signTypeCode: "MN",
     faces: "SF",
@@ -58,9 +81,10 @@ const SEED: SignSpec[] = [
   {
     ...emptySignSpec(),
     id: "seed-fl-1",
+    name: "Storefront Channel Letters",
     productCode: "FL-NI-PT-OEM-NV-DM",
     customerName: "Pioneer Bank",
-    projectName: "Storefront Channel Letters",
+    projectName: "Pioneer Bank — Branch Refresh",
     quantity: 8,
     signTypeCode: "FL",
     faces: "NA",
@@ -77,7 +101,14 @@ const SEED: SignSpec[] = [
 ];
 
 export async function seedIfEmpty(): Promise<void> {
-  const existing = await localSignSpecRepo.list();
-  if (existing.length > 0) return;
-  for (const s of SEED) await localSignSpecRepo.save(s);
+  const [specs, projects] = await Promise.all([
+    localSignSpecRepo.list(),
+    localProjectRepo.list(),
+  ]);
+  if (projects.length === 0) {
+    for (const p of SEED_PROJECTS) await localProjectRepo.save(p);
+  }
+  if (specs.length === 0) {
+    for (const s of SEED_SIGNS) await localSignSpecRepo.save(s);
+  }
 }
