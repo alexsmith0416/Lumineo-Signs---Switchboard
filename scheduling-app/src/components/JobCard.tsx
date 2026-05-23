@@ -20,6 +20,8 @@ function deptStyle(dept: Department | undefined): { bg: string; text: string } {
     "#CECBF6": "#26215c",
     "#C8E6D4": "#04342c",
     "#FFE0A8": "#5e3c00",
+    "#D6DCE5": "#1c2533",
+    "#F8D5B7": "#5b2a00",
   };
   return { bg, text: textMap[bg] ?? "#1a1d23" };
 }

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { addDays, format, isSameDay, startOfWeek } from "date-fns";
-import { dayKey, isWeekend } from "../engine/capacity";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { addDays, differenceInCalendarDays, format, startOfWeek } from "date-fns";
+import { isWeekend } from "../engine/capacity";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKindMeta } from "../services/data-source";
 import type { UseScheduleStore } from "../store/schedule-store";
@@ -14,12 +14,59 @@ interface CalendarViewProps {
   readOnly?: boolean;
   bannerSlot?: React.ReactNode;
   toolbarExtras?: React.ReactNode;
-  /** Rendered into the slot the production calendar uses for `+ Add Job`. */
   addAction?: React.ReactNode;
-  /** Called when an empty cell is clicked. Receives the cell context. */
   onEmptyCellClick?: (cell: { start: Date; employeeId: string }) => void;
-  /** Override the default click-to-edit behavior for existing job cards. */
   onJobClick?: (line: ScheduleLine) => void;
+}
+
+interface CardLayout {
+  line: ScheduleLine;
+  startIdx: number;
+  spanDays: number;
+  overflowLeft: boolean;
+  overflowRight: boolean;
+  lane: number;
+}
+
+function getDayIndex(date: Date, weekStart: Date): number {
+  return differenceInCalendarDays(date, weekStart);
+}
+
+function computeRowCards(lines: ScheduleLine[], weekStart: Date): CardLayout[] {
+  const out: CardLayout[] = [];
+  const ordered = [...lines].sort(
+    (a, b) => a.startDateTime.getTime() - b.startDateTime.getTime(),
+  );
+
+  // Simple lane allocator: each new card uses the lowest lane that doesn't
+  // overlap any prior card already placed in that lane.
+  const laneEnds: number[] = [];
+
+  for (const line of ordered) {
+    const startIdx = getDayIndex(line.startDateTime, weekStart);
+    const endIdx = getDayIndex(line.endDateTime, weekStart);
+    if (endIdx < 0 || startIdx > 6) continue;
+    const clippedStart = Math.max(0, startIdx);
+    const clippedEnd = Math.min(6, endIdx);
+
+    let lane = laneEnds.findIndex((end) => end < clippedStart);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(clippedEnd);
+    } else {
+      laneEnds[lane] = clippedEnd;
+    }
+
+    out.push({
+      line,
+      startIdx: clippedStart,
+      spanDays: clippedEnd - clippedStart + 1,
+      overflowLeft: startIdx < 0,
+      overflowRight: endIdx > 6,
+      lane,
+    });
+  }
+  return out;
 }
 
 export default function CalendarView({
@@ -40,9 +87,12 @@ export default function CalendarView({
     departments,
     schedule,
     conflicts,
+    workHours,
+    overtime,
     loadWeek,
     setWeekStart,
     shiftTaskAndCommit,
+    updateTaskHours,
   } = useStore();
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
@@ -93,13 +143,7 @@ export default function CalendarView({
   const peopleNoun = (count: number) =>
     `${count} ${count === 1 ? kindMeta.resourceLabel.toLowerCase() : kindMeta.resourceLabelPlural.toLowerCase()}`;
 
-  const context = {
-    employees,
-    departments,
-    schedule,
-    workHours: useStore.getState().workHours,
-    overtime: useStore.getState().overtime,
-  };
+  const context = { employees, departments, schedule, workHours, overtime };
 
   return (
     <div>
@@ -140,52 +184,40 @@ export default function CalendarView({
                 flow {dept.flowOrder} · {peopleNoun(emps.length)}
               </span>
             </div>
-            {emps.map((emp) => (
-              <div key={emp.id} className="employee-row">
-                <div className="employee-row__name">
-                  <strong>{emp.name}</strong>
-                  <span className="productivity">
-                    {Math.round(emp.productivityRate * 100)}% · {emp.standardHoursPerDay}h/day
-                  </span>
-                </div>
-                {days.map((day) => {
-                  const lines = schedule.filter(
-                    (l) => l.employeeId === emp.id && isSameDay(l.startDateTime, day),
-                  );
-                  const weekend = isWeekend(day);
-                  return (
-                    <div
-                      key={`${emp.id}-${dayKey(day)}`}
-                      className={`employee-row__day${weekend ? " employee-row__day--weekend" : ""}${lines.length === 0 ? " employee-row__day--empty" : ""}`}
-                      onDragOver={onCellDragOver}
-                      onDrop={(e) => onCellDrop(e, emp.id, day)}
-                      onClick={() => {
-                        if (lines.length === 0 && onEmptyCellClick) {
-                          const start = new Date(day);
-                          start.setHours(8, 0, 0, 0);
-                          onEmptyCellClick({ start, employeeId: emp.id });
-                        }
-                      }}
-                    >
-                      {lines.map((line) => (
-                        <DraggableJob
-                          key={line.id}
-                          line={line}
-                          department={departments.get(line.departmentId)}
-                          employee={employees.get(line.employeeId)}
-                          conflicts={conflicts}
-                          readOnly={readOnly}
-                          onClick={() => {
-                            if (onJobClick) onJobClick(line);
-                            else setEditLineId(line.id);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            {emps.map((emp) => {
+              const empLines = schedule.filter((l) => l.employeeId === emp.id);
+              const cards = computeRowCards(empLines, days[0]!);
+              const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
+              const rowMinHeight = (maxLane + 1) * 32 + 8;
+
+              return (
+                <EmployeeRow
+                  key={emp.id}
+                  emp={emp}
+                  days={days}
+                  cards={cards}
+                  departments={departments}
+                  conflicts={conflicts}
+                  rowMinHeight={rowMinHeight}
+                  readOnly={readOnly}
+                  onCellDragOver={onCellDragOver}
+                  onCellDrop={onCellDrop}
+                  onCellClick={(day) => {
+                    if (!onEmptyCellClick) return;
+                    const start = new Date(day);
+                    start.setHours(8, 0, 0, 0);
+                    onEmptyCellClick({ start, employeeId: emp.id });
+                  }}
+                  onJobClick={(line) => {
+                    if (onJobClick) onJobClick(line);
+                    else setEditLineId(line.id);
+                  }}
+                  onResize={async (line, newHours) => {
+                    await updateTaskHours(line.id, newHours);
+                  }}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
@@ -205,19 +237,167 @@ export default function CalendarView({
   );
 }
 
-interface DraggableJobProps {
-  line: ScheduleLine;
-  department: Department | undefined;
-  employee: Employee | undefined;
+interface EmployeeRowProps {
+  emp: Employee;
+  days: Date[];
+  cards: CardLayout[];
+  departments: Map<string, Department>;
   conflicts: Conflict[];
+  rowMinHeight: number;
   readOnly: boolean;
-  onClick: () => void;
+  onCellDragOver: (e: React.DragEvent) => void;
+  onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
+  onCellClick: (day: Date) => void;
+  onJobClick: (line: ScheduleLine) => void;
+  onResize: (line: ScheduleLine, newHours: number) => Promise<void>;
 }
 
-function DraggableJob({ line, department, employee, conflicts, readOnly, onClick }: DraggableJobProps) {
+function EmployeeRow({
+  emp,
+  days,
+  cards,
+  departments,
+  conflicts,
+  rowMinHeight,
+  readOnly,
+  onCellDragOver,
+  onCellDrop,
+  onCellClick,
+  onJobClick,
+  onResize,
+}: EmployeeRowProps) {
+  const daysRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div className="employee-row" style={{ minHeight: rowMinHeight }}>
+      <div className="employee-row__name">
+        <strong>{emp.name}</strong>
+        <span className="productivity">
+          {Math.round(emp.productivityRate * 100)}% · {emp.standardHoursPerDay}h/day
+        </span>
+      </div>
+      <div className="employee-row__days" ref={daysRef} style={{ minHeight: rowMinHeight }}>
+        {days.map((day, i) => {
+          const occupiedHere = cards.some(
+            (c) => i >= c.startIdx && i < c.startIdx + c.spanDays,
+          );
+          const weekend = isWeekend(day);
+          return (
+            <div
+              key={i}
+              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere ? " day-cell--empty" : ""}`}
+              onDragOver={onCellDragOver}
+              onDrop={(e) => onCellDrop(e, emp.id, day)}
+              onClick={() => {
+                if (!occupiedHere) onCellClick(day);
+              }}
+            />
+          );
+        })}
+
+        {cards.map((card) => (
+          <GanttCard
+            key={card.line.id}
+            card={card}
+            department={departments.get(card.line.departmentId)}
+            employee={emp}
+            conflicts={conflicts}
+            readOnly={readOnly}
+            daysRef={daysRef}
+            onClick={() => onJobClick(card.line)}
+            onResize={(newHours) => onResize(card.line, newHours)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface GanttCardProps {
+  card: CardLayout;
+  department: Department | undefined;
+  employee: Employee;
+  conflicts: Conflict[];
+  readOnly: boolean;
+  daysRef: React.RefObject<HTMLDivElement | null>;
+  onClick: () => void;
+  onResize: (newHours: number) => Promise<void>;
+}
+
+function GanttCard({
+  card,
+  department,
+  employee,
+  conflicts,
+  readOnly,
+  daysRef,
+  onClick,
+  onResize,
+}: GanttCardProps) {
+  const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
+
+  const [resizePreview, setResizePreview] = useState<{
+    deltaPx: number;
+    newHours: number;
+  } | null>(null);
+
+  const widthPct = (spanDays / 7) * 100;
+  const leftPct = (startIdx / 7) * 100;
+  const previewWidthPct = resizePreview
+    ? widthPct + (resizePreview.deltaPx / (daysRef.current?.clientWidth || 1)) * 100
+    : widthPct;
+
+  const laneHeight = 32;
+  const top = 4 + lane * laneHeight;
+
+  const startResize = (e: React.MouseEvent) => {
+    if (readOnly || line.isLocked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const dayContainer = daysRef.current;
+    if (!dayContainer) return;
+    const dayWidth = dayContainer.clientWidth / 7;
+    const startX = e.clientX;
+    const baseHours = line.overrideHours ?? line.estimatedHours;
+
+    const onMove = (mv: MouseEvent) => {
+      const deltaPx = mv.clientX - startX;
+      const dayDelta = deltaPx / dayWidth;
+      const hourDelta = dayDelta * employee.standardHoursPerDay;
+      const proposed = Math.max(0.25, baseHours + hourDelta);
+      const rounded = Math.round(proposed * 4) / 4; // nearest 0.25h
+      setResizePreview({ deltaPx, newHours: rounded });
+    };
+
+    const onUp = (mv: MouseEvent) => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const deltaPx = mv.clientX - startX;
+      const dayDelta = deltaPx / dayWidth;
+      const hourDelta = dayDelta * employee.standardHoursPerDay;
+      const proposed = Math.max(0.25, baseHours + hourDelta);
+      const rounded = Math.round(proposed * 4) / 4;
+      setResizePreview(null);
+      if (Math.abs(rounded - baseHours) >= 0.25) {
+        void onResize(rounded);
+      }
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   return (
     <div
-      draggable={!readOnly && !line.isLocked}
+      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}`}
+      style={{
+        left: `${leftPct}%`,
+        width: `${previewWidthPct}%`,
+        top,
+        height: laneHeight - 8,
+        bottom: "auto",
+      }}
+      draggable={!readOnly && !line.isLocked && !resizePreview}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/lineId", line.id);
       }}
@@ -225,9 +405,41 @@ function DraggableJob({ line, department, employee, conflicts, readOnly, onClick
         e.stopPropagation();
         onClick();
       }}
-      style={{ cursor: readOnly || line.isLocked ? "pointer" : "grab" }}
     >
-      <JobCard line={line} department={department} employee={employee} conflicts={conflicts} />
+      <JobCard
+        line={line}
+        department={department}
+        employee={employee}
+        conflicts={conflicts}
+      />
+      {!readOnly && !line.isLocked && (
+        <>
+          <div
+            className="resize-handle resize-handle--right"
+            onMouseDown={startResize}
+            onClick={(e) => e.stopPropagation()}
+            title="Drag to resize task duration"
+          />
+          {resizePreview && (
+            <div
+              style={{
+                position: "absolute",
+                top: -22,
+                right: 0,
+                background: "var(--lumineo-navy)",
+                color: "#fff",
+                padding: "2px 6px",
+                borderRadius: 3,
+                fontSize: 10,
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+              }}
+            >
+              {resizePreview.newHours}h
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

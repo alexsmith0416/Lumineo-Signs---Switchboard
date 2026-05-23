@@ -4,10 +4,12 @@ import type { DepartmentId } from "../engine/types";
 // `crfdf_planninglinedepartmentmap` table; this is a deterministic
 // reproduction that we can use until the table is wired in.
 const RULES: Array<{ pattern: RegExp; departmentId: DepartmentId }> = [
-  { pattern: /\b(metal|fabricat(e|ion)|weld|cut|raceway|channel letter|blank|cabinet|cnc|brake)\b/i, departmentId: "dept-metal" },
+  { pattern: /\b(steel|sub[- ]?structure|i[- ]?beam|structural)\b/i, departmentId: "dept-steel" },
+  { pattern: /\b(cnc|rout(e|er|ing)|acm|mdf|pvc panel)\b/i, departmentId: "dept-routing" },
+  { pattern: /\b(metal|fabricat(e|ion)|weld|cut|raceway|channel letter|blank|cabinet|brake)\b/i, departmentId: "dept-metal" },
   { pattern: /\b(paint|prime|topcoat|powder coat|coat)\b/i, departmentId: "dept-paint" },
-  { pattern: /\b(assembl(e|y)|wir(e|ing)|led|mount|final|install)\b/i, departmentId: "dept-assembly" },
   { pattern: /\b(vinyl|graphic|decal|braille|wrap)\b/i, departmentId: "dept-vinyl" },
+  { pattern: /\b(assembl(e|y)|wir(e|ing)|led|mount|final|install)\b/i, departmentId: "dept-assembly" },
 ];
 
 export interface MappedPlanningLine {

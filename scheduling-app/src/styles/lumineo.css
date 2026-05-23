@@ -227,7 +227,7 @@ input, select, textarea {
 
 .employee-row {
   display: grid;
-  grid-template-columns: 140px repeat(7, 1fr);
+  grid-template-columns: 140px 1fr;
   border-bottom: 1px solid var(--bg-tertiary);
   min-height: 56px;
 }
@@ -249,42 +249,118 @@ input, select, textarea {
   color: var(--text-tertiary);
 }
 
-.employee-row__day {
-  border-right: 1px solid var(--bg-tertiary);
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.employee-row__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   position: relative;
+  min-height: 56px;
 }
 
-.employee-row__day--weekend {
+.day-cell {
+  border-right: 1px solid var(--bg-tertiary);
+  min-height: 56px;
+}
+
+.day-cell:last-child { border-right: none; }
+
+.day-cell--weekend {
   background: var(--bg-secondary);
 }
 
-.employee-row__day--empty:hover {
+.day-cell--empty:hover {
   background: var(--bg-tertiary);
   cursor: pointer;
 }
 
-.job-card {
-  border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 10px;
-  position: relative;
-  border: 1px solid rgba(0,0,0,0.05);
+.gantt-card {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  z-index: 2;
 }
 
-.job-card__job-no { font-weight: 600; font-size: 10px; }
-.job-card__customer { font-size: 11px; font-weight: 500; }
-.job-card__desc { font-size: 9px; opacity: 0.85; }
+.gantt-card .job-card {
+  height: 100%;
+  position: relative;
+}
+
+.gantt-card .resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background: transparent;
+  z-index: 3;
+}
+
+.gantt-card .resize-handle:hover,
+.gantt-card .resize-handle--active {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.gantt-card .resize-handle--right {
+  right: 1px;
+  cursor: col-resize;
+  border-radius: 0 4px 4px 0;
+}
+
+.gantt-card .resize-handle--left {
+  left: 1px;
+  cursor: col-resize;
+  border-radius: 4px 0 0 4px;
+}
+
+.gantt-card--overflow-left .job-card {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 3px solid rgba(0, 0, 0, 0.25);
+}
+
+.gantt-card--overflow-right .job-card {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: 3px solid rgba(0, 0, 0, 0.25);
+}
+
+.job-card {
+  border-radius: 6px;
+  padding: 0 24px 0 8px;
+  font-size: 11px;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.job-card__job-no {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.job-card__customer {
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.job-card__desc {
+  opacity: 0.8;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
 .job-card__icons {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 10px;
   display: flex;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* ============ Forms / Add Job panel ============ */
