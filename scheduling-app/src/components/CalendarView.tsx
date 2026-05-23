@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, startOfWeek } from "date-fns";
 import { isWeekend } from "../engine/capacity";
+import { shiftTask, updateDuration } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKindMeta } from "../services/data-source";
 import type { UseScheduleStore } from "../store/schedule-store";
+import { useScenarioStore } from "../store/scenario-store";
 import JobCard from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
+import CascadeConfirmDialog, {
+  summarizeCascadeMoves,
+  type CascadeMove,
+} from "./CascadeConfirmDialog";
 
 interface CalendarViewProps {
   useStore: UseScheduleStore;
@@ -31,6 +37,21 @@ interface CalendarViewProps {
   monthlyGoal?: number;
   /** Combined billing reference total (used when a region toggle shows partial billing). */
   combinedBillingThisWeek?: number;
+  /** Navigation callback so the dialog can jump to the Scenario Sandbox. */
+  onNavigate?: (view: string) => void;
+  /** Whether the "Try in Sandbox" option should appear in the cascade confirm dialog.
+   *  Only valid on the Production calendar today since the scenario store binds to
+   *  the production data source.  */
+  supportsScenarioSandbox?: boolean;
+}
+
+interface PendingShift {
+  kind: "move" | "resize";
+  lineId: string;
+  newStart: Date;
+  newEmployeeId?: string;
+  newOverrideHours?: number;
+  moves: CascadeMove[];
 }
 
 interface CardLayout {
@@ -99,6 +120,8 @@ export default function CalendarView({
   showBillingStats = false,
   monthlyGoal,
   combinedBillingThisWeek,
+  onNavigate,
+  supportsScenarioSandbox = false,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -117,6 +140,10 @@ export default function CalendarView({
   } = useStore();
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
+  const [pendingShift, setPendingShift] = useState<PendingShift | null>(null);
+  const enterScenario = useScenarioStore((s) => s.enter);
+  const addScenarioChange = useScenarioStore((s) => s.addChange);
+  const getContext = useStore((s) => s.getContext);
 
   useEffect(() => {
     void loadWeek();
@@ -155,7 +182,109 @@ export default function CalendarView({
     if (!lineId) return;
     const newStart = new Date(day);
     newStart.setHours(8, 0, 0, 0);
-    await shiftTaskAndCommit(lineId, newStart, employeeId, true);
+    await tryShiftWithConfirm(lineId, newStart, employeeId);
+  };
+
+  const tryShiftWithConfirm = async (
+    lineId: string,
+    newStart: Date,
+    newEmployeeId?: string,
+  ) => {
+    const ctx = getContext();
+    const preview = shiftTask(ctx, lineId, newStart, newEmployeeId, {
+      cascade: true,
+      previewOnly: true,
+    });
+    const moves = summarizeCascadeMoves(ctx, preview, lineId);
+
+    if (moves.length === 0) {
+      await shiftTaskAndCommit(lineId, newStart, newEmployeeId, true);
+      return;
+    }
+    setPendingShift({
+      kind: "move",
+      lineId,
+      newStart,
+      newEmployeeId,
+      moves,
+    });
+  };
+
+  const tryResizeWithConfirm = async (line: ScheduleLine, newHours: number) => {
+    const ctx = getContext();
+    const preview = updateDuration(ctx, line.id, newHours, true);
+    const moves = summarizeCascadeMoves(ctx, preview, line.id);
+
+    if (moves.length === 0) {
+      await updateTaskHours(line.id, newHours);
+      return;
+    }
+    setPendingShift({
+      kind: "resize",
+      lineId: line.id,
+      newStart: line.startDateTime,
+      newOverrideHours: newHours,
+      moves,
+    });
+  };
+
+  const commitPending = async (cascade: boolean) => {
+    if (!pendingShift) return;
+    const p = pendingShift;
+    setPendingShift(null);
+    if (p.kind === "move") {
+      await shiftTaskAndCommit(p.lineId, p.newStart, p.newEmployeeId, cascade);
+    } else if (p.kind === "resize" && p.newOverrideHours !== undefined) {
+      // updateTaskHours always cascades; for "Move only this" we set the
+      // override on a clone via the engine, then write back fields directly
+      // — keep it simple here and call updateTaskHours (cascade=true) only
+      // for the cascade branch. For move-only, we skip the cascade by going
+      // through dataSource directly so downstream tasks aren't touched.
+      if (cascade) {
+        await updateTaskHours(p.lineId, p.newOverrideHours);
+      } else {
+        await applyResizeNoCascade(p.lineId, p.newOverrideHours);
+      }
+    }
+  };
+
+  const dataSource = useStore((s) => s.dataSource);
+  async function applyResizeNoCascade(lineId: string, hours: number) {
+    const ctx = getContext();
+    const line = ctx.schedule.find((l) => l.id === lineId);
+    if (!line) return;
+    // Recompute only this line's end using the engine, no cascade.
+    const r = updateDuration(ctx, lineId, hours, false);
+    const updated = r.context.schedule.find((l) => l.id === lineId);
+    if (!updated) return;
+    await dataSource.updateScheduleLine(lineId, {
+      startDateTime: updated.startDateTime,
+      endDateTime: updated.endDateTime,
+      overrideHours: updated.overrideHours,
+    });
+    await loadWeek();
+  }
+
+  const handleEnterScenario = () => {
+    if (!pendingShift) return;
+    const p = pendingShift;
+    enterScenario(getContext());
+    if (p.kind === "move") {
+      addScenarioChange({
+        type: "shift-task",
+        lineId: p.lineId,
+        newStart: p.newStart,
+        ...(p.newEmployeeId ? { newEmployeeId: p.newEmployeeId } : {}),
+      });
+    } else if (p.kind === "resize" && p.newOverrideHours !== undefined) {
+      addScenarioChange({
+        type: "update-duration",
+        lineId: p.lineId,
+        overrideHours: p.newOverrideHours,
+      });
+    }
+    setPendingShift(null);
+    onNavigate?.("scenario");
   };
 
   if (loading) return <div className="loading">Loading schedule…</div>;
@@ -230,6 +359,11 @@ export default function CalendarView({
                   showInvoice={showInvoice}
                   showCrewBadge={showCrewBadge}
                   showWeather={showWeather}
+                  highlightedLineIds={
+                    pendingShift
+                      ? new Set([pendingShift.lineId, ...pendingShift.moves.map((m) => m.line.id)])
+                      : null
+                  }
                   onCellDragOver={onCellDragOver}
                   onCellDrop={onCellDrop}
                   onCellClick={(day) => {
@@ -243,7 +377,7 @@ export default function CalendarView({
                     else setEditLineId(line.id);
                   }}
                   onResize={async (line, newHours) => {
-                    await updateTaskHours(line.id, newHours);
+                    await tryResizeWithConfirm(line, newHours);
                   }}
                 />
               );
@@ -260,6 +394,28 @@ export default function CalendarView({
             line={editing}
             onClose={() => setEditLineId(null)}
             useStore={useStore}
+          />
+        );
+      })()}
+
+      {pendingShift && (() => {
+        const targetLine = schedule.find((l) => l.id === pendingShift.lineId);
+        if (!targetLine) return null;
+        return (
+          <CascadeConfirmDialog
+            targetLine={targetLine}
+            newStart={pendingShift.newStart}
+            newEmployeeId={pendingShift.newEmployeeId}
+            newOverrideHours={pendingShift.newOverrideHours}
+            changeKind={pendingShift.kind}
+            moves={pendingShift.moves}
+            employeeName={(id) => employees.get(id)?.name ?? id}
+            departmentName={(id) => departments.get(id)?.name ?? id}
+            showScenarioOption={!!onNavigate && supportsScenarioSandbox}
+            onCancel={() => setPendingShift(null)}
+            onMoveOnly={() => commitPending(false)}
+            onEnterScenario={handleEnterScenario}
+            onContinue={() => commitPending(true)}
           />
         );
       })()}
@@ -280,6 +436,7 @@ interface EmployeeRowProps {
   showInvoice: boolean;
   showCrewBadge: boolean;
   showWeather: boolean;
+  highlightedLineIds: Set<string> | null;
   onCellDragOver: (e: React.DragEvent) => void;
   onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
   onCellClick: (day: Date) => void;
@@ -300,6 +457,7 @@ function EmployeeRow({
   showInvoice,
   showCrewBadge,
   showWeather,
+  highlightedLineIds,
   onCellDragOver,
   onCellDrop,
   onCellClick,
@@ -348,6 +506,7 @@ function EmployeeRow({
             showInvoice={showInvoice}
             showCrewBadge={showCrewBadge}
             showWeather={showWeather}
+            highlighted={highlightedLineIds?.has(card.line.id) ?? false}
             daysRef={daysRef}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
@@ -369,6 +528,7 @@ interface GanttCardProps {
   showInvoice: boolean;
   showCrewBadge: boolean;
   showWeather: boolean;
+  highlighted: boolean;
   daysRef: React.RefObject<HTMLDivElement | null>;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
@@ -385,6 +545,7 @@ function GanttCard({
   showInvoice,
   showCrewBadge,
   showWeather,
+  highlighted,
   daysRef,
   onClick,
   onResize,
@@ -443,7 +604,7 @@ function GanttCard({
 
   return (
     <div
-      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}`}
+      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}`}
       style={{
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,

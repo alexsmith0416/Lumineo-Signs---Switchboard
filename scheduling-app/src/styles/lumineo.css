@@ -324,6 +324,22 @@ input, select, textarea {
   border-right: 3px solid rgba(0, 0, 0, 0.25);
 }
 
+@keyframes cascade-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(232, 21, 27, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0); }
+}
+
+.gantt-card--highlighted {
+  z-index: 4;
+}
+
+.gantt-card--highlighted .job-card {
+  outline: 2px solid var(--lumineo-red);
+  outline-offset: 0;
+  animation: cascade-pulse 1.6s ease-out infinite;
+}
+
 /* Job card: column layout — job# + customer on top line, description below,
    optional addons (crew/weather/$) on a third line. All text left-justified. */
 .job-card {

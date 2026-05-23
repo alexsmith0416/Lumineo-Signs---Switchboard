@@ -8,9 +8,10 @@ import AddJobPanel from "./AddJobPanel";
 interface ProductionCalendarProps {
   readOnly?: boolean;
   bannerSlot?: React.ReactNode;
+  onNavigate?: (view: string) => void;
 }
 
-export default function ProductionCalendar({ readOnly = false, bannerSlot }: ProductionCalendarProps) {
+export default function ProductionCalendar({ readOnly = false, bannerSlot, onNavigate }: ProductionCalendarProps) {
   const weekStart = useScheduleStore((s) => s.weekStart);
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
@@ -24,6 +25,8 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot }: Pro
         kindMeta={KIND_META.production}
         readOnly={readOnly}
         bannerSlot={bannerSlot}
+        onNavigate={onNavigate}
+        supportsScenarioSandbox={true}
         addAction={
           <button
             onClick={() =>

@@ -60,7 +60,9 @@ export default function App() {
       </nav>
 
       <main className="app-main">
-        {view === "production" && <ProductionCalendar />}
+        {view === "production" && (
+          <ProductionCalendar onNavigate={(v) => setView(v as View)} />
+        )}
         {view === "installation" && <InstallationCalendar />}
         {view === "shipping" && <ShippingCalendar />}
         {view === "scenario" && <ScenarioSandbox />}
