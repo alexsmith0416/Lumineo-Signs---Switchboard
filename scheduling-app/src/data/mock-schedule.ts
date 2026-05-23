@@ -12,16 +12,14 @@ function at(dayOffset: number, hour: number): Date {
   return addHours(addDays(monday, dayOffset), hour);
 }
 
-// Flow order reflects the typical Lumineo job path:
-// raw steel → sheet metal → CNC routing → paint → vinyl/graphics → assembly.
-// Adjust `flowOrder` if your shop runs a different sequence.
+// Department display + cascade order (top-to-bottom on the calendar).
 export const MOCK_DEPARTMENTS: Department[] = [
-  { id: "dept-steel", name: "Steel MFG", flowOrder: 1, color: "#D6DCE5" },
+  { id: "dept-routing", name: "Routing", flowOrder: 1, color: "#F8D5B7" },
   { id: "dept-metal", name: "Metal Fab", flowOrder: 2, color: "#BED7FF" },
-  { id: "dept-routing", name: "Routing", flowOrder: 3, color: "#F8D5B7" },
-  { id: "dept-paint", name: "Paint", flowOrder: 4, color: "#FAC775" },
+  { id: "dept-paint", name: "Paint", flowOrder: 3, color: "#FAC775" },
+  { id: "dept-assembly", name: "Assembly", flowOrder: 4, color: "#CECBF6" },
   { id: "dept-vinyl", name: "Vinyl / Graphics", flowOrder: 5, color: "#C8E6D4" },
-  { id: "dept-assembly", name: "Assembly", flowOrder: 6, color: "#CECBF6" },
+  { id: "dept-steel", name: "Steel MFG", flowOrder: 6, color: "#D6DCE5" },
 ];
 
 // Real production roster. Productivity defaults to 100% / 8h/day until per-

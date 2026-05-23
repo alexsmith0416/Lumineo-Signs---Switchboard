@@ -4,14 +4,16 @@ import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
 import ShippingCalendar from "./components/ShippingCalendar";
 import ScenarioSandbox from "./components/ScenarioSandbox";
+import MonthlyPlanView from "./components/MonthlyPlanView";
 
-type View = "production" | "installation" | "shipping" | "scenario";
+type View = "production" | "installation" | "shipping" | "scenario" | "monthly";
 
 const VIEW_TITLES: Record<View, string> = {
   production: "Production Scheduling",
   installation: "Installation Scheduling",
   shipping: "Shipping Scheduling",
   scenario: "Scenario Sandbox",
+  monthly: "Monthly Install Plan",
 };
 
 export default function App() {
@@ -44,6 +46,12 @@ export default function App() {
         <div className="app-sidebar__divider" />
         <div className="app-sidebar__section-label">Planning</div>
         <button
+          className={`app-sidebar__item${view === "monthly" ? " app-sidebar__item--active" : ""}`}
+          onClick={() => setView("monthly")}
+        >
+          Monthly Plan
+        </button>
+        <button
           className={`app-sidebar__item${view === "scenario" ? " app-sidebar__item--active" : ""}`}
           onClick={() => setView("scenario")}
         >
@@ -56,6 +64,7 @@ export default function App() {
         {view === "installation" && <InstallationCalendar />}
         {view === "shipping" && <ShippingCalendar />}
         {view === "scenario" && <ScenarioSandbox />}
+        {view === "monthly" && <MonthlyPlanView />}
       </main>
     </div>
   );

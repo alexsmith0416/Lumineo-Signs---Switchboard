@@ -3,12 +3,22 @@ import { createPortal } from "react-dom";
 import { differenceInMinutes, format } from "date-fns";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import { effectiveHours } from "../engine/capacity";
+import CrewBadge from "./CrewBadge";
+import WeatherChip from "./WeatherChip";
 
 interface JobCardProps {
   line: ScheduleLine;
   department: Department | undefined;
   conflicts: Conflict[];
   employee?: Employee;
+  showInvoice?: boolean;
+  showCrewBadge?: boolean;
+  showWeather?: boolean;
+  layout?: "compact" | "stacked";
+}
+
+function formatMoney(amount: number): string {
+  return `$${amount.toLocaleString("en-US")}`;
 }
 
 function deptStyle(dept: Department | undefined): { bg: string; text: string } {
@@ -28,7 +38,16 @@ function deptStyle(dept: Department | undefined): { bg: string; text: string } {
 
 const HOVER_DELAY_MS = 250;
 
-export default function JobCard({ line, department, conflicts, employee }: JobCardProps) {
+export default function JobCard({
+  line,
+  department,
+  conflicts,
+  employee,
+  showInvoice = false,
+  showCrewBadge = false,
+  showWeather = false,
+  layout = "compact",
+}: JobCardProps) {
   const style = deptStyle(department);
   const lineConflicts = conflicts.filter(
     (c) => c.lineId === line.id || c.relatedLineId === line.id,
@@ -57,14 +76,42 @@ export default function JobCard({ line, department, conflicts, employee }: JobCa
     <>
       <div
         ref={cardRef}
-        className="job-card"
+        className={`job-card job-card--${layout}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={open}
         onMouseLeave={close}
       >
-        <div className="job-card__job-no">{line.jobNo}</div>
-        <div className="job-card__customer">{line.customerName}</div>
-        <div className="job-card__desc">{line.planningLineDescription}</div>
+        {layout === "stacked" ? (
+          <>
+            <div className="job-card__line job-card__line--top">
+              <span className="job-card__job-no">{line.jobNo}</span>
+              <span className="job-card__customer">{line.customerName}</span>
+              <span className="job-card__desc">{line.planningLineDescription}</span>
+            </div>
+            <div className="job-card__line job-card__line--bottom">
+              {showCrewBadge && <CrewBadge line={line} />}
+              {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
+              {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
+                <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="job-card__job-no">{line.jobNo}</div>
+            <div className="job-card__customer">{line.customerName}</div>
+            <div className="job-card__desc">{line.planningLineDescription}</div>
+            {(showCrewBadge || showWeather || showInvoice) && (
+              <div className="job-card__addons">
+                {showCrewBadge && <CrewBadge line={line} />}
+                {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
+                {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
+                  <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
+                )}
+              </div>
+            )}
+          </>
+        )}
         <div className="job-card__icons">
           {line.isLocked && <span title="Locked">🔒</span>}
           {pastDue && <span title="Past customer due date">⚠</span>}

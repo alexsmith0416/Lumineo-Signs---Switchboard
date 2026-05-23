@@ -17,6 +17,20 @@ interface CalendarViewProps {
   addAction?: React.ReactNode;
   onEmptyCellClick?: (cell: { start: Date; employeeId: string }) => void;
   onJobClick?: (line: ScheduleLine) => void;
+  /** Card layout: compact (default — single-line) or stacked (two-line, taller). */
+  cardLayout?: "compact" | "stacked";
+  /** Show invoice $ amount on cards. */
+  showInvoice?: boolean;
+  /** Show crew/truck badge on cards. */
+  showCrewBadge?: boolean;
+  /** Show weather chip on cards. */
+  showWeather?: boolean;
+  /** Add billing-aware stats to WeekSummary. */
+  showBillingStats?: boolean;
+  /** External monthly goal (combined across regions, used by WeekSummary). */
+  monthlyGoal?: number;
+  /** Combined billing reference total (used when a region toggle shows partial billing). */
+  combinedBillingThisWeek?: number;
 }
 
 interface CardLayout {
@@ -78,6 +92,13 @@ export default function CalendarView({
   addAction,
   onEmptyCellClick,
   onJobClick,
+  cardLayout = "compact",
+  showInvoice = false,
+  showCrewBadge = false,
+  showWeather = false,
+  showBillingStats = false,
+  monthlyGoal,
+  combinedBillingThisWeek,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -152,6 +173,9 @@ export default function CalendarView({
         context={context}
         weekStart={weekStart}
         resourceLabelPlural={kindMeta.resourceLabelPlural}
+        showBillingStats={showBillingStats}
+        monthlyGoal={monthlyGoal}
+        combinedBillingThisWeek={combinedBillingThisWeek}
       />
       <div className="calendar-toolbar">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))}>‹ Prev</button>
@@ -188,7 +212,8 @@ export default function CalendarView({
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
-              const rowMinHeight = (maxLane + 1) * 32 + 8;
+              const laneHeight = cardLayout === "stacked" ? 56 : 32;
+              const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
               return (
                 <EmployeeRow
@@ -199,7 +224,12 @@ export default function CalendarView({
                   departments={departments}
                   conflicts={conflicts}
                   rowMinHeight={rowMinHeight}
+                  laneHeight={laneHeight}
                   readOnly={readOnly}
+                  cardLayout={cardLayout}
+                  showInvoice={showInvoice}
+                  showCrewBadge={showCrewBadge}
+                  showWeather={showWeather}
                   onCellDragOver={onCellDragOver}
                   onCellDrop={onCellDrop}
                   onCellClick={(day) => {
@@ -244,7 +274,12 @@ interface EmployeeRowProps {
   departments: Map<string, Department>;
   conflicts: Conflict[];
   rowMinHeight: number;
+  laneHeight: number;
   readOnly: boolean;
+  cardLayout: "compact" | "stacked";
+  showInvoice: boolean;
+  showCrewBadge: boolean;
+  showWeather: boolean;
   onCellDragOver: (e: React.DragEvent) => void;
   onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
   onCellClick: (day: Date) => void;
@@ -259,7 +294,12 @@ function EmployeeRow({
   departments,
   conflicts,
   rowMinHeight,
+  laneHeight,
   readOnly,
+  cardLayout,
+  showInvoice,
+  showCrewBadge,
+  showWeather,
   onCellDragOver,
   onCellDrop,
   onCellClick,
@@ -303,6 +343,11 @@ function EmployeeRow({
             employee={emp}
             conflicts={conflicts}
             readOnly={readOnly}
+            laneHeight={laneHeight}
+            cardLayout={cardLayout}
+            showInvoice={showInvoice}
+            showCrewBadge={showCrewBadge}
+            showWeather={showWeather}
             daysRef={daysRef}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
@@ -319,6 +364,11 @@ interface GanttCardProps {
   employee: Employee;
   conflicts: Conflict[];
   readOnly: boolean;
+  laneHeight: number;
+  cardLayout: "compact" | "stacked";
+  showInvoice: boolean;
+  showCrewBadge: boolean;
+  showWeather: boolean;
   daysRef: React.RefObject<HTMLDivElement | null>;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
@@ -330,6 +380,11 @@ function GanttCard({
   employee,
   conflicts,
   readOnly,
+  laneHeight,
+  cardLayout,
+  showInvoice,
+  showCrewBadge,
+  showWeather,
   daysRef,
   onClick,
   onResize,
@@ -347,7 +402,6 @@ function GanttCard({
     ? widthPct + (resizePreview.deltaPx / (daysRef.current?.clientWidth || 1)) * 100
     : widthPct;
 
-  const laneHeight = 32;
   const top = 4 + lane * laneHeight;
 
   const startResize = (e: React.MouseEvent) => {
@@ -411,6 +465,10 @@ function GanttCard({
         department={department}
         employee={employee}
         conflicts={conflicts}
+        layout={cardLayout}
+        showInvoice={showInvoice}
+        showCrewBadge={showCrewBadge}
+        showWeather={showWeather}
       />
       {!readOnly && !line.isLocked && (
         <>

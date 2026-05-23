@@ -363,6 +363,53 @@ input, select, textarea {
   font-size: 11px;
 }
 
+.job-card__addons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-right: 22px;
+  flex-shrink: 0;
+}
+
+.job-card__invoice {
+  color: #1b6e3e;
+  font-weight: 700;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Two-line stacked layout — used on the installation calendar. */
+.job-card--stacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 24px 4px 8px;
+  gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.job-card--stacked .job-card__line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.job-card--stacked .job-card__line--top { font-size: 11px; }
+.job-card--stacked .job-card__line--bottom { font-size: 10px; gap: 5px; }
+
+.job-card--stacked .job-card__job-no { font-weight: 700; }
+.job-card--stacked .job-card__customer { font-weight: 500; }
+.job-card--stacked .job-card__desc {
+  opacity: 0.78;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
 /* ============ Forms / Add Job panel ============ */
 
 .slide-over {

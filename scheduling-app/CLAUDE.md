@@ -128,9 +128,31 @@ The dev server boots with mock data; everything is reactive but persists only in
 - M3 (ALE-81) — Engine live · cascade is implemented; calendar currently passes `cascade=false` per M2 acceptance — flip to `true` for M3
 - M4 (ALE-82) — Add Job Panel · all three modes (single / multi / auto) implemented against mocks
 - M5 (ALE-83) — Scenario Sandbox · workspace + diff + impact + commit implemented
-- M6 (ALE-84) — Installation · live calendar against mock crews + install lines using the same engine
+- M6 (ALE-84) — Installation · live calendar against real WK + NEK crew rosters w/ region toggle, weather chip, crew/truck badge, $ toggle, monthly goal stat
 - M7 (ALE-85) — Shipping · live calendar against mock trucks + shipping lines using the same engine
 - M8 (ALE-86) — Polish & rollout · not started
+
+## Monthly install plan + AI auto-fill
+
+Sidebar item **Monthly Plan** (`src/components/MonthlyPlanView.tsx`) shows a
+per-month roll-up of install billing across both regions, with per-week cards,
+a target line, and gap vs the configured $1.1M monthly goal
+(`MONTHLY_INSTALL_GOAL` in `InstallationCalendar.tsx`).
+
+The "AI auto-fill" button runs a deterministic greedy algorithm
+(`autofillToGoal` inside `MonthlyPlanView.tsx`) over the `INSTALL_CANDIDATES`
+pool (`data/mock-install-candidates.ts`) — sorted by promised-date with a
+per-week soft cap of `monthlyGoal / numWeeks`. Today the pool is a fixed
+mock; in production it should be a Dataverse view of jobs whose production
+status is `ready-for-install` or `near-complete`. Replace the import with
+a real service when that view exists.
+
+## Card layouts
+
+`CalendarView` accepts `cardLayout: "compact" | "stacked"`. Production /
+Shipping use compact (24 px tall, single row of text). Installation uses
+stacked (44 px, two rows: job/customer/desc on top, crew/weather/$ on bottom).
+Lane height in the row layout flexes from this prop.
 
 ## Known gaps to address
 

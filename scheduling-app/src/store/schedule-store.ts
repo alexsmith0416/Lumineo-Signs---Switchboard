@@ -5,7 +5,11 @@ import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { productionDataSource } from "../services/dataverse";
-import { installationDataSource } from "../services/installation-data";
+import {
+  installationDataSource,
+  nekInstallDataSource,
+  wkInstallDataSource,
+} from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
 import type { ScheduleDataSource } from "../services/data-source";
 import type {
@@ -211,4 +215,6 @@ export function createScheduleStore(
 
 export const useScheduleStore = createScheduleStore(productionDataSource);
 export const useInstallationStore = createScheduleStore(installationDataSource);
+export const useInstallationStoreWK = createScheduleStore(wkInstallDataSource);
+export const useInstallationStoreNEK = createScheduleStore(nekInstallDataSource);
 export const useShippingStore = createScheduleStore(shippingDataSource);

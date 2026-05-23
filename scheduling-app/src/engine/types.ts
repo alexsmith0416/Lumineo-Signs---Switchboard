@@ -34,6 +34,18 @@ export interface ScheduleLine {
   customerDueDate: Date | null;
   isLocked: boolean;
   jobSequence: number;
+
+  // Optional billing + install-specific metadata. Production lines typically
+  // leave these null; install lines populate them so the UI can render the
+  // weather chip, crew badge, and dollar amount.
+  invoiceAmount?: number | null;
+  crewPersons?: number | null;
+  crewTrucks?: number | null;
+  crewCranes?: number | null;
+  crewLifts?: number | null;
+  crewBuckets?: number | null;
+  installZip?: string | null;
+  region?: string | null;
 }
 
 export interface WorkHoursOverride {
