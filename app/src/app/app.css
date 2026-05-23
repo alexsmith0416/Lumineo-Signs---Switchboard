@@ -795,6 +795,31 @@
   color: var(--lum-gray-500);
 }
 
+.sbp-refimage__sharepoint {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lum-navy);
+  text-decoration: none;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
+.sbp-refimage__sharepoint:hover {
+  text-decoration: underline;
+}
+
+.sbp-modal__caption-link {
+  color: rgba(255,255,255,0.95);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  margin-left: 4px;
+}
+
+.sbp-modal__caption-link:hover {
+  color: white;
+}
+
 /* ============ Full-screen modal overlay ============ */
 .sbp-modal {
   position: fixed;

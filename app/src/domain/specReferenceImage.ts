@@ -1,16 +1,24 @@
 // Spec reference image lookup. The canvas plan stores 18 spec-page images
-// in the Lumineo SharePoint at:
+// in the Lumineo SharePoint Sign Spec Pages folder:
 //
-//   https://luminousneon.sharepoint.com/sites/installationschedule/
-//   Shared%20Documents/SignSpecPages/{file}.png
+//   Folder (shared link):
+//     https://luminousneon.sharepoint.com/:f:/s/installationschedule/
+//     IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5
+//
+//   Canonical sites-relative path for tenant users (used as the image base):
+//     https://luminousneon.sharepoint.com/sites/installationschedule/
+//     Shared%20Documents/SignSpecPages/{filename}
 //
 // The (signTypeCode, faceType) tuple selects the image. Mappings ship here
 // as keys so swapping the actual filenames in (or moving them to Dataverse
-// File columns) is a one-line edit. We also generate a tinted SVG fallback
-// so the modal renders meaningfully in dev before the SharePoint URLs are
-// pinned down.
+// File columns) is a one-line edit per row. We also generate a tinted SVG
+// fallback so the modal renders meaningfully in dev before the per-file
+// names are confirmed.
 
 import type { SignSpec } from "./SignSpec";
+
+export const SPEC_PAGES_FOLDER_URL =
+  "https://luminousneon.sharepoint.com/:f:/s/installationschedule/IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5";
 
 const SHAREPOINT_BASE =
   "https://luminousneon.sharepoint.com/sites/installationschedule/Shared%20Documents/SignSpecPages/";
@@ -64,7 +72,7 @@ export function getSpecReferenceImage(spec: SignSpec): SpecReferenceImage | null
     placeholder: tintedSvg(spec),
     caption: file
       ? `Reference: ${file}`
-      : `No reference image mapped for ${key} yet — using placeholder.`,
+      : `No reference image mapped for ${key} yet. Browse the spec pages folder in SharePoint to confirm the filename.`,
   };
 }
 

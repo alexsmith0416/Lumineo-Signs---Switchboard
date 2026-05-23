@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useSpec } from "../app/SpecContext";
-import { getSpecReferenceImage } from "../domain/specReferenceImage";
+import { getSpecReferenceImage, SPEC_PAGES_FOLDER_URL } from "../domain/specReferenceImage";
 
 export function SpecReferenceImage() {
   const { spec } = useSpec();
@@ -62,6 +62,14 @@ export function SpecReferenceImage() {
         <div className="sbp-refimage__hint">
           <span className="lum-field-label">Spec Reference</span>
           <span className="sbp-refimage__hint-text">Tap image to expand</span>
+          <a
+            className="sbp-refimage__sharepoint"
+            href={SPEC_PAGES_FOLDER_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            Open SharePoint folder ↗
+          </a>
         </div>
       </div>
 
@@ -86,7 +94,19 @@ export function SpecReferenceImage() {
           </button>
           <figure className="sbp-modal__figure">
             <img className="sbp-modal__img" src={src} alt="" />
-            <figcaption className="sbp-modal__caption">{ref.caption}</figcaption>
+            <figcaption className="sbp-modal__caption">
+              {ref.caption}
+              {" "}
+              <a
+                className="sbp-modal__caption-link"
+                href={SPEC_PAGES_FOLDER_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Open in SharePoint ↗
+              </a>
+            </figcaption>
           </figure>
         </div>
       ) : null}

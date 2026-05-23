@@ -45,6 +45,21 @@ and mirrored in `app/src/domain/SignSpec.ts`.
 | Notes                  | lum_notes                 | Multiline text   | |
 | Status                 | lum_status                | Whole number     | 100000000 = Draft on create |
 
+## Spec reference images (SharePoint)
+
+The 18 per-spec PNGs live in the `Sign Spec Pages` folder of the
+`installationschedule` SharePoint site:
+
+- **Folder (shared link, for browsing):**
+  https://luminousneon.sharepoint.com/:f:/s/installationschedule/IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5
+- **Per-file URL pattern (used by the app, tenant users only):**
+  `https://luminousneon.sharepoint.com/sites/installationschedule/Shared%20Documents/SignSpecPages/{filename}`
+
+The `(signTypeCode, faceType) → filename` mapping lives in
+`app/src/domain/specReferenceImage.ts` so it's a one-line edit per row.
+The "Open SharePoint folder" link in the Builder's reference image card and
+in the full-screen modal both point at the shared folder URL.
+
 ## How the code app talks to the table
 
 `app/src/data/dataverseService.ts` exports a `SignSpecRepo` interface with
