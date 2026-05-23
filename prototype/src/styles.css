@@ -90,8 +90,11 @@ button {
 }
 
 .hdr__logo {
-  width: 36px;
-  height: 36px;
+  /* Sized to roughly the combined height of brand-name + brand-sub
+     (15px*1.1 + 2 + 11px*1.1 ≈ 31px) plus a little padding so the
+     square reads as a solid block alongside the two-line text. */
+  width: 40px;
+  height: 40px;
   /* SVG inside paints the red square + transparent ray cutouts directly.
      No background here — the header navy shows through the ray cutouts. */
   border-radius: var(--radius-sm);
@@ -105,22 +108,22 @@ button {
 .hdr__brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.15;
-  gap: 1px;
+  line-height: 1.1;
+  gap: 2px;
 }
 
 .hdr__brand-name {
   font-weight: 700;
   color: white;
-  font-size: 13px;
-  letter-spacing: 1.2px;
+  font-size: 15px;
+  letter-spacing: 1px;
 }
 
 .hdr__brand-sub {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 1.4px;
+  letter-spacing: 1.3px;
 }
 
 .hdr__divider {
@@ -1235,10 +1238,9 @@ button {
     padding: 0 10px;
   }
   .hdr__brand { gap: 10px; min-width: 0; }
-  .hdr__logo { width: 30px; height: 30px; }
-  .hdr__logo svg { width: 18px; height: 18px; }
-  .hdr__brand-name { font-size: 11px; letter-spacing: 0.7px; }
-  .hdr__brand-sub  { font-size: 9px; letter-spacing: 0.9px; }
+  .hdr__logo { width: 34px; height: 34px; }
+  .hdr__brand-name { font-size: 13px; letter-spacing: 0.8px; }
+  .hdr__brand-sub  { font-size: 10px; letter-spacing: 1px; }
   .hdr__divider,
   .hdr__view-title,
   .hdr__btn--ghost,
