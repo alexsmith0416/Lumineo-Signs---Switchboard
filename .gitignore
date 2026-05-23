@@ -8,3 +8,8 @@ dist/
 .DS_Store
 *.log
 coverage/
+
+# TS / build artifacts (Vite handles real compilation; tsc is type-check only)
+*.tsbuildinfo
+app/src/**/*.js
+app/src/**/*.js.map
