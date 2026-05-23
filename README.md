@@ -2,10 +2,11 @@
 
 React + Vite + TypeScript Power Apps Code app that replaces the manual sign-spec process at Lumineo Signs. Mirrors the Vercel preview UX with the routing, spec-image, and vinyl-search modifications carried over, and shares design tokens with the Switchboard prototype so the three code apps render identically.
 
-- **Linear project:** [Sign Builder Pro — Power Apps Code App](https://linear.app/lumineosigns/project/sign-builder-pro-power-apps-code-app-8a268257911a)
+- **Linear project:** [Sign Builder Pro — Power Apps Code App](https://linear.app/lumineosigns/project/sign-builder-pro-power-apps-code-app-8a268257911a) — In Progress, 22 of 23 issues in review
 - **Target platform:** Power Apps Code apps via `pac code init` / `pac code run` / `pac code push`
-- **Dataverse table:** `Sign Specifications` (31 fields — see `docs/dataverse-schema.md`)
+- **Dataverse tables:** `lum_signspecification` (31 fields), `lum_signproject` (4 fields) — see `docs/dataverse-schema.md`
 - **Launches from:** Switchboard tile launcher, with `userEmail`, `role`, optional `specId` URL params
+- **Deploy guide:** `docs/deploy.md` — full `pac` CLI workflow + smoke checklist
 
 ## What's built
 
@@ -61,13 +62,20 @@ npm run build                # production bundle into app/dist
 
 ## Power Apps deployment
 
-This project is structured to drop into a `pac code init` solution. After `pac auth create` to your tenant:
+Full step-by-step lives in [`docs/deploy.md`](docs/deploy.md), including the one-time tenant prep, the build + push workflow, the post-deploy smoke checklist, and the rollback path.
+
+Short version after `pac auth create`:
 
 ```bash
 cd app
-pac code init --displayName "Sign Builder Pro"   # if power.config.json is missing
-pac code push                                    # uploads the built dist/
-pac code run                                     # launches the published app
+npm install && npm run build
+pac code push
+pac code run
 ```
 
-The `Sign Specifications` Dataverse table must exist (see `docs/dataverse-schema.md`) before `pac code push`. The Dataverse adapter (`src/data/dataverseAdapter.ts`) auto-detects the SDK at runtime, so the deployed bundle picks it up without code changes.
+The Dataverse adapter (`src/data/dataverseAdapter.ts`) auto-detects the SDK at runtime — `window.PowerProvider` in the published bundle, localStorage fallback in dev — so the bundle picks up the live tables without code changes.
+
+## Branches
+
+- `claude/sign-builder-power-apps-sASaA` — polished tip (current)
+- `claude/sign-builder-power-apps-sASaA-mobile-baseline` — pre-polish fallback if the mobile polish (hamburger menu, swipe rows, bottom action bar) needs to be reverted
