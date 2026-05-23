@@ -883,6 +883,109 @@
   max-width: 60ch;
 }
 
+/* ============ Projects workspace ============ */
+.sbp-projects {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: calc(100vh - 73px);
+  gap: 0;
+}
+
+@media (max-width: 900px) {
+  .sbp-projects { grid-template-columns: 1fr; }
+}
+
+.sbp-projects__list {
+  background: white;
+  border-right: 1px solid var(--lum-gray-200);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 73px;
+  align-self: start;
+  max-height: calc(100vh - 73px);
+  overflow-y: auto;
+}
+
+.sbp-projects__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--lum-gray-100);
+}
+
+.sbp-projects__list-head .sbp-sidebar__title {
+  color: var(--lum-gray-500);
+}
+
+.sbp-projects__item {
+  width: 100%;
+  text-align: left;
+  background: var(--lum-gray-50);
+  border: 1px solid var(--lum-gray-200);
+  border-radius: var(--lum-radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.sbp-projects__item:hover {
+  border-color: var(--lum-navy);
+  background: var(--lum-navy-bg);
+}
+
+.sbp-projects__item.is-active {
+  border-color: var(--lum-navy);
+  background: var(--lum-navy-bg);
+  box-shadow: 0 0 0 1px var(--lum-navy);
+}
+
+.sbp-projects__item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lum-navy);
+}
+
+.sbp-projects__item-meta {
+  font-size: 11px;
+  color: var(--lum-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.sbp-projects__detail {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--lum-gray-50);
+}
+
+.sbp-projects__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sbp-projects__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sbp-projects__empty {
+  font-size: 12px;
+  color: var(--lum-gray-500);
+  padding: 16px 4px;
+  text-align: center;
+}
+
 /* ============ Misc ============ */
 .sbp-empty {
   padding: 48px 24px;
