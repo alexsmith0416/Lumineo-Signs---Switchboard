@@ -200,13 +200,17 @@ input, select, textarea {
 .calendar-grid {
   border: 1px solid var(--border);
   border-radius: 6px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   background: var(--bg-primary);
+  position: relative;
+  -webkit-overflow-scrolling: touch;
 }
 
 .calendar-header-row {
   display: grid;
-  grid-template-columns: 140px repeat(7, 1fr);
+  grid-template-columns: 140px repeat(7, minmax(110px, 1fr));
+  min-width: 920px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   font-weight: 500;
@@ -219,6 +223,14 @@ input, select, textarea {
   text-align: center;
 }
 
+.calendar-header-cell--resource {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: var(--bg-secondary);
+  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
+}
+
 .calendar-header-cell--weekend {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
@@ -226,14 +238,24 @@ input, select, textarea {
 
 .dept-section {
   border-bottom: 1px solid var(--border);
+  min-width: 920px;
 }
 
 .dept-header {
+  font-weight: 600;
+  /* Colored bar — height set by inner label's padding. */
+}
+
+.dept-header__label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  font-weight: 600;
+  background: inherit;
+  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
 }
 
 .employee-row {
@@ -241,6 +263,7 @@ input, select, textarea {
   grid-template-columns: 140px 1fr;
   border-bottom: 1px solid var(--bg-tertiary);
   min-height: 56px;
+  min-width: 920px;
 }
 
 .employee-row:last-child { border-bottom: none; }
@@ -253,6 +276,10 @@ input, select, textarea {
   flex-direction: column;
   gap: 2px;
   font-size: 12px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.15);
 }
 
 .employee-row__name .productivity {
@@ -262,7 +289,7 @@ input, select, textarea {
 
 .employee-row__days {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
   position: relative;
   min-height: 56px;
 }
@@ -723,18 +750,21 @@ input, select, textarea {
   }
   .calendar-toolbar > .calendar-toolbar__spacer { display: none; }
 
-  /* Calendar grid scrolls horizontally when its content is wider than
-     the screen. Resource column shrinks but the day columns keep a
-     minimum so cards stay legible. */
-  .calendar-grid { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
+  /* Calendar grid scrolls horizontally on small screens. Resource
+     column compacts but stays sticky-left so it remains visible while
+     the user swipes through the days. Day columns hold a min-width so
+     cards stay legible. */
   .calendar-header-row,
+  .employee-row,
+  .dept-section {
+    grid-template-columns: 110px repeat(7, minmax(90px, 1fr));
+    min-width: 740px;
+  }
   .employee-row {
     grid-template-columns: 110px 1fr;
-    min-width: 760px;
   }
-  .calendar-header-row {
-    grid-template-columns: 110px repeat(7, minmax(82px, 1fr));
+  .employee-row__days {
+    grid-template-columns: repeat(7, minmax(90px, 1fr));
   }
   .calendar-header-cell {
     padding: 6px 4px;
@@ -746,7 +776,7 @@ input, select, textarea {
   }
   .employee-row__name .productivity { font-size: 9px; }
 
-  .dept-header { padding: 5px 10px; font-size: 12px; }
+  .dept-header__label { padding: 5px 10px; font-size: 12px; }
 
   .job-card { font-size: 10px; padding: 3px 22px 3px 6px; }
   .job-card__job-no { font-size: 10px; }
@@ -772,9 +802,16 @@ input, select, textarea {
 /* Even tighter for very narrow phones */
 @media (max-width: 380px) {
   .calendar-header-row,
+  .dept-section {
+    grid-template-columns: 96px repeat(7, minmax(82px, 1fr));
+    min-width: 680px;
+  }
   .employee-row {
-    grid-template-columns: 96px repeat(7, minmax(74px, 1fr));
-    min-width: 700px;
+    grid-template-columns: 96px 1fr;
+    min-width: 680px;
+  }
+  .employee-row__days {
+    grid-template-columns: repeat(7, minmax(82px, 1fr));
   }
   .employee-row__name { padding: 4px 4px; font-size: 10px; }
 }

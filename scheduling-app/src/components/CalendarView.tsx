@@ -328,7 +328,9 @@ export default function CalendarView({
 
       <div className="calendar-grid">
         <div className="calendar-header-row">
-          <div className="calendar-header-cell">{kindMeta.resourceLabel}</div>
+          <div className="calendar-header-cell calendar-header-cell--resource">
+            {kindMeta.resourceLabel}
+          </div>
           {days.map((d) => (
             <div
               key={d.toISOString()}
@@ -343,10 +345,12 @@ export default function CalendarView({
         {grouped.map(({ dept, emps }) => (
           <div key={dept.id} className="dept-section">
             <div className="dept-header" style={{ background: dept.color }}>
-              <span>{dept.name}</span>
-              <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
-                flow {dept.flowOrder} · {peopleNoun(emps.length)}
-              </span>
+              <div className="dept-header__label">
+                <span>{dept.name}</span>
+                <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
+                  flow {dept.flowOrder} · {peopleNoun(emps.length)}
+                </span>
+              </div>
             </div>
             {emps.map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);

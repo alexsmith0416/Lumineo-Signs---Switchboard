@@ -89,9 +89,9 @@ export default function InstallationCalendar() {
       showInvoice={showInvoice}
       showCrewBadge={showCrew}
       showWeather={showWeather}
-      showBillingStats={true}
-      monthlyGoal={MONTHLY_INSTALL_GOAL}
-      combinedBillingThisWeek={combinedThisWeek}
+      showBillingStats={showInvoice}
+      monthlyGoal={showInvoice ? MONTHLY_INSTALL_GOAL : undefined}
+      combinedBillingThisWeek={showInvoice ? combinedThisWeek : undefined}
       toolbarExtras={toolbar}
     />
   );
