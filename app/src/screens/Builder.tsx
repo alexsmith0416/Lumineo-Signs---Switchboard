@@ -18,6 +18,7 @@ import { Step9Mounting } from "../builder/steps/Step9Mounting";
 import { Step10Pole } from "../builder/steps/Step10Pole";
 import { Step11Footing } from "../builder/steps/Step11Footing";
 import { Step12Electrical } from "../builder/steps/Step12Electrical";
+import { StepNotesStatus } from "../builder/steps/StepNotesStatus";
 import { SpecSummary } from "../builder/SpecSummary";
 import { SpecReferenceImage } from "../builder/SpecReferenceImage";
 import { statusTone } from "../ui/specStatus";
@@ -157,8 +158,21 @@ export function Builder() {
 
         <div className="sbp-form__scroll">
           <SpecSummary />
-          {saveStatus === "error" && !spec.signTypeCode ? (
-            <Banner tone="amber">Please select a sign type first.</Banner>
+
+          {spec.id ? (
+            <Banner tone="info">
+              Editing saved spec <strong>{spec.productCode || spec.id}</strong>
+              {spec.customerName ? <> · {spec.customerName}</> : null}
+              {spec.projectName ? <> · {spec.projectName}</> : null}
+            </Banner>
+          ) : null}
+
+          {saveStatus === "error" ? (
+            <Banner tone={spec.signTypeCode ? "red" : "amber"}>
+              {spec.signTypeCode
+                ? "Save failed — please try again, or check the network / Dataverse connection."
+                : "Please select a sign type first."}
+            </Banner>
           ) : null}
 
           <Step1SignType />
@@ -186,6 +200,9 @@ export function Builder() {
 
           {/* Spec reference image — once a face type is picked */}
           {spec.faceType ? <SpecReferenceImage /> : null}
+
+          {/* Notes + status card always renders once the user has started a spec */}
+          {spec.signTypeCode ? <StepNotesStatus /> : null}
 
           {!spec.signTypeCode ? (
             <div className="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>
