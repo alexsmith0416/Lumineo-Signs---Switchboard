@@ -270,37 +270,149 @@ input, select, textarea {
   letter-spacing: 0.5px;
 }
 
+/* ─── Hamburger menu — mobile-only slide-down drawer ─────────────────────
+   Desktop hides the button entirely; mobile hides the inline nav and shows
+   the button. Tapping it opens a full-screen overlay with the routes
+   stacked as large touch targets. */
+.lum-hamburger {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.lum-hamburger:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.lum-hamburger__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+}
+.lum-hamburger__bars > span {
+  display: block;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.lum-hamburger__bars.is-open > span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.lum-hamburger__bars.is-open > span:nth-child(2) { opacity: 0; }
+.lum-hamburger__bars.is-open > span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.lum-hamburger-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 8, 40, 0.78);
+  animation: lum-hamburger-fade-in 0.15s ease;
+}
+@keyframes lum-hamburger-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lum-hamburger-sheet__inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  box-shadow: 0 12px 32px rgba(8, 8, 40, 0.35);
+  animation: lum-hamburger-slide-in 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes lum-hamburger-slide-in {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.lum-hamburger-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 10px;
+  border-bottom: 1px solid var(--lum-gray-100);
+  margin-bottom: 6px;
+}
+
+.lum-hamburger-sheet__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--lum-gray-500);
+}
+
+.lum-hamburger-sheet__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--lum-gray-100);
+  color: var(--lum-gray-700);
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lum-hamburger-sheet__close:hover {
+  background: var(--lum-navy-bg);
+  color: var(--lum-navy);
+}
+
+.lum-hamburger-sheet__link {
+  padding: 14px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lum-text);
+  text-decoration: none;
+  display: block;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.lum-hamburger-sheet__link:hover {
+  background: var(--lum-gray-50);
+}
+.lum-hamburger-sheet__link.is-active {
+  background: var(--lum-navy-bg);
+  color: var(--lum-navy);
+  border-left: 3px solid var(--lum-red);
+}
+
 /* ─── Header mobile breakpoints (placed AFTER base rules so the cascade
-       lets display:none win at narrow viewports). At <900px the brand
-       sub-label disappears and nav becomes horizontally scrollable so links
-       don't get clipped. At <600px the role-switcher collapses to just the
-       avatar so the header stays one row at phone widths. */
+       lets display:none win at narrow viewports). */
 @media (max-width: 900px) {
   .lum-header {
     padding: 0 14px;
     gap: 10px;
   }
   .lum-header__brand { padding-right: 12px; }
-  .lum-header__divider { margin: 0 10px; }
+  .lum-header__divider { display: none; }
   .lum-header__left {
     flex: 1;
     min-width: 0;
   }
-  .lum-header__nav {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    scrollbar-width: none; /* Firefox */
-  }
-  .lum-header__nav::-webkit-scrollbar { display: none; }
-  .lum-header__navlink {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
+  .lum-header__nav { display: none; }
+  .lum-hamburger { display: inline-flex; }
   .lum-header__brand-sub { display: none; }
 }
 
 @media (max-width: 600px) {
-  .lum-header__divider { display: none; }
   .lum-header__roleswitcher-trigger {
     padding: 4px;
     gap: 0;

@@ -175,6 +175,34 @@ export function Builder() {
           </div>
         </div>
 
+        {/* Mobile-only bottom action bar — pinned to the viewport so the
+            primary actions stay reachable while the user scrolls the form. */}
+        <div className="sbp-bottom-actions">
+          <button
+            type="button"
+            className="lum-btn is-ghost"
+            onClick={exportSpecHtml}
+            disabled={!spec.productCode}
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            className="lum-btn is-primary"
+            onClick={saveSpec}
+            disabled={!spec.signTypeCode || saveStatus === "saving"}
+          >
+            {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save"}
+          </button>
+          <button
+            type="button"
+            className="lum-btn is-danger"
+            onClick={clearAll}
+          >
+            Clear
+          </button>
+        </div>
+
         <div className="sbp-form__scroll">
           <SpecSummary />
 

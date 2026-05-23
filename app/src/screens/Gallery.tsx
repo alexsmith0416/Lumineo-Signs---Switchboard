@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
 import { Pill } from "../ui/Pill";
 import { statusTone } from "../ui/specStatus";
+import { SwipeRow } from "../ui/SwipeRow";
 import { SIGN_TYPES, getSignType } from "../domain/signTypes";
 import type { SignSpec } from "../domain/SignSpec";
 
@@ -66,9 +67,10 @@ export function Gallery() {
         </select>
       </div>
 
-      <div className="sbp-list">
+      <div className="sbp-list sbp-list--swipe">
         <div className="sbp-list__head">
           <span className="sbp-list__title">{filtered.length} spec{filtered.length === 1 ? "" : "s"}</span>
+          <span className="sbp-list__head-hint">Swipe ◂ to edit / delete</span>
         </div>
         {filtered.length === 0 ? (
           <div className="sbp-list__empty">No specs match that filter.</div>
@@ -76,20 +78,15 @@ export function Gallery() {
           filtered.map((s) => {
             const t = getSignType(s.signTypeCode || "");
             const isConfirming = confirming === s.id;
-            return (
-              <div key={s.id} className="sbp-list__row" style={{ cursor: "default" }}>
-                <button
-                  type="button"
-                  className="sbp-gallery-row__main"
-                  onClick={() => edit(s)}
-                  title="Edit spec"
-                >
+            const rowBody = (
+              <div className="sbp-list__row" style={{ cursor: "pointer" }}>
+                <div className="sbp-gallery-row__main">
                   <span className="sbp-list__row-title">{s.projectName || s.productCode || "Untitled"}</span>
                   <span className="sbp-list__row-meta">
                     {s.customerName ? `${s.customerName} · ` : ""}{t?.name ?? "—"} · Qty {s.quantity}
                   </span>
-                </button>
-                <div className="sbp-list__row-right">
+                </div>
+                <div className="sbp-list__row-right sbp-list__row-right--desktop">
                   <Pill tone="navy">{s.productCode || "—"}</Pill>
                   <Pill tone={statusTone(s.status)}>{s.status}</Pill>
                   {isConfirming ? (
@@ -98,7 +95,7 @@ export function Gallery() {
                         type="button"
                         className="lum-btn is-danger"
                         style={{ padding: "5px 10px", fontSize: 11 }}
-                        onClick={() => s.id && confirmDelete(s.id)}
+                        onClick={(e) => { e.stopPropagation(); s.id && confirmDelete(s.id); }}
                       >
                         Confirm delete
                       </button>
@@ -106,7 +103,7 @@ export function Gallery() {
                         type="button"
                         className="lum-btn is-ghost"
                         style={{ padding: "5px 10px", fontSize: 11 }}
-                        onClick={() => setConfirming(null)}
+                        onClick={(e) => { e.stopPropagation(); setConfirming(null); }}
                       >
                         Cancel
                       </button>
@@ -117,7 +114,7 @@ export function Gallery() {
                         type="button"
                         className="lum-btn is-ghost"
                         style={{ padding: "5px 10px", fontSize: 11 }}
-                        onClick={() => duplicate(s)}
+                        onClick={(e) => { e.stopPropagation(); duplicate(s); }}
                         title="Duplicate as a new draft"
                       >
                         Duplicate
@@ -126,7 +123,7 @@ export function Gallery() {
                         type="button"
                         className="lum-btn is-ghost"
                         style={{ padding: "5px 10px", fontSize: 11 }}
-                        onClick={() => s.id && setConfirming(s.id)}
+                        onClick={(e) => { e.stopPropagation(); s.id && setConfirming(s.id); }}
                         title="Delete spec"
                       >
                         Delete
@@ -134,7 +131,23 @@ export function Gallery() {
                     </>
                   )}
                 </div>
+                <div className="sbp-list__row-right sbp-list__row-right--mobile">
+                  <Pill tone="navy">{s.productCode || "—"}</Pill>
+                  <Pill tone={statusTone(s.status)}>{s.status}</Pill>
+                </div>
               </div>
+            );
+            return (
+              <SwipeRow
+                key={s.id}
+                onActivate={() => edit(s)}
+                actions={[
+                  { label: "Duplicate", tone: "neutral", onClick: () => duplicate(s) },
+                  { label: "Delete",    tone: "danger",  onClick: () => s.id && deleteSpec(s.id) },
+                ]}
+              >
+                {rowBody}
+              </SwipeRow>
             );
           })
         )}

@@ -1006,6 +1006,75 @@
   text-align: center;
 }
 
+/* ============ Swipe-to-reveal rows (Gallery on mobile) ============ */
+.sbp-swiperow {
+  position: relative;
+  overflow: hidden;
+  background: white;
+}
+
+.sbp-swiperow + .sbp-swiperow {
+  border-top: 1px solid var(--lum-gray-100);
+}
+
+.sbp-swiperow__body {
+  position: relative;
+  background: white;
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
+  touch-action: pan-y;
+  z-index: 1;
+}
+
+.sbp-swiperow__actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  z-index: 0;
+}
+
+.sbp-swiperow__action {
+  flex: 1;
+  background: var(--lum-navy);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.sbp-swiperow__action:hover { filter: brightness(1.1); }
+
+.sbp-swiperow__action.is-danger {
+  background: var(--lum-red);
+}
+
+.sbp-list--swipe .sbp-list__row {
+  border-top: none;
+}
+
+.sbp-list__head-hint {
+  display: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lum-gray-500);
+  letter-spacing: 0.4px;
+}
+
+.sbp-list__row-right--mobile { display: none; }
+
+/* Desktop default — bottom action bar hidden; mobile media query at the
+   end of the file flips it to flex. */
+.sbp-bottom-actions { display: none; }
+
 /* ============ Misc ============ */
 .sbp-empty {
   padding: 48px 24px;
@@ -1033,11 +1102,9 @@
   }
   .sbp-topbar__title { flex: 1 1 100%; }
   .sbp-topbar__input { min-width: 140px; flex: 1 1 220px; }
-  .sbp-topbar__actions {
-    margin-left: 0;
-    flex: 1 1 100%;
-    flex-wrap: wrap;
-  }
+  /* The inline action group on the topbar hides on mobile — the fixed
+     bottom-action bar replaces it. */
+  .sbp-topbar__actions { display: none; }
 
   /* Projects — stack the rail above the detail pane. */
   .sbp-projects { grid-template-columns: 1fr; }
@@ -1047,7 +1114,27 @@
     border-right: none;
     border-bottom: 1px solid var(--lum-gray-200);
   }
+
+  /* Bottom action bar visible on mobile only. */
+  .sbp-bottom-actions {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9;
+    background: white;
+    border-top: 1px solid var(--lum-gray-200);
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    gap: 8px;
+    box-shadow: 0 -4px 16px rgba(20, 20, 100, 0.08);
+  }
+  .sbp-bottom-actions .lum-btn { flex: 1; padding: 12px 8px; font-size: 13px; }
+  /* Form scroll pads the bottom so the last card isn't hidden behind the
+     fixed bar. */
+  .sbp-form__scroll { padding-bottom: 96px; }
 }
+
 
 @media (max-width: 800px) {
   .sbp-kpis { grid-template-columns: 1fr; }
@@ -1061,8 +1148,9 @@
 
   .sbp-projects__detail { padding: 16px; }
 
-  /* Builder form pane padding shrinks. */
-  .sbp-form__scroll { padding: 16px 16px 48px; }
+  /* Builder form pane padding shrinks. Bottom padding accounts for the
+     fixed bottom action bar that hovers over the last form card. */
+  .sbp-form__scroll { padding: 16px 16px 96px; }
 
   /* List rows: stack the left content + right cluster vertically so action
      buttons + pills don't push off the right edge of the viewport. */
@@ -1077,4 +1165,14 @@
   }
   .sbp-list__chevron { display: none; }
 
+  /* Gallery rows on mobile — hide the inline desktop Duplicate / Delete
+     cluster (now living behind the swipe), keep the pills-only mobile
+     variant, and surface the swipe hint. */
+  .sbp-list__row-right--desktop { display: none; }
+  .sbp-list__row-right--mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .sbp-list--swipe .sbp-list__head-hint { display: inline-flex; }
 }
