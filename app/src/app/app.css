@@ -754,10 +754,6 @@
   box-shadow: var(--lum-shadow-sm);
 }
 
-.sbp-refimage__thumb-wrap {
-  position: relative;
-}
-
 .sbp-refimage__thumb {
   width: 144px;
   height: 108px;

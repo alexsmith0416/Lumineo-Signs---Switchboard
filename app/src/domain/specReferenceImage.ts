@@ -1,110 +1,99 @@
-// Spec reference image lookup. The canvas plan stores 18 spec-page images
-// in the Lumineo SharePoint Sign Spec Pages folder:
+// Spec reference image lookup. The 30+ spec pages live in SharePoint under
+// the Sign Spec Pages folder; the same set is bundled into `app/public/
+// spec-images/` so the app shows real reference imagery in dev and as the
+// offline fallback in deployed builds.
 //
-//   Folder (shared link):
-//     https://luminousneon.sharepoint.com/:f:/s/installationschedule/
-//     IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5
+// SharePoint folder (source of truth, surfaced as an "Open" link in the
+// modal so Ops can navigate to the editable master):
+//   https://luminousneon.sharepoint.com/:f:/s/installationschedule/
+//   IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5
 //
-//   Canonical sites-relative path for tenant users (used as the image base):
-//     https://luminousneon.sharepoint.com/sites/installationschedule/
-//     Shared%20Documents/SignSpecPages/{filename}
-//
-// The (signTypeCode, faceType) tuple selects the image. Mappings ship here
-// as keys so swapping the actual filenames in (or moving them to Dataverse
-// File columns) is a one-line edit per row. We also generate a tinted SVG
-// fallback so the modal renders meaningfully in dev before the per-file
-// names are confirmed.
+// The lookup branches by sign-type category — cabinets fan out on
+// (faces, illumination, faceType); letters / pans / post-and-panel / EMC
+// each have a single representative image.
 
 import type { SignSpec } from "./SignSpec";
 
 export const SPEC_PAGES_FOLDER_URL =
   "https://luminousneon.sharepoint.com/:f:/s/installationschedule/IgCICY5o8mlOT7c8fCvX5reKAUAU8IBC97OAv05zbg9C2WI?e=VXPnx5";
 
-const SHAREPOINT_BASE =
-  "https://luminousneon.sharepoint.com/sites/installationschedule/Shared%20Documents/SignSpecPages/";
+const LOCAL_BASE = "spec-images/";
 
-// Stub mapping — fill in the actual SharePoint filenames as they're confirmed
-// with Ops (see ALE-50 "18 URL mappings to SharePoint"). The keys are
-// `${signTypeCode}-${faceType}` and the value is the filename + .png.
-const REFERENCE_FILES: Record<string, string> = {
-  // Wall sign cabinets
-  "WC-AT":   "wall-cabinet-aluminum-face.png",
-  "WC-PT":   "wall-cabinet-plex-face.png",
-  "WC-RFPB": "wall-cabinet-routed-pushback.png",
-  "WC-RFPT": "wall-cabinet-routed-pushthrough.png",
-  // Monument
-  "MN-AT":   "monument-aluminum-face.png",
-  "MN-PT":   "monument-plex-face.png",
-  "MN-RFPB": "monument-routed-pushback.png",
-  // Pole + post-and-panel
-  "PS-AT":   "pole-sign-aluminum.png",
-  "PS-PT":   "pole-sign-plex.png",
-  "PP-AT":   "post-and-panel.png",
-  // Pan signs
-  "AP-AT":   "pan-sign.png",
-  "EP-AT":   "economy-pan.png",
-  // EMC
-  "EM-EM":   "emc-led-panel.png",
-  // Letter sets
-  "FL-AT":   "channel-letters.png",
-  "FL-PT":   "channel-letters-plex.png",
-  "HL-AT":   "halo-letters.png",
-  "CL-AT":   "combo-letters.png",
-  "AL-AT":   "fco-aluminum.png",
+// One file pair (full + thumb) per representative spec page.
+type FileStem = string;   // e.g. "Cabinets/ST-04_NonIllum_Cabinet"
+
+// Letters — one image per sign type, independent of face type.
+const LETTER_STEMS: Partial<Record<SignSpec["signTypeCode"], FileStem>> = {
+  FL: "ChannelLetters/ST-12_Front_Lit_Channel_Letters",
+  HL: "ChannelLetters/ST-13_Halo_Lit_Channel_Letters",
+  CL: "ChannelLetters/ST-14_Combo_Lit_Channel_Letters",
+  AL: "FCOs/ST-15_FCO_Aluminum_Letters",
+  CA: "FCOs/ST-16_Cast_Aluminum_Letters",
+  PL: "FCOs/ST-18_Formed_Plastic_Letters",
+  AC: "FCOs/ST-19_FCO_Acrylic_Letters",
 };
 
+function resolveFileStem(spec: SignSpec): FileStem | null {
+  const t = spec.signTypeCode;
+  if (!t) return null;
+
+  // Letters, pans, EMC, post-and-panel: a single image per sign type.
+  if (LETTER_STEMS[t]) return LETTER_STEMS[t]!;
+  if (t === "AP") return "Pans/ST-01_Aluminum_Pan_Sign";
+  if (t === "EP") return "Pans/ST-02_Economy_Pan_Sign";
+  if (t === "PP") return "PostPanels/ST-03_Post_Panel_Sign";
+  if (t === "EM") return "Electronics/ST-22_EMC_Standards";
+
+  // Cabinets (WC, MN, PS): need faces + illumination + faceType.
+  if (t === "WC" || t === "MN" || t === "PS") {
+    if (spec.illumination === "NI") return "Cabinets/ST-04_NonIllum_Cabinet";
+    if (!spec.faceType) return null;
+    const df = spec.faces === "DF";
+
+    // Routed copy (push-back / push-through) and aluminum trim cap all map to
+    // the routed-copy cabinet pages — they describe the same construction.
+    if (spec.faceType === "RFPB" || spec.faceType === "RFPT" || spec.faceType === "AT") {
+      return df
+        ? "Cabinets/ST-11_DF_Routed_Copy_Cabinet"
+        : "Cabinets/ST-10_SF_Routed_Copy_Cabinet";
+    }
+    // Plex face / acrylic polycarbonate
+    if (spec.faceType === "PT") {
+      return df
+        ? "Cabinets/ST-07_DF_Acrylic_Poly_Cabinet"
+        : "Cabinets/ST-06_SF_Acrylic_Poly_Cabinet";
+    }
+    // Direct print / digital face → flex face cabinet pages
+    if (spec.faceType === "DF") {
+      return df
+        ? "Cabinets/ST-09_DF_Flex_Face_Cabinet"
+        : "Cabinets/ST-08_SF_Flex_Face_Cabinet";
+    }
+  }
+
+  return null;
+}
+
 export type SpecReferenceImage = {
-  /** Absolute URL of the production image (may 404 until SharePoint files land). */
-  href: string;
-  /** Inline SVG data URI used as the thumbnail until the real image loads. */
-  placeholder: string;
-  /** Short caption shown under the modal — useful when the image is generic. */
+  /** Bundled thumb path — always loads. */
+  thumb: string;
+  /** Bundled full-size path — used in the modal. */
+  full: string;
+  /** Human caption shown below the modal image. */
   caption: string;
 };
 
 export function getSpecReferenceImage(spec: SignSpec): SpecReferenceImage | null {
-  if (!spec.signTypeCode || !spec.faceType) return null;
-  const key = `${spec.signTypeCode}-${spec.faceType}`;
-  const file = REFERENCE_FILES[key];
-  const href = file ? SHAREPOINT_BASE + file : "";
+  const stem = resolveFileStem(spec);
+  if (!stem) return null;
+  // Pretty caption: strip the leading "ST-NN_" sequence and the underscores.
+  const file = stem.split("/").pop() ?? stem;
+  const caption = file
+    .replace(/^ST-\d+_/, "")
+    .replace(/_/g, " ");
   return {
-    href,
-    placeholder: tintedSvg(spec),
-    caption: file
-      ? `Reference: ${file}`
-      : `No reference image mapped for ${key} yet. Browse the spec pages folder in SharePoint to confirm the filename.`,
+    thumb: `${LOCAL_BASE}${stem}_thumb.jpg`,
+    full:  `${LOCAL_BASE}${stem}_full.jpg`,
+    caption,
   };
-}
-
-// Generates a 480×360 SVG that visually distinguishes specs by sign-type + face
-// type. Not a real diagram — just so the modal has something meaningful to
-// render until the SharePoint URLs are wired up.
-function tintedSvg(spec: SignSpec): string {
-  const fill = spec.vinylHex || "#141464";
-  const accent = spec.illumination === "IL" || spec.illumination === "EL"
-    ? "#F2994A"
-    : "#8b91a3";
-  const label = [spec.signTypeCode, spec.faceType].filter(Boolean).join(" / ");
-  const productCode = spec.productCode || "(no code)";
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360">
-    <rect width="480" height="360" fill="#f7f8fa"/>
-    <rect x="40" y="60" width="400" height="240" rx="14" fill="${fill}" stroke="#141464" stroke-width="2"/>
-    <rect x="60" y="90" width="360" height="40" rx="6" fill="rgba(255,255,255,0.85)"/>
-    <text x="240" y="118" font-family="-apple-system, Segoe UI, sans-serif" font-size="22" font-weight="800" fill="#141464" text-anchor="middle" letter-spacing="2">LUMINEO SIGNS</text>
-    <rect x="60" y="150" width="360" height="120" rx="6" fill="rgba(255,255,255,0.92)"/>
-    <text x="240" y="200" font-family="ui-monospace, Menlo, monospace" font-size="22" font-weight="700" fill="#141464" text-anchor="middle">${escape(productCode)}</text>
-    <text x="240" y="240" font-family="-apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#4a4f5e" text-anchor="middle">${escape(label)}</text>
-    <circle cx="60" cy="60" r="14" fill="${accent}"/>
-    <text x="60" y="65" font-family="-apple-system, Segoe UI, sans-serif" font-size="14" font-weight="800" fill="white" text-anchor="middle">L</text>
-    <text x="240" y="334" font-family="-apple-system, Segoe UI, sans-serif" font-size="11" font-weight="700" fill="#8b91a3" text-anchor="middle" letter-spacing="2">REFERENCE PLACEHOLDER</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
-function escape(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

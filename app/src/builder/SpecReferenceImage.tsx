@@ -1,6 +1,8 @@
-// Spec reference image thumbnail + the full-screen modal. The thumbnail shows
-// once a face type is selected (per ALE-50). Tapping it opens the modal;
-// closing happens on ✕, on background tap, or on Escape.
+// Spec reference image thumbnail + the full-screen modal (ALE-50).
+// Thumb (bundled, 144×108) appears once a face type is chosen for cabinets,
+// or as soon as the sign type is set for letters / pans / EMC / post-panel.
+// Tapping it opens the modal at the full-size image; close on ✕, background
+// tap, or Escape.
 
 import { useEffect, useState } from "react";
 import { useSpec } from "../app/SpecContext";
@@ -9,9 +11,6 @@ import { getSpecReferenceImage, SPEC_PAGES_FOLDER_URL } from "../domain/specRefe
 export function SpecReferenceImage() {
   const { spec } = useSpec();
   const [open, setOpen] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  const ref = getSpecReferenceImage(spec);
 
   // Close modal on Escape.
   useEffect(() => {
@@ -23,45 +22,26 @@ export function SpecReferenceImage() {
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
 
-  // Reset the load-state probe whenever the lookup changes so we re-try the
-  // SharePoint URL for the new sign/face type combo.
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [ref?.href]);
-
+  const ref = getSpecReferenceImage(spec);
   if (!ref) return null;
-
-  // Probe whether the SharePoint URL is reachable. We optimistically render
-  // the placeholder and swap to the real image once <img> fires onLoad.
-  const src = imageLoaded && ref.href ? ref.href : ref.placeholder;
 
   return (
     <>
       <div className="sbp-refimage">
-        <div className="sbp-refimage__thumb-wrap">
-          <button
-            type="button"
-            className="sbp-refimage__thumb"
-            onClick={() => setOpen(true)}
-            aria-label="Open spec reference image"
-          >
-            <img src={src} alt={`Spec reference for ${spec.productCode || "this sign"}`} />
-          </button>
-          {/* Hidden probe — when the real SharePoint URL loads, swap to it. */}
-          {ref.href ? (
-            <img
-              src={ref.href}
-              alt=""
-              aria-hidden
-              style={{ display: "none" }}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageLoaded(false)}
-            />
-          ) : null}
-        </div>
+        <button
+          type="button"
+          className="sbp-refimage__thumb"
+          onClick={() => setOpen(true)}
+          aria-label={`Open full spec page: ${ref.caption}`}
+        >
+          <img src={ref.thumb} alt={`Spec reference: ${ref.caption}`} />
+        </button>
         <div className="sbp-refimage__hint">
           <span className="lum-field-label">Spec Reference</span>
-          <span className="sbp-refimage__hint-text">Tap image to expand</span>
+          <span className="sbp-refimage__hint-text">{ref.caption}</span>
+          <span className="sbp-refimage__hint-text" style={{ opacity: 0.7 }}>
+            Tap image to expand
+          </span>
           <a
             className="sbp-refimage__sharepoint"
             href={SPEC_PAGES_FOLDER_URL}
@@ -78,9 +58,9 @@ export function SpecReferenceImage() {
           className="sbp-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Spec reference image"
+          aria-label={`Spec reference image — ${ref.caption}`}
           onClick={(e) => {
-            // Close on background tap only — not on image click.
+            // Close on background tap only.
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
@@ -93,7 +73,7 @@ export function SpecReferenceImage() {
             ×
           </button>
           <figure className="sbp-modal__figure">
-            <img className="sbp-modal__img" src={src} alt="" />
+            <img className="sbp-modal__img" src={ref.full} alt={ref.caption} />
             <figcaption className="sbp-modal__caption">
               {ref.caption}
               {" "}
