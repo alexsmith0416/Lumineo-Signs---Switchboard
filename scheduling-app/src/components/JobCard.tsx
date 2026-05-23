@@ -81,36 +81,19 @@ export default function JobCard({
         onMouseEnter={open}
         onMouseLeave={close}
       >
-        {layout === "stacked" ? (
-          <>
-            <div className="job-card__line job-card__line--top">
-              <span className="job-card__job-no">{line.jobNo}</span>
-              <span className="job-card__customer">{line.customerName}</span>
-              <span className="job-card__desc">{line.planningLineDescription}</span>
-            </div>
-            <div className="job-card__line job-card__line--bottom">
-              {showCrewBadge && <CrewBadge line={line} />}
-              {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
-              {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
-                <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="job-card__job-no">{line.jobNo}</div>
-            <div className="job-card__customer">{line.customerName}</div>
-            <div className="job-card__desc">{line.planningLineDescription}</div>
-            {(showCrewBadge || showWeather || showInvoice) && (
-              <div className="job-card__addons">
-                {showCrewBadge && <CrewBadge line={line} />}
-                {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
-                {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
-                  <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
-                )}
-              </div>
+        <div className="job-card__header">
+          <span className="job-card__job-no">{line.jobNo}</span>
+          <span className="job-card__customer">{line.customerName}</span>
+        </div>
+        <div className="job-card__desc">{line.planningLineDescription}</div>
+        {(showCrewBadge || showWeather || showInvoice) && (
+          <div className="job-card__addons">
+            {showCrewBadge && <CrewBadge line={line} />}
+            {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
+            {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
+              <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
             )}
-          </>
+          </div>
         )}
         <div className="job-card__icons">
           {line.isLocked && <span title="Locked">🔒</span>}

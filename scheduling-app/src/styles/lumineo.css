@@ -324,51 +324,61 @@ input, select, textarea {
   border-right: 3px solid rgba(0, 0, 0, 0.25);
 }
 
+/* Job card: column layout — job# + customer on top line, description below,
+   optional addons (crew/weather/$) on a third line. All text left-justified. */
 .job-card {
   border-radius: 6px;
-  padding: 0 24px 0 8px;
-  font-size: 11px;
+  padding: 4px 24px 4px 8px;
   position: relative;
   border: 1px solid rgba(0,0,0,0.05);
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+  gap: 2px;
   white-space: nowrap;
   overflow: hidden;
+  font-size: 11px;
+  height: 100%;
+}
+
+.job-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
 }
 
 .job-card__job-no {
   font-weight: 700;
   flex-shrink: 0;
+  text-align: left;
 }
+
 .job-card__customer {
   font-weight: 500;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  text-align: left;
 }
+
 .job-card__desc {
-  opacity: 0.8;
+  opacity: 0.78;
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 1;
   min-width: 0;
-}
-.job-card__icons {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: 10px;
-  display: flex;
-  gap: 3px;
-  font-size: 11px;
+  text-align: left;
 }
 
 .job-card__addons {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding-right: 22px;
+  justify-content: flex-start;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -379,35 +389,21 @@ input, select, textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Two-line stacked layout — used on the installation calendar. */
-.job-card--stacked {
+.job-card__icons {
+  position: absolute;
+  top: 4px;
+  right: 6px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4px 24px 4px 8px;
-  gap: 2px;
-  white-space: nowrap;
-  overflow: hidden;
+  gap: 3px;
+  font-size: 11px;
 }
 
-.job-card--stacked .job-card__line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.job-card--stacked .job-card__line--top { font-size: 11px; }
-.job-card--stacked .job-card__line--bottom { font-size: 10px; gap: 5px; }
-
-.job-card--stacked .job-card__job-no { font-weight: 700; }
-.job-card--stacked .job-card__customer { font-weight: 500; }
+/* Stacked layout (installation) — same column structure, just taller +
+   the addons row is meaningful here. The base .job-card already pins
+   text-align: left, so no further override is required. */
 .job-card--stacked .job-card__desc {
-  opacity: 0.78;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex-shrink: 1;
+  font-size: 10px;
+  margin-top: 1px;
 }
 
 /* ============ Forms / Add Job panel ============ */

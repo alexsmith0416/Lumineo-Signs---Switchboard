@@ -212,7 +212,7 @@ export default function CalendarView({
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
-              const laneHeight = cardLayout === "stacked" ? 56 : 32;
+              const laneHeight = cardLayout === "stacked" ? 68 : 46;
               const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
               return (
