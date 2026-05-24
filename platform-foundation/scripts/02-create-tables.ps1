@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "=== Lumineo Platform Foundation — Create Tables ===" -ForegroundColor Cyan
 
 # --- Auth token ---
-$token = (pac auth token 2>&1 | Select-String "Bearer (.+)" | ForEach-Object { $_.Matches.Groups[1].Value })
+$token = az account get-access-token --resource "https://org8fa22efd.crm.dynamics.com" --query accessToken --output tsv
 if (-not $token) {
     Write-Error "No PAC auth token found. Run 01-setup.ps1 first."
     exit 1

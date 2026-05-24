@@ -47,7 +47,7 @@ Write-Host "     Authenticated." -ForegroundColor Green
 # --- 3. Verify lum_ publisher ---
 Write-Host "`n[3/4] Checking for 'lum_' publisher..." -ForegroundColor Yellow
 
-$token = (pac auth token 2>&1 | Select-String "Bearer (.+)" | ForEach-Object { $_.Matches.Groups[1].Value })
+$token = az account get-access-token --resource "https://org8fa22efd.crm.dynamics.com" --query accessToken --output tsv
 $apiBase = $EnvironmentUrl.TrimEnd('/') + "/api/data/v9.2"
 
 $headers = @{
