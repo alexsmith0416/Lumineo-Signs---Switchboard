@@ -75,7 +75,7 @@ function New-Table($logicalName, $displayName, $pluralName, $description, $attri
         DisplayName           = lbl $displayName
         DisplayCollectionName = lbl $pluralName
         Description           = lbl $description
-        OwnershipType         = "OrgOwned"
+        OwnershipType         = "OrganizationOwned"
         HasActivities         = $false
         HasNotes              = $false
         IsActivity            = $false
@@ -209,3 +209,5 @@ New-Table "lum_userviewpreferences" "User View Preferences" "User View Preferenc
 )
 
 Write-Host "`n=== Done. Run 04-airtable-sync-flow.md next for flow setup. ===" -ForegroundColor Cyan
+
+
