@@ -4,11 +4,26 @@
 
 ---
 
+## Current Build Mode — Open Access + Airtable
+
+**Until further notice, these temporary rules apply:**
+
+| Concern | Temporary approach | Future state |
+|---|---|---|
+| Access control | All authenticated users see all screens — no role filtering | Entra security groups + role routing |
+| Job data | Read from Airtable via `AirtableMirror_Sync` flow → Dataverse | BC virtual tables + BC API write-back |
+| BC writes | Queue in `lum_PendingBCWrites`, process manually | Automated via BC API when access granted |
+| Entra groups | Not configured — deferred | 5 `Lumineo-*` security groups |
+
+Do not build role-based routing or group membership checks until the Entra groups task is explicitly reopened.
+
+---
+
 ## App Inventory
 
 | App | Type | Linear Project | Status |
 |-----|------|---------------|--------|
-| Platform Foundation | Dataverse + flows + component lib | ab485dc7 | Not started — **build first** |
+| Platform Foundation | Dataverse + flows + component lib | ab485dc7 | Scripts ready — run next |
 | Switchboard | Canvas Power App (shell) | 9f38c4d4 | Not started |
 | LNI Production Schedule | Code App (React+Vite+TS) | 53e5d207 | Flows + deploy remaining |
 | Sign Builder Pro | Canvas Power App | ea529bb1 | 22/23 In Review — QA + deploy |
@@ -78,7 +93,7 @@ Set(colGray50,       RGBA(247,248,250,1));
 Set(colWhite,        RGBA(255,255,255,1));
 ```
 
-Navbar wordmark: 15px / weight 800 / white / 0.12em letter-spacing  
+Navbar wordmark: 15px / weight 800 / white / 0.12em letter-spacing
 All fonts: Google Fonts Open Sans (400/500/600/700)
 
 ---
@@ -88,37 +103,46 @@ All fonts: Google Fonts Open Sans (400/500/600/700)
 ```
 ┌─────────────────────────────────────────────────┐
 │              Switchboard (Canvas App)            │
-│  Splash → Login → Role Routing → Home Screen     │
-│  App Launcher → Launch(subAppUrl, {userEmail,role})│
+│  Splash → Login → Home Screen (single, no roles) │
+│  App Launcher → Launch(subAppUrl, {userEmail})   │
 └──────┬──────────┬──────────┬────────────────────┘
        │          │          │
   Canvas Apps   Code Apps  Canvas Apps
   Sales Hub     LNI Prod   Sign Builder Pro
   Time+Photo    Sched Hub
        │
-       └── All share: Dataverse (lum_ tables) + Entra ID + PA Flows
+       └── All share: Dataverse (lum_ tables) + Airtable sync
 ```
 
-**Identity:** Microsoft Entra ID — 5 security groups (names locked):
-- `Lumineo-Operations` — superuser
-- `Lumineo-Sales`
-- `Lumineo-Employees-Production`
-- `Lumineo-Employees-Installation`
-- `Lumineo-Employees-Shipping`
+**Access model (temporary):** All users authenticated via Microsoft 365 see all screens. No Entra group checks.
 
 **Sub-app launch pattern:**
 ```
-Launch(
-    varSalesHubUrl,
-    {userEmail: varCurrentUser.Email, role: varUserRole}
-)
+Launch(varSalesHubUrl, {userEmail: varCurrentUser.Email})
 ```
 
 **Sub-app receive pattern:**
 ```
 Set(varUserEmail, Param("userEmail"));
-Set(varRole,      Param("role"));
 ```
+
+---
+
+## Data Sources
+
+### Job data — Airtable (temporary primary source)
+
+Job data flows: **Airtable → `AirtableMirror_Sync` PA flow (every 15 min) → Dataverse `lum_Job` table**
+
+- Read `lum_job` in all apps — never query Airtable directly from canvas
+- The sync flow keeps Dataverse current; canvas apps only touch Dataverse
+- New jobs created in apps write to `lum_job`; a separate outbound flow syncs back to Airtable
+
+### Business Central (future)
+
+- BC virtual tables (bc_Customer, bc_Item, bc_SalesOrder, etc.) will be available read-only once configured
+- Writes queue in `lum_pendingbcwrites` until BC API admin access is granted
+- Do not block any feature on BC API access
 
 ---
 
@@ -126,11 +150,11 @@ Set(varRole,      Param("role"));
 
 | Logical Name | Display Name | Key Purpose |
 |---|---|---|
-| lum_userprofile | User Profile | Entra → Dataverse user record, role, preferences |
-| lum_job | Job | Core job/project record |
+| lum_userprofile | User Profile | Microsoft 365 user record (no role routing yet) |
+| lum_job | Job | Core job record — populated by Airtable sync |
 | lum_task | Task | Job subtasks |
 | lum_timeentry | Time Entry | Clock-in/out records |
-| lum_photo | Photo | Job site photos (Dataverse File col or SP doclib) |
+| lum_photo | Photo | Job site photos (Dataverse File column, ≤128 MB) |
 | lum_signspec | Sign Spec | Sign specifications for Sign Builder Pro |
 | lum_opportunity | Opportunity | Sales opportunities |
 | lum_announcement | Announcement | Home screen announcements |
@@ -146,7 +170,7 @@ Set(varRole,      Param("role"));
 | lum_spotlight | Spotlight | Employee spotlight cards |
 | lum_suggestion | Suggestion | Employee suggestion box |
 
-**BC Virtual Tables (read-only — never copy data):**
+**BC Virtual Tables (future — read-only, never copy data):**
 bc_Customer, bc_Item, bc_SalesOrder, bc_SalesOrderLine, bc_Vendor, bc_Inventory
 
 ---
@@ -179,15 +203,10 @@ Concurrent(
 );
 ```
 
-### Role-based navigation
+### No role routing (temporary — single home screen for all users)
 ```
-Switch(varCurrentUser.lum_role,
-    "Operations",    Navigate(HomeOps,    ScreenTransition.None),
-    "Sales",         Navigate(HomeSales,  ScreenTransition.None),
-    "Production",    Navigate(HomeProd,   ScreenTransition.None),
-    "Installation",  Navigate(HomeInstall,ScreenTransition.None),
-    "Shipping",      Navigate(HomeShip,   ScreenTransition.None)
-)
+// After OnStart, navigate directly — no Switch() on role
+Navigate(HomeScreen, ScreenTransition.None)
 ```
 
 ---
@@ -254,20 +273,28 @@ pac code-app push --name LNIProductionSchedule
 | Use `lum_` prefix on ALL custom schema | Use any other prefix |
 | Load KPIs from `lum_KpiSnapshot` | Query live BC/Dataverse on splash |
 | Use `Concurrent()` on OnStart | Chain sequential Set() calls |
-| Pass user context via `Launch()` params | Re-authenticate in sub-apps |
+| Pass user email via `Launch()` params | Re-authenticate in sub-apps |
 | Use `lcl_` component library controls | Duplicate UI components per app |
 | Write BC data via `lum_PendingBCWrites` | Call BC API directly from canvas |
-| Use Entra group names exactly as listed | Rename or abbreviate group names |
+| Read job data from `lum_job` (Airtable-synced) | Query Airtable directly from canvas |
 | Read design docs in `docs/` before building | Guess at spec details |
+| Build single home screen (all users) | Add role routing before Entra groups are configured |
+
+---
+
+## Deferred Items (do not build until explicitly reopened)
+
+- **Entra security groups** (`Lumineo-Operations`, `Lumineo-Sales`, `Lumineo-Employees-Production`, `Lumineo-Employees-Installation`, `Lumineo-Employees-Shipping`) — groups and role-based routing
+- **BC API write-back** — automated processing of `lum_PendingBCWrites`
+- **BC virtual table configuration** — bc_Customer, bc_Item, etc.
 
 ---
 
 ## BC Integration (Interim)
 
-Until BC API admin access is granted:
-- **Reads:** BC virtual tables (direct, read-only)
-- **Writes:** Queue in `lum_pendingbcwrites`, processed by flow when API access granted
-- **Sync:** `AirtableMirror_Sync` PA flow runs every 15 min (Airtable → Dataverse)
+- **Job data reads:** `lum_job` table, populated by `AirtableMirror_Sync` flow every 15 min
+- **BC writes:** Queue in `lum_pendingbcwrites`, process manually until API access granted
+- **BC reads:** Not available until virtual tables are configured — use Airtable-synced data
 
 Full schema: `docs/04-dataverse-schema.md`
 Full architecture: `docs/01-architecture-overview.md`
