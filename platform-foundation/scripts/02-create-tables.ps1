@@ -100,6 +100,17 @@ function pick($name, $display, [hashtable[]]$options) {
     }
 }
 
+# File column — Dataverse File type (up to 128 MB per file)
+function file_($name, $display, $maxSizeKB = 131072) {
+    return @{
+        "@odata.type" = "Microsoft.Dynamics.CRM.FileAttributeMetadata"
+        SchemaName    = $name
+        DisplayName   = lbl $display
+        RequiredLevel = rl "None"
+        MaxSizeInKB   = $maxSizeKB
+    }
+}
+
 # --- Create table helper ---
 function New-Table($logicalName, $displayName, $pluralName, $description, $attributes) {
     # Check if exists
@@ -186,13 +197,14 @@ New-Table "lum_timeentry" "Time Entry" "Time Entries" "Clock-in/out records for 
     memo "lum_notes"       "Notes"
 )
 
-# 5. lum_Photo
-New-Table "lum_photo" "Photo" "Photos" "Job site photos captured by crew" @(
+# 5. lum_Photo — Dataverse File column (up to 128 MB per photo)
+New-Table "lum_photo" "Photo" "Photos" "Job site photos captured by crew; stored as Dataverse File columns" @(
+    file_ "lum_photofile"   "Photo File"
     str  "lum_caption"      "Caption"        500
     str  "lum_jobreference" "Job Reference"  100
     str  "lum_takenby"      "Taken By"       200
     dt   "lum_takendatetime" "Taken Date/Time"
-    str  "lum_storagelocation" "Storage Location" 500
+    str  "lum_thumbnailurl" "Thumbnail URL"  500
 )
 
 # 6. lum_SignSpec
@@ -317,6 +329,7 @@ New-Table "lum_spotlight" "Spotlight" "Spotlights" "Employee spotlight cards sho
     str  "lum_employeename"  "Employee Name"  200
     str  "lum_jobtitle"      "Job Title"      100
     memo "lum_bio"           "Bio"            2000
+    file_ "lum_headshot"     "Headshot"
     dt   "lum_featuredfrom"  "Featured From"
     dt   "lum_featuredto"    "Featured To"
     bool_ "lum_isactive"     "Is Active"
