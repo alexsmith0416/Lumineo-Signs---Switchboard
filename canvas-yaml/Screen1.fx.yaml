@@ -1,0 +1,581 @@
+"Screen1 As screen.'autoLayout_HeaderFooter_ver1.0'":
+    Fill: =RGBA(250, 250, 251, 1)
+    LoadingSpinnerColor: =RGBA(0, 120, 212, 1)
+    OnVisible: |-
+        =// Responsive sizing — assumes gblDesignW = 1280 from App.OnStart
+        Set(gblContentW, Min(App.Width - 40, gblDesignW));
+        Set(gblContentX, (App.Width - gblContentW) / 2);
+        Set(gblIsDesktop, gblContentW >= 900);
+        Set(gblIsTablet,  gblContentW >= 560 && gblContentW < 900);
+        Set(gblIsPhone,   gblContentW < 560);
+
+        // Refresh Dataverse so KPI cards pick up the latest snapshot rows
+        Refresh('lum_kpisnapshot');
+
+        // Safety counter — singleton row from lum_safetymetric
+        Set(varSafety, First('lum_safetymetric'));
+        Set(varSafetyDays,
+            If(IsBlank(varSafety),
+                247,    // fallback for demo before the singleton exists
+                DateDiff(varSafety.currentStreakStartDate, Today(), Days)
+            )
+        );
+        Set(varSafetyRecord, Coalesce(varSafety.longestStreakDays, 412));
+
+        // Department load — colored by dept (Production navy, Installation red, Shipping green)
+        Set(varDeptLoad, Table(
+            { label: "Production",   hours: 142, tone: RGBA(20, 20, 100, 1) },
+            { label: "Installation", hours: 98,  tone: RGBA(232, 21, 27, 1) },
+            { label: "Shipping",     hours: 67,  tone: RGBA(15, 110, 86, 1) }
+        ));
+        Set(varDeptLoadMax, Max(varDeptLoad, hours));
+
+        // Late tasks — Dataverse query with static seed fallback for demo
+        Set(varLateTasks,
+            With({ live: Filter('lum_task',
+                status <> "Done" && scheduledDate < Today()
+            )},
+                If(CountRows(live) > 0,
+                    live,
+                    Table(
+                        { title: "Pylon refurb — fabrication", jobNumber: "J123478", assignedTo: "Marcus L.", department: "Production",   daysLate: 2 },
+                        { title: "Channel letters — paint",     jobNumber: "J123456", assignedTo: "Hunter B.", department: "Production",   daysLate: 1 },
+                        { title: "Site survey — Westfield",     jobNumber: "J123512", assignedTo: "Aiden P.",  department: "Installation", daysLate: 3 },
+                        { title: "Crate & label — Sunoco LED",  jobNumber: "J123488", assignedTo: "Priya D.",  department: "Shipping",     daysLate: 1 }
+                    )
+                )
+            )
+        );
+
+        // Pending approvals — spec + quote union with static fallback
+        Set(varPendingApprovals, Table(
+            { title: "Hartford Med — backlit channel spec", kind: "SPEC",  amount: 18400, waiting: "2d", source: "Sign Builder" },
+            { title: "Westfield Mall — monument quote",      kind: "QUOTE", amount: 84000, waiting: "1d", source: "Sales Hub" },
+            { title: "Route 9 pylon — refurb scope",          kind: "SPEC",  amount: 12200, waiting: "4h", source: "Sign Builder" }
+        ))
+
+    "headerMain As component.'6e550ccd5972433c84eec8b9cd6f93db'":
+        AppTitle: ="Lumineo Signs"
+        CompWidth: =App.Width
+        Height: =64
+        PageTitle: ="Home · " & Coalesce(gblUser.role, "Operations")
+        ShowBack: =false
+        Width: =App.Width
+        X: =0
+        Y: =0
+        ZIndex: =20
+
+    safetyCounter As component.b2c3d4e5f6a748b9c0d1e2f3a4b5c6d7:
+        CompSize: =200
+        Days: =varSafetyDays
+        Record: =varSafetyRecord
+        Height: =92
+        Width: =If(gblIsPhone, gblContentW, 200)
+        X: =gblContentX
+        Y: =76
+        ZIndex: =3
+
+    kpiCardDIP As component.a1b2c3d4e5f648a9b0c1d2e3f4a5b6c7:
+        AccentColor: |-
+            ="#141464"
+        CompHeight: =92
+        CompWidth: =(gblContentW - 200 - 8 - 24) / 4
+        Height: =92
+        kpiKey: ="dip_avg_days"
+        Subtitle: ="(DIP)"
+        Title: ="Avg Days Job Open"
+        Value: ="32"
+        Width: =(gblContentW - 200 - 8 - 24) / 4
+        X: =gblContentX + 208
+        Y: =76
+        ZIndex: =3
+
+    kpiCardOpenValue As component.a1b2c3d4e5f648a9b0c1d2e3f4a5b6c7:
+        AccentColor: |-
+            ="#141464"
+        CompHeight: =92
+        CompWidth: =(gblContentW - 200 - 8 - 24) / 4
+        Height: =92
+        kpiKey: ="value_open_jobs"
+        Subtitle: ="Excluding on hold"
+        Title: ="Value of Open Jobs"
+        Value: ="$1.2M"
+        Width: =(gblContentW - 200 - 8 - 24) / 4
+        X: =gblContentX + 208 + ((gblContentW - 200 - 8 - 24) / 4) + 8
+        Y: =76
+        ZIndex: =3
+
+    kpiCardGmApril As component.a1b2c3d4e5f648a9b0c1d2e3f4a5b6c7:
+        AccentColor: |-
+            ="#141464"
+        CompHeight: =92
+        CompWidth: =(gblContentW - 200 - 8 - 24) / 4
+        Height: =92
+        kpiKey: ="gm_pct_april"
+        Subtitle: ="This Month"
+        Title: ="GM % — April"
+        Value: ="34.2%"
+        Width: =(gblContentW - 200 - 8 - 24) / 4
+        X: =gblContentX + 208 + (((gblContentW - 200 - 8 - 24) / 4) + 8) * 2
+        Y: =76
+        ZIndex: =3
+
+    kpiCardGmYtd As component.a1b2c3d4e5f648a9b0c1d2e3f4a5b6c7:
+        AccentColor: |-
+            ="#141464"
+        CompHeight: =92
+        CompWidth: =(gblContentW - 200 - 8 - 24) / 4
+        Height: =92
+        kpiKey: ="gm_pct_ytd"
+        Subtitle: ="Year to Date"
+        Title: ="GM % — YTD"
+        Value: ="31.8%"
+        Width: =(gblContentW - 200 - 8 - 24) / 4
+        X: =gblContentX + 208 + (((gblContentW - 200 - 8 - 24) / 4) + 8) * 3
+        Y: =76
+        ZIndex: =3
+
+    annCard1 As component.c3d4e5f6a7b848c9d0e1f2a3b4c5d6e7:
+        Author: ="Alex Smith"
+        Body: ="All hands team meeting Thursday at 9am in the main conference room. Attendance required."
+        CompHeight: =48
+        CompWidth: =gblContentW
+        Height: =48
+        PostedDate: ="5/24/2026"
+        Title: ="Team Meeting — Thursday 9am"
+        Width: =gblContentW
+        X: =gblContentX
+        Y: =180
+        ZIndex: =3
+
+    tileProjectScheduler As component.c9d0e1f2a3b448c9d0e1f2a3b4c5d6e7:
+        AppEmoji: ="chart"
+        AppKey: ="projectScheduler"
+        AppLabel: ="Project Scheduler"
+        BadgeText: =Text(CountRows(Filter('lum_job', status <> "Complete"))) & " open"
+        CompHeight: =108
+        CompWidth: =(gblContentW - 32) / 5
+        Enabled: =true
+        Height: =108
+        TargetUrl: |-
+            ="about:blank"
+        Visible: =gblUser.role = "Operations"
+        Width: =(gblContentW - 32) / 5
+        X: =gblContentX
+        Y: =244
+        ZIndex: =3
+
+    tileWeeklyScheduler As component.c9d0e1f2a3b448c9d0e1f2a3b4c5d6e7:
+        AppEmoji: ="calendar"
+        AppKey: ="weeklyScheduler"
+        AppLabel: ="Weekly Scheduler"
+        BadgeText: ="This week"
+        CompHeight: =108
+        CompWidth: =(gblContentW - 32) / 5
+        Enabled: =true
+        Height: =108
+        TargetUrl: |-
+            ="about:blank"
+        Width: =(gblContentW - 32) / 5
+        X: =gblContentX + ((gblContentW - 32) / 5) + 8
+        Y: =244
+        ZIndex: =3
+
+    tileSignBuilder As component.c9d0e1f2a3b448c9d0e1f2a3b4c5d6e7:
+        AppEmoji: ="pencil"
+        AppKey: ="signBuilderPro"
+        AppLabel: ="Sign Builder Pro"
+        BadgeText: ="Open specs"
+        CompHeight: =108
+        CompWidth: =(gblContentW - 32) / 5
+        Enabled: =true
+        Height: =108
+        TargetUrl: |-
+            ="about:blank"
+        Visible: =gblUser.role in ["Operations", "Sales", "Production"]
+        Width: =(gblContentW - 32) / 5
+        X: =gblContentX + (((gblContentW - 32) / 5) + 8) * 2
+        Y: =244
+        ZIndex: =3
+
+    tileTimePhoto As component.c9d0e1f2a3b448c9d0e1f2a3b4c5d6e7:
+        AppEmoji: ="camera"
+        AppKey: ="timePhoto"
+        AppLabel: ="Time & Photo"
+        BadgeText: ="Punch in"
+        CompHeight: =108
+        CompWidth: =(gblContentW - 32) / 5
+        Enabled: =true
+        Height: =108
+        TargetUrl: |-
+            ="about:blank"
+        Visible: =gblUser.role in ["Operations", "Production", "Installation", "Shipping"]
+        Width: =(gblContentW - 32) / 5
+        X: =gblContentX + (((gblContentW - 32) / 5) + 8) * 3
+        Y: =244
+        ZIndex: =3
+
+    tileSalesHub As component.c9d0e1f2a3b448c9d0e1f2a3b4c5d6e7:
+        AppEmoji: ="dollar"
+        AppKey: ="salesHub"
+        AppLabel: ="Sales Hub"
+        BadgeText: ="Open opps"
+        CompHeight: =108
+        CompWidth: =(gblContentW - 32) / 5
+        Enabled: =true
+        Height: =108
+        TargetUrl: |-
+            ="about:blank"
+        Visible: =gblUser.role in ["Operations", "Sales"]
+        Width: =(gblContentW - 32) / 5
+        X: =gblContentX + (((gblContentW - 32) / 5) + 8) * 4
+        Y: =244
+        ZIndex: =3
+
+    opsWdtDeptBg As rectangle:
+        BorderColor: =RGBA(228, 229, 234, 1)
+        BorderThickness: =1
+        DisabledFill: =RGBA(245, 245, 245, 1)
+        Fill: =RGBA(255, 255, 255, 1)
+        FocusedBorderThickness: =4
+        Height: =152
+        HoverFill: =RGBA(255, 255, 255, 1)
+        PressedFill: =RGBA(255, 255, 255, 1)
+        Width: =gblContentW
+        X: =gblContentX
+        Y: =360
+        ZIndex: =3
+
+    opsWdtDeptLbl As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(31, 31, 46, 1)
+        FontWeight: =FontWeight.Bold
+        Height: =18
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =12
+        Text: ="DEPARTMENT LOAD"
+        Width: =400
+        X: =gblContentX + 14
+        Y: =372
+        ZIndex: =4
+
+    opsWdtDeptSub As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(139, 145, 163, 1)
+        FontWeight: =FontWeight.Semibold
+        Height: =14
+        Size: =10
+        Text: ="HOURS SCHEDULED THIS WEEK"
+        Width: =400
+        X: =gblContentX + 14
+        Y: =390
+        ZIndex: =4
+
+    galDeptLoad As "gallery.galleryVertical":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Height: =96
+        Items: =varDeptLoad
+        TemplatePadding: =6
+        TemplateSize: =32
+        Width: =gblContentW - 28
+        X: =gblContentX + 14
+        Y: =412
+        ZIndex: =4
+
+        galDeptName As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(31, 31, 46, 1)
+            FontWeight: =FontWeight.Semibold
+            Height: =16
+            Size: =11
+            Text: =ThisItem.label
+            Width: =160
+            X: =0
+            Y: =0
+
+        galDeptHours As label:
+            Align: =Align.Right
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(74, 79, 94, 1)
+            FontWeight: =FontWeight.Bold
+            Height: =16
+            Size: =11
+            Text: =Text(ThisItem.hours) & " h"
+            Width: =80
+            X: =Parent.TemplateWidth - 80 - 8
+            Y: =0
+
+        galBarTrack As rectangle:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =RGBA(245, 245, 245, 1)
+            Height: =6
+            Width: =Parent.TemplateWidth - 8
+            X: =0
+            Y: =20
+
+        galBarFill As rectangle:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            Fill: =ThisItem.tone
+            Height: =6
+            Width: =(Parent.TemplateWidth - 8) * (ThisItem.hours / varDeptLoadMax)
+            X: =0
+            Y: =20
+
+    opsWdtLateBg As rectangle:
+        BorderColor: =RGBA(228, 229, 234, 1)
+        BorderThickness: =1
+        DisabledFill: =RGBA(245, 245, 245, 1)
+        Fill: =RGBA(255, 255, 255, 1)
+        FocusedBorderThickness: =4
+        Height: =240
+        HoverFill: =RGBA(255, 255, 255, 1)
+        PressedFill: =RGBA(255, 255, 255, 1)
+        Width: =(gblContentW - 8) / 2
+        X: =gblContentX
+        Y: =520
+        ZIndex: =3
+
+    opsWdtLateLbl As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(31, 31, 46, 1)
+        FontWeight: =FontWeight.Bold
+        Height: =18
+        Size: =12
+        Text: ="LATE TASKS"
+        Width: =400
+        X: =gblContentX + 14
+        Y: =532
+        ZIndex: =4
+
+    opsWdtLateSub As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(139, 145, 163, 1)
+        FontWeight: =FontWeight.Semibold
+        Height: =14
+        Size: =10
+        Text: =Text(CountRows(varLateTasks)) & " PAST SCHEDULED DATE"
+        Width: =400
+        X: =gblContentX + 14
+        Y: =550
+        ZIndex: =4
+
+    galLateTasks As "gallery.galleryVertical":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Height: =180
+        Items: =varLateTasks
+        TemplatePadding: =4
+        TemplateSize: =44
+        Width: =((gblContentW - 8) / 2) - 28
+        X: =gblContentX + 14
+        Y: =574
+        ZIndex: =4
+
+        galLatePrimary As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(31, 31, 46, 1)
+            FontWeight: =FontWeight.Semibold
+            Height: =16
+            Size: =12
+            Text: =ThisItem.title
+            Width: =Parent.TemplateWidth - 100
+            X: =0
+            Y: =4
+
+        galLateSecondary As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(139, 145, 163, 1)
+            Height: =14
+            Size: =10
+            Text: =ThisItem.jobNumber & " · " & ThisItem.assignedTo
+            Width: =Parent.TemplateWidth - 100
+            X: =0
+            Y: =22
+
+        galLatePill As label:
+            Align: =Align.Center
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =Switch(ThisItem.department,
+                "Production",   RGBA(20, 20, 100, 1),
+                "Installation", RGBA(232, 21, 27, 1),
+                "Shipping",     RGBA(15, 110, 86, 1),
+                RGBA(74, 79, 94, 1)
+            )
+            Fill: =Switch(ThisItem.department,
+                "Production",   RGBA(232, 234, 245, 1),
+                "Installation", RGBA(255, 228, 229, 1),
+                "Shipping",     RGBA(216, 239, 231, 1),
+                RGBA(245, 245, 245, 1)
+            )
+            FontWeight: =FontWeight.Bold
+            Height: =18
+            RadiusBottomLeft: =9
+            RadiusBottomRight: =9
+            RadiusTopLeft: =9
+            RadiusTopRight: =9
+            Size: =9
+            Text: =Upper(ThisItem.department)
+            Width: =90
+            X: =Parent.TemplateWidth - 90
+            Y: =4
+
+        galLateMeta As label:
+            Align: =Align.Right
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(139, 145, 163, 1)
+            Height: =14
+            Size: =10
+            Text: =Text(ThisItem.daysLate) & " day" & If(ThisItem.daysLate > 1, "s") & " late"
+            Width: =90
+            X: =Parent.TemplateWidth - 90
+            Y: =22
+
+    opsWdtPendBg As rectangle:
+        BorderColor: =RGBA(228, 229, 234, 1)
+        BorderThickness: =1
+        DisabledFill: =RGBA(245, 245, 245, 1)
+        Fill: =RGBA(255, 255, 255, 1)
+        FocusedBorderThickness: =4
+        Height: =240
+        HoverFill: =RGBA(255, 255, 255, 1)
+        PressedFill: =RGBA(255, 255, 255, 1)
+        Width: =(gblContentW - 8) / 2
+        X: =gblContentX + ((gblContentW - 8) / 2) + 8
+        Y: =520
+        ZIndex: =3
+
+    opsWdtPendLbl As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(31, 31, 46, 1)
+        FontWeight: =FontWeight.Bold
+        Height: =18
+        Size: =12
+        Text: ="PENDING APPROVALS"
+        Width: =400
+        X: =gblContentX + ((gblContentW - 8) / 2) + 8 + 14
+        Y: =532
+        ZIndex: =4
+
+    opsWdtPendSub As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(139, 145, 163, 1)
+        FontWeight: =FontWeight.Semibold
+        Height: =14
+        Size: =10
+        Text: ="SPECS + QUOTES AWAITING OPS"
+        Width: =400
+        X: =gblContentX + ((gblContentW - 8) / 2) + 8 + 14
+        Y: =550
+        ZIndex: =4
+
+    galPendingApprovals As "gallery.galleryVertical":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Height: =180
+        Items: =varPendingApprovals
+        TemplatePadding: =4
+        TemplateSize: =44
+        Width: =((gblContentW - 8) / 2) - 28
+        X: =gblContentX + ((gblContentW - 8) / 2) + 8 + 14
+        Y: =574
+        ZIndex: =4
+
+        galPendPrimary As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(31, 31, 46, 1)
+            FontWeight: =FontWeight.Semibold
+            Height: =16
+            Size: =12
+            Text: =ThisItem.title
+            Width: =Parent.TemplateWidth - 100
+            X: =0
+            Y: =4
+
+        galPendSecondary As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(139, 145, 163, 1)
+            Height: =14
+            Size: =10
+            Text: =ThisItem.source & " · $" & Text(ThisItem.amount, "#,##0")
+            Width: =Parent.TemplateWidth - 100
+            X: =0
+            Y: =22
+
+        galPendPill As label:
+            Align: =Align.Center
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =If(ThisItem.kind = "QUOTE", RGBA(232, 21, 27, 1), RGBA(176, 103, 21, 1))
+            Fill: =If(ThisItem.kind = "QUOTE", RGBA(255, 228, 229, 1), RGBA(253, 240, 217, 1))
+            FontWeight: =FontWeight.Bold
+            Height: =18
+            RadiusBottomLeft: =9
+            RadiusBottomRight: =9
+            RadiusTopLeft: =9
+            RadiusTopRight: =9
+            Size: =9
+            Text: =ThisItem.kind
+            Width: =60
+            X: =Parent.TemplateWidth - 60
+            Y: =4
+
+        galPendMeta As label:
+            Align: =Align.Right
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(139, 145, 163, 1)
+            Height: =14
+            Size: =10
+            Text: ="waiting " & ThisItem.waiting
+            Width: =80
+            X: =Parent.TemplateWidth - 80
+            Y: =22
+
+    opsLblBdays As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(139, 145, 163, 1)
+        FontWeight: =FontWeight.Bold
+        Height: =16
+        Size: =10
+        Text: ="UPCOMING BIRTHDAYS"
+        Width: =400
+        X: =gblContentX
+        Y: =776
+        ZIndex: =3
+
+    birthdayStrip1 As component.d4e5f6a7b8c948d9e0f1a2b3c4d5e6f7:
+        BirthdayDate: ="May 28"
+        CompWidth: =gblContentW
+        Height: =56
+        PersonName: ="Jordan Williams"
+        Width: =gblContentW
+        X: =gblContentX
+        Y: =800
+        ZIndex: =3
+
+    photoCarousel1 As component.e5f6a7b8c9d048e9f0a1b2c3d4e5f6a7:
+        CompHeight: =140
+        CompWidth: =gblContentW
+        Height: =140
+        Photos: |-
+            =Table({Caption:"Channel letters — Hartford Med"},{Caption:"Monument sign — Westfield"},{Caption:"Pylon refurb — Route 9"},{Caption:"Cabinet sign — Stop & Shop"},{Caption:"LED retrofit — Sunoco"},{Caption:"Wayfinding install — UConn"})
+        Width: =gblContentW
+        X: =gblContentX
+        Y: =868
+        ZIndex: =3
