@@ -800,6 +800,256 @@ Step-by-step for Claude Code in VS Code:
 
 ---
 
+## Wiring KPI cards to Dataverse (`lum_kpisnapshot`)
+
+Once the placeholder `"$0"` labels need real values, point each `lcl_KpiCard`
+instance at a row in `lum_kpisnapshot`. The KPI snapshot table is the
+**presentation layer** — its rows are pre-computed by Power Automate so the
+canvas doesn't have to do any math at render time.
+
+### Schema reminder (from [doc 04](04-dataverse-schema.md))
+
+| Field | Type | Notes |
+|---|---|---|
+| `key` | text | e.g. `"dip_avg_days"`, `"gm_pct_april"` |
+| `audience` | text | `"Operations"`, `"Sales"`, …, or `"All"` |
+| `label` | text | UI label (e.g. "Avg Days Job Open (DIP)") |
+| `value` | decimal | the number to display |
+| `valueFormat` | text | `"currency"` \| `"int"` \| `"hours"` \| `"percent"` \| `"days"` |
+| `deltaValue` | decimal | percent change vs prior period |
+| `deltaDirection` | text | `"up"` \| `"down"` \| `"flat"` |
+| `deltaIsGood` | bool | true if the delta direction is favorable |
+| `link` | text | optional deep-link URL on tap |
+| `computedAt` | datetime | when this row was generated |
+
+### KPI card data binding pattern
+
+Each `lcl_KpiCard` exposes a single input — `kpiKey` (text). Everything
+else flows from the lookup.
+
+**`lcl_KpiCard` component inputs:**
+
+| Name | Type | Example |
+|---|---|---|
+| `kpiKey` | Text | `"dip_avg_days"` |
+
+**`lcl_KpiCard.varKpi` (define as a local variable in the component's `OnReset` or compute inline):**
+
+```powerfx
+// As a With() expression in each label so it re-evaluates on data refresh:
+With(
+    { kpi: LookUp('lum_kpisnapshot',
+        key = Self.kpiKey &&
+        (audience = "All" || audience = gblUser.role)
+    )},
+    kpi.value     // or kpi.label, kpi.deltaValue, etc.
+)
+```
+
+If you'd rather not paste `With()` into every label, set a component-scoped
+output called `kpi` (Power Apps Studio: Component → Properties → New custom
+property → output). Then each label can read `KpiCard.kpi.label` directly.
+
+**`lblKpiLabel.Text`:**
+
+```powerfx
+With({ kpi: LookUp('lum_kpisnapshot', key = Self.kpiKey && (audience = "All" || audience = gblUser.role)) },
+    Upper(Coalesce(kpi.label, "—"))
+)
+```
+
+**`lblKpiValue.Text`:**
+
+```powerfx
+With({ kpi: LookUp('lum_kpisnapshot', key = Self.kpiKey && (audience = "All" || audience = gblUser.role)) },
+    Switch(kpi.valueFormat,
+        "currency", "$" & Text(kpi.value, "[$-en-US]#,##0"),
+        "int",      Text(kpi.value, "#,##0"),
+        "hours",    Text(kpi.value, "#,##0") & " h",
+        "days",     Text(kpi.value, "#,##0"),
+        "percent",  Text(kpi.value, "#,##0.0") & "%",
+        Text(kpi.value)
+    )
+)
+```
+
+**`lblKpiDelta.Text`:**
+
+```powerfx
+With({ kpi: LookUp('lum_kpisnapshot', key = Self.kpiKey && (audience = "All" || audience = gblUser.role)) },
+    If(kpi.deltaDirection = "flat",
+        "▬",
+        Switch(kpi.deltaDirection, "up", "▲ ", "down", "▼ ", "")
+        & Text(Abs(kpi.deltaValue), "#,##0.#")
+        & If(kpi.valueFormat = "percent", " pp", "%")
+    )
+)
+```
+
+**`lblKpiDelta.Color`:**
+
+```powerfx
+With({ kpi: LookUp('lum_kpisnapshot', key = Self.kpiKey && (audience = "All" || audience = gblUser.role)) },
+    If(kpi.deltaDirection = "flat",  gblBrand.textDim,
+       kpi.deltaIsGood,              gblBrand.green,
+                                     gblBrand.red)
+)
+```
+
+### The 4 Operations KPI keys
+
+Replace the current placeholder cards (`Revenue MTD`, `Active Jobs`,
+`Jobs Complete`, `Gross Margin`) with these, per user-confirmed scope
+(safety + Operational Execution + the 2 GM% KPIs):
+
+| Card instance | `kpiKey` | Label that should resolve | Value format |
+|---|---|---|---|
+| `kpiCardDIP` | `dip_avg_days` | Avg Days Job Open (DIP) | days |
+| `kpiCardOpenValue` | `value_open_jobs` | Value of Open Jobs | currency |
+| `kpiCardGmApril` | `gm_pct_april` | GM % — April | percent |
+| `kpiCardGmYtd` | `gm_pct_ytd` | GM % — YTD | percent |
+
+For the safety counter, the source is `lum_safetymetric` (not
+`lum_kpisnapshot`). Already covered in the safety chip section above.
+
+### Seed data for testing (before BC sync exists)
+
+Until [Linear ALE-24/25](https://linear.app/lumineosigns/project/lni-production-schedule-power-apps-code-app-29f2fc1f8840)
+land and Power Automate populates these rows, seed them manually so the
+canvas has something to show. Run this once from a dev session
+(`App.OnStart` temporarily, then remove) or from a Power Automate "Seed
+KPI snapshots" flow:
+
+```powerfx
+// Operations
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "dip_avg_days", audience: "Operations",
+    label: "Avg Days Job Open (DIP)", value: 32, valueFormat: "days",
+    deltaValue: 3, deltaDirection: "down", deltaIsGood: true,
+    computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "value_open_jobs", audience: "Operations",
+    label: "Value of Open Jobs", value: 1247800, valueFormat: "currency",
+    deltaValue: 8, deltaDirection: "up", deltaIsGood: true,
+    computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "gm_pct_april", audience: "Operations",
+    label: "GM % — April", value: 34.2, valueFormat: "percent",
+    deltaValue: 2, deltaDirection: "up", deltaIsGood: true,
+    computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "gm_pct_ytd", audience: "Operations",
+    label: "GM % — YTD", value: 31.8, valueFormat: "percent",
+    deltaValue: 1, deltaDirection: "up", deltaIsGood: true,
+    computedAt: Now()
+});
+
+// Sales
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "my_open_opportunities", audience: "Sales",
+    label: "My Opportunities", value: 11, valueFormat: "int",
+    deltaValue: 3, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "my_quota_pct", audience: "Sales",
+    label: "Quota Attained", value: 68, valueFormat: "percent",
+    deltaValue: 7, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "won_this_month", audience: "Sales",
+    label: "Won This Month", value: 47600, valueFormat: "currency",
+    deltaValue: 22, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+
+// Production
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "my_tasks_today", audience: "Production",
+    label: "My Tasks Today", value: 5, valueFormat: "int",
+    deltaDirection: "flat", computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "my_hours_this_week", audience: "Production",
+    label: "My Hours This Week", value: 34, valueFormat: "hours",
+    deltaValue: 2, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+
+// Installation
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "installs_this_week", audience: "Installation",
+    label: "Installs This Week", value: 4, valueFormat: "int",
+    deltaValue: 1, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "est_vs_actual_hours", audience: "Installation",
+    label: "Est vs Actual", value: 92, valueFormat: "percent",
+    deltaValue: 3, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+
+// Shipping
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "packages_out_today", audience: "Shipping",
+    label: "Packages Out Today", value: 12, valueFormat: "int",
+    deltaValue: 2, deltaDirection: "up", deltaIsGood: true, computedAt: Now()
+});
+Patch('lum_kpisnapshot', Defaults('lum_kpisnapshot'), {
+    key: "late_shipments", audience: "Shipping",
+    label: "Late Shipments", value: 1, valueFormat: "int",
+    deltaDirection: "flat", computedAt: Now()
+});
+
+// Safety singleton — different table
+Patch('lum_safetymetric', Defaults('lum_safetymetric'), {
+    currentStreakStartDate: DateAdd(Today(), -247, Days),
+    longestStreakDays: 412,
+    longestStreakEndDate: DateAdd(Today(), -365, Days),
+    updatedAt: Now()
+});
+```
+
+### Refresh strategy
+
+The `lum_kpisnapshot` rows are pre-computed elsewhere (Power Automate
+nightly + on-demand rollups). The canvas just reads. Trigger a refresh on:
+
+- `App.OnStart` — initial load
+- `scrHomeOps.OnVisible` — every time the user navigates back to home
+- Optionally: a timer control that calls `Refresh('lum_kpisnapshot')` every
+  60 seconds for live-feeling dashboards on shop-floor tablets
+
+```powerfx
+// On home screen OnVisible
+Refresh('lum_kpisnapshot');
+```
+
+### Tap-to-drill behavior (per [doc 15](15-launch-contract.md))
+
+If the KPI row has a `link` field set, tap should navigate there. Wire
+into the KPI card's `OnSelect`:
+
+```powerfx
+With({ kpi: LookUp('lum_kpisnapshot', key = Self.kpiKey && (audience = "All" || audience = gblUser.role)) },
+    If(!IsBlank(kpi.link),
+        Launch(kpi.link, {
+            userEmail: gblUser.email,
+            role: gblUser.role,
+            returnTo: "switchboard://home"
+        }),
+        // no link — silent no-op
+        false
+    )
+)
+```
+
+For Operations:
+- `dip_avg_days.link` = Project Scheduler URL with `?context={"action":"openCalendar"}`
+- `value_open_jobs.link` = Project Scheduler URL with `?context={"action":"openJob","filter":"openValue"}`
+- `gm_pct_*` = no link for now (financial drill-down is future work)
+
+---
+
 ## Open questions / known gaps
 
 These need to be resolved as part of platform setup:
