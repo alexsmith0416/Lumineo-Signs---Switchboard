@@ -1170,6 +1170,742 @@ Anything that doesn't match → refer back to the per-section specs above.
 
 ---
 
+## Visual styling checklist — every control, every property
+
+This section is the one-pass-through reference. Once layout + container
+hierarchy is in place, walk through each control below and apply the
+properties listed. Every formula assumes `gblBrand`, `gblFont`, `gblRadii`,
+`gblUser`, `gblContentW`, `gblContentX`, `gblIsPhone`, `gblIsDesktop` are
+set per the "Foundation" section above.
+
+### Color cheat-sheet
+
+| Token | Hex | Use |
+|---|---|---|
+| `gblBrand.navy` | `#141464` | Header bg, safety chip bg, brand-primary text |
+| `gblBrand.navyLight` | `#2A2A8A` | Hover state on navy |
+| `gblBrand.navyMid` | `#E8EAF5` | Pill backgrounds, active-row tint |
+| `gblBrand.navySoft` | `#F2F3FA` | Announcement bg, hover for white cards |
+| `gblBrand.red` | `#E8151B` | Logo, +New button, negative deltas, "SAFETY" pill |
+| `gblBrand.redSoft` | `#FFE4E5` | Red-tinted badges (production/late) |
+| `gblBrand.green` | `#0F6E56` | Positive deltas |
+| `gblBrand.greenSoft` | `#D8EFE7` | Green badges (ready, on-time) |
+| `gblBrand.amber` | `#F2994A` | Pending / at-risk |
+| `gblBrand.amberSoft` | `#FDF0D9` | Amber badges |
+| `gblBrand.bg` | `#FAFAFB` | Screen background |
+| `gblBrand.bg2` | `#F5F5F5` | Light strip backgrounds |
+| `gblBrand.card` | `#FFFFFF` | White cards (KPIs, tiles, widgets) |
+| `gblBrand.border` | `#E4E5EA` | 1-px borders on cards |
+| `gblBrand.borderSoft` | `#EFF0F3` | Internal dividers |
+| `gblBrand.text` | `#1F1F2E` | Primary body text |
+| `gblBrand.textMid` | `#4A4F5E` | Secondary text |
+| `gblBrand.textDim` | `#8B91A3` | Tertiary (labels, dim ticks) |
+
+Every control below uses tokens from this table — **never hard-code a hex value**.
+
+### Universal card chrome (KPI / tile / widget / announcement)
+
+Any rectangular "card" gets these properties unless explicitly overridden:
+
+| Property | Value |
+|---|---|
+| `Fill` | `gblBrand.card` |
+| `BorderColor` | `gblBrand.border` |
+| `BorderThickness` | `1` |
+| `BorderStyle` | `BorderStyle.Solid` |
+| `BorderRadius` (or `RadiusTopLeft`/`TopRight`/`BottomLeft`/`BottomRight`) | `6` |
+| `PaddingLeft` / `PaddingRight` | `12` |
+| `PaddingTop` / `PaddingBottom` | `12` |
+
+For hover/tap response on interactive cards (KPIs, app tiles):
+
+| Property | Value |
+|---|---|
+| `HoverFill` | `gblBrand.navySoft` |
+| `HoverBorderColor` | `gblBrand.navy` |
+
+### Standard text styles
+
+| Style | Font size | Font weight | Color | Use |
+|---|---|---|---|---|
+| Section label | 10 | `Bold` | `gblBrand.textDim` (uppercase, letter-spacing if available) | "APPS", "OPERATIONS DASHBOARD" |
+| Card title | 12 | `Bold` | `gblBrand.text` (uppercase) | Widget titles |
+| Card subtitle | 10 | `Semibold` | `gblBrand.textDim` | Widget subtitles |
+| KPI label | 9 | `Bold` | `gblBrand.textDim` (uppercase) | "REVENUE THIS WEEK" |
+| KPI value | 20 | `Bold` | `gblBrand.text` (tabular-nums) | "$84,200" |
+| KPI delta | 10 | `Bold` | dynamic per delta direction | "▲ 12%" |
+| Safety label | 9 | `Bold` | `RGBA(255, 255, 255, 0.72)` | "DAYS SINCE LOST TIME" |
+| Safety value | 28 | `Bold` | `White` (tabular-nums) | "247" |
+| Tile emoji | 24-26 | — | — | "📊" |
+| Tile label | 13 | `Bold` | `gblBrand.text` | "Project Scheduler" |
+| Tile badge | 9 | `Bold` | `gblBrand.navy` on `gblBrand.navyMid` bg, pill radius | "17 open" |
+| List primary | 12 | `Semibold` | `gblBrand.text` | Task names, customer names |
+| List secondary | 11 | `Regular` | `gblBrand.textDim` | Job numbers, sub-labels |
+| List badge | 9 | `Bold` | matches role tone (red/amber/green/navy/gray) | "Production" |
+
+`Font` for all text controls = `gblFont.family` (Open Sans).
+
+---
+
+### 1. `lcl_Header` (component)
+
+Defined once. Reused at the top of every screen.
+
+**Component root container:**
+
+| Property | Value |
+|---|---|
+| `Width` | `App.Width` (or `Parent.Width` when inside a screen) |
+| `Height` | `64` |
+| `Fill` | `gblBrand.navy` |
+| `X` | `0` |
+| `Y` | `0` |
+
+**Inner controls (positioned manually since the header is a fixed top bar):**
+
+`hdrLogo` (Image control, the ray-burst SVG):
+
+| Property | Value |
+|---|---|
+| `X` | `20` |
+| `Y` | `12` |
+| `Width` | `40` |
+| `Height` | `40` |
+| `Image` | (paste base64 SVG from "Logo SVG" section earlier in this doc) |
+| `ImagePosition` | `ImagePosition.Fit` |
+
+`hdrBrandName` (Label):
+
+| Property | Value |
+|---|---|
+| `X` | `74` |
+| `Y` | `16` |
+| `Width` | `200` |
+| `Height` | `18` |
+| `Text` | `"LUMINEO SIGNS"` |
+| `Font` | `gblFont.family` |
+| `Size` | `15` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `White` |
+
+`hdrBrandSub` (Label):
+
+| Property | Value |
+|---|---|
+| `X` | `74` |
+| `Y` | `36` |
+| `Width` | `200` |
+| `Height` | `14` |
+| `Text` | `"SWITCHBOARD"` |
+| `Font` | `gblFont.family` |
+| `Size` | `11` |
+| `FontWeight` | `FontWeight.Semibold` |
+| `Color` | `RGBA(255, 255, 255, 0.55)` |
+
+`hdrDivider` (Rectangle):
+
+| Property | Value |
+|---|---|
+| `X` | `290` |
+| `Y` | `16` |
+| `Width` | `1` |
+| `Height` | `32` |
+| `Fill` | `RGBA(255, 255, 255, 0.12)` |
+
+`hdrViewTitle` (Label):
+
+| Property | Value |
+|---|---|
+| `X` | `302` |
+| `Y` | `22` |
+| `Width` | `400` |
+| `Height` | `20` |
+| `Text` | `"Home · " & gblUser.role` |
+| `Size` | `13` |
+| `FontWeight` | `FontWeight.Semibold` |
+| `Color` | `RGBA(255, 255, 255, 0.85)` |
+
+`hdrBtnHelp` (Button):
+
+| Property | Value |
+|---|---|
+| `X` | `App.Width - 230` |
+| `Y` | `16` |
+| `Width` | `60` |
+| `Height` | `32` |
+| `Text` | `"Help"` |
+| `Fill` | `RGBA(255, 255, 255, 0.1)` |
+| `HoverFill` | `RGBA(255, 255, 255, 0.18)` |
+| `Color` | `White` |
+| `Size` | `12` |
+| `FontWeight` | `FontWeight.Semibold` |
+| `BorderRadius` | `gblRadii.sm` |
+| `Visible` | `!gblIsPhone` (hidden on phone per doc 17 narrow breakpoint) |
+
+`hdrBtnNew` (Button):
+
+| Property | Value |
+|---|---|
+| `X` | `App.Width - 160` |
+| `Y` | `16` |
+| `Width` | `64` |
+| `Height` | `32` |
+| `Text` | `"+ New"` |
+| `Fill` | `gblBrand.red` |
+| `HoverFill` | `RGBA(200, 18, 26, 1)` |
+| `Color` | `White` |
+| `Size` | `12` |
+| `FontWeight` | `FontWeight.Bold` |
+| `BorderRadius` | `gblRadii.sm` |
+
+`hdrUserButton` (Button — opens role-switcher popover):
+
+| Property | Value |
+|---|---|
+| `X` | `App.Width - 88` |
+| `Y` | `14` |
+| `Width` | `78` |
+| `Height` | `36` |
+| `Fill` | `RGBA(255, 255, 255, 0.06)` |
+| `HoverFill` | `RGBA(255, 255, 255, 0.14)` |
+| `BorderRadius` | `gblRadii.sm` |
+| `OnSelect` | `UpdateContext({ ctxShowRoleMenu: !ctxShowRoleMenu })` |
+
+Inside `hdrUserButton` (or layered on top): an `hdrAvatar` Circle/Ellipse with the user's initials in the center, plus a `hdrCaret` label showing "▾".
+
+---
+
+### 2. Safety counter (`safetyCounter`)
+
+Sits inside `conGlanceRow`, on the **left** of the KPI strip.
+
+**Outer container:**
+
+| Property | Value |
+|---|---|
+| `LayoutMode` | `Auto` |
+| `LayoutDirection` | `Vertical` |
+| `LayoutGap` | `1` |
+| `LayoutAlignItems` | `Start` |
+| `Width` | `If(gblIsPhone, Parent.Width, 200)` |
+| `Height` | `If(gblIsPhone, 72, 92)` |
+| `Fill` | `gblBrand.navy` |
+| `BorderRadius` | `gblRadii.md` |
+| `PaddingLeft` / `PaddingRight` | `12` |
+| `PaddingTop` / `PaddingBottom` | `8` |
+
+**Inner controls (in the order they stack vertically):**
+
+`lblSafetyHead` (Label):
+
+| Property | Value |
+|---|---|
+| `Text` | `"DAYS SINCE LOST TIME"` |
+| `Size` | `9` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `RGBA(255, 255, 255, 0.72)` |
+| `Width` | `Parent.Width - 24` |
+| `Height` | `12` |
+
+`lblSafetyPill` (small pill positioned in the top-right of the chip — optional):
+
+| Property | Value |
+|---|---|
+| `Text` | `"SAFETY"` |
+| `Size` | `8` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `White` |
+| `Fill` | `gblBrand.red` |
+| `BorderRadius` | `gblRadii.pill` |
+| `PaddingLeft` / `PaddingRight` | `6` |
+| `PaddingTop` / `PaddingBottom` | `1` |
+| `Width` | `52` |
+| `Height` | `14` |
+
+`lblSafetyValue` (Label, big number):
+
+| Property | Value |
+|---|---|
+| `Text` | `Text(varSafetyDays, "#,##0")` |
+| `Size` | `28` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `White` |
+| `LetterSpacing` | `-0.8` (if available) |
+
+`lblSafetySub` (Label, "Record 412"):
+
+| Property | Value |
+|---|---|
+| `Text` | `"Record " & Text(varSafety.longestStreakDays, "#,##0")` |
+| `Size` | `10` |
+| `FontWeight` | `FontWeight.Regular` |
+| `Color` | `RGBA(255, 255, 255, 0.6)` |
+
+Set `varSafety` and `varSafetyDays` on each home screen's `OnVisible`:
+
+```powerfx
+Set(varSafety, First('lum_safetymetric'));
+Set(varSafetyDays, DateDiff(varSafety.currentStreakStartDate, Today(), Days));
+```
+
+---
+
+### 3. KPI cards (`kpiCardDIP`, `kpiCardOpenValue`, `kpiCardGmApril`, `kpiCardGmYtd`)
+
+All 4 share identical chrome. Only their `kpiKey` input differs.
+
+**Outer container (the card itself):**
+
+| Property | Value |
+|---|---|
+| `LayoutMode` | `Auto` |
+| `LayoutDirection` | `Vertical` |
+| `LayoutGap` | `2` |
+| `LayoutAlignItems` | `Start` |
+| `Height` | `If(gblIsPhone, 72, 92)` |
+| `FillPortions` | `1` (so all 4 share remaining row width equally) |
+| `Fill` | `gblBrand.card` |
+| `BorderColor` | `gblBrand.border` |
+| `BorderThickness` | `1` |
+| `BorderRadius` | `gblRadii.md` |
+| `HoverFill` | `gblBrand.navySoft` |
+| `HoverBorderColor` | `gblBrand.navy` |
+| `PaddingLeft` / `PaddingRight` | `12` |
+| `PaddingTop` / `PaddingBottom` | `8` |
+| `TabIndex` | `0` |
+| `OnSelect` | (the launch-link `With()` formula from the "Wiring KPI cards" section) |
+
+**Component input:**
+
+`kpiKey` (Text input on the card component). The 4 instances pass:
+- `kpiCardDIP.kpiKey = "dip_avg_days"`
+- `kpiCardOpenValue.kpiKey = "value_open_jobs"`
+- `kpiCardGmApril.kpiKey = "gm_pct_april"`
+- `kpiCardGmYtd.kpiKey = "gm_pct_ytd"`
+
+**Inner controls (stacked vertically inside the auto-layout container):**
+
+`lblKpiLabel`:
+
+| Property | Value |
+|---|---|
+| `Text` | (see formula in "Wiring KPI cards" section — uses `With() + LookUp()`) |
+| `Size` | `9` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.textDim` |
+| `Width` | `Parent.Width - Parent.PaddingLeft - Parent.PaddingRight` |
+| `Height` | `12` |
+| `Overflow` | `Overflow.Hidden` |
+
+`lblKpiValue`:
+
+| Property | Value |
+|---|---|
+| `Text` | (formula from "Wiring KPI cards" — handles all valueFormats) |
+| `Size` | `20` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.text` |
+| `Height` | `26` |
+
+`lblKpiDelta`:
+
+| Property | Value |
+|---|---|
+| `Text` | (formula from "Wiring KPI cards" — arrow + delta + suffix) |
+| `Size` | `10` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | (formula from "Wiring KPI cards" — green/red/dim) |
+| `Height` | `14` |
+| `Visible` | (hide for `"text"` valueFormat KPIs that don't have a delta) |
+
+---
+
+### 4. App tiles (`cmpAppTile` component + 5 instances)
+
+`cmpAppTile` component definition. **Outer container:**
+
+| Property | Value |
+|---|---|
+| `LayoutMode` | `Auto` |
+| `LayoutDirection` | `Vertical` |
+| `LayoutGap` | `6` |
+| `LayoutAlignItems` | `Start` |
+| `Height` | `If(gblIsPhone, 84, 108)` |
+| `FillPortions` | `1` |
+| `Fill` | `gblBrand.card` |
+| `BorderColor` | `gblBrand.border` |
+| `BorderThickness` | `1` |
+| `BorderRadius` | `gblRadii.md` |
+| `HoverFill` | `gblBrand.navySoft` |
+| `HoverBorderColor` | `gblBrand.navy` |
+| `PaddingLeft` / `PaddingRight` | `12` |
+| `PaddingTop` | `12` |
+| `PaddingBottom` | `10` |
+| `OnSelect` | (the Launch + Patch formula in "Wiring KPI cards / app tile OnSelect") |
+
+**Component inputs:**
+
+| Input | Type | Example |
+|---|---|---|
+| `key` | Text | `"projectScheduler"` |
+| `label` | Text | `"Project Scheduler"` |
+| `emoji` | Text | `"📊"` |
+| `badgeText` | Text | `"17 open"` |
+| `enabled` | Boolean | `true` |
+| `targetUrl` | Text | (Power Apps player URL) |
+
+**Inner controls:**
+
+`lblTileEmoji`:
+
+| Property | Value |
+|---|---|
+| `Text` | `Self.emoji` |
+| `Size` | `If(gblIsPhone, 22, 26)` |
+| `Width` | `40` |
+| `Height` | `30` |
+
+`lblTileLabel`:
+
+| Property | Value |
+|---|---|
+| `Text` | `Self.label` |
+| `Size` | `If(gblIsPhone, 12, 13)` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.text` |
+| `Width` | `Parent.Width - 24` |
+
+`lblTileBadge` (positioned top-right via manual X/Y on top of the auto-layout):
+
+| Property | Value |
+|---|---|
+| `Text` | `Self.badgeText` |
+| `Size` | `9` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.navy` |
+| `Fill` | `gblBrand.navyMid` |
+| `BorderRadius` | `gblRadii.pill` |
+| `X` | `Parent.Width - Self.Width - 10` |
+| `Y` | `10` |
+| `Height` | `18` |
+| `Width` | (auto — let Power Apps size to content; or set `LayoutAlignItems = Start` on parent + `AlignSelf = End`) |
+| `PaddingLeft` / `PaddingRight` | `8` |
+| `Visible` | `!IsBlank(Self.badgeText)` |
+
+**5 instances inside `conAppLauncher`:**
+
+| Instance name | key | label | emoji | badgeText | Visible |
+|---|---|---|---|---|---|
+| `tileProjectScheduler` | `"projectScheduler"` | `"Project Scheduler"` | `"📊"` | `Text(CountRows(Filter('lum_job', status<>"Complete"))) & " open"` | `gblUser.role = "Operations"` |
+| `tileWeeklyScheduler` | `"weeklyScheduler"` | `"Weekly Scheduler"` | `"🗓️"` | `Text(CountRows('lum_task')) & " this week"` | `true` (all roles) |
+| `tileSignBuilder` | `"signBuilderPro"` | `"Sign Builder Pro"` | `"✏️"` | `Text(CountRows(Filter('lum_signspec', status="Open"))) & " specs"` | `gblUser.role in ["Operations", "Sales", "Production"]` |
+| `tileTimePhoto` | `"timePhoto"` | `"Time & Photo"` | `"📷"` | `"Punch in"` | `gblUser.role in ["Operations", "Production", "Installation", "Shipping"]` |
+| `tileSalesHub` | `"salesHub"` | `"Sales Hub"` | `"💰"` | `Text(CountRows(Filter('lum_opportunity', stage<>"Won" && stage<>"Lost"))) & " opps"` | `gblUser.role in ["Operations", "Sales"]` |
+
+---
+
+### 5. Announcement (`annCard1` — or convert to a Gallery)
+
+If sticking with a single instance:
+
+**Outer container:**
+
+| Property | Value |
+|---|---|
+| `LayoutMode` | `Auto` |
+| `LayoutDirection` | `Horizontal` |
+| `LayoutGap` | `12` |
+| `LayoutAlignItems` | `Center` |
+| `Width` | `gblContentW` |
+| `Height` | `40` |
+| `Fill` | `gblBrand.navySoft` |
+| `BorderColor` | `gblBrand.navyMid` |
+| `BorderThickness` | `1` |
+| `RadiusTopLeft` / `RadiusBottomLeft` | `gblRadii.md` |
+| `RadiusTopRight` / `RadiusBottomRight` | `gblRadii.md` |
+| Left border emphasis | Add a 3-px-wide rectangle with `Fill = gblBrand.navy` at X=0, full height (since modern containers don't have border-side properties) |
+| `PaddingLeft` | `14` (or 17 if you include the 3-px stripe) |
+| `PaddingRight` | `14` |
+| `PaddingTop` / `PaddingBottom` | `10` |
+
+**Inner controls:**
+
+`annIcon`:
+
+| Property | Value |
+|---|---|
+| `Text` | `"📢"` |
+| `Size` | `16` |
+| `Width` | `24` |
+
+`annTitle`:
+
+| Property | Value |
+|---|---|
+| `Text` | `"Announcement"` |
+| `Size` | `12` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.navy` |
+| `Width` | `100` |
+
+`annBody`:
+
+| Property | Value |
+|---|---|
+| `Text` | (the announcement text — for Gallery version, `ThisItem.body`) |
+| `Size` | `12` |
+| `Color` | `gblBrand.text` |
+| `FillPortions` | `1` |
+| `Wrap` | `false` (or `true` if multi-line announcements are OK) |
+
+`annDismiss`:
+
+| Property | Value |
+|---|---|
+| `Text` | `"×"` |
+| `Size` | `14` |
+| `Color` | `gblBrand.textDim` |
+| `Width` | `22` |
+| `Height` | `22` |
+| `OnSelect` | `Patch('lum_announcement', ThisItem, { dismissed: true })` (or a per-user dismissal pattern) |
+
+---
+
+### 6. Operations dashboard widgets
+
+Three widgets, each composed of 3 sub-controls already in the tree:
+`opsWdt[Dept|Late|Pend][Bg|Lbl|Body]`.
+
+**`opsWdtDeptBg`, `opsWdtLateBg`, `opsWdtPendBg`** — the card background. Same chrome:
+
+| Property | Value |
+|---|---|
+| `Fill` | `gblBrand.card` |
+| `BorderColor` | `gblBrand.border` |
+| `BorderThickness` | `1` |
+| `BorderRadius` | `gblRadii.md` |
+
+**`opsWdtDeptLbl`, `opsWdtLateLbl`, `opsWdtPendLbl`** — the title row. Each contains a title + subtitle (and optional action button):
+
+For `opsWdtDeptLbl`:
+
+| Property | Value |
+|---|---|
+| `Width` | (full widget width — `Parent.Width - 24` for padding) |
+| Title text | `"DEPARTMENT LOAD"` (12 px Bold uppercase, `gblBrand.text`) |
+| Subtitle text | `"hours scheduled this week"` (10 px Semibold, `gblBrand.textDim`) |
+
+For `opsWdtLateLbl`:
+
+| Property | Value |
+|---|---|
+| Title text | `"LATE TASKS"` |
+| Subtitle text | `Text(CountRows(varLateTasks)) & " past scheduled date"` |
+
+For `opsWdtPendLbl`:
+
+| Property | Value |
+|---|---|
+| Title text | `"PENDING APPROVALS"` |
+| Subtitle text | `"specs + quotes awaiting Ops"` |
+| Action button | `"Review"` (10 px Bold, `gblBrand.navy`, white bg with border) |
+
+**`opsWdtDeptBody`** — the bar list (3 rows: Production, Installation, Shipping):
+
+Best built as a Gallery over a static collection:
+
+```powerfx
+// On scrHomeOps.OnVisible
+Set(varDeptLoad,
+    Table(
+        { label: "Production",   hours: 142, tone: gblBrand.navy },
+        { label: "Installation", hours: 96,  tone: gblBrand.red  },
+        { label: "Shipping",     hours: 48,  tone: gblBrand.green }
+    )
+);
+Set(varDeptLoadMax, Max(varDeptLoad, hours));
+```
+
+Each gallery row:
+
+| Property | Value |
+|---|---|
+| `Height` | `36` |
+
+Inside each row:
+- `lblDeptName` — `ThisItem.label`, 12 px Semibold, `gblBrand.text`
+- `lblDeptHours` — `Text(ThisItem.hours) & " h"`, 11 px Bold, `gblBrand.textMid`, right-aligned
+- `recBarTrack` — Rectangle, full width, `Fill = gblBrand.bg2`, `BorderRadius = gblRadii.pill`, `Height = 8`
+- `recBarFill` — Rectangle inside the track, `Fill = ThisItem.tone`, `BorderRadius = gblRadii.pill`, `Height = 8`, `Width = Parent.Width * (ThisItem.hours / varDeptLoadMax)`
+
+**`opsWdtLateBody`** — late tasks gallery:
+
+```powerfx
+// On scrHomeOps.OnVisible
+Set(varLateTasks,
+    Filter('lum_task',
+        status <> "Done" && scheduledDate < Today()
+    )
+);
+```
+
+Each gallery row:
+
+| Property | Value |
+|---|---|
+| `Height` | `52` |
+
+Inside:
+- `lblLatePrimary` — `ThisItem.title`, 12 px Semibold, `gblBrand.text`
+- `lblLateSecondary` — `ThisItem.jobNumber & " · " & ThisItem.assignedTo.displayName`, 11 px Regular, `gblBrand.textDim`
+- `pillLateDept` — `ThisItem.department`, 9 px Bold uppercase, on red/amber/navy pill matching dept tone (see Standard text styles table)
+- `lblLateMeta` — `Text(DateDiff(ThisItem.scheduledDate, Today(), Days)) & " day" & If(DateDiff(ThisItem.scheduledDate, Today(), Days) > 1, "s") & " late"`, 10 px Regular, `gblBrand.textDim`
+
+**`opsWdtPendBody`** — pending approvals gallery. Same structure as late tasks but Items source is the spec/quote union. Each row shows the item type pill ("SPEC" amber / "QUOTE" red), title, dollar value, and waiting-time meta.
+
+---
+
+### 7. Birthday strip (`lcl_BirthdayStrip`)
+
+**Outer container:**
+
+| Property | Value |
+|---|---|
+| `LayoutMode` | `Auto` |
+| `LayoutDirection` | `Vertical` |
+| `LayoutGap` | `8` |
+| Card chrome | (universal — see above) |
+| `Width` | `gblContentW` |
+| `Height` | (auto — content sized) |
+
+**Inner controls:**
+
+`lblBirthdayTitle`:
+
+| Property | Value |
+|---|---|
+| `Text` | `"🎂 UPCOMING BIRTHDAYS"` |
+| `Size` | `10` |
+| `FontWeight` | `FontWeight.Bold` |
+| `Color` | `gblBrand.textDim` |
+
+`galBirthdayStrip` (horizontal Gallery):
+
+| Property | Value |
+|---|---|
+| `Layout` | `Horizontal` |
+| `Width` | `Parent.Width - 28` |
+| `Height` | `36` |
+| `Items` | `Sort(Filter('lum_userprofile', !IsBlank(birthday) && DateAdd(Today(), 14, Days) >= ThisRecord.birthday), birthday)` |
+| `WrapCount` | `1` (single row, scroll horizontally) |
+
+Each chip:
+
+| Property | Value |
+|---|---|
+| `Width` | (auto — set to label width + 16) |
+| `Height` | `28` |
+| `Fill` | `gblBrand.bg2` |
+| `BorderRadius` | `gblRadii.pill` |
+| `BorderColor` | `gblBrand.borderSoft` |
+| `BorderThickness` | `1` |
+
+Inside chip:
+- `imgAvatar` — circle 22 px, `Fill = gblBrand.navyMid`, initials text (`Color = gblBrand.navy`, 10 px Bold)
+- `lblName` — `ThisItem.displayName`, 11 px Semibold, `gblBrand.text`
+- `lblWhen` — `"· " & relativeDate(ThisItem.birthday)`, 11 px Regular, `gblBrand.textDim`
+
+Where `relativeDate` is a Power Fx helper:
+
+```powerfx
+Switch(true,
+    DateDiff(Today(), ThisItem.birthday, Days) = 0, "Today",
+    DateDiff(Today(), ThisItem.birthday, Days) = 1, "Tomorrow",
+    DateDiff(Today(), ThisItem.birthday, Days) <= 7,
+        Text(ThisItem.birthday, "dddd"),                       // "Thursday"
+    "Next " & Text(ThisItem.birthday, "dddd")                  // "Next Monday"
+)
+```
+
+---
+
+### 8. Photo reel (`lcl_PhotoCarousel`)
+
+**Outer container:**
+
+| Property | Value |
+|---|---|
+| Card chrome | (universal) |
+| `LayoutDirection` | `Vertical` |
+| `LayoutGap` | `10` |
+| `Width` | `gblContentW` |
+
+**Inner controls:**
+
+`reelHeadRow` (Horizontal container):
+
+- `lblReelTitle` — `"RECENT COMPLETIONS"`, 12 px Bold uppercase, `gblBrand.text`
+- `lblReelSeeAll` — `"See all →"`, 11 px Bold, `gblBrand.navy`, right-aligned
+
+`galPhotoReel` (horizontal Gallery):
+
+| Property | Value |
+|---|---|
+| `Layout` | `Horizontal` |
+| `Items` | `SortByColumns(Filter('lum_photo', isShowcase = true, takenAt > DateAdd(Today(), -30, Days)), "takenAt", Descending)` |
+| `Width` | `Parent.Width - 28` |
+| `Height` | `120` |
+
+Each photo tile:
+
+| Property | Value |
+|---|---|
+| `Width` | `200` |
+| `Height` | `120` |
+| `Fill` | (either `ThisItem.gradient` if you've added a gradient column, or use the `image` attachment) |
+| `BorderRadius` | `gblRadii.sm` |
+| `OnSelect` | `Set(varLightboxPhoto, ThisItem); UpdateContext({ ctxShowLightbox: true })` (optional) |
+
+Overlay (positioned absolute at bottom):
+- `recOverlay` — `Fill = LinearGradient(transparent → RGBA(0,0,0,0.55))`, full width, bottom 50%
+- `lblPhotoCaption` — `ThisItem.caption`, 11 px Bold, `White`, with text shadow
+- `lblPhotoBy` — `ThisItem.takenBy.displayName`, 10 px Regular, `RGBA(255,255,255,0.85)`
+- `lblPhotoJob` — `ThisItem.jobNumber`, 10 px Mono, `RGBA(255,255,255,0.75)`, right-aligned
+
+---
+
+### 9. Screen-level properties
+
+Every home screen (`scrHomeOps`, `scrHomeSales`, …):
+
+| Property | Value |
+|---|---|
+| `Fill` | `gblBrand.bg` |
+| `OnVisible` | (see snippet 2 — sets `gblContentW`, `gblContentX`, `gblIsDesktop`, etc. AND fetches `varSafety`, `varDeptLoad`, `varLateTasks` for the relevant role) |
+
+---
+
+### Visual QA — the page should look like the React prototype
+
+Final check after applying everything above: open `prototype/V21-*.html`
+in a browser side-by-side with Power Apps Studio in preview. The
+Operations splash should match piece-by-piece:
+
+1. Navy 64-px header bar with red ray-burst logo + "LUMINEO SIGNS / SWITCHBOARD" white text + "Home · Operations" view title (faded white) + Help/+New buttons + AS avatar on the right
+2. Below the header: a centered content column (max 1280 px on desktop, full width minus 20 px on phone)
+3. Glance row: navy safety card on the left (200 px wide on desktop, full width on phone) + 4 white KPI cards equally distributed (DIP 32 / Value $1,247,800 / GM Apr 34.2% / GM YTD 31.8%)
+4. Announcement: navy-tinted bar with red megaphone icon + announcement body
+5. App launcher: 5 white tiles in a horizontal row on desktop (2x3 on phone) — Project Scheduler / Weekly Scheduler / Sign Builder Pro / Time & Photo / Sales Hub — each with emoji + label + nav-pill badge
+6. Operations dashboard: Department Load card spanning full width with 3 horizontal bars (Production navy, Installation red, Shipping green), then Late Tasks card on the left + Pending Approvals card on the right (2-col on desktop, stacked on phone)
+7. Birthday strip card: title row + horizontal chip strip of upcoming birthdays
+8. Photo reel card: title row + horizontal strip of 8 colored gradient tiles with captions
+
+If any of the above looks different from the prototype, refer back to the
+per-control table in this section. If something in the prototype isn't
+covered here, flag it and update this doc.
+
+---
+
 ## Open questions / known gaps
 
 These need to be resolved as part of platform setup:
