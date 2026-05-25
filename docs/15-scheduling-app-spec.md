@@ -340,7 +340,7 @@ When a task is moved or resized:
 2. Applies the move/resize to the target.
 3. Walks each resource's queue chronologically; any later task whose start overlaps the running max-end gets pushed to that max-end (and its own end is recomputed via `calculateEndTime`).
 4. Walks all tasks; for any task whose same-job predecessors (lower `flowOrder`) end after its current start, the task is pushed.
-5. Iterates until no further changes (max 100 iterations).
+5. Iterates until no further changes (max 200 iterations; see §3.3 invariant 9).
 6. Returns `{ context, moved, conflicts }`.
 
 `shiftTask` accepts `{ cascade: boolean, previewOnly: boolean }`. UI runs `previewOnly: true` first; if `moved.length > 1` (i.e., other tasks would shift), surfaces the **CascadeConfirmDialog** with:
@@ -766,7 +766,7 @@ For each milestone in Linear (M0–M15 + future):
 1. Build the production version of the corresponding feature.
 2. Run the prototype HTML side-by-side in another tab.
 3. Walk through the acceptance criteria on the matching Linear issue.
-4. Spot-check that the engine produces the same output for the same inputs (the 46 engine tests should still pass).
+4. Spot-check that the engine produces the same output for the same inputs (the 47 engine tests should still pass).
 5. Update the Linear issue status.
 
 The prototype is the contract. The production build is the implementation. They should be indistinguishable to the user.
