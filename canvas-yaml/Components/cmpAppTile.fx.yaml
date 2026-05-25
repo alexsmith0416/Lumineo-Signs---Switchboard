@@ -1,0 +1,125 @@
+cmpAppTile As CanvasComponent:
+    AppEmoji: ="chart"
+    AppKey: ="key"
+    AppLabel: ="App Name"
+    BadgeText: =""
+    CompHeight: =108
+    CompWidth: =249
+    Enabled: =true
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =108
+    TargetUrl: |-
+        ="about:blank"
+    Width: =249
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    tilRectBG As rectangle:
+        BorderColor: =gblBrand.border
+        BorderThickness: =1
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.card
+        FocusedBorderThickness: =1
+        Height: =cmpAppTile.CompHeight
+        HoverFill: =gblBrand.navySoft
+        OnSelect: |-
+            =If(cmpAppTile.Enabled,
+                Launch(
+                    cmpAppTile.TargetUrl,
+                    {userEmail: gblUser.email, role: gblUser.role, returnTo: "switchboard://home"}
+                )
+            )
+        PressedFill: =gblBrand.navyMid
+        Width: =cmpAppTile.CompWidth
+        ZIndex: =1
+
+    tilLblEmoji As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.text
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        Height: =36
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =26
+        Text: |-
+            =Switch(Lower(cmpAppTile.AppEmoji),
+                "chart",    "📊",
+                "calendar", "🗓️",
+                "pencil",   "✏️",
+                "camera",   "📷",
+                "dollar",   "💰",
+                "truck",    "🚚",
+                "box",      "📦",
+                "wrench",   "🔧",
+                "phone",    "📞",
+                "people",   "👥",
+                cmpAppTile.AppEmoji
+            )
+        Width: =36
+        X: =14
+        Y: =14
+        ZIndex: =2
+
+    tilLblLabel As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.text
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =13
+        Text: =cmpAppTile.AppLabel
+        Width: =cmpAppTile.CompWidth - 28
+        X: =14
+        Y: =68
+        ZIndex: =3
+
+    tilBadgeBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.navyMid
+        FocusedBorderThickness: =1
+        Height: =18
+        HoverFill: =gblBrand.navyMid
+        PressedFill: =gblBrand.navyMid
+        RadiusBottomLeft: =9
+        RadiusBottomRight: =9
+        RadiusTopLeft: =9
+        RadiusTopRight: =9
+        Visible: =!IsBlank(cmpAppTile.BadgeText)
+        Width: =If(Len(cmpAppTile.BadgeText) > 10, 96, 72)
+        X: =cmpAppTile.CompWidth - Self.Width - 10
+        Y: =10
+        ZIndex: =4
+
+    tilBadgeLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.navy
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =18
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =9
+        Text: =cmpAppTile.BadgeText
+        Visible: =!IsBlank(cmpAppTile.BadgeText)
+        Width: =If(Len(cmpAppTile.BadgeText) > 10, 96, 72)
+        X: =cmpAppTile.CompWidth - Self.Width - 10
+        Y: =10
+        ZIndex: =5

@@ -1,0 +1,117 @@
+lcl_DaysCounter As CanvasComponent:
+    CompHeight: =92
+    CompWidth: =200
+    Days: =0
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =92
+    Record: =0
+    Width: =200
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    dayRectBG As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.navy
+        Fill: =gblBrand.navy
+        FocusedBorderThickness: =1
+        Height: =lcl_DaysCounter.CompHeight
+        HoverFill: =gblBrand.navy
+        PressedFill: =gblBrand.navyLight
+        Width: =lcl_DaysCounter.CompWidth
+        ZIndex: =1
+
+    dayLblHead As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.72)
+        DisabledColor: =RGBA(255, 255, 255, 0.4)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =12
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =9
+        Text: ="DAYS SINCE LOST TIME"
+        Width: =lcl_DaysCounter.CompWidth - 70
+        X: =12
+        Y: =10
+        ZIndex: =2
+
+    dayPillBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.red
+        Fill: =gblBrand.red
+        FocusedBorderThickness: =1
+        Height: =16
+        HoverFill: =gblBrand.red
+        PressedFill: =gblBrand.red
+        RadiusBottomLeft: =8
+        RadiusBottomRight: =8
+        RadiusTopLeft: =8
+        RadiusTopRight: =8
+        Width: =46
+        X: =lcl_DaysCounter.CompWidth - 58
+        Y: =8
+        ZIndex: =3
+
+    dayPillLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =16
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =8
+        Text: ="SAFETY"
+        Width: =46
+        X: =lcl_DaysCounter.CompWidth - 58
+        Y: =8
+        ZIndex: =4
+
+    dayLblValue As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =40
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =28
+        Text: =Text(lcl_DaysCounter.Days, "#,##0")
+        Width: =lcl_DaysCounter.CompWidth - 24
+        X: =12
+        Y: =28
+        ZIndex: =5
+
+    dayLblSub As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.6)
+        DisabledColor: =RGBA(255, 255, 255, 0.4)
+        FocusedBorderThickness: =1
+        Height: =14
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =10
+        Text: ="Record " & Text(lcl_DaysCounter.Record, "#,##0")
+        Width: =lcl_DaysCounter.CompWidth - 24
+        X: =12
+        Y: =72
+        ZIndex: =6

@@ -1,0 +1,115 @@
+lcl_AnnouncementCard As CanvasComponent:
+    Author: ="Author"
+    Body: ="Announcement body text"
+    CompHeight: =48
+    CompWidth: =1280
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =48
+    PostedDate: ="Today"
+    Title: ="Announcement"
+    Width: =1280
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    annRectBG As rectangle:
+        BorderColor: =gblBrand.navyMid
+        BorderThickness: =1
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.navySoft
+        FocusedBorderThickness: =1
+        Height: =lcl_AnnouncementCard.CompHeight
+        HoverFill: =gblBrand.navyMid
+        PressedFill: =gblBrand.navyMid
+        Width: =lcl_AnnouncementCard.CompWidth
+        ZIndex: =1
+
+    annRectAccent As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.navy
+        Fill: =gblBrand.navy
+        FocusedBorderThickness: =1
+        Height: =lcl_AnnouncementCard.CompHeight
+        HoverFill: =gblBrand.navy
+        PressedFill: =gblBrand.navy
+        Width: =3
+        X: =0
+        Y: =0
+        ZIndex: =2
+
+    annIcon As "icon.'Megaphone'":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Color: =gblBrand.navy
+        DisabledBorderColor: =RGBA(0, 0, 0, 0)
+        DisabledColor: =gblBrand.textDim
+        DisabledFill: =RGBA(0, 0, 0, 0)
+        FocusedBorderThickness: =1
+        Height: =20
+        HoverBorderColor: =RGBA(0, 0, 0, 0)
+        HoverColor: =gblBrand.navy
+        HoverFill: =RGBA(0, 0, 0, 0)
+        Icon: =Icon.Megaphone
+        PressedBorderColor: =RGBA(0, 0, 0, 0)
+        PressedColor: =gblBrand.navy
+        PressedFill: =RGBA(0, 0, 0, 0)
+        Width: =20
+        X: =14
+        Y: =14
+        ZIndex: =3
+
+    annLblTitle As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.navy
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =12
+        Text: =lcl_AnnouncementCard.Title
+        Width: =220
+        X: =42
+        Y: =14
+        ZIndex: =4
+
+    annLblBody As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.text
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =12
+        Text: =lcl_AnnouncementCard.Body
+        Width: =lcl_AnnouncementCard.CompWidth - 280
+        X: =266
+        Y: =14
+        ZIndex: =5
+
+    annLblMeta As label:
+        Align: =Align.Right
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.textDim
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =10
+        Text: =lcl_AnnouncementCard.PostedDate & " · " & lcl_AnnouncementCard.Author
+        Width: =180
+        X: =lcl_AnnouncementCard.CompWidth - 194
+        Y: =14
+        ZIndex: =6

@@ -1,0 +1,123 @@
+lcl_PhotoCarousel As CanvasComponent:
+    CompHeight: =140
+    CompWidth: =1280
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =140
+    Photos: |-
+        =Table({Caption:"Photo 1"},{Caption:"Photo 2"},{Caption:"Photo 3"},{Caption:"Photo 4"},{Caption:"Photo 5"})
+    Width: =1280
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    phoRectBG As rectangle:
+        BorderColor: =gblBrand.border
+        BorderThickness: =1
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.card
+        FocusedBorderThickness: =1
+        Height: =lcl_PhotoCarousel.CompHeight
+        HoverFill: =gblBrand.card
+        PressedFill: =gblBrand.card
+        Width: =lcl_PhotoCarousel.CompWidth
+        ZIndex: =1
+
+    phoLblTitle As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.text
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =16
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: ="RECENT COMPLETIONS"
+        Width: =400
+        X: =14
+        Y: =10
+        ZIndex: =2
+
+    phoLblSeeAll As label:
+        Align: =Align.Right
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.navy
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =16
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =10
+        Text: ="See all →"
+        Width: =80
+        X: =lcl_PhotoCarousel.CompWidth - 94
+        Y: =10
+        ZIndex: =3
+
+    "phoGalPhotos As gallery.galleryHorizontal":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        DelayItemLoading: =true
+        Height: =lcl_PhotoCarousel.CompHeight - 42
+        Items: =lcl_PhotoCarousel.Photos
+        LoadingSpinner: =LoadingSpinner.Data
+        ShowScrollbar: =false
+        TemplatePadding: =6
+        TemplateSize: =180
+        Width: =lcl_PhotoCarousel.CompWidth - 24
+        X: =12
+        Y: =32
+        ZIndex: =4
+
+        phoRectFrame As rectangle:
+            BorderColor: =gblBrand.border
+            BorderThickness: =1
+            DisabledFill: =gblBrand.bg2
+            Fill: =gblBrand.navy
+            FocusedBorderThickness: =1
+            Height: =Parent.TemplateHeight - 4
+            HoverFill: =gblBrand.navyLight
+            PressedFill: =gblBrand.navy
+            Width: =Parent.TemplateWidth - 6
+            X: =0
+            Y: =2
+            ZIndex: =1
+
+        phoRectOverlay As rectangle:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            DisabledFill: =RGBA(0, 0, 0, 0.4)
+            Fill: =RGBA(0, 0, 0, 0.55)
+            FocusedBorderThickness: =1
+            Height: =28
+            HoverFill: =RGBA(0, 0, 0, 0.55)
+            PressedFill: =RGBA(0, 0, 0, 0.55)
+            Width: =Parent.TemplateWidth - 6
+            X: =0
+            Y: =Parent.TemplateHeight - 32
+            ZIndex: =2
+
+        phoLblCaption As label:
+            BorderColor: =RGBA(0, 0, 0, 0)
+            BorderStyle: =BorderStyle.None
+            Color: =RGBA(255, 255, 255, 1)
+            DisabledColor: =RGBA(255, 255, 255, 0.7)
+            FocusedBorderThickness: =1
+            FontWeight: =FontWeight.Bold
+            Height: =22
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =10
+            Text: =ThisItem.Caption
+            Width: =Parent.TemplateWidth - 14
+            X: =6
+            Y: =Parent.TemplateHeight - 28
+            ZIndex: =3

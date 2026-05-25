@@ -1,0 +1,135 @@
+lcl_BirthdayStrip As CanvasComponent:
+    BirthdayDate: ="May 28"
+    CompWidth: =1280
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =48
+    PersonName: ="Jordan Williams"
+    Width: =1280
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    bdyRectBG As rectangle:
+        BorderColor: =gblBrand.border
+        BorderThickness: =1
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.card
+        FocusedBorderThickness: =1
+        Height: =48
+        HoverFill: =gblBrand.card
+        PressedFill: =gblBrand.card
+        Width: =lcl_BirthdayStrip.CompWidth
+        ZIndex: =1
+
+    bdyIcnBirthday As "icon.Star":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Color: =gblBrand.red
+        DisabledBorderColor: =RGBA(0, 0, 0, 0)
+        DisabledColor: =gblBrand.textDim
+        DisabledFill: =RGBA(0, 0, 0, 0)
+        FocusedBorderThickness: =1
+        Height: =18
+        HoverBorderColor: =RGBA(0, 0, 0, 0)
+        HoverColor: =gblBrand.red
+        HoverFill: =RGBA(0, 0, 0, 0)
+        Icon: =Icon.Star
+        PressedBorderColor: =RGBA(0, 0, 0, 0)
+        PressedColor: =gblBrand.red
+        PressedFill: =RGBA(0, 0, 0, 0)
+        Width: =18
+        X: =14
+        Y: =15
+        ZIndex: =2
+
+    bdyChipBg As rectangle:
+        BorderColor: =gblBrand.borderSoft
+        BorderThickness: =1
+        DisabledFill: =gblBrand.bg2
+        Fill: =gblBrand.bg2
+        FocusedBorderThickness: =1
+        Height: =26
+        HoverFill: =gblBrand.navyMid
+        PressedFill: =gblBrand.navyMid
+        RadiusBottomLeft: =13
+        RadiusBottomRight: =13
+        RadiusTopLeft: =13
+        RadiusTopRight: =13
+        Width: =220
+        X: =40
+        Y: =11
+        ZIndex: =3
+
+    bdyAvatar As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.navyMid
+        Fill: =gblBrand.navyMid
+        FocusedBorderThickness: =1
+        Height: =22
+        HoverFill: =gblBrand.navyMid
+        PressedFill: =gblBrand.navyMid
+        RadiusBottomLeft: =11
+        RadiusBottomRight: =11
+        RadiusTopLeft: =11
+        RadiusTopRight: =11
+        Width: =22
+        X: =42
+        Y: =13
+        ZIndex: =4
+
+    bdyAvatarInitials As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.navy
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =22
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =9
+        Text: =Concat(ForAll(Split(lcl_BirthdayStrip.PersonName, " "), {init: Left(Value, 1)}), init)
+        Width: =22
+        X: =42
+        Y: =13
+        ZIndex: =5
+
+    bdyLblName As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.text
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =22
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: =lcl_BirthdayStrip.PersonName
+        Width: =120
+        X: =72
+        Y: =13
+        ZIndex: =6
+
+    bdyLblDate As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =gblBrand.textDim
+        DisabledColor: =gblBrand.textDim
+        FocusedBorderThickness: =1
+        Height: =22
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: ="· " & lcl_BirthdayStrip.BirthdayDate
+        Width: =80
+        X: =194
+        Y: =13
+        ZIndex: =7

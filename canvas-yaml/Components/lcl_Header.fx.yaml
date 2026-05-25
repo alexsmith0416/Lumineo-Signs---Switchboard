@@ -1,0 +1,332 @@
+lcl_Header As CanvasComponent:
+    OnBack():
+        ThisProperty:
+            Default: =
+    AppTitle: ="LUMINEO SIGNS"
+    CompWidth: =1366
+    Fill: =RGBA(0, 0, 0, 0)
+    Height: =64
+    PageTitle: ="Home"
+    ShowBack: =false
+    Width: =1366
+    X: =0
+    Y: =0
+    ZIndex: =1
+
+    rectBG As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.navy
+        Fill: =gblBrand.navy
+        FocusedBorderThickness: =1
+        Height: =64
+        HoverFill: =gblBrand.navy
+        PressedFill: =gblBrand.navy
+        Width: =lcl_Header.CompWidth
+        ZIndex: =1
+
+    hdrLogoBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.red
+        Fill: =gblBrand.red
+        FocusedBorderThickness: =1
+        Height: =40
+        HoverFill: =gblBrand.red
+        PressedFill: =gblBrand.red
+        RadiusBottomLeft: =4
+        RadiusBottomRight: =4
+        RadiusTopLeft: =4
+        RadiusTopRight: =4
+        Width: =40
+        X: =20
+        Y: =12
+        ZIndex: =2
+
+    hdrLogoIcon As "icon.Diamond":
+        BorderColor: =RGBA(0, 0, 0, 0)
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledBorderColor: =RGBA(0, 0, 0, 0)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        DisabledFill: =RGBA(0, 0, 0, 0)
+        FocusedBorderThickness: =1
+        Height: =24
+        HoverBorderColor: =RGBA(0, 0, 0, 0)
+        HoverColor: =RGBA(255, 255, 255, 1)
+        HoverFill: =RGBA(0, 0, 0, 0)
+        Icon: =Icon.Diamond
+        PressedBorderColor: =RGBA(0, 0, 0, 0)
+        PressedColor: =RGBA(255, 255, 255, 1)
+        PressedFill: =RGBA(0, 0, 0, 0)
+        Width: =24
+        X: =28
+        Y: =20
+        ZIndex: =3
+
+    hdrBrandName As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.5)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =15
+        Text: =lcl_Header.AppTitle
+        Width: =200
+        X: =74
+        Y: =14
+        ZIndex: =4
+
+    hdrBrandSub As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.55)
+        DisabledColor: =RGBA(255, 255, 255, 0.4)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =14
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: ="SWITCHBOARD"
+        Width: =200
+        X: =74
+        Y: =36
+        ZIndex: =5
+
+    hdrDivider As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =RGBA(255, 255, 255, 0.12)
+        Fill: =RGBA(255, 255, 255, 0.12)
+        FocusedBorderThickness: =1
+        Height: =32
+        HoverFill: =RGBA(255, 255, 255, 0.12)
+        PressedFill: =RGBA(255, 255, 255, 0.12)
+        Width: =1
+        X: =290
+        Y: =16
+        ZIndex: =6
+
+    hdrViewTitle As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.85)
+        DisabledColor: =RGBA(255, 255, 255, 0.5)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =20
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =13
+        Text: =lcl_Header.PageTitle
+        Width: =400
+        X: =302
+        Y: =22
+        ZIndex: =7
+
+    hdrBtnHelpBg As rectangle:
+        BorderColor: =RGBA(255, 255, 255, 0.22)
+        BorderThickness: =1
+        DisabledFill: =RGBA(255, 255, 255, 0.06)
+        Fill: =RGBA(255, 255, 255, 0.1)
+        FocusedBorderThickness: =1
+        Height: =32
+        HoverFill: =RGBA(255, 255, 255, 0.18)
+        PressedFill: =RGBA(255, 255, 255, 0.24)
+        RadiusBottomLeft: =4
+        RadiusBottomRight: =4
+        RadiusTopLeft: =4
+        RadiusTopRight: =4
+        Visible: =!lcl_Header.ShowBack
+        Width: =60
+        X: =lcl_Header.CompWidth - 234
+        Y: =16
+        ZIndex: =8
+
+    hdrBtnHelpLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =32
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =12
+        Text: ="Help"
+        Visible: =!lcl_Header.ShowBack
+        Width: =60
+        X: =lcl_Header.CompWidth - 234
+        Y: =16
+        ZIndex: =9
+
+    hdrBtnNewBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =RGBA(180, 14, 20, 1)
+        Fill: =gblBrand.red
+        FocusedBorderThickness: =1
+        Height: =32
+        HoverFill: =RGBA(200, 18, 24, 1)
+        OnSelect: =Set(varNewMenuOpen, !varNewMenuOpen)
+        PressedFill: =RGBA(170, 12, 18, 1)
+        RadiusBottomLeft: =4
+        RadiusBottomRight: =4
+        RadiusTopLeft: =4
+        RadiusTopRight: =4
+        Visible: =!lcl_Header.ShowBack
+        Width: =64
+        X: =lcl_Header.CompWidth - 166
+        Y: =16
+        ZIndex: =10
+
+    hdrBtnNewLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =32
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =12
+        Text: ="+ New"
+        Visible: =!lcl_Header.ShowBack
+        Width: =64
+        X: =lcl_Header.CompWidth - 166
+        Y: =16
+        ZIndex: =11
+
+    hdrAvatarBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =gblBrand.red
+        Fill: =gblBrand.red
+        FocusedBorderThickness: =1
+        Height: =32
+        HoverFill: =RGBA(200, 18, 24, 1)
+        PressedFill: =RGBA(170, 12, 18, 1)
+        RadiusBottomLeft: =16
+        RadiusBottomRight: =16
+        RadiusTopLeft: =16
+        RadiusTopRight: =16
+        Visible: =!lcl_Header.ShowBack
+        Width: =32
+        X: =lcl_Header.CompWidth - 90
+        Y: =16
+        ZIndex: =12
+
+    hdrAvatarLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Bold
+        Height: =32
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: =Concat(ForAll(Split(Coalesce(User().FullName, "Alex Smith"), " "), {init: Left(Value, 1)}), init)
+        Visible: =!lcl_Header.ShowBack
+        Width: =32
+        X: =lcl_Header.CompWidth - 90
+        Y: =16
+        ZIndex: =13
+
+    hdrUserLbl As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.9)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =16
+        OnSelect: =Set(varShowRoleMenu, !varShowRoleMenu)
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =11
+        Text: =Coalesce(User().FullName, "Alex Smith")
+        Visible: =!lcl_Header.ShowBack
+        Width: =54
+        X: =lcl_Header.CompWidth - 50
+        Y: =14
+        ZIndex: =14
+
+    hdrUserRoleLbl As label:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 0.6)
+        DisabledColor: =RGBA(255, 255, 255, 0.4)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =14
+        OnSelect: =Set(varShowRoleMenu, !varShowRoleMenu)
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =9
+        Text: =Upper(Coalesce(gblUser.role, "OPERATIONS"))
+        Visible: =!lcl_Header.ShowBack
+        Width: =54
+        X: =lcl_Header.CompWidth - 50
+        Y: =32
+        ZIndex: =15
+
+    hdrBackBg As rectangle:
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        DisabledFill: =RGBA(0, 0, 0, 0)
+        Fill: =RGBA(255, 255, 255, 0.08)
+        FocusedBorderThickness: =1
+        Height: =64
+        HoverFill: =RGBA(255, 255, 255, 0.16)
+        OnSelect: =lcl_Header.OnBack()
+        PressedFill: =RGBA(255, 255, 255, 0.22)
+        Visible: =lcl_Header.ShowBack
+        Width: =48
+        ZIndex: =16
+
+    hdrBackLbl As label:
+        Align: =Align.Center
+        BorderColor: =RGBA(0, 0, 0, 0)
+        BorderStyle: =BorderStyle.None
+        Color: =RGBA(255, 255, 255, 1)
+        DisabledColor: =RGBA(255, 255, 255, 0.6)
+        FocusedBorderThickness: =1
+        FontWeight: =FontWeight.Semibold
+        Height: =32
+        PaddingBottom: =0
+        PaddingLeft: =0
+        PaddingRight: =0
+        PaddingTop: =0
+        Size: =18
+        Text: ="←"
+        Visible: =lcl_Header.ShowBack
+        Width: =48
+        Y: =16
+        ZIndex: =17
