@@ -11,6 +11,21 @@ The blueprint for converting the React/TypeScript prototype at `scheduling-app/`
 - **Linear project:** [Lumineo Scheduling Hub](https://linear.app/lumineosigns/project/lumineo-scheduling-hub-b4e29b417bee)
 - **Standalone preview:** `npm run build` in `scheduling-app/` then run `node /tmp/inline.mjs` (or use the bundled `dist/`)
 
+## Current prototype state (as of latest commit)
+
+| Surface | Status |
+|---|---|
+| Production calendar | ✅ Drag/move + drag/resize with cascade-confirm dialog, dept-color cards, sticky resource column + dept label, hover tooltips, edit panel, custom-card creation, print 🖨 button |
+| Installation calendar | ✅ WK ↔ NEK toggle, `$` / weather / crew toggles, stacked 3-row cards, real WK + NEK rosters, monthly goal tracking, Add Job parity with Production |
+| Shipping calendar | ✅ Same engine, trucks-as-resources |
+| Scenario Sandbox | ✅ Auto-enters, kind tabs (Production / Install · WK / NEK / Shipping) with change-count badges, embedded read-only calendar preview |
+| Monthly Install Plan | ✅ Combined billing roll-up, per-week mini-cards vs `$1.1M` goal, AI auto-fill respecting both dollar headroom and per-region crew availability |
+| Custom (non-BC) cards | ✅ 7 presets (PTO / Inventory / Truck Maint / Med Cert / DOT / Crane Cert / Holiday) all locked-by-default; Holiday auto-applies to all employees |
+| Cascade-aware confirm | ✅ Dialog with Cancel / Move only this / Try in Sandbox / Continue, red pulse on affected cards |
+| Mobile responsive | ✅ Hamburger nav drawer, portrait layout under 720 px, sticky resource column + dept label during horizontal scroll, iOS touch-drag polyfill |
+| Engine | ✅ 47 unit tests, business-hour anchored capacity walker, cascade with 200-iteration safety cap |
+| Real data | ⛔ Stubbed throughout `services/*-data.ts`, `bc.ts`, `WeatherChip.tsx`, `zip-geo.ts` — this spec is the contract for swapping them out |
+
 ## Companion docs (already in this repo — read them too)
 
 - [01 — Architecture Overview](01-architecture-overview.md) — Switchboard shell + sub-app pattern
@@ -45,15 +60,16 @@ Plus a **custom (non-BC) card** facility — PTO, Holiday, Maintenance, Med Cert
 | Layer | Prototype | Production |
 |---|---|---|
 | Build | Vite + React 18 + TypeScript | Power Code App (Vite + React 18 + TypeScript) |
-| State | Zustand (4 parallel stores: production / installation × 2 regions / shipping + scenario + preview) | Same — Zustand keeps its shape |
+| State | Zustand — 4 schedule stores (production / WK install / NEK install / shipping) + 4 scenario stores (one per schedule store, via `createScenarioStore` factory) + 1 scenario preview store | Same — Zustand keeps its shape |
 | Engine | Pure TS, only `date-fns` imported | Same |
-| Routing | None — view state lives in `App.tsx` `useState` | Same; consider URL hash sync for shareable deep links |
-| Persistence (live) | `createMockDataSource()` returning in-memory mocks | **Power SDK** generated bindings against Dataverse tables |
-| BC search | Mock fixed list in `services/bc.ts` | **BC analytics connector** — `jobPlanningLines (microsoft/analytics/v1.0)`, `jobs (microsoft/analytics/v1.0)` |
+| Touch-drag polyfill | `mobile-drag-drop` (~10 kB, wired in `main.tsx`) | Keep — iOS Safari needs it; Power Code Apps still render in a browser engine |
+| Routing | None — view state in `App.tsx` `useState` | Same; consider URL hash sync for shareable deep links |
+| Persistence (live) | `createMockDataSource()` returning in-memory mocks | **Power SDK** bindings against Dataverse tables. Until BC admin lands, Dataverse is mirrored from Airtable via a Power Automate sync flow (see §8.6) |
+| BC search | Mock fixed list in `services/bc.ts` | **BC analytics connector** — `jobPlanningLines` / `jobs` (microsoft/analytics/v1.0). Same flow until BC API access lands. |
 | Weather | Deterministic hash mock in `WeatherChip.tsx` | **OpenWeatherMap One Call 3.0** via Power Automate custom connector + `WeatherCache` Dataverse table |
 | Crew/truck | Static columns on mock schedule lines | **BC `lumCrewType` purchase lines** → nightly `RecomputeCrewAssignments` flow → `CrewAssignment` Dataverse table |
 | Auth | None (open dev server) | **Entra ID** through the Switchboard shell |
-| ZIP geo | Inline table for the ~20 ZIPs in mocks | **`bc_ZipGeo`** Dataverse table (~42 k US ZIPs, one-time import) |
+| ZIP geo | Inline table for the ~20 ZIPs in mocks | **`bc_ZipGeo`** Dataverse table (~42k US ZIPs, one-time import) |
 
 The engine, stores, UI components, brand styles, and interaction logic transfer verbatim. The substitution is purely at the I/O boundary (`src/services/*`).
 
@@ -102,66 +118,79 @@ Services / Data Source (I/O boundary — STUB BOUNDARY)
 
 ```
 scheduling-app/src/
-├── App.tsx
-├── main.tsx
+├── App.tsx                     — shell + view state + nav drawer mount
+├── main.tsx                    — React root + mobile-drag-drop polyfill init
 ├── components/
-│   ├── AppHeader.tsx           — navy header, hamburger button
-│   ├── NavDrawer.tsx           — left-slide drawer (replaces sidebar)
-│   ├── CalendarView.tsx        — the generic Gantt grid (driven by any schedule store)
-│   ├── ProductionCalendar.tsx  — wraps CalendarView + AddJobPanel
-│   ├── InstallationCalendar.tsx— wraps CalendarView w/ WK/NEK toggle + $/weather/crew toggles
-│   ├── ShippingCalendar.tsx    — wraps CalendarView
-│   ├── ScenarioSandbox.tsx     — auto-enters; renders ChangeBuilder/Impact/Diff + read-only preview calendar
-│   ├── MonthlyPlanView.tsx     — month roll-up + AI auto-fill
-│   ├── AddJobPanel.tsx         — slide-over with BC Job / Custom Card tabs
+│   ├── AppHeader.tsx           — navy header, hamburger button (≡)
+│   ├── NavDrawer.tsx           — left-slide drawer, role=dialog, Escape closes, autofocus
+│   ├── CalendarView.tsx        — generic Gantt grid; accepts useStore + scenarioStore props,
+│   │                              Today/Print/Prev/Next, sticky resource column,
+│   │                              cascade-aware drop/resize, lane-allocated overlay cards
+│   ├── ProductionCalendar.tsx  — wraps CalendarView + AddJobPanel (production store)
+│   ├── InstallationCalendar.tsx— wraps CalendarView w/ WK↔NEK toggle, $/🌤/crew toggles,
+│   │                              region-specific scenario store
+│   ├── ShippingCalendar.tsx    — wraps CalendarView (shipping store)
+│   ├── ScenarioSandbox.tsx     — auto-enters; kind tabs (Production/Install·WK/NEK/Shipping)
+│   │                              with change-count badges; renders ChangeBuilder + Impact
+│   │                              + Diff + read-only CalendarView preview
+│   ├── MonthlyPlanView.tsx     — month roll-up + AI auto-fill with crew capacity budget
+│   ├── AddJobPanel.tsx         — slide-over with BC Job ↔ Custom Card tabs;
+│   │                              custom mode has 7 presets + apply-all + lock checkboxes
 │   ├── EditJobPanel.tsx        — slide-over for editing existing line
-│   ├── JobCard.tsx             — single card; handles tooltip, custom-color, install layout
-│   ├── CrewBadge.tsx           — "2M 1T" chip
-│   ├── WeatherChip.tsx         — icon + temp chip, expanded mode for tooltip
-│   ├── CascadeConfirmDialog.tsx— pre-commit modal with 4 options
-│   ├── WeekSummary.tsx         — top stats strip (utilization, billing, goal)
+│   ├── JobCard.tsx             — single card; portal tooltip, custom-color, stacked install layout
+│   ├── CrewBadge.tsx           — "2M 1T" / "4M 2T 1L" chip
+│   ├── WeatherChip.tsx         — compact + expanded variants (mock backed)
+│   ├── CascadeConfirmDialog.tsx— pre-commit modal with 4 options; role=alertdialog, Escape closes
+│   ├── WeekSummary.tsx         — top stats strip (utilization, scheduled, capacity,
+│   │                              billing-week, both-regions-week, billing-month, monthly-goal)
 │   ├── LumineoLogo.tsx         — inline SVG
 │   └── scenario/
-│       ├── ScenarioBanner.tsx
-│       ├── ChangeBuilder.tsx
-│       ├── ImpactSummary.tsx
-│       ├── ScheduleDiff.tsx
+│       ├── ScenarioBanner.tsx  — amber pinned banner, accepts useStore prop
+│       ├── ChangeBuilder.tsx   — accepts useStore + useScheduleStore props
+│       ├── ImpactSummary.tsx   — accepts useStore prop
+│       ├── ScheduleDiff.tsx    — accepts useStore prop
 │       └── forms/{Overtime,Weekends,ShiftTask,RushJob}Form.tsx
 ├── engine/
-│   ├── index.ts
-│   ├── types.ts                — ScheduleLine, Employee, Department, ScenarioChange, etc.
+│   ├── index.ts                — barrel re-exports
+│   ├── types.ts                — ScheduleLine (w/ optional invoice/crew/weather/region/custom fields),
+│   │                              Employee, Department, ScenarioChange, etc.
 │   ├── capacity.ts             — getDayCapacity, effectiveHours, getHoursUsedOnDay
 │   ├── time-walker.ts          — calculateEndTime with 8am-4pm business-hour anchor
-│   ├── cascade.ts              — shiftTask, updateDuration, cloneContext
+│   ├── cascade.ts              — shiftTask, updateDuration, cloneContext;
+│   │                              MAX_ITERATIONS=200 with console.warn on cap-hit
 │   ├── conflicts.ts            — detectConflicts (past-due, employee-overlap, dept-order)
 │   ├── scenarios.ts            — runScenario, commitScenario, computeImpact
-│   ├── *.test.ts               — 46 unit tests
+│   ├── *.test.ts               — 47 unit tests (locked-PTO cascade-flow-around included)
 │   └── __fixtures__/build.ts   — test fixtures
 ├── hooks/
 │   ├── useJobSearch.ts         — debounced BC search with session cache
 │   └── useLivePreview.ts       — engine-driven preview of end-time as user edits
 ├── services/
 │   ├── data-source.ts          — ScheduleDataSource interface + createMockDataSource factory
-│   ├── dataverse.ts            — production data source (STUB)
-│   ├── installation-data.ts    — WK + NEK data sources (STUB)
-│   ├── shipping-data.ts        — shipping data source (STUB)
+│   ├── dataverse.ts            — production data source (STUB → Power SDK)
+│   ├── installation-data.ts    — WK + NEK data sources (STUB → Power SDK)
+│   ├── shipping-data.ts        — shipping data source (STUB → Power SDK)
 │   ├── bc.ts                   — BC analytics connector (STUB)
 │   ├── planning-line-mapping.ts— keyword → department mapping
 │   ├── auto-schedule.ts        — proposeSchedule (earliest-legal-slot per line)
-│   └── zip-geo.ts              — ZIP → City, State lookup (STUB)
+│   └── zip-geo.ts              — ZIP → City, State lookup (STUB → bc_ZipGeo)
 ├── store/
 │   ├── schedule-store.ts       — createScheduleStore factory + 4 instances
-│   ├── scenario-store.ts       — production-bound scenario state
+│   │                              (useScheduleStore, useInstallationStoreWK/NEK, useShippingStore)
+│   ├── scenario-store.ts       — createScenarioStore(dataSource) factory + 4 instances
+│   │                              (useProductionScenarioStore, useInstallationScenarioStoreWK/NEK,
+│   │                              useShippingScenarioStore); useScenarioStore aliases production
 │   └── scenario-preview-store.ts — read-only preview store hydrated from scenario state
 ├── data/
 │   ├── mock-schedule.ts        — production employees + lines
-│   ├── mock-installation.ts    — WK + NEK rosters + lines
+│   ├── mock-installation.ts    — WK + NEK rosters + lines (from PDFs)
 │   ├── mock-shipping.ts        — trucks + delivery lines
 │   ├── mock-bc.ts              — BC job catalog for search
 │   ├── mock-install-candidates.ts — AI auto-fill candidate pool
 │   └── custom-card-presets.ts  — 7 preset cards (PTO, Holiday, etc.)
+│                                  with lockByDefault + applyAllByDefault flags
 └── styles/
-    └── lumineo.css             — brand tokens + every component style
+    └── lumineo.css             — brand tokens + every component style + @media print
 ```
 
 ### 3.3 Engine contract
@@ -175,11 +204,12 @@ Invariants:
 3. **Effective hours.** `(line.overrideHours ?? line.estimatedHours) / employee.productivityRate`. Rate 0 is treated as 1.
 4. **Department flow.** A task at `flowOrder N` cannot start before all tasks at `flowOrder < N` in the same job have finished.
 5. **Same-employee queue.** Tasks never overlap on one employee. Cascade walks each resource's queue in chronological order; later tasks that would overlap the running max-end get pushed forward.
-6. **Locked tasks** (`isLocked: true`). Never move under cascade. Cascade flows around them. Conflict icons surface the violation.
+6. **Locked tasks** (`isLocked: true`). Never move under cascade. Cascade flows around them. Conflict icons surface the violation. Custom cards from presets default to `isLocked: true` (see §4.4).
 7. **Capacity walking.** `calculateEndTime` walks day by day via `getDayCapacity`. Days with 0 capacity (weekends without `worksWeekends`, manual zero overrides) are skipped, not zeroed.
 8. **Business hours.** Work is anchored to 8:00–16:00. A task that would extend past 16:00 spills to the next workday's 8:00.
+9. **Cascade convergence.** Iterative cascade caps at `MAX_ITERATIONS = 200`. If the cap is hit, the engine returns a partial result and logs `[cascade] hit MAX_ITERATIONS …` so ops can investigate the pathological dependency chain.
 
-46 unit tests in `src/engine/*.test.ts` lock these in.
+47 unit tests in `src/engine/*.test.ts` lock these in.
 
 ---
 
@@ -281,15 +311,20 @@ Write operations (when a custom card is committed, when a scenario commits, etc.
 
 [`src/data/custom-card-presets.ts`](../scheduling-app/src/data/custom-card-presets.ts) defines the 7 presets:
 
-| id | Label | Background | Default hours |
-|---|---|---|---|
-| `pto` | PTO | `#FFC1D6` pink | 8 |
-| `inventory` | Inventory | `#B8E5C4` light green | 8 |
-| `truck-maintenance` | Truck Maintenance | `#1F5E2E` dark green | 4 |
-| `med-cert` | Med Cert | `#4F7DD3` blue | 2 |
-| `dot-physical` | DOT Physical | `#AED8F0` light blue | 2 |
-| `crane-cert` | Crane Cert | `#FF9248` orange | 4 |
-| `holiday` | Holiday - Shop Closed | `#FFD93D` yellow | 8 |
+| id | Label | Background | Default hours | Lock by default | Apply-all by default |
+|---|---|---|---|---|---|
+| `pto` | PTO | `#FFC1D6` pink | 8 | ✅ | — |
+| `inventory` | Inventory | `#B8E5C4` light green | 8 | ✅ | — |
+| `truck-maintenance` | Truck Maintenance | `#1F5E2E` dark green | 4 | ✅ | — |
+| `med-cert` | Med Cert | `#4F7DD3` blue | 2 | ✅ | — |
+| `dot-physical` | DOT Physical | `#AED8F0` light blue | 2 | ✅ | — |
+| `crane-cert` | Crane Cert | `#FF9248` orange | 4 | ✅ | — |
+| `holiday` | Holiday - Shop Closed | `#FFD93D` yellow | 8 | ✅ | ✅ |
+
+Behavior driven by these flags:
+
+- `lockByDefault: true` — cards committed from this preset get `isLocked: true`, so cascade flows around them (a regular job moving won't shove a PTO day forward). User can uncheck the lock in the AddJobPanel custom form before committing.
+- `applyAllByDefault: true` — the "Apply to all N resources" checkbox is pre-checked, so a single Holiday commit writes one card per employee in the current calendar's roster. The resource dropdown disables when apply-all is on.
 
 Production: these presets can also be stored in a Dataverse `crfdf_customcardpreset` table so Ops can edit them without a code change.
 
@@ -340,7 +375,20 @@ Cards surface ⚠/⚡ icons + the hover tooltip lists the conflict messages.
 
 ### 5.4 Scenario sandbox
 
-Lives in `useScenarioStore` (production-bound today). Five change kinds:
+Implemented as a `createScenarioStore(dataSource)` factory in [`src/store/scenario-store.ts`](../scheduling-app/src/store/scenario-store.ts) with four exported instances:
+
+- `useProductionScenarioStore` — bound to `productionDataSource`
+- `useInstallationScenarioStoreWK` — bound to `wkInstallDataSource`
+- `useInstallationScenarioStoreNEK` — bound to `nekInstallDataSource`
+- `useShippingScenarioStore` — bound to `shippingDataSource`
+
+`useScenarioStore` is preserved as an alias for the production store so older imports keep working.
+
+The `ScenarioSandbox` screen has a top tab strip — Production / Install · WK / Install · NEK / Shipping — with a red badge showing each store's pending-change count. Switching tabs swaps the active store throughout the sandbox (banner, ChangeBuilder, ImpactSummary, ScheduleDiff, and the read-only CalendarView preview) and auto-enters the matching store's workspace.
+
+The cascade-confirm dialog's "Try in Sandbox" button writes into the right scenario store via the `scenarioStore` prop on `CalendarView` — Production cards stage into the production sandbox, Install · WK cards stage into the WK install sandbox, etc.
+
+Five change kinds:
 
 - `shift-task` — move a line; cascade applied
 - `update-duration` — change overrideHours; cascade applied
@@ -365,10 +413,12 @@ Commit produces a list of patches (line ID + changed fields). Today these go thr
 **AI auto-fill algorithm** (`autofillToGoal` in `MonthlyPlanView.tsx`):
 
 1. Sort the candidate pool by `promisedDate` ascending (urgent first), tie-broken by descending `invoiceAmount` (close the gap faster).
-2. Walk candidates. Each week has a soft cap of `monthlyGoal / numWeeks` minus its existing billing.
-3. For each candidate, pick the first week with `headroom >= candidate.invoiceAmount * 0.5` (allows some flex). Decrement that week's headroom by the full amount.
+2. Walk candidates. Each week has two soft caps:
+   - **Dollar headroom** — `monthlyGoal / numWeeks` minus the week's existing billing.
+   - **Crew-day headroom per region** — `5 workdays × crewCount` of the candidate's region (WK or NEK).
+3. For each candidate, compute `crewDaysNeeded = ceil(estimatedHours / 8)` and pick the first week with `dollar headroom >= candidate.invoiceAmount * 0.5` AND `regional crew headroom >= crewDaysNeeded`. Decrement both budgets.
 4. Stop selecting once `runningTotal >= gap`.
-5. Return `{ selected, rejected }` with reasons.
+5. Return `{ selected, rejected }` — rejections specify whether the cause was dollar capacity or regional crew capacity.
 
 Candidate pool today: `INSTALL_CANDIDATES` (10 hard-coded jobs in `data/mock-install-candidates.ts`). Production sources from a Dataverse view of production lines marked `near-complete` + install lines with no scheduled date.
 
@@ -386,7 +436,7 @@ Candidate pool today: `INSTALL_CANDIDATES` (10 hard-coded jobs in `data/mock-ins
 ### 6.2 Production calendar
 
 - Top: `WeekSummary` strip (utilization %, scheduled h, capacity h, jobs, lines)
-- Toolbar: `‹ Prev` | `Today` (outlined navy, disabled when on current week) | `Next ›` | "Week of …" label | (right-pinned, brand red) `+ Add Job`
+- Toolbar: `‹ Prev` | `Today` (outlined navy, disabled when on current week) | `Next ›` | "Week of …" label | (right-pinned outlined navy) `🖨` print button | (far right, brand red) `+ Add Job`
 - Calendar grid:
   - Resource column (140 px desktop, 110/96 px mobile) — sticky-left.
   - 7 day columns (min-width 110 px) with weekend cells dimmed.
@@ -422,10 +472,11 @@ Same as production. Departments are vehicle types (Flatbed / Box / Hot Shot). No
 
 ### 6.6 Scenario Sandbox
 
-- **Auto-enters** on mount (no splash).
+- **Auto-enters** on mount (no splash). Same behavior after Commit / Discard.
+- **Kind tabs** at the top — `Production` / `Install · WK` / `Install · NEK` / `Shipping`. Each tab carries a red badge with that store's pending-change count. Switching tabs swaps every panel (banner / change builder / impact / diff / preview) to read from the matching scenario + schedule store pair.
 - Amber banner pinned at top: "⚠ SCENARIO SANDBOX · N pending change(s) — nothing is live yet" with `Discard` / `Commit` buttons.
 - Two-column grid: `ChangeBuilder` (left, with + Overtime / + Weekends / + Shift task / + Rush job buttons) and `ImpactSummary` + `ScheduleDiff` (right).
-- Below: a **read-only `CalendarView`** showing the live schedule with every staged change applied (powered by `useScenarioPreviewStore`). Updates reactively as the user stacks changes.
+- Below: a **read-only `CalendarView`** showing the live schedule with every staged change applied (powered by `useScenarioPreviewStore`, re-hydrated whenever scenario state or the active tab changes). Updates reactively as the user stacks changes.
 
 ### 6.7 Add Job slide-over
 
@@ -436,7 +487,7 @@ Top toggle: `BC Job` | `Custom Card`.
   - Multi — check multiple lines
   - Auto-schedule — engine proposes a slot for every line at the earliest legal time
   Live "predicted slot" times shown under each line as the user toggles modes.
-- **Custom Card** mode: 7 preset chips + a "build your own" form (title, background + text color pickers, hours with Full Day/Full Week shortcuts, resource dropdown, optional notes).
+- **Custom Card** mode: 7 preset chips + a "build your own" form (title, background + text color pickers with live preview, hours with Full Day / Full Week shortcuts, resource dropdown, **Apply field** with two checkboxes — "Apply to all N resources" for shop-wide events and "🔒 Lock — cascade flows around this card" for PTO/Holiday/cert immutability — and optional notes). Picking a preset auto-fills title/color/hours and toggles the lock + apply-all checkboxes per the preset's flags (all presets have `lockByDefault: true`; only Holiday has `applyAllByDefault: true`).
 
 ### 6.8 Edit Job slide-over
 
@@ -635,29 +686,46 @@ Approach:
 
 ## 10. Suggestions for the production build
 
-Ordered by leverage:
+Ordered by leverage. Items marked ✅ have already landed in the prototype.
 
-1. **Get Power SDK + Dataverse environment set up first.** Without it the rest is paralyzed. The schema changes in [docs/04](04-dataverse-schema.md) need to land before the SDK gen step.
-2. **Wire up real BC search before anything else.** It's the biggest external dependency and the easiest to validate end-to-end. Add Job won't be testable without it.
+### Sequencing for the production wiring
+
+1. **Get Power SDK + Dataverse environment set up first.** Without it the rest is paralyzed. The schema changes in [docs/04](04-dataverse-schema.md) need to land before the SDK gen step. While BC admin access is pending, the Airtable → Dataverse mirror via Power Automate (§8.6) is the data source.
+2. **Wire up real BC search before anything else.** Biggest external dependency, easiest to validate end-to-end. Add Job isn't testable without it.
 3. **Build CrewAssignment + WeatherCache tables in parallel** — both are small, both unblock install card chrome.
-4. **Keep the prototype HTML running for stakeholder demos in parallel.** It's a single self-contained file; ops/sales can click around it without waiting for the production build.
-5. **Don't re-implement the engine.** Copy `engine/*.ts` and `engine/*.test.ts` verbatim. The 46 tests pin the behavior.
+4. **Keep the prototype HTML running for stakeholder demos in parallel.** Single self-contained file; ops/sales can click around it without waiting for the production build.
+5. **Don't re-implement the engine.** Copy `engine/*.ts` and `engine/*.test.ts` verbatim. The 47 tests pin the behavior.
 6. **Don't redesign the calendar UI.** The Gantt-style overlay with sticky resource column took several iterations. The CSS in `lumineo.css` is the result.
 7. **Use feature flags** to roll out by area: Production → Install → Shipping → Scenario → Monthly Plan. Each surface is independent enough.
-8. **Touch-drag on iOS Safari** has historically required a polyfill for HTML5 drag-and-drop. If shop-floor tablets are iPads, plan for `Sortable.js` or equivalent.
 
-Things to add that I'd build next if I had another session:
+### Items that already landed in the prototype
 
-- **Print-friendly weekly schedule export** — foremen want paper. PDF or print stylesheet.
-- **Offline mode / local cache** — shop floor wi-fi is iffy. Service worker + IndexedDB.
-- **Multi-user real-time sync** — when two ops users move things simultaneously, they need to see each other's changes. Dataverse change-watcher or polling.
-- **Audit log / change history per line** — who moved this and why?
-- **Notifications** — past-due alerts, schedule changes pushed to crew phones.
-- **Bulk apply for custom cards** — one Holiday → all employees in one action.
+- ✅ **Pin custom cards by default.** All 7 presets have `lockByDefault: true`; AddJobPanel exposes a `🔒 Lock` checkbox so the user can override.
+- ✅ **Bulk-apply for Holiday.** "Apply to all N resources" checkbox loops `addScheduleLine` per employee in the active calendar's roster.
+- ✅ **Per-region scenario stores.** `createScenarioStore(dataSource)` factory + Production / WK / NEK / Shipping instances + kind tab strip in `ScenarioSandbox`.
+- ✅ **iOS Safari touch-drag.** `mobile-drag-drop` polyfill wired in `main.tsx` with `forceApply: true`.
+- ✅ **Print stylesheet + 🖨 button** that strips chrome and renders a clean 7-day grid suitable for foreman paper.
+- ✅ **AI auto-fill respects crew availability** alongside dollar headroom; rejections name which budget is exhausted.
+- ✅ **Accessibility basics** — NavDrawer + CascadeConfirmDialog use `role=dialog` / `role=alertdialog`, trap Escape, auto-focus first item. Prev/Next + Print get aria-labels.
+- ✅ **Cascade convergence cap** raised to 200 with a logged warning.
+
+### Items deferred to the production build (sketches in §9)
+
+- **Offline mode / local cache** — service worker + IndexedDB outbox.
+- **Multi-user real-time sync** — Dataverse `subscribe` (long-term) or 30s poll against the Airtable mirror (interim).
+- **Audit log per line** — `crfdf_schedulelinehistory` table + History tab in EditJobPanel.
+- **Virtualize calendar grid** — `react-window` for employee rows when shops grow past ~75 resources.
+
+### Out of scope per current direction
+
+- **Push notifications.** Not in the current build phase.
+- **Monthly goal as a Dataverse config row.** `MONTHLY_INSTALL_GOAL` stays a constant in `InstallationCalendar.tsx` for now; easy to swap to a Dataverse fetch when needed.
+
+### Items worth revisiting after launch
+
 - **Recurring custom cards** — yearly PTO, monthly inventory.
-- **Per-region scenario store** — scenarios for install/shipping (currently production-only).
-- **Performance pass** — virtualize the calendar grid for shops with 100+ employees.
-- **Accessibility** — keyboard nav for drag/resize, ARIA labels on the slide-overs, focus management.
+- **Per-region scenario forms** — today the change-builder forms (Overtime/Weekends/Shift/Rush) still write through `useScenarioStore` (production); they should accept a `useStore` prop like the rest of the scenario sub-components to fully respect the active tab.
+- **Keyboard nav for drag/resize.** Today's accessibility wins are around dialogs + ARIA labels; full keyboard scheduling is a larger refactor.
 
 ---
 
@@ -665,25 +733,29 @@ Things to add that I'd build next if I had another session:
 
 | File | Port verbatim | Replace |
 |---|---|---|
-| `src/engine/*.ts` | ✅ all | — |
+| `src/engine/*.ts` | ✅ all (47 tests pin behavior) | — |
 | `src/engine/*.test.ts` | ✅ all | — |
-| `src/components/*.tsx` | ✅ all | — |
-| `src/styles/lumineo.css` | ✅ | — |
-| `src/store/schedule-store.ts` | ✅ (factory) | — |
-| `src/store/scenario-store.ts` | ✅ | — |
-| `src/store/scenario-preview-store.ts` | ✅ | — |
-| `src/services/data-source.ts` | ✅ (interface) | — |
-| `src/services/dataverse.ts` | — | **Replace with real Power SDK adapter for production lines** |
-| `src/services/installation-data.ts` | — | **Replace with real Power SDK adapter for WK + NEK install lines** |
+| `src/components/*.tsx` (all 17+ files) | ✅ all | — |
+| `src/components/scenario/*.tsx` (banner / builder / impact / diff / 4 forms) | ✅ all | — |
+| `src/styles/lumineo.css` (incl. `@media print`) | ✅ | — |
+| `src/store/schedule-store.ts` (factory + 4 instances) | ✅ | — |
+| `src/store/scenario-store.ts` (factory + 4 instances) | ✅ | — |
+| `src/store/scenario-preview-store.ts` (no-op-backed) | ✅ | — |
+| `src/hooks/*.ts` | ✅ | — |
+| `src/services/data-source.ts` (interface + mock factory) | ✅ (interface only) | — |
+| `src/services/dataverse.ts` | — | **Replace with real Power SDK adapter for production lines** (interim: Dataverse mirror of Airtable) |
+| `src/services/installation-data.ts` | — | **Replace with real Power SDK adapters for WK + NEK install lines** |
 | `src/services/shipping-data.ts` | — | **Replace with real Power SDK adapter for shipping lines** |
 | `src/services/bc.ts` | — | **Replace with real BC analytics connector** |
 | `src/services/zip-geo.ts` | — | **Replace with `bc_ZipGeo` lookup via Dataverse** |
-| `src/services/planning-line-mapping.ts` | ✅ (logic) | Source the rules from `crfdf_planninglinedepartmentmap` table instead of inline |
+| `src/services/planning-line-mapping.ts` | ✅ (logic) | Source rules from `crfdf_planninglinedepartmentmap` table instead of inline |
 | `src/services/auto-schedule.ts` | ✅ | — |
 | `src/components/WeatherChip.tsx` | ✅ (component) | **Replace `getMockWeather` with `Lumineo Weather` connector call** |
 | `src/components/CrewBadge.tsx` | ✅ | — (just populated from `CrewAssignment` rows) |
-| `src/data/*.ts` | — | **Delete all** — these are mock fixtures |
+| `src/main.tsx` (incl. mobile-drag-drop polyfill init) | ✅ | — |
+| `src/data/*.ts` (mock fixtures) | — | **Delete all** in the production codebase — wire to real data sources |
 | `src/data/custom-card-presets.ts` | ✅ for v1; later, source from `crfdf_customcardpreset` Dataverse table | — |
+| `package.json` deps (`date-fns`, `zustand`, `mobile-drag-drop`, `react`) | ✅ | — |
 
 ---
 
