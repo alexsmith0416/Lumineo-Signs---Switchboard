@@ -51,6 +51,7 @@
 
 14. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
 15. [docs/16-pcf-wrapping-contract.md](docs/16-pcf-wrapping-contract.md) — wrapping the three existing React apps as PCF controls
+16. [docs/17-canvas-app-implementation.md](docs/17-canvas-app-implementation.md) — Canvas Power App build spec (container hierarchy, Power Fx, control properties)
 
 ## Linear hub
 
