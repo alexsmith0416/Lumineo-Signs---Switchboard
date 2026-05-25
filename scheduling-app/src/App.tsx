@@ -45,8 +45,12 @@ export default function App() {
         {view === "production" && (
           <ProductionCalendar onNavigate={(v) => setView(v as View)} />
         )}
-        {view === "installation" && <InstallationCalendar />}
-        {view === "shipping" && <ShippingCalendar />}
+        {view === "installation" && (
+          <InstallationCalendar onNavigate={(v) => setView(v as View)} />
+        )}
+        {view === "shipping" && (
+          <ShippingCalendar onNavigate={(v) => setView(v as View)} />
+        )}
         {view === "scenario" && <ScenarioSandbox />}
         {view === "monthly" && <MonthlyPlanView />}
       </main>

@@ -9,7 +9,12 @@ import type {
   ShiftResult,
 } from "./types";
 
-const MAX_ITERATIONS = 100;
+// Cascade is iterative — each pass may push tasks that then conflict with
+// other tasks, requiring another pass. 200 iterations is enough for any
+// reasonable schedule (Lumineo's largest single-job chains are <10 lines).
+// If we ever hit the cap we log and bail with what we've got rather than
+// running unbounded.
+const MAX_ITERATIONS = 200;
 
 export function cloneContext(ctx: ScheduleContext): ScheduleContext {
   return {
@@ -179,6 +184,17 @@ export function shiftTask(
     }
 
     if (!changedThisPass) break;
+
+    if (i === MAX_ITERATIONS - 1) {
+      // Cap hit — pathological dependency chain. Bail with the partial result
+      // so the UI can still show what we have, but flag it loudly for ops.
+      if (typeof console !== "undefined") {
+        console.warn(
+          `[cascade] hit MAX_ITERATIONS (${MAX_ITERATIONS}) for shift of line ${lineId}. ` +
+            `Schedule may not have fully converged. Returning partial result with ${moved.size} moved tasks.`,
+        );
+      }
+    }
   }
 
   return {

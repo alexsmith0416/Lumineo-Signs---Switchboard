@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { addDays } from "date-fns";
 import { useShippingStore } from "../store/schedule-store";
+import { useShippingScenarioStore } from "../store/scenario-store";
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
 
-export default function ShippingCalendar() {
+interface ShippingCalendarProps {
+  onNavigate?: (view: string) => void;
+}
+
+export default function ShippingCalendar({ onNavigate }: ShippingCalendarProps = {}) {
   const weekStart = useShippingStore((s) => s.weekStart);
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
@@ -17,6 +22,9 @@ export default function ShippingCalendar() {
       <CalendarView
         useStore={useShippingStore}
         kindMeta={KIND_META.shipping}
+        onNavigate={onNavigate}
+        supportsScenarioSandbox={!!onNavigate}
+        scenarioStore={useShippingScenarioStore}
         addAction={
           <button
             className="btn-add-job"

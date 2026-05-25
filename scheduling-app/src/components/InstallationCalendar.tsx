@@ -4,15 +4,23 @@ import {
   useInstallationStoreNEK,
   useInstallationStoreWK,
 } from "../store/schedule-store";
+import {
+  useInstallationScenarioStoreNEK,
+  useInstallationScenarioStoreWK,
+} from "../store/scenario-store";
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
+
+interface InstallationCalendarProps {
+  onNavigate?: (view: string) => void;
+}
 
 export const MONTHLY_INSTALL_GOAL = 1_100_000;
 
 type Region = "WK" | "NEK";
 
-export default function InstallationCalendar() {
+export default function InstallationCalendar({ onNavigate }: InstallationCalendarProps = {}) {
   const [region, setRegion] = useState<Region>("WK");
   const [showInvoice, setShowInvoice] = useState(true);
   const [showWeather, setShowWeather] = useState(true);
@@ -23,6 +31,8 @@ export default function InstallationCalendar() {
   } | null>(null);
 
   const useStore = region === "WK" ? useInstallationStoreWK : useInstallationStoreNEK;
+  const scenarioStore =
+    region === "WK" ? useInstallationScenarioStoreWK : useInstallationScenarioStoreNEK;
   const weekStart = useStore((s) => s.weekStart);
 
   // Ensure both stores have loaded so the combined billing stat can be
@@ -101,6 +111,9 @@ export default function InstallationCalendar() {
         monthlyGoal={showInvoice ? MONTHLY_INSTALL_GOAL : undefined}
         combinedBillingThisWeek={showInvoice ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
+        onNavigate={onNavigate}
+        supportsScenarioSandbox={!!onNavigate}
+        scenarioStore={scenarioStore}
         addAction={
           <button
             className="btn-add-job"

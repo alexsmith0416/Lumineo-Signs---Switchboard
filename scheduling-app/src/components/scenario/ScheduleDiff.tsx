@@ -1,8 +1,12 @@
 import { format } from "date-fns";
-import { useScenarioStore } from "../../store/scenario-store";
+import { useScenarioStore, type UseScenarioStore } from "../../store/scenario-store";
 
-export default function ScheduleDiff() {
-  const { result, base } = useScenarioStore();
+interface ScheduleDiffProps {
+  useStore?: UseScenarioStore;
+}
+
+export default function ScheduleDiff({ useStore = useScenarioStore }: ScheduleDiffProps = {}) {
+  const { result, base } = useStore();
   if (!result || !base) {
     return (
       <div className="impact-card">

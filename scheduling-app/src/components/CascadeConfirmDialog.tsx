@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { format } from "date-fns";
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
 import type { ShiftResult } from "../engine/types";
@@ -87,6 +88,15 @@ export default function CascadeConfirmDialog({
   onEnterScenario,
   onContinue,
 }: CascadeConfirmDialogProps) {
+  // Escape cancels — gives keyboard users a fast exit from the modal
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
   const deptFlow = moves.filter((m) => m.reason === "department-flow");
   const queueMoves = moves.filter((m) => m.reason === "employee-queue");
   const otherMoves = moves.filter((m) => m.reason === "other");
@@ -103,6 +113,9 @@ export default function CascadeConfirmDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={`Cascade preview — ${moves.length} downstream tasks would shift`}
         style={{
           background: "#fff",
           borderRadius: 8,

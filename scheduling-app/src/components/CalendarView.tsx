@@ -5,7 +5,7 @@ import { shiftTask, updateDuration } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKindMeta } from "../services/data-source";
 import type { UseScheduleStore } from "../store/schedule-store";
-import { useScenarioStore } from "../store/scenario-store";
+import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import JobCard from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
@@ -39,10 +39,12 @@ interface CalendarViewProps {
   combinedBillingThisWeek?: number;
   /** Navigation callback so the dialog can jump to the Scenario Sandbox. */
   onNavigate?: (view: string) => void;
-  /** Whether the "Try in Sandbox" option should appear in the cascade confirm dialog.
-   *  Only valid on the Production calendar today since the scenario store binds to
-   *  the production data source.  */
+  /** Whether the "Try in Sandbox" option should appear in the cascade confirm dialog. */
   supportsScenarioSandbox?: boolean;
+  /** Which scenario store to use for "Try in Sandbox". Defaults to the
+   *  production scenario store; install / shipping calendars pass their
+   *  own region-specific scenario store. */
+  scenarioStore?: UseScenarioStore;
 }
 
 interface PendingShift {
@@ -122,6 +124,7 @@ export default function CalendarView({
   combinedBillingThisWeek,
   onNavigate,
   supportsScenarioSandbox = false,
+  scenarioStore = useScenarioStore,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -141,8 +144,8 @@ export default function CalendarView({
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
   const [pendingShift, setPendingShift] = useState<PendingShift | null>(null);
-  const enterScenario = useScenarioStore((s) => s.enter);
-  const addScenarioChange = useScenarioStore((s) => s.addChange);
+  const enterScenario = scenarioStore((s) => s.enter);
+  const addScenarioChange = scenarioStore((s) => s.addChange);
   const getContext = useStore((s) => s.getContext);
 
   useEffect(() => {
@@ -307,7 +310,7 @@ export default function CalendarView({
         combinedBillingThisWeek={combinedBillingThisWeek}
       />
       <div className="calendar-toolbar">
-        <button onClick={() => setWeekStart(addDays(weekStart, -7))}>‹ Prev</button>
+        <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
           className="calendar-toolbar__today"
           onClick={() => setWeekStart(new Date())}
@@ -319,10 +322,18 @@ export default function CalendarView({
         >
           Today
         </button>
-        <button onClick={() => setWeekStart(addDays(weekStart, 7))}>Next ›</button>
+        <button onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
         <div className="calendar-toolbar__spacer" />
         {toolbarExtras}
+        <button
+          className="calendar-toolbar__print"
+          onClick={() => window.print()}
+          title="Print this week"
+          aria-label="Print this week"
+        >
+          🖨
+        </button>
         {addAction}
       </div>
 

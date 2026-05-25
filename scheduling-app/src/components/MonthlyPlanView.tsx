@@ -93,7 +93,12 @@ export default function MonthlyPlanView() {
   const goalProgress = monthStats.combined / MONTHLY_INSTALL_GOAL;
 
   const runAutofill = () => {
-    setProposal(autofillToGoal(INSTALL_CANDIDATES, gap, month.slots));
+    setProposal(
+      autofillToGoal(INSTALL_CANDIDATES, gap, month.slots, {
+        wkCrewCount: new Set(wkSchedule.map((l) => l.employeeId)).size,
+        nekCrewCount: new Set(nekSchedule.map((l) => l.employeeId)).size,
+      }),
+    );
   };
 
   return (
@@ -310,10 +315,16 @@ interface AutofillResult {
   remainingGap: number;
 }
 
+interface CrewCapacityOpts {
+  wkCrewCount: number;
+  nekCrewCount: number;
+}
+
 function autofillToGoal(
   candidates: InstallCandidate[],
   gap: number,
   weeks: WeekSlot[],
+  crew: CrewCapacityOpts,
 ): AutofillResult {
   if (gap <= 0) {
     return { selected: [], rejected: [], totalAdded: 0, remainingGap: 0 };
@@ -330,21 +341,40 @@ function autofillToGoal(
   const rejected: { candidate: InstallCandidate; reason: string }[] = [];
   let runningTotal = 0;
 
-  // Each week has a soft capacity ($ headroom = monthlyGoal/weeks - existing).
-  const weekHeadroom = weeks.map((w) => Math.max(0, MONTHLY_INSTALL_GOAL / weeks.length - w.total));
+  // Each week has TWO caps now:
+  //   1. $ headroom — keep weeks roughly balanced toward the goal
+  //   2. Crew-day headroom per region — can't book more days than crews exist
+  const weekDollarHeadroom = weeks.map((w) =>
+    Math.max(0, MONTHLY_INSTALL_GOAL / weeks.length - w.total),
+  );
+  // 5 workdays per week × crew count per region = max crew-days available.
+  // Each candidate consumes `ceil(estimatedHours / 8)` crew-days from its region.
+  const weekCrewDaysWK = weeks.map(() => 5 * crew.wkCrewCount);
+  const weekCrewDaysNEK = weeks.map(() => 5 * crew.nekCrewCount);
 
   for (const cand of sorted) {
     if (runningTotal >= gap) {
       rejected.push({ candidate: cand, reason: "Gap already closed" });
       continue;
     }
-    // Pick the first week with room.
-    const weekIdx = weekHeadroom.findIndex((h) => h >= cand.invoiceAmount * 0.5);
+    const crewDaysNeeded = Math.ceil(cand.estimatedHours / 8);
+    const regionCap = cand.region === "WK" ? weekCrewDaysWK : weekCrewDaysNEK;
+
+    // Pick the first week with both $ and crew room.
+    const weekIdx = weeks.findIndex(
+      (_, i) =>
+        weekDollarHeadroom[i]! >= cand.invoiceAmount * 0.5 &&
+        regionCap[i]! >= crewDaysNeeded,
+    );
     if (weekIdx === -1) {
-      rejected.push({ candidate: cand, reason: "No week has capacity" });
+      const reason = regionCap.every((c) => c < crewDaysNeeded)
+        ? `No ${cand.region} crew capacity (${crewDaysNeeded} crew-days needed)`
+        : "No week has capacity";
+      rejected.push({ candidate: cand, reason });
       continue;
     }
-    weekHeadroom[weekIdx]! -= cand.invoiceAmount;
+    weekDollarHeadroom[weekIdx]! -= cand.invoiceAmount;
+    regionCap[weekIdx]! -= crewDaysNeeded;
     selected.push(cand);
     runningTotal += cand.invoiceAmount;
   }

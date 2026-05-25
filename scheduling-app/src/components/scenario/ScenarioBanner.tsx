@@ -1,11 +1,15 @@
-import { useScenarioStore } from "../../store/scenario-store";
+import { useScenarioStore, type UseScenarioStore } from "../../store/scenario-store";
 
 interface ScenarioBannerProps {
   onCommit?: () => void;
+  useStore?: UseScenarioStore;
 }
 
-export default function ScenarioBanner({ onCommit }: ScenarioBannerProps) {
-  const { active, changes, discard, commit } = useScenarioStore();
+export default function ScenarioBanner({
+  onCommit,
+  useStore = useScenarioStore,
+}: ScenarioBannerProps) {
+  const { active, changes, discard, commit } = useStore();
   if (!active) return null;
   return (
     <div className="scenario-banner">

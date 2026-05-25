@@ -572,7 +572,68 @@ Production work: confirm LNI's data shape matches; align field names; add change
 
 ---
 
-## 9. Suggestions for the production build
+## 8.6 Airtable bridge (interim data source)
+
+Until BC admin privileges land, both this Scheduling Hub and the production Scheduling app pull from Dataverse mirrored from Airtable via a Power Automate sync flow (the design lives in [docs/13](13-airtable-bridge-mapping.md)). Implication for the production build:
+
+- The `ScheduleDataSource` interface is unchanged — implementations read from Dataverse just like the final BC-backed version would.
+- The Airtable→Dataverse mirror flow runs on a schedule (every N minutes). Stale reads are possible. Plan for ~5 minute lag.
+- Writes from the app go to Dataverse and are picked up by the reverse flow into Airtable. Don't write to Airtable directly from the app.
+- When BC API access lands, the data source implementations swap from "Dataverse mirror" to "Dataverse virtual table over BC" with no UI change.
+
+## 9. Deferred improvements with implementation notes
+
+Items intentionally deferred from the prototype build that the production team should sequence in. Each entry includes the suggested approach so you can scope quickly.
+
+### Offline mode + service worker
+
+Shop-floor wi-fi is often spotty. The Code App should serve the last-known schedule offline and queue writes for replay on reconnect.
+
+Approach:
+
+- Register a service worker that caches the app shell + the latest `loadWeek` response per kind.
+- Move the `ScheduleDataSource` calls behind a thin retry/queue wrapper that, on `navigator.onLine === false`, writes to an IndexedDB outbox and returns optimistic results.
+- On `online` event, drain the outbox via the real data source. Surface a "syncing N changes" toast.
+- Pair with a "Stale data — last sync HH:MM" banner when the cache is over ~10 min old.
+
+The 4 schedule stores plus the scenario stores all already use the same data source interface, so this wrapper is the only insertion point needed.
+
+### Multi-user real-time sync
+
+Two ops users editing simultaneously should see each other's changes within a few seconds.
+
+Approach (Dataverse-backed):
+
+- Subscribe to Dataverse `subscribe` events on the schedule line tables.
+- On change, dispatch through `useScheduleStore.setState` for the affected line.
+- For conflict resolution, take last-write-wins for non-cascade edits; for cascade commits, use an optimistic-concurrency token (existing `modifiedon` column) and re-fetch + re-apply on conflict.
+
+Approach (Airtable interim):
+
+- Airtable doesn't expose change-watch in the way Dataverse does. Poll the Dataverse mirror every 30 s via `loadWeek` while a calendar is mounted.
+- Show a "refreshed N seconds ago" indicator.
+
+### Audit log per schedule line
+
+"Who moved this, when, and why" matters for liability + post-mortems.
+
+Approach:
+
+- New Dataverse table `crfdf_schedulelinehistory` with FK to the line, plus actor, timestamp, old value, new value, change reason (text), source ("drag" / "edit-panel" / "scenario-commit" / "auto-fill").
+- Trigger via Dataverse plugin or via the data source wrapper writing a history row on every `updateScheduleLine` / `createScheduleLine` / `deleteScheduleLine`.
+- Surface a "History" tab in `EditJobPanel` showing the tail of changes.
+
+### Virtualize calendar for large shops
+
+At Lumineo's current scale (~20 + ~20 + ~10) the calendar renders every row eagerly with no issue. If either shop grows past ~75 employees a single render starts to feel sluggish.
+
+Approach:
+
+- Replace the `grouped.map(({ dept, emps }) => emps.map(emp => <EmployeeRow ... />))` chain in `CalendarView` with `react-window`'s `VariableSizeList`, item per employee row.
+- Department headers stay outside the virtualization, rendered as fixed dividers between sections.
+- The sticky resource column + sticky dept header label CSS continues to work since they're inside the virtualized children's container.
+
+## 10. Suggestions for the production build
 
 Ordered by leverage:
 
@@ -600,7 +661,7 @@ Things to add that I'd build next if I had another session:
 
 ---
 
-## 10. File-by-file map (what to port vs replace)
+## 11. File-by-file map (what to port vs replace)
 
 | File | Port verbatim | Replace |
 |---|---|---|
@@ -626,7 +687,7 @@ Things to add that I'd build next if I had another session:
 
 ---
 
-## 11. How to validate the production build matches the prototype
+## 12. How to validate the production build matches the prototype
 
 For each milestone in Linear (M0–M15 + future):
 

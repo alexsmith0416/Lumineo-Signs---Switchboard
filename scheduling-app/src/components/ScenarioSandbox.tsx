@@ -1,6 +1,16 @@
-import { useEffect } from "react";
-import { useScenarioStore } from "../store/scenario-store";
-import { useScheduleStore } from "../store/schedule-store";
+import { useEffect, useState } from "react";
+import {
+  useInstallationScenarioStoreNEK,
+  useInstallationScenarioStoreWK,
+  useProductionScenarioStore,
+  useShippingScenarioStore,
+} from "../store/scenario-store";
+import {
+  useInstallationStoreNEK,
+  useInstallationStoreWK,
+  useScheduleStore,
+  useShippingStore,
+} from "../store/schedule-store";
 import { useScenarioPreviewStore } from "../store/scenario-preview-store";
 import { detectConflicts } from "../engine/conflicts";
 import { KIND_META } from "../services/data-source";
@@ -10,19 +20,71 @@ import ImpactSummary from "./scenario/ImpactSummary";
 import ScheduleDiff from "./scenario/ScheduleDiff";
 import CalendarView from "./CalendarView";
 
-export default function ScenarioSandbox() {
-  const { active, enter, result } = useScenarioStore();
-  const getContext = useScheduleStore((s) => s.getContext);
-  const loadWeek = useScheduleStore((s) => s.loadWeek);
-  const schedule = useScheduleStore((s) => s.schedule);
-  const liveWeekStart = useScheduleStore((s) => s.weekStart);
+type Kind = "production" | "install-wk" | "install-nek" | "shipping";
 
-  // Make sure the live schedule has been loaded once before we try to enter.
+const KIND_TABS: Array<{ id: Kind; label: string }> = [
+  { id: "production", label: "Production" },
+  { id: "install-wk", label: "Install · WK" },
+  { id: "install-nek", label: "Install · NEK" },
+  { id: "shipping", label: "Shipping" },
+];
+
+export default function ScenarioSandbox() {
+  const [kind, setKind] = useState<Kind>("production");
+
+  // Subscribe to every scenario store's pending-change count so the tab
+  // labels can show "(N)" badges. Hook order is stable across renders.
+  const prodCount = useProductionScenarioStore((s) => s.changes.length);
+  const wkCount = useInstallationScenarioStoreWK((s) => s.changes.length);
+  const nekCount = useInstallationScenarioStoreNEK((s) => s.changes.length);
+  const shipCount = useShippingScenarioStore((s) => s.changes.length);
+  const counts: Record<Kind, number> = {
+    production: prodCount,
+    "install-wk": wkCount,
+    "install-nek": nekCount,
+    shipping: shipCount,
+  };
+
+  // Resolve the matching store pair for the selected kind. Calling all of
+  // them by selector each render is fine — Zustand only re-renders when
+  // the selected slice changes.
+  const scenarioStore =
+    kind === "production"
+      ? useProductionScenarioStore
+      : kind === "install-wk"
+        ? useInstallationScenarioStoreWK
+        : kind === "install-nek"
+          ? useInstallationScenarioStoreNEK
+          : useShippingScenarioStore;
+  const scheduleStore =
+    kind === "production"
+      ? useScheduleStore
+      : kind === "install-wk"
+        ? useInstallationStoreWK
+        : kind === "install-nek"
+          ? useInstallationStoreNEK
+          : useShippingStore;
+  const kindMeta =
+    kind === "production"
+      ? KIND_META.production
+      : kind === "shipping"
+        ? KIND_META.shipping
+        : KIND_META.installation;
+
+  const active = scenarioStore((s) => s.active);
+  const result = scenarioStore((s) => s.result);
+  const enter = scenarioStore((s) => s.enter);
+  const getContext = scheduleStore((s) => s.getContext);
+  const loadWeek = scheduleStore((s) => s.loadWeek);
+  const schedule = scheduleStore((s) => s.schedule);
+  const liveWeekStart = scheduleStore((s) => s.weekStart);
+
+  // Make sure the matching live schedule has been loaded once
   useEffect(() => {
     if (schedule.length === 0) void loadWeek();
   }, [schedule.length, loadWeek]);
 
-  // Auto-enter the sandbox the moment the user lands on this view (or after
+  // Auto-enter the sandbox the moment the user lands on this kind (or after
   // they Commit / Discard). No more splash screen.
   useEffect(() => {
     if (!active && schedule.length > 0) {
@@ -47,7 +109,7 @@ export default function ScenarioSandbox() {
       loading: false,
       error: null,
     });
-  }, [active, result, liveWeekStart, getContext]);
+  }, [active, result, liveWeekStart, getContext, kind]);
 
   if (schedule.length === 0) {
     return <div className="loading">Loading schedule…</div>;
@@ -55,12 +117,63 @@ export default function ScenarioSandbox() {
 
   return (
     <div>
-      <ScenarioBanner />
+      {/* Kind tabs — switch which calendar this sandbox is for */}
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          marginBottom: 10,
+          padding: 4,
+          background: "var(--bg-secondary)",
+          borderRadius: 6,
+          flexWrap: "wrap",
+        }}
+        role="tablist"
+        aria-label="Scenario sandbox kind"
+      >
+        {KIND_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={kind === t.id}
+            onClick={() => setKind(t.id)}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              borderRadius: 4,
+              background: kind === t.id ? "var(--lumineo-navy)" : "transparent",
+              color: kind === t.id ? "#fff" : "var(--text-primary)",
+              fontWeight: kind === t.id ? 600 : 500,
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            {t.label}
+            {counts[t.id] > 0 && (
+              <span
+                style={{
+                  marginLeft: 6,
+                  padding: "1px 6px",
+                  borderRadius: 8,
+                  background: kind === t.id ? "rgba(255,255,255,0.25)" : "var(--lumineo-red)",
+                  color: "#fff",
+                  fontSize: 10,
+                }}
+              >
+                {counts[t.id]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <ScenarioBanner useStore={scenarioStore} />
       <div className="scenario-grid" style={{ marginTop: 12 }}>
-        <ChangeBuilder />
+        <ChangeBuilder useStore={scenarioStore} useScheduleStore={scheduleStore} />
         <div>
-          <ImpactSummary />
-          <ScheduleDiff />
+          <ImpactSummary useStore={scenarioStore} />
+          <ScheduleDiff useStore={scenarioStore} />
         </div>
       </div>
 
@@ -80,7 +193,7 @@ export default function ScenarioSandbox() {
         <CalendarView
           useStore={useScenarioPreviewStore}
           kindMeta={{
-            ...KIND_META.production,
+            ...kindMeta,
             title: "Scenario Preview",
           }}
           readOnly

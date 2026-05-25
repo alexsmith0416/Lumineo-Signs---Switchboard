@@ -270,6 +270,19 @@ input, select, textarea {
   cursor: default;
 }
 
+.calendar-toolbar__print {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.calendar-toolbar__print:hover {
+  background: var(--bg-tertiary) !important;
+}
+
 /* Add Job button — brand red, always pinned right of the toolbar even
    when the toolbar wraps onto multiple lines on smaller screens. */
 .btn-add-job {
@@ -870,7 +883,87 @@ input, select, textarea {
   }
 }
 
-/* Even tighter for very narrow phones */
+/* =================================================================
+   PRINT — clean week schedule with chrome stripped, for foreman paper.
+   ================================================================= */
+
+@media print {
+  body {
+    background: #fff;
+    font-size: 10px;
+  }
+  .app-shell {
+    display: block;
+    height: auto;
+  }
+  .app-header,
+  .app-sidebar,
+  .nav-drawer,
+  .nav-drawer-backdrop,
+  .calendar-toolbar button,
+  .calendar-toolbar > div[style*="display: flex"],
+  .calendar-toolbar > div[style*="display:flex"],
+  .app-header__menu,
+  .app-header__actions,
+  .btn-add-job,
+  .gantt-card .resize-handle,
+  .slide-over,
+  .app-main {
+    background: #fff !important;
+  }
+  .app-header,
+  .nav-drawer,
+  .nav-drawer-backdrop,
+  .calendar-toolbar button,
+  .btn-add-job,
+  .gantt-card .resize-handle,
+  .slide-over {
+    display: none !important;
+  }
+  .app-main {
+    padding: 0;
+    overflow: visible;
+  }
+  /* Print page title — derive from page <h1>/<h2> if present, else from
+     the calendar's week label. */
+  .calendar-toolbar__label {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 0 6px;
+  }
+  .calendar-grid {
+    border: 1px solid #999;
+    overflow: visible;
+    page-break-inside: auto;
+  }
+  .calendar-header-row,
+  .employee-row,
+  .dept-section {
+    min-width: 0 !important;
+    page-break-inside: avoid;
+  }
+  .calendar-header-row {
+    grid-template-columns: 110px repeat(7, 1fr) !important;
+    background: #f0f0f0;
+  }
+  .employee-row {
+    grid-template-columns: 110px 1fr !important;
+  }
+  .employee-row__days {
+    grid-template-columns: repeat(7, 1fr) !important;
+  }
+  .gantt-card {
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  .job-card {
+    border: 1px solid rgba(0, 0, 0, 0.3) !important;
+  }
+  /* Hide the live week-summary stats strip — replace with date + branding */
+  .app-main > div > div:first-child {
+    display: none !important;
+  }
+}
 @media (max-width: 380px) {
   .calendar-header-row,
   .dept-section {

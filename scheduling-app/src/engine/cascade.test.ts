@@ -129,3 +129,25 @@ describe("updateDuration", () => {
     expect(a.endDateTime.getTime()).toBeGreaterThan(at(0, 12).getTime());
   });
 });
+
+describe("cascade — locked custom cards", () => {
+  it("flows around a locked PTO card on the same employee", () => {
+    const ctx = buildContext([
+      line({
+        id: "pto",
+        jobNo: "PTO",
+        employeeId: "bob",
+        departmentId: "metal",
+        start: at(2, 8),
+        estimatedHours: 8,
+        isLocked: true,
+      }),
+      line({ id: "a", jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 4 }),
+    ]);
+    // Move A forward so it would naturally collide with the locked PTO
+    const r = shiftTask(ctx, "a", at(2, 8), undefined, { cascade: true });
+    const pto = r.context.schedule.find((l) => l.id === "pto")!;
+    expect(pto.startDateTime.getTime()).toBe(at(2, 8).getTime());
+    expect(pto.isLocked).toBe(true);
+  });
+});

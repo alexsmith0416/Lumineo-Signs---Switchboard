@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { useScenarioStore } from "../../store/scenario-store";
-import { useScheduleStore } from "../../store/schedule-store";
+import { useScenarioStore, type UseScenarioStore } from "../../store/scenario-store";
+import { useScheduleStore, type UseScheduleStore } from "../../store/schedule-store";
 import OvertimeForm from "./forms/OvertimeForm";
 import WeekendsForm from "./forms/WeekendsForm";
 import ShiftTaskForm from "./forms/ShiftTaskForm";
 import RushJobForm from "./forms/RushJobForm";
 import type { Employee, ScheduleLine } from "../../engine/types";
+
+interface ChangeBuilderProps {
+  useStore?: UseScenarioStore;
+  useScheduleStore?: UseScheduleStore;
+}
 
 type ChangeKind = "overtime" | "weekends" | "shift" | "rush" | null;
 
@@ -34,10 +39,13 @@ function describeChange(
   }
 }
 
-export default function ChangeBuilder() {
-  const { changes, removeChange } = useScenarioStore();
-  const employees = useScheduleStore((s) => s.employees);
-  const schedule = useScheduleStore((s) => s.schedule);
+export default function ChangeBuilder({
+  useStore = useScenarioStore,
+  useScheduleStore: useScheduleStoreProp = useScheduleStore,
+}: ChangeBuilderProps = {}) {
+  const { changes, removeChange } = useStore();
+  const employees = useScheduleStoreProp((s) => s.employees);
+  const schedule = useScheduleStoreProp((s) => s.schedule);
   const [active, setActive] = useState<ChangeKind>(null);
 
   if (active) {

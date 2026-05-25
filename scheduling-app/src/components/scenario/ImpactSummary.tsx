@@ -1,7 +1,11 @@
-import { useScenarioStore } from "../../store/scenario-store";
+import { useScenarioStore, type UseScenarioStore } from "../../store/scenario-store";
 
-export default function ImpactSummary() {
-  const { impact } = useScenarioStore();
+interface ImpactSummaryProps {
+  useStore?: UseScenarioStore;
+}
+
+export default function ImpactSummary({ useStore = useScenarioStore }: ImpactSummaryProps = {}) {
+  const { impact } = useStore();
   if (!impact) {
     return (
       <div className="impact-card">

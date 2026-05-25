@@ -38,6 +38,8 @@ export default function AddJobPanel({
   const [customFg, setCustomFg] = useState("#1a1d23");
   const [customHours, setCustomHours] = useState(8);
   const [customEmployeeId, setCustomEmployeeId] = useState<string>(initialEmployeeId ?? "");
+  const [customLocked, setCustomLocked] = useState(false);
+  const [customApplyAll, setCustomApplyAll] = useState(false);
 
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
@@ -181,12 +183,13 @@ export default function AddJobPanel({
     setCustomBg(preset.bgColor);
     setCustomFg(preset.textColor);
     setCustomHours(preset.defaultHours);
+    setCustomLocked(preset.lockByDefault ?? false);
+    setCustomApplyAll(preset.applyAllByDefault ?? false);
   };
 
   const commitCustom = async () => {
-    if (!customTitle || !customEmployeeId) return;
-    const emp = employees.get(customEmployeeId);
-    if (!emp) return;
+    if (!customTitle) return;
+    if (!customApplyAll && !customEmployeeId) return;
 
     const ctxForEngine = {
       employees,
@@ -199,36 +202,45 @@ export default function AddJobPanel({
     let start = initialStart ? new Date(initialStart) : new Date();
     if (start.getHours() < 8) start.setHours(8, 0, 0, 0);
 
-    const tempLine: ScheduleLine = {
-      id: "tmp",
-      jobNo: customTitle,
-      customerName: customTitle,
-      planningLineDescription: customNotes,
-      startDateTime: start,
-      endDateTime: start,
-      estimatedHours: customHours,
-      overrideHours: null,
-      employeeId: customEmployeeId,
-      departmentId: emp.departmentId,
-      customerDueDate: null,
-      isLocked: false,
-      jobSequence: 0,
-      isCustom: true,
-      customColor: customBg,
-      customTextColor: customFg,
-    };
-    const end = calculateEndTime(
-      start,
-      effectiveHours(tempLine, emp),
-      emp,
-      ctxForEngine,
-    );
+    const targets = customApplyAll
+      ? [...employees.values()]
+      : (() => {
+          const emp = employees.get(customEmployeeId);
+          return emp ? [emp] : [];
+        })();
 
-    await addScheduleLine({
-      ...tempLine,
-      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      endDateTime: end,
-    });
+    for (const emp of targets) {
+      const tempLine: ScheduleLine = {
+        id: "tmp",
+        jobNo: customTitle,
+        customerName: customTitle,
+        planningLineDescription: customNotes,
+        startDateTime: start,
+        endDateTime: start,
+        estimatedHours: customHours,
+        overrideHours: null,
+        employeeId: emp.id,
+        departmentId: emp.departmentId,
+        customerDueDate: null,
+        isLocked: customLocked,
+        jobSequence: 0,
+        isCustom: true,
+        customColor: customBg,
+        customTextColor: customFg,
+      };
+      const end = calculateEndTime(
+        start,
+        effectiveHours(tempLine, emp),
+        emp,
+        ctxForEngine,
+      );
+
+      await addScheduleLine({
+        ...tempLine,
+        id: `custom-${emp.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        endDateTime: end,
+      });
+    }
     onClose();
   };
 
@@ -527,6 +539,7 @@ export default function AddJobPanel({
                 className="form-field__select"
                 value={customEmployeeId}
                 onChange={(e) => setCustomEmployeeId(e.target.value)}
+                disabled={customApplyAll}
               >
                 <option value="">Choose…</option>
                 {[...employees.values()].map((e) => (
@@ -535,6 +548,46 @@ export default function AddJobPanel({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="form-field">
+              <div className="form-field__label">Apply</div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  padding: "6px 10px",
+                  background: "var(--input-bg)",
+                  fontSize: 12,
+                }}
+              >
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={customApplyAll}
+                    onChange={(e) => setCustomApplyAll(e.target.checked)}
+                  />
+                  <span>
+                    Apply to <strong>all {employees.size} resources</strong>
+                    {" "}
+                    <span style={{ color: "var(--text-tertiary)" }}>
+                      (e.g. shop-wide Holiday)
+                    </span>
+                  </span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={customLocked}
+                    onChange={(e) => setCustomLocked(e.target.checked)}
+                  />
+                  <span>
+                    🔒 Lock — cascade flows around this card{" "}
+                    <span style={{ color: "var(--text-tertiary)" }}>(recommended for PTO / Holiday)</span>
+                  </span>
+                </label>
+              </div>
             </div>
 
             <div className="form-field">
@@ -568,7 +621,9 @@ export default function AddJobPanel({
                 ? !selected ||
                   (mode === "single" && singleLineNo === null) ||
                   (mode === "multi" && checkedLines.size === 0)
-                : !customTitle || !customEmployeeId || customHours <= 0
+                : !customTitle ||
+                  (!customApplyAll && !customEmployeeId) ||
+                  customHours <= 0
             }
             onClick={cardKind === "bc" ? commit : commitCustom}
           >
