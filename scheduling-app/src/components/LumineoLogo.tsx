@@ -1,0 +1,35 @@
+import type { SVGProps } from "react";
+
+interface LumineoLogoProps extends Omit<SVGProps<SVGSVGElement>, "title"> {
+  size?: number;
+  color?: string;
+  title?: string;
+}
+
+export default function LumineoLogo({
+  size = 32,
+  color = "#E8151B",
+  title = "Lumineo Signs",
+  className,
+  ...rest
+}: LumineoLogoProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 732 732"
+      width={size}
+      height={size}
+      role="img"
+      aria-label={title}
+      className={className}
+      {...rest}
+    >
+      <title>{title}</title>
+      <path
+        d="M0,0 L732,0 L732,732 L0,732 Z M162,561 L735.9,455.1 L735.8,378.5 Z M162,561 L735.5,285.8 L735.2,189.3 Z M162,561 L734.8,64.7 L734.6,-3.5 Z M162,561 L734.6,-3.5 L737,-5 L666.3,-3.7 Z M162,561 L541.8,-4.1 L445.2,-4.5 Z M162,561 L352.6,-4.7 L276,-4.9 Z"
+        fill={color}
+        fillRule="evenodd"
+      />
+    </svg>
+  );
+}
