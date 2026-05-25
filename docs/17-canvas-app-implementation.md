@@ -1050,6 +1050,126 @@ For Operations:
 
 ---
 
+## Appendix — Migrating from the current Screen1 state to this spec
+
+The current `.msapp` Screen1 (as built by Claude Code in VS Code) has all the
+right components placed but in a different layout from the one this doc
+describes. Specifically:
+
+| Current Screen1 zone | What's there now | Target per this doc |
+|---|---|---|
+| Top bar (Y=0) | `lcl_Header` full width | Keep — becomes `conHeader` (64 px tall) |
+| Left rail (X=0, full height) | `lcl_NavRail` | **Remove from home screens.** Doc 17 design doesn't use a left rail — navigation between sub-apps happens via the app launcher tiles. (If you want to keep the rail as a power-user shortcut, hide it on phone and put it inside the header on tablet/desktop.) |
+| KPI row (Y=80) | 4× `lcl_KpiCard` | Move into `conKpiGrid` (a child of `conGlanceRow`) |
+| Right of KPI row | `lcl_DaysCounter` + 2× `lcl_WeatherChip` | Days counter moves to the **left** of the KPI strip in `conGlanceRow`. Weather chips move OUT of the Operations home and into `scrHomeInst`'s role dashboard only (per doc 05 — weather is an Installation-role widget). |
+| Announcements (Y=256, left) | 2× `lcl_AnnouncementCard` | Move into `conAnnouncements` (a vertical container child of `conContent`, full width). Convert from 2 hard-coded cards to a Gallery over `lum_announcement` so the count is data-driven. |
+| Events (Y=256, right) | 3× `lcl_EventCalendarStrip` | **Move out of the home screen entirely.** Doc 17 doesn't have an events panel on the splash — this content belongs on a future dedicated calendar screen. Or, if you want to keep it visible on home, treat it as a role-dashboard widget (with the proper card wrapper). |
+| Bottom row | `lcl_BirthdayStrip`, 2× `lcl_CrewTruckBadge`, `lcl_PhotoCarousel` | Birthday strip → `conBirthdays`. Photo carousel → `conPhotoReel`. Crew badges → **move out of Operations home into `scrHomeInst`'s route widget** (per doc 10 — the 2M 1T badge sits on individual install route stops, not on the splash). |
+
+### Concrete refactor steps
+
+1. **Add containers** as new children of Screen1 (or a new `scrHomeOps`
+   screen — recommended so other roles can live in separate screens):
+
+   ```
+   scrHomeOps (Fill = gblBrand.bg)
+   ├─ conHeader            (X=0, Y=0, Width=App.Width, Height=64)
+   ├─ conContent            (X=gblContentX, Y=76, Width=gblContentW, vertical auto-layout, gap 12)
+   │  ├─ conGlanceRow        (horizontal on desktop, vertical on phone, gap 8)
+   │  │  ├─ lcl_DaysCounter
+   │  │  └─ conKpiGrid        (horizontal wrap, gap 8)
+   │  │     ├─ kpiCardDIP
+   │  │     ├─ kpiCardOpenValue
+   │  │     ├─ kpiCardGmApril
+   │  │     └─ kpiCardGmYtd
+   │  ├─ conAnnouncements    (vertical, gallery over lum_announcement)
+   │  ├─ conAppLauncher      (horizontal wrap, 5 cmpAppTile instances)
+   │  ├─ conRoleDashboard    (vertical on phone, 2-col grid on desktop)
+   │  │  ├─ widgetDeptLoad      (span 2 — full width)
+   │  │  ├─ widgetLateTasks     (col 1)
+   │  │  └─ widgetPendingApprovals (col 2)
+   │  ├─ conBirthdays        (lcl_BirthdayStrip wrapped with a title row)
+   │  └─ conPhotoReel        (lcl_PhotoCarousel wrapped with a title row)
+   └─ conRoleSwitcher        (popover for testing — opens from header avatar)
+   ```
+
+2. **Re-parent existing controls** into the containers above. In Power
+   Apps Studio: right-click control → Reparent → pick container. Or in
+   the YAML source (if you're editing as code via `pac canvas pull`),
+   move the control entries under the new container nodes.
+
+3. **Hide weather + crew badge controls** on Ops home:
+
+   ```powerfx
+   // lcl_WeatherChip_Warehouse.Visible
+   gblUser.role = "Installation"
+
+   // lcl_CrewTruckBadge1.Visible
+   gblUser.role = "Installation"
+   ```
+
+   Or just delete them from `scrHomeOps` and re-instantiate them in
+   `scrHomeInst` where they belong.
+
+4. **Build `cmpAppTile`** as a new canvas component (Insert → Components →
+   New component). Per the spec earlier in this doc. Instantiate 5 times
+   inside `conAppLauncher` for Project Scheduler, Weekly Scheduler, Sign
+   Builder Pro, Time & Photo, Sales Hub.
+
+5. **Build the 3 Operations dashboard widgets** as new canvas components
+   (or as nested containers if you prefer):
+   - `widgetDeptLoad` — a card with a horizontal bar list (Production,
+     Installation, Shipping with hours each, scaled to max)
+   - `widgetLateTasks` — a card with a gallery over
+     `Filter('lum_task', status<>"Done" && scheduledDate < Today())`
+   - `widgetPendingApprovals` — a card with a gallery over a union of
+     `lum_signspec` (awaiting approval) and `lum_opportunity` (quotes
+     >$50k awaiting Ops sign-off)
+
+6. **Add the 4 other role screens** (`scrHomeSales`, `scrHomeProd`,
+   `scrHomeInst`, `scrHomeShip`). Each is a copy of `scrHomeOps` with
+   role-specific KPI keys, app tile visibility, and dashboard widgets per
+   doc 05.
+
+7. **Route on `App.OnStart`** to the correct home screen based on
+   `gblUser.role` per the snippet earlier in this doc.
+
+8. **Wire KPI data binding** per the "Wiring KPI cards to Dataverse"
+   section above. Replace `"$0"` placeholder text with the `With()` +
+   `LookUp()` formulas.
+
+### Components to NOT delete
+
+- `lcl_NavRail` — keep the component definition so it's available for
+  reuse on future dense desktop screens (e.g. Project Scheduler's job
+  list shell). Just don't instantiate it on the home screens.
+- `lcl_EventCalendarStrip` — keep the component, drop the 3 home-screen
+  instances. Will reuse on a future events page.
+- `lcl_WeatherChip` — keep, instantiate only on `scrHomeInst`.
+- `lcl_CrewTruckBadge` — keep, instantiate only inside Installation route
+  stops.
+
+### Validation checklist
+
+After the refactor, the home screen should look like:
+
+- Navy 64-px header at top with logo, "LUMINEO SIGNS / SWITCHBOARD",
+  view title "Home · Operations", "+ New" + avatar on the right
+- White content background below
+- Glance row: navy safety card on the left (~200 px wide) + 4 white KPI
+  cards equally distributed to the right
+- Announcement card(s) full-width below
+- 5 app tiles in a single row (or 2x3 on phone)
+- Operations dashboard: Department Load full-width on top, Late Tasks +
+  Pending Approvals side-by-side below
+- Birthday strip (title + chips that scroll horizontally if needed)
+- Photo reel (title + 6-8 image tiles that scroll horizontally if needed)
+- Vertical scrolling works through the whole content area
+
+Anything that doesn't match → refer back to the per-section specs above.
+
+---
+
 ## Open questions / known gaps
 
 These need to be resolved as part of platform setup:
