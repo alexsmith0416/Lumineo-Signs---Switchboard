@@ -4,8 +4,6 @@ import { usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 
-const BUILD_TAG = "V21 — desktop layout";
-
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
   const [w, setW] = useState<number | null>(null);
@@ -55,66 +53,6 @@ function useLayoutVars(screenW: number | null): void {
   }, [screenW]);
 }
 
-function DebugBanner({ pinnedTo }: { pinnedTo: number | null }) {
-  const [dims, setDims] = useState({
-    inner: 0,
-    docW: 0,
-    screen: 0,
-    dpr: 0,
-    ua: "",
-  });
-  useEffect(() => {
-    const update = () =>
-      setDims({
-        inner: window.innerWidth,
-        docW: document.documentElement.clientWidth,
-        screen: window.screen?.width ?? 0,
-        dpr: window.devicePixelRatio || 1,
-        ua: navigator.userAgent.slice(0, 90),
-      });
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-  const kpiW =
-    pinnedTo != null ? Math.floor((Math.max(pinnedTo - 20, 240) - 6) / 2) : "?";
-
-  // Count actual rendered .kpi DOM nodes — confirms how many React rendered
-  const [kpiCount, setKpiCount] = useState<number>(0);
-  useEffect(() => {
-    const tick = setInterval(() => {
-      const n = document.querySelectorAll(".kpi-grid > .kpi").length;
-      setKpiCount(n);
-    }, 200);
-    return () => clearInterval(tick);
-  }, []);
-
-  return (
-    <div
-      style={{
-        background: "#E8151B",
-        color: "white",
-        fontFamily: "ui-monospace, Menlo, monospace",
-        fontSize: 11,
-        padding: "6px 10px",
-        lineHeight: 1.35,
-        wordBreak: "break-all",
-        textAlign: "left",
-      }}
-    >
-      <div style={{ fontWeight: 800, letterSpacing: 0.5 }}>BUILD {BUILD_TAG}</div>
-      <div>
-        innerW={dims.inner} · docW={dims.docW} · screenW={dims.screen} · dpr=
-        {dims.dpr}
-      </div>
-      <div>
-        pinned={pinnedTo ?? "?"}px · kpi-w={kpiW}px · kpi-count={kpiCount}
-      </div>
-      <div style={{ opacity: 0.85 }}>UA: {dims.ua}</div>
-    </div>
-  );
-}
-
 export default function App() {
   const [role, setRole] = useState<Role>("Operations");
   const user = usersByRole[role];
@@ -159,7 +97,6 @@ export default function App() {
 
   return (
     <div className="app" style={pinStyle}>
-      <DebugBanner pinnedTo={screenW} />
       <Header user={user} role={role} onChangeRole={setRole} />
       <SplashScreen
         role={role}
