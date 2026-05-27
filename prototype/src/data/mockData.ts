@@ -93,6 +93,13 @@ export const appTiles: AppTile[] = [
     audience: ["Operations", "Sales", "Production"],
     badgeText: "8 specs",
     enabled: true,
+    // Swap to the Power Apps Code app URL once `pac code push` has
+    // deployed Sign Builder Pro to the Lumineo tenant — the URL is
+    // assigned by Power Apps and looks like:
+    //   https://apps.powerapps.com/play/e/<env-id>/a/<app-id>
+    // Until then, this points at the existing Vercel preview so the
+    // launcher demo is end-to-end clickable.
+    launchUrl: "https://sign-builder-pro-preview.vercel.app/",
   },
   {
     key: "timePhoto",
