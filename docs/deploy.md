@@ -1,4 +1,50 @@
-# Deploying Sign Builder Pro to Power Apps
+# Deploying Sign Builder Pro
+
+Two deployment targets, depending on what you need:
+
+- **Vercel (prototype URL)** — for sharing a link with stakeholders, demoing,
+  and wiring the Switchboard launcher tile. Static hosting, no Dataverse, runs
+  on the localStorage fallback. See [§ Vercel](#vercel-prototype-url) below.
+- **Power Apps Code app (tenant deployment)** — production target, connects to
+  the real `lum_signspecification` + `lum_signproject` Dataverse tables. See
+  [§ Power Apps](#power-apps) further down.
+
+## Vercel (prototype URL)
+
+A `vercel.json` is checked in at the repo root, so Vercel auto-detects the
+build commands without any dashboard config.
+
+**One-time setup:**
+
+1. Go to <https://vercel.com/new> → **Import Git Repository** → select
+   `alexsmith0416/Lumineo-Signs---Switchboard`.
+2. Leave every field on its default — `vercel.json` already specifies the
+   install command (`cd app && npm ci`), build command (`cd app && npm run
+   build`), and output directory (`app/dist`).
+3. **Production Branch:** `claude/sign-builder-power-apps-sASaA` (or whichever
+   branch you want as the canonical prototype).
+4. Click **Deploy**. ~60 seconds later you get a URL like
+   `sign-builder-pro-<hash>.vercel.app`.
+
+Every push to the production branch redeploys automatically. Preview
+deployments are created for other branches too — handy for reviewing the
+mobile-baseline fallback or the launcher-wiring branch side-by-side.
+
+**Wiring the Switchboard launcher tile:**
+
+Once you have the Vercel URL, swap it into
+`prototype/src/data/mockData.ts` on the
+`claude/switchboard-wire-sign-builder-pro-tile` branch:
+
+```diff
+- launchUrl: "https://sign-builder-pro-preview.vercel.app/",
++ launchUrl: "https://sign-builder-pro-<hash>.vercel.app/",
+```
+
+Then clicking the ✏️ Sign Builder Pro tile in Switchboard navigates to your
+Vercel-hosted prototype with `?userEmail=&role=` appended.
+
+## Power Apps
 
 This is the end-to-end checklist for taking the React app on
 `claude/sign-builder-power-apps-sASaA` and standing it up as a Power

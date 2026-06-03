@@ -6,7 +6,8 @@ React + Vite + TypeScript Power Apps Code app that replaces the manual sign-spec
 - **Target platform:** Power Apps Code apps via `pac code init` / `pac code run` / `pac code push`
 - **Dataverse tables:** `lum_signspecification` (31 fields), `lum_signproject` (4 fields) — see `docs/dataverse-schema.md`
 - **Launches from:** Switchboard tile launcher, with `userEmail`, `role`, optional `specId` URL params
-- **Deploy guide:** `docs/deploy.md` — full `pac` CLI workflow + smoke checklist
+- **Deploy guide:** `docs/deploy.md` — full Vercel prototype + Power Apps Code app workflow
+- **Vercel config:** `vercel.json` at repo root — auto-detected by Vercel when the repo is imported
 
 ## What's built
 
