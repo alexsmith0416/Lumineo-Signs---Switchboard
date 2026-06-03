@@ -21,15 +21,22 @@ export function Capture() {
 
   const [jobNo, setJobNo] = useState<string>(active?.jobNo ?? "24-1187");
   const [category, setCategory] = useState<PhotoCategory>("Survey");
-  const fileInput = useRef<HTMLInputElement | null>(null);
+
+  // Separate inputs: gallery has NO capture attr (picks from photo library);
+  // camera has capture="environment" so it forces the OS camera app as a
+  // fallback when the in-app live preview can't run.
+  const galleryInput = useRef<HTMLInputElement | null>(null);
+  const cameraInput = useRef<HTMLInputElement | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [facingMode, setFacingMode] = useState<FacingMode>("environment");
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraNotice, setCameraNotice] = useState<string | null>(null);
   const [flashing, setFlashing] = useState(false);
   const [nowTick, setNowTick] = useState(() => new Date().toISOString());
+
+  const [showGalleryConfirm, setShowGalleryConfirm] = useState(false);
 
   const canGetUserMedia =
     typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
@@ -57,11 +64,11 @@ export function Capture() {
 
   async function startCamera(mode: FacingMode = facingMode) {
     if (!canGetUserMedia) {
-      setCameraError("Live camera not available — using file picker.");
-      fileInput.current?.click();
+      setCameraNotice("Opening your phone's camera…");
+      cameraInput.current?.click();
       return;
     }
-    setCameraError(null);
+    setCameraNotice(null);
     try {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -75,9 +82,10 @@ export function Capture() {
       }
       setStreaming(true);
     } catch (err) {
-      console.warn("Camera unavailable", err);
-      setCameraError("Camera blocked. Tap the gallery icon to pick a photo.");
+      console.warn("Camera unavailable, falling back to OS camera", err);
+      setCameraNotice("Using your phone's camera app instead.");
       setStreaming(false);
+      cameraInput.current?.click();
     }
   }
 
@@ -89,6 +97,7 @@ export function Capture() {
 
   async function snap() {
     if (!streaming || !videoRef.current) {
+      // First tap of the shutter when not streaming = enable the camera.
       void startCamera();
       return;
     }
@@ -114,7 +123,16 @@ export function Capture() {
     const dataUrl = await readAsDataUrl(file);
     const fileSizeKB = Math.max(1, Math.round(file.size / 1024));
     addPhoto({ jobNo, category, dataUrl, gps, fileSizeKB });
-    if (fileInput.current) fileInput.current.value = "";
+    e.target.value = "";
+  }
+
+  function openGalleryConfirm() {
+    setShowGalleryConfirm(true);
+  }
+
+  function confirmGalleryPick() {
+    setShowGalleryConfirm(false);
+    galleryInput.current?.click();
   }
 
   return (
@@ -184,11 +202,14 @@ export function Capture() {
                 <CameraIcon size={28} className="text-white" />
               </div>
               <div className="text-[12px] font-bold tracking-wider uppercase">
-                {canGetUserMedia ? "Tap to Enable Camera" : "Tap to Add Photo"}
+                Tap to Enable Camera
               </div>
-              {cameraError && (
+              <div className="text-[10px] text-white/70 max-w-[80%] text-center leading-tight">
+                Opens the live viewfinder, or your phone's camera app
+              </div>
+              {cameraNotice && (
                 <div className="text-[10px] text-amber-200 max-w-[80%] text-center leading-tight">
-                  {cameraError}
+                  {cameraNotice}
                 </div>
               )}
             </button>
@@ -221,8 +242,19 @@ export function Capture() {
           )}
         </div>
 
+        {/* Hidden gallery picker — no capture attribute, so the OS opens the
+            photo library. */}
         <input
-          ref={fileInput}
+          ref={galleryInput}
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          className="hidden"
+        />
+        {/* Hidden camera fallback — capture="environment" forces the OS
+            camera app on phones when getUserMedia isn't available. */}
+        <input
+          ref={cameraInput}
           type="file"
           accept="image/*"
           capture="environment"
@@ -232,10 +264,10 @@ export function Capture() {
 
         <div className="flex justify-around items-center px-3.5 py-4">
           <button
-            onClick={() => fileInput.current?.click()}
+            onClick={openGalleryConfirm}
             className="w-11 h-11 rounded-[10px] bg-navy-bg text-navy flex items-center justify-center hover:bg-gray-200"
-            aria-label="Choose from photos"
-            title="Pick from camera roll"
+            aria-label="Choose from photo library"
+            title="Pick from gallery"
           >
             <ImageIcon />
           </button>
@@ -247,7 +279,7 @@ export function Capture() {
           />
           <button
             onClick={flipCamera}
-            disabled={!canGetUserMedia}
+            disabled={!canGetUserMedia || !streaming}
             className="w-11 h-11 rounded-[10px] bg-navy-bg text-navy flex items-center justify-center hover:bg-gray-200 disabled:opacity-40"
             aria-label="Flip camera"
             title="Flip front / back"
@@ -286,7 +318,60 @@ export function Capture() {
           </button>
         </section>
       </Body>
+
+      {showGalleryConfirm && (
+        <GalleryConfirmModal
+          onCancel={() => setShowGalleryConfirm(false)}
+          onConfirm={confirmGalleryPick}
+        />
+      )}
     </>
+  );
+}
+
+function GalleryConfirmModal({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 bg-navy/50 z-40 flex items-end">
+      <div className="bg-white rounded-t-2xl w-full p-4 shadow-2xl">
+        <div className="w-12 h-12 rounded-full bg-navy-bg flex items-center justify-center mb-3">
+          <ImageIcon className="text-navy" />
+        </div>
+        <div className="text-[17px] font-extrabold text-navy">Choose from Photo Library</div>
+        <div className="text-[12px] text-gray-600 mt-1.5 leading-snug">
+          This will open your phone's photo gallery so you can upload a picture
+          taken outside the app — for example a survey photo from earlier or a
+          reference image. The file is attached to this job and category.
+        </div>
+
+        <div className="bg-gray-100 rounded-[10px] p-3 my-3.5 text-[11px] text-gray-700 leading-snug">
+          <div className="font-bold text-navy mb-1">Tip</div>
+          To capture a brand-new photo right now, close this and tap the white
+          shutter button instead — that opens your camera.
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={onCancel}
+            className="h-11 rounded-[10px] bg-gray-100 hover:bg-gray-200 text-navy font-bold text-sm border border-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="h-11 rounded-[10px] bg-navy hover:bg-navy-light text-white font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <ImageIcon size={16} className="text-white" />
+            Browse Photos
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
