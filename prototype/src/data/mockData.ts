@@ -25,40 +25,126 @@ export const usersByRole: Record<Role, User> = {
 };
 
 export const safetyMetric: SafetyMetric = {
-  currentStreakDays: 247,
-  longestStreakDays: 412,
-  lastResetDate: "2025-04-03",
+  currentStreakDays: 78,
+  longestStreakDays: 390,
+  lastResetDate: "2026-03-04",
 };
 
+// Source: Lumineo_KPI_Dashboard_Monthly_2026 — April-LT (and prior months for
+// trend %). Sparkline order: Jan, Feb, Mar, Apr. Delta = April vs March.
+// "Shown Views" column drives which roles receive each KPI:
+//   - "All Views"          → every role
+//   - "Operations, Sales"  → Operations + Sales
+//   - "Operations"         → Operations only
+
+const kpi_revApril: Kpi = {
+  key: "rev_completions_april",
+  label: "Completions Invoiced — April",
+  value: 890833,
+  valueFormat: "currency",
+  delta: 21,
+  deltaDirection: "down",
+  deltaIsGood: false,
+  sparkline: [779, 881, 1121, 891],
+};
+
+const kpi_revYtd: Kpi = {
+  key: "rev_completions_ytd",
+  label: "Completions Invoiced — YTD",
+  value: 3665935,
+  valueFormat: "currency",
+  delta: 32,
+  deltaDirection: "up",
+  deltaIsGood: true,
+  sparkline: [779, 1680, 2769, 3666],
+};
+
+const kpi_gmApril: Kpi = {
+  key: "gm_pct_april",
+  label: "GM % — April",
+  value: 58.3,
+  valueFormat: "percent",
+  delta: 15,
+  deltaDirection: "up",
+  deltaIsGood: true,
+  sparkline: [53.9, 43.1, 43.1, 58.3],
+};
+
+const kpi_gmYtd: Kpi = {
+  key: "gm_pct_ytd",
+  label: "GM % — YTD",
+  value: 46.6,
+  valueFormat: "percent",
+  delta: 3,
+  deltaDirection: "up",
+  deltaIsGood: true,
+  sparkline: [53.9, 43.5, 43.5, 46.6],
+};
+
+const kpi_dip: Kpi = {
+  key: "dip_avg_days",
+  label: "Avg Days Job Open (DIP)",
+  value: 66,
+  valueFormat: "int",
+  delta: 10,
+  deltaDirection: "up",
+  deltaIsGood: false,
+  sparkline: [54, 59, 60, 66],
+};
+
+const kpi_openJobs: Kpi = {
+  key: "value_open_jobs",
+  label: "Value of Open Jobs",
+  value: 3098338,
+  valueFormat: "currency",
+  delta: 11,
+  deltaDirection: "up",
+  deltaIsGood: false,
+  sparkline: [3348, 2666, 2788, 3098],
+};
+
+const kpi_newOrdApril: Kpi = {
+  key: "new_orders_april",
+  label: "New Orders — April",
+  value: 1360447,
+  valueFormat: "currency",
+  delta: 31,
+  deltaDirection: "down",
+  deltaIsGood: false,
+  sparkline: [744, 989, 1980, 1360],
+};
+
+const kpi_newOrdYtd: Kpi = {
+  key: "new_orders_ytd",
+  label: "New Orders — YTD",
+  value: 5072801,
+  valueFormat: "currency",
+  delta: 37,
+  deltaDirection: "up",
+  deltaIsGood: true,
+  sparkline: [744, 1732, 3712, 5073],
+};
+
+const kpi_empSat: Kpi = {
+  key: "emp_sat_score",
+  label: "Employee Satisfaction",
+  value: 3.9,
+  valueFormat: "text",
+  textValue: "3.9 / 5",
+  deltaDirection: "flat",
+  delta: 0,
+  sparkline: [4.1, 3.9, 3.9, 3.9],
+};
+
+const kpis_allViews: Kpi[]      = [kpi_gmApril, kpi_gmYtd, kpi_dip];
+const kpis_opsAndSales: Kpi[]   = [kpi_revApril, kpi_revYtd, kpi_openJobs, kpi_newOrdApril, kpi_newOrdYtd];
+
 export const kpisByRole: Record<Role, Kpi[]> = {
-  Operations: [
-    { key: "dip_avg_days",      label: "Avg Days Job Open (DIP)",  value: 32,       valueFormat: "int",      delta: 3,  deltaDirection: "down", deltaIsGood: true,  sparkline: [38, 36, 35, 34, 33, 33, 32] },
-    { key: "value_open_jobs",   label: "Value of Open Jobs",        value: 1247800,  valueFormat: "currency", delta: 8,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [980, 1020, 1080, 1140, 1180, 1210, 1248] },
-    { key: "gm_pct_april",      label: "GM % — April",              value: 34.2,     valueFormat: "percent",  delta: 2,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [30, 31, 32, 33, 33.5, 34, 34.2] },
-    { key: "gm_pct_ytd",        label: "GM % — YTD",                value: 31.8,     valueFormat: "percent",  delta: 1,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [29, 29.5, 30, 30.5, 31, 31.5, 31.8] },
-  ],
-  Sales: [
-    { key: "my_open_opportunities", label: "My Opportunities", value: 11,     valueFormat: "int",      delta: 3,  deltaDirection: "up", deltaIsGood: true, sparkline: [6, 7, 8, 9, 9, 10, 11] },
-    { key: "my_quota_pct",          label: "Quota Attained",   value: 68,     valueFormat: "percent",  delta: 7,  deltaDirection: "up", deltaIsGood: true, sparkline: [42, 48, 55, 58, 61, 64, 68] },
-    { key: "won_this_month",        label: "Won This Month",   value: 47600,  valueFormat: "currency", delta: 22, deltaDirection: "up", deltaIsGood: true, sparkline: [12, 14, 22, 28, 31, 39, 47.6] },
-  ],
-  Production: [
-    { key: "my_tasks_today",          label: "My Tasks Today",         value: 5,   valueFormat: "int",   deltaDirection: "flat", sparkline: [4, 5, 5, 4, 6, 5, 5] },
-    { key: "my_hours_this_week",      label: "My Hours This Week",     value: 34, valueFormat: "hours", delta: 2,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [28, 30, 32, 30, 33, 34, 34] },
-    { key: "tasks_complete_this_week",label: "Completed This Week",    value: 19, valueFormat: "int",   delta: 4,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [12, 14, 15, 16, 17, 18, 19] },
-  ],
-  Installation: [
-    { key: "my_next_install",       label: "Next Install",         value: 0,    valueFormat: "text",    textValue: "Tomorrow, 8 AM — Hartford, CT", sparkline: [] },
-    { key: "installs_this_week",    label: "Installs This Week",   value: 4,    valueFormat: "int",     delta: 1,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [2, 3, 3, 4, 4, 4, 4] },
-    { key: "est_vs_actual_hours",   label: "Est vs Actual",        value: 92,   valueFormat: "percent", delta: 3,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [85, 87, 89, 90, 91, 91, 92] },
-    { key: "tomorrow_weather",      label: "Tomorrow's Weather",   value: 0,    valueFormat: "text",    textValue: "☀️ 72° / 54°", sparkline: [] },
-  ],
-  Shipping: [
-    { key: "packages_out_today",      label: "Packages Out Today",  value: 12,   valueFormat: "int",      delta: 2,  deltaDirection: "up",   deltaIsGood: true,  sparkline: [8, 9, 10, 10, 11, 11, 12] },
-    { key: "packages_in_queue",       label: "In Queue",            value: 23,   valueFormat: "int",      delta: 5,  deltaDirection: "down", deltaIsGood: true,  sparkline: [30, 29, 28, 26, 25, 24, 23] },
-    { key: "late_shipments",          label: "Late Shipments",      value: 1,    valueFormat: "int",      deltaDirection: "flat", sparkline: [1, 0, 1, 1, 0, 1, 1] },
-    { key: "value_shipped_this_week", label: "Value Shipped",       value: 58400,valueFormat: "currency", delta: 18, deltaDirection: "up",   deltaIsGood: true,  sparkline: [22, 28, 35, 41, 47, 52, 58.4] },
-  ],
+  Operations:   [...kpis_allViews, ...kpis_opsAndSales, kpi_empSat],
+  Sales:        [...kpis_allViews, ...kpis_opsAndSales],
+  Production:   [...kpis_allViews],
+  Installation: [...kpis_allViews],
+  Shipping:     [...kpis_allViews],
 };
 
 export const announcements: Announcement[] = [
