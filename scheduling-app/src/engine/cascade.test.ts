@@ -130,6 +130,45 @@ describe("updateDuration", () => {
   });
 });
 
+describe("cascade — bidirectional pull-back", () => {
+  it("pulls a previously-pushed task back to its preferred when the cause moves back", () => {
+    // Bob has T1 (Mon 8-12) and T2 (Mon 13-16). T2's preferredStart = Mon 13.
+    const ctx = buildContext([
+      line({
+        id: "T1",
+        jobNo: "J1",
+        employeeId: "bob",
+        departmentId: "metal",
+        start: at(0, 8),
+        estimatedHours: 4,
+      }),
+      {
+        ...line({
+          id: "T2",
+          jobNo: "J2",
+          employeeId: "bob",
+          departmentId: "metal",
+          start: at(0, 13),
+          estimatedHours: 3,
+        }),
+        preferredStart: at(0, 13),
+      },
+    ]);
+
+    // Move T1 forward to 11am — its new end (15:00) collides with T2.
+    const forward = shiftTask(ctx, "T1", at(0, 11), undefined, { cascade: true });
+    const t2After = forward.context.schedule.find((l) => l.id === "T2")!;
+    expect(t2After.startDateTime.getTime()).toBeGreaterThan(at(0, 13).getTime());
+
+    // Now move T1 back to Mon 8 — T2 should pull back to its preferred Mon 13.
+    const backward = shiftTask(forward.context, "T1", at(0, 8), undefined, {
+      cascade: true,
+    });
+    const t2Back = backward.context.schedule.find((l) => l.id === "T2")!;
+    expect(t2Back.startDateTime.getTime()).toBe(at(0, 13).getTime());
+  });
+});
+
 describe("cascade — locked custom cards", () => {
   it("flows around a locked PTO card on the same employee", () => {
     const ctx = buildContext([

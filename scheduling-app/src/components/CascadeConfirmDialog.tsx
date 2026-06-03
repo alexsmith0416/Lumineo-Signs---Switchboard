@@ -27,15 +27,23 @@ export function summarizeCascadeMoves(
   if (!targetLine) return [];
 
   const moves: CascadeMove[] = [];
+  // Defensive threshold — a start-time delta under a minute is engine
+  // book-keeping (date-object identity churn, capacity recomputation
+  // round-trips), not a perceivable cascade. The user shouldn't get a
+  // confirm dialog for sub-minute drift.
+  const MEANINGFUL_DELTA_MS = 60_000;
   for (const movedId of after.moved) {
     if (movedId === targetLineId) continue;
     const afterLine = after.context.schedule.find((l) => l.id === movedId);
     const beforeLine = beforeById.get(movedId);
     if (!afterLine || !beforeLine) continue;
-    if (
-      beforeLine.startDateTime.getTime() === afterLine.startDateTime.getTime() &&
-      beforeLine.endDateTime.getTime() === afterLine.endDateTime.getTime()
-    ) {
+    const startDelta = Math.abs(
+      afterLine.startDateTime.getTime() - beforeLine.startDateTime.getTime(),
+    );
+    // The dialog cares about start-time shifts only — end-time drift
+    // alone (capacity recomputation due to a same-day move) isn't a
+    // scheduling cascade in the user-facing sense.
+    if (startDelta < MEANINGFUL_DELTA_MS) {
       continue;
     }
     const reason: CascadeMove["reason"] =

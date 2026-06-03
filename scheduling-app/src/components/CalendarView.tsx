@@ -45,6 +45,10 @@ interface CalendarViewProps {
    *  production scenario store; install / shipping calendars pass their
    *  own region-specific scenario store. */
   scenarioStore?: UseScenarioStore;
+  /** Department IDs to hide from the rendered grid. */
+  hiddenDeptIds?: Set<string>;
+  /** Employee/resource IDs to hide from the rendered grid. */
+  hiddenEmployeeIds?: Set<string>;
 }
 
 interface PendingShift {
@@ -125,6 +129,8 @@ export default function CalendarView({
   onNavigate,
   supportsScenarioSandbox = false,
   scenarioStore = useScenarioStore,
+  hiddenDeptIds,
+  hiddenEmployeeIds,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -160,6 +166,7 @@ export default function CalendarView({
   const grouped = useMemo(() => {
     const out = new Map<string, Employee[]>();
     for (const emp of employees.values()) {
+      if (hiddenEmployeeIds?.has(emp.id)) continue;
       const list = out.get(emp.departmentId) ?? [];
       list.push(emp);
       out.set(emp.departmentId, list);
@@ -168,11 +175,14 @@ export default function CalendarView({
     [...departments.values()]
       .sort((a, b) => a.flowOrder - b.flowOrder)
       .forEach((dept) => {
+        if (hiddenDeptIds?.has(dept.id)) return;
         const emps = (out.get(dept.id) ?? []).sort((a, b) => a.name.localeCompare(b.name));
-        if (emps.length) ordered.push({ dept, emps });
+        // Include the dept even if empty — newly-added custom locations
+        // and pinned-empty groups should still appear so the user sees them.
+        ordered.push({ dept, emps });
       });
     return ordered;
-  }, [employees, departments]);
+  }, [employees, departments, hiddenDeptIds, hiddenEmployeeIds]);
 
   const onCellDragOver = (e: React.DragEvent) => {
     e.preventDefault();

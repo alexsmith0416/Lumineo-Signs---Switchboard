@@ -40,6 +40,8 @@ export default function AddJobPanel({
   const [customEmployeeId, setCustomEmployeeId] = useState<string>(initialEmployeeId ?? "");
   const [customLocked, setCustomLocked] = useState(false);
   const [customApplyAll, setCustomApplyAll] = useState(false);
+  const [customScope, setCustomScope] = useState<"resource" | "department" | "all">("resource");
+  const [customDeptId, setCustomDeptId] = useState<string>("");
 
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
@@ -184,12 +186,16 @@ export default function AddJobPanel({
     setCustomFg(preset.textColor);
     setCustomHours(preset.defaultHours);
     setCustomLocked(preset.lockByDefault ?? false);
-    setCustomApplyAll(preset.applyAllByDefault ?? false);
+    if (preset.applyAllByDefault) {
+      setCustomScope("all");
+      setCustomApplyAll(true);
+    }
   };
 
   const commitCustom = async () => {
     if (!customTitle) return;
-    if (!customApplyAll && !customEmployeeId) return;
+    if (customScope === "resource" && !customEmployeeId) return;
+    if (customScope === "department" && !customDeptId) return;
 
     const ctxForEngine = {
       employees,
@@ -202,12 +208,15 @@ export default function AddJobPanel({
     let start = initialStart ? new Date(initialStart) : new Date();
     if (start.getHours() < 8) start.setHours(8, 0, 0, 0);
 
-    const targets = customApplyAll
-      ? [...employees.values()]
-      : (() => {
-          const emp = employees.get(customEmployeeId);
-          return emp ? [emp] : [];
-        })();
+    const targets =
+      customScope === "all" || customApplyAll
+        ? [...employees.values()]
+        : customScope === "department"
+          ? [...employees.values()].filter((e) => e.departmentId === customDeptId)
+          : (() => {
+              const emp = employees.get(customEmployeeId);
+              return emp ? [emp] : [];
+            })();
 
     for (const emp of targets) {
       const tempLine: ScheduleLine = {
@@ -534,24 +543,7 @@ export default function AddJobPanel({
             </div>
 
             <div className="form-field">
-              <div className="form-field__label">Resource</div>
-              <select
-                className="form-field__select"
-                value={customEmployeeId}
-                onChange={(e) => setCustomEmployeeId(e.target.value)}
-                disabled={customApplyAll}
-              >
-                <option value="">Choose…</option>
-                {[...employees.values()].map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-field">
-              <div className="form-field__label">Apply</div>
+              <div className="form-field__label">Scope</div>
               <div
                 style={{
                   display: "flex",
@@ -564,30 +556,105 @@ export default function AddJobPanel({
               >
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                   <input
-                    type="checkbox"
-                    checked={customApplyAll}
-                    onChange={(e) => setCustomApplyAll(e.target.checked)}
+                    type="radio"
+                    name="custom-scope"
+                    checked={customScope === "resource"}
+                    onChange={() => setCustomScope("resource")}
                   />
-                  <span>
-                    Apply to <strong>all {employees.size} resources</strong>
-                    {" "}
-                    <span style={{ color: "var(--text-tertiary)" }}>
-                      (e.g. shop-wide Holiday)
-                    </span>
-                  </span>
+                  <span>One resource</span>
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                   <input
-                    type="checkbox"
-                    checked={customLocked}
-                    onChange={(e) => setCustomLocked(e.target.checked)}
+                    type="radio"
+                    name="custom-scope"
+                    checked={customScope === "department"}
+                    onChange={() => setCustomScope("department")}
+                  />
+                  <span>Entire department</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="custom-scope"
+                    checked={customScope === "all"}
+                    onChange={() => setCustomScope("all")}
                   />
                   <span>
-                    🔒 Lock — cascade flows around this card{" "}
-                    <span style={{ color: "var(--text-tertiary)" }}>(recommended for PTO / Holiday)</span>
+                    All {employees.size} resources{" "}
+                    <span style={{ color: "var(--text-tertiary)" }}>(e.g. shop-wide Holiday)</span>
                   </span>
                 </label>
               </div>
+            </div>
+
+            {customScope === "resource" && (
+              <div className="form-field">
+                <div className="form-field__label">Resource</div>
+                <select
+                  className="form-field__select"
+                  value={customEmployeeId}
+                  onChange={(e) => setCustomEmployeeId(e.target.value)}
+                >
+                  <option value="">Choose…</option>
+                  {[...employees.values()].map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {customScope === "department" && (
+              <div className="form-field">
+                <div className="form-field__label">Department</div>
+                <select
+                  className="form-field__select"
+                  value={customDeptId}
+                  onChange={(e) => setCustomDeptId(e.target.value)}
+                >
+                  <option value="">Choose…</option>
+                  {[...departments.values()]
+                    .sort((a, b) => a.flowOrder - b.flowOrder)
+                    .map((d) => {
+                      const count = [...employees.values()].filter(
+                        (e) => e.departmentId === d.id,
+                      ).length;
+                      return (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({count})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+            )}
+
+            <div className="form-field">
+              <div className="form-field__label">Lock</div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 10px",
+                  background: "var(--input-bg)",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={customLocked}
+                  onChange={(e) => setCustomLocked(e.target.checked)}
+                />
+                <span>
+                  🔒 Lock — cascade flows around this card{" "}
+                  <span style={{ color: "var(--text-tertiary)" }}>
+                    (recommended for PTO / Holiday)
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="form-field">
@@ -622,7 +689,8 @@ export default function AddJobPanel({
                   (mode === "single" && singleLineNo === null) ||
                   (mode === "multi" && checkedLines.size === 0)
                 : !customTitle ||
-                  (!customApplyAll && !customEmployeeId) ||
+                  (customScope === "resource" && !customEmployeeId) ||
+                  (customScope === "department" && !customDeptId) ||
                   customHours <= 0
             }
             onClick={cardKind === "bc" ? commit : commitCustom}

@@ -47,6 +47,9 @@ export interface ScheduleStoreState {
   addScheduleLine: (line: ScheduleLine) => Promise<void>;
   deleteScheduleLine: (lineId: string) => Promise<void>;
   setWeekStart: (date: Date) => void;
+  /** Add a department in memory. Production wires this up to a Dataverse
+   *  write through the data source. */
+  addDepartment: (dept: Department) => void;
 }
 
 function buildContext(state: ScheduleStoreState): ScheduleContext {
@@ -104,19 +107,25 @@ export function createScheduleStore(
         };
         // Reconcile stored end times with engine math — handles drift from
         // schema changes (new productivityRate column) and legacy rows.
+        // Also seeds `preferredStart` to the loaded position when absent,
+        // so the cascade has a "user-intended" floor to pull tasks back to.
         const normalized = schedule.map((line) => {
           const emp = empMap.get(line.employeeId);
-          if (!emp) return line;
+          const seededPreferred =
+            line.preferredStart instanceof Date
+              ? line
+              : { ...line, preferredStart: new Date(line.startDateTime) };
+          if (!emp) return seededPreferred;
           const engineEnd = calculateEndTime(
-            line.startDateTime,
-            effectiveHours(line, emp),
+            seededPreferred.startDateTime,
+            effectiveHours(seededPreferred, emp),
             emp,
             ctxForNormalize,
-            line.id,
+            seededPreferred.id,
           );
-          return engineEnd.getTime() === line.endDateTime.getTime()
-            ? line
-            : { ...line, endDateTime: engineEnd };
+          return engineEnd.getTime() === seededPreferred.endDateTime.getTime()
+            ? seededPreferred
+            : { ...seededPreferred, endDateTime: engineEnd };
         });
         const ctx: ScheduleContext = { ...ctxForNormalize, schedule: normalized };
         set({
@@ -209,6 +218,12 @@ export function createScheduleStore(
         schedule: next,
         conflicts: detectConflicts(ctx),
       });
+    },
+
+    addDepartment: (dept) => {
+      const next = new Map(get().departments);
+      next.set(dept.id, dept);
+      set({ departments: next });
     },
   }));
 }

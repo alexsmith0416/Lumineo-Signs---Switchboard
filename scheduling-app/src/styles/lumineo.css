@@ -283,6 +283,20 @@ input, select, textarea {
   background: var(--bg-tertiary) !important;
 }
 
+.visibility-menu__trigger {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.visibility-menu__trigger:hover {
+  background: var(--bg-tertiary) !important;
+}
+
 /* Add Job button — brand red, always pinned right of the toolbar even
    when the toolbar wraps onto multiple lines on smaller screens. */
 .btn-add-job {

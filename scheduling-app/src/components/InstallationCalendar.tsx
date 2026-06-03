@@ -11,6 +11,7 @@ import {
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
+import VisibilityMenu from "./VisibilityMenu";
 
 interface InstallationCalendarProps {
   onNavigate?: (view: string) => void;
@@ -29,11 +30,15 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
     start?: Date;
     employeeId?: string;
   } | null>(null);
+  const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
+  const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
   const useStore = region === "WK" ? useInstallationStoreWK : useInstallationStoreNEK;
   const scenarioStore =
     region === "WK" ? useInstallationScenarioStoreWK : useInstallationScenarioStoreNEK;
   const weekStart = useStore((s) => s.weekStart);
+  const employees = useStore((s) => s.employees);
+  const departments = useStore((s) => s.departments);
 
   // Ensure both stores have loaded so the combined billing stat can be
   // computed accurately regardless of which region is currently displayed.
@@ -91,7 +96,35 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
       </div>
       <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="#1b6e3e" />
       <ToggleChip label="🌤" active={showWeather} onClick={() => setShowWeather((v) => !v)} />
-      <ToggleChip label="2M·1T" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
+      <ToggleChip label="Crew/Truck" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
+      <VisibilityMenu
+        departments={[...departments.values()]}
+        employees={[...employees.values()]}
+        hiddenDeptIds={hiddenDeptIds}
+        hiddenEmployeeIds={hiddenEmployeeIds}
+        onToggleDept={(id) =>
+          setHiddenDeptIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          })
+        }
+        onToggleEmployee={(id) =>
+          setHiddenEmployeeIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          })
+        }
+        onShowAll={() => {
+          setHiddenDeptIds(new Set());
+          setHiddenEmployeeIds(new Set());
+        }}
+        resourceLabel="Crew"
+        departmentLabel="Location"
+      />
     </div>
   );
 
@@ -114,6 +147,8 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}
         scenarioStore={scenarioStore}
+        hiddenDeptIds={hiddenDeptIds}
+        hiddenEmployeeIds={hiddenEmployeeIds}
         addAction={
           <button
             className="btn-add-job"

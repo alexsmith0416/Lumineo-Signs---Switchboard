@@ -54,6 +54,12 @@ export interface ScheduleLine {
   isCustom?: boolean;
   customColor?: string | null;
   customTextColor?: string | null;
+
+  // The user's last-explicit position for this line. Cascade uses this as
+  // the floor: a pushed task pulls back to its preferred position when
+  // the cause moves back. Defaults to `startDateTime` on load. Set to
+  // the new start whenever the user explicitly drags / edits the task.
+  preferredStart?: Date | null;
 }
 
 export interface WorkHoursOverride {
