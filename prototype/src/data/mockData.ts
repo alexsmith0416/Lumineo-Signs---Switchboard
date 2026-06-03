@@ -84,6 +84,7 @@ export const appTiles: AppTile[] = [
     audience: ["Operations"],
     badgeText: "17 open",
     enabled: true,
+    targetUrl: "https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/app/4ed31b48-ef55-4425-a993-5bbe3dc439e2",
   },
   {
     key: "weeklyScheduler",
@@ -92,6 +93,7 @@ export const appTiles: AppTile[] = [
     audience: ["Operations", "Sales", "Production", "Installation", "Shipping"],
     badgeText: "23 this week",
     enabled: true,
+    targetUrl: "prototypes/Weekly Scheduler Prototype.html",
   },
   {
     key: "signBuilderPro",
@@ -100,6 +102,7 @@ export const appTiles: AppTile[] = [
     audience: ["Operations", "Sales", "Production"],
     badgeText: "8 specs",
     enabled: true,
+    targetUrl: "https://sign-builder-pro.vercel.app/",
   },
   {
     key: "timePhoto",
@@ -108,6 +111,16 @@ export const appTiles: AppTile[] = [
     audience: ["Operations", "Production", "Installation", "Shipping"],
     badgeText: "Punch in",
     enabled: true,
+    targetUrl: "prototypes/time-and-photo.html",
+  },
+  {
+    key: "estimating",
+    label: "Estimating",
+    emoji: "🧮",
+    audience: ["Operations", "Sales"],
+    badgeText: "6 in review",
+    enabled: true,
+    targetUrl: "https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/app/c0284c40-d998-4e72-aeca-a25e29746c02",
   },
   {
     key: "salesHub",
@@ -116,6 +129,7 @@ export const appTiles: AppTile[] = [
     audience: ["Operations", "Sales"],
     badgeText: "11 opps",
     enabled: true,
+    targetUrl: "prototypes/sales-hub-mockup.html",
   },
 ];
 

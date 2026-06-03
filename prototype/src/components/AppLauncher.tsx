@@ -27,6 +27,9 @@ export default function AppLauncher({ tiles, role, itemWidth, cols = 2 }: Props)
             className={`apptile ${!t.enabled ? "is-disabled" : ""}`}
             disabled={!t.enabled}
             title={`Launch ${t.label}`}
+            onClick={() => {
+              if (t.enabled) window.open(t.targetUrl, "_blank", "noopener");
+            }}
           >
             <span className="apptile__emoji" aria-hidden="true">
               {t.emoji}

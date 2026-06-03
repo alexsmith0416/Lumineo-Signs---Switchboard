@@ -43,6 +43,7 @@ export interface AppTile {
   audience: Role[];
   badgeText?: string;
   enabled: boolean;
+  targetUrl: string;
 }
 
 export interface Photo {
