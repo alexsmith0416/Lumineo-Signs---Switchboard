@@ -43,6 +43,10 @@ export interface AppTile {
   audience: Role[];
   badgeText?: string;
   enabled: boolean;
+  /** Hosted sub-app URL. AppLauncher appends ?userEmail=&role= per the
+      docs/07-sub-apps.md launch contract. Tiles without a launchUrl
+      render as inert mockups (button stays disabled). */
+  launchUrl?: string;
 }
 
 export interface Photo {
