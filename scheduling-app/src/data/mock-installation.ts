@@ -31,9 +31,10 @@ export const WK_CREWS: Employee[] = [
   { id: "wk-jason", name: "Jason / CCO (60)", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 65 },
   { id: "wk-doug", name: "Doug / CCO (F38)", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 65 },
   { id: "wk-lee", name: "Lee (F81/F50)", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 58 },
+  { id: "wk-bill", name: "Bill Day", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 58 },
+  { id: "wk-tanner", name: "Tanner", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 58 },
   { id: "wk-heath", name: "Heath / CCO", departmentId: "loc-hutch", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 65 },
   { id: "wk-ray", name: "Ray / CCO (F52)", departmentId: "loc-wichita", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 65 },
-  { id: "wk-don", name: "Don D.", departmentId: "loc-salina", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 55 },
   { id: "wk-danny", name: "Danny / CCO (420)", departmentId: "loc-dodge", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 65 },
   { id: "wk-thomas", name: "Thomas (D90)", departmentId: "loc-dodge", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 55 },
 ];
@@ -46,6 +47,7 @@ interface MakeLineInput {
   emp: string;
   loc: string;
   day: number;
+  startHour?: number;
   hours: number;
   zip: string;
   invoice: number;
@@ -54,22 +56,26 @@ interface MakeLineInput {
   cranes?: number;
   lifts?: number;
   region: "WK" | "NEK";
+  isLocked?: boolean;
+  customColor?: string;
+  isCustom?: boolean;
 }
 
 function mkLine(i: MakeLineInput): ScheduleLine {
+  const startHour = i.startHour ?? 8;
   return {
     id: i.id,
     jobNo: i.jobNo,
     customerName: i.customer,
     planningLineDescription: i.desc,
-    startDateTime: at(i.day, 8),
-    endDateTime: at(i.day, 8 + Math.min(i.hours, 8)),
+    startDateTime: at(i.day, startHour),
+    endDateTime: at(i.day, startHour + Math.min(i.hours, 8)),
     estimatedHours: i.hours,
     overrideHours: null,
     employeeId: i.emp,
     departmentId: i.loc,
     customerDueDate: null,
-    isLocked: false,
+    isLocked: i.isLocked ?? false,
     jobSequence: 1,
     invoiceAmount: i.invoice,
     crewPersons: i.crew,
@@ -79,63 +85,100 @@ function mkLine(i: MakeLineInput): ScheduleLine {
     crewBuckets: 0,
     installZip: i.zip,
     region: i.region,
+    isCustom: i.isCustom,
+    customColor: i.customColor,
   };
 }
 
-// Schedule lines for WK week of 5/25/26 mapped to current-week day offsets.
-// Day 0 = Mon (Memorial Day holiday — no install lines), 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat.
+// WK schedule — week of 6/1/26 (Mon) through 6/5/26 (Fri).
+// Dollar values + locations sourced from the LNI Production Schedule CSV.
 export const WK_LINES: ScheduleLine[] = [
-  // ============ Tuesday — McPherson J35730 (multi-crew) ============
-  mkLine({ id: "wk-1", jobNo: "J35730", customer: "McPherson", desc: "Install remaining set of RGB channel letters", emp: "wk-al", loc: "loc-hutch", day: 1, hours: 8, zip: "67460", invoice: 24500, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-2", jobNo: "J35730", customer: "McPherson", desc: "Install remaining set of RGB channel letters", emp: "wk-aiden", loc: "loc-hutch", day: 1, hours: 8, zip: "67460", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-3", jobNo: "J35730", customer: "McPherson", desc: "Install remaining set of RGB channel letters", emp: "wk-doug", loc: "loc-hutch", day: 1, hours: 8, zip: "67460", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-4", jobNo: "J35730", customer: "McPherson", desc: "Install remaining set of RGB channel letters", emp: "wk-heath", loc: "loc-hutch", day: 1, hours: 8, zip: "67460", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-5", jobNo: "J36617", customer: "Leiker (Steel)", desc: "Weld up cross beam with transition pipe", emp: "wk-lee", loc: "loc-hutch", day: 1, hours: 8, zip: "67501", invoice: 8500, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-6", jobNo: "J36842", customer: "First Dental", desc: "Reinstall cabinet and new faces", emp: "wk-danny", loc: "loc-dodge", day: 1, hours: 4, zip: "67801", invoice: 12800, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-7", jobNo: "J37441", customer: "Southwest Livestock", desc: "Install ACM panel", emp: "wk-danny", loc: "loc-dodge", day: 1, hours: 4, zip: "67801", invoice: 6200, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-8", jobNo: "J36842", customer: "First Dental", desc: "Reinstall cabinet and new faces", emp: "wk-thomas", loc: "loc-dodge", day: 1, hours: 4, zip: "67801", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-9", jobNo: "J37441", customer: "Southwest Livestock", desc: "Install ACM panel", emp: "wk-thomas", loc: "loc-dodge", day: 1, hours: 4, zip: "67801", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  // ============ AL / CCO (F96) ============
+  mkLine({ id: "wk-al-mon-1", jobNo: "J31228", customer: "Iron Insurance", desc: "Install pan sign on building", emp: "wk-al", loc: "loc-hutch", day: 0, startHour: 8, hours: 4, zip: "67505", invoice: 4616.10, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-al-mon-2", jobNo: "J37189", customer: "Iron Insurance", desc: "Install interior sign", emp: "wk-al", loc: "loc-hutch", day: 0, startHour: 12, hours: 2, zip: "67505", invoice: 749.00, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-al-mon-3", jobNo: "J31226", customer: "Iron Insurance", desc: "Remove faces for replacement", emp: "wk-al", loc: "loc-hutch", day: 0, startHour: 14, hours: 2, zip: "67505", invoice: 3102.32, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-al-tue", jobNo: "J32429", customer: "City of Andover (Capitol Fed)", desc: "Install channel letters on freestanding wall with curved wireway on the back", emp: "wk-al", loc: "loc-hutch", day: 1, hours: 8, zip: "67002", invoice: 22755.00, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-al-wed-1", jobNo: "J33723", customer: "Salina Public Library", desc: "Install interior logo and FCOs", emp: "wk-al", loc: "loc-hutch", day: 2, startHour: 8, hours: 4, zip: "67401", invoice: 2287.44, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-al-wed-2", jobNo: "J29256", customer: "MCP Group - Salina Fire Station #4", desc: "Install building letters", emp: "wk-al", loc: "loc-hutch", day: 2, startHour: 12, hours: 4, zip: "67401", invoice: 29168.55, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-al-thu-1", jobNo: "J36515", customer: "Children's Mercy", desc: "Set poles and mow pads", emp: "wk-al", loc: "loc-hutch", day: 3, startHour: 8, hours: 4, zip: "67202", invoice: 20149.95, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-al-thu-2", jobNo: "J36516", customer: "Children's Mercy", desc: "Set poles and mow pads", emp: "wk-al", loc: "loc-hutch", day: 3, startHour: 12, hours: 4, zip: "67202", invoice: 15506.95, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-al-fri", jobNo: "J31226", customer: "Iron Insurance", desc: "Install new monument faces", emp: "wk-al", loc: "loc-hutch", day: 4, hours: 8, zip: "67505", invoice: 3102.32, crew: 1, trucks: 1, region: "WK" }),
 
-  // ============ Wednesday ============
-  mkLine({ id: "wk-10", jobNo: "J34016", customer: "Bethel (with Chuck)", desc: "Install donor wall panels", emp: "wk-dustin", loc: "loc-hutch", day: 2, hours: 8, zip: "67114", invoice: 18400, crew: 2, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-11", jobNo: "J33841", customer: "Goodwill", desc: "Install quick sticks, faces, paint pole cabinet + retainers", emp: "wk-al", loc: "loc-hutch", day: 2, hours: 8, zip: "67501", invoice: 32600, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-12", jobNo: "J33841", customer: "Goodwill", desc: "Install quick sticks, faces, paint pole cabinet + retainers", emp: "wk-aiden", loc: "loc-hutch", day: 2, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-13", jobNo: "J36944", customer: "City of Wichita (light columns)", desc: "Install letters", emp: "wk-jason", loc: "loc-hutch", day: 2, hours: 4, zip: "67202", invoice: 14200, crew: 1, trucks: 1, lifts: 1, region: "WK" }),
-  mkLine({ id: "wk-14", jobNo: "J37686", customer: "Carlos O'Kelly's", desc: "Remove 1 set of raceway mounted channel letters", emp: "wk-jason", loc: "loc-hutch", day: 2, hours: 4, zip: "67202", invoice: 4200, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-15", jobNo: "J29256", customer: "Salina Fire", desc: "Install letters", emp: "wk-heath", loc: "loc-hutch", day: 2, hours: 4, zip: "67401", invoice: 9800, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-16", jobNo: "J37686", customer: "Carlos O'Kelly's", desc: "Remove channel letters", emp: "wk-heath", loc: "loc-hutch", day: 2, hours: 4, zip: "67401", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-17", jobNo: "J35663-J36617", customer: "Leiker", desc: "Install S/F wall sign + refurb pole sign + weld cross beam (overnight)", emp: "wk-doug", loc: "loc-hutch", day: 2, hours: 8, zip: "67501", invoice: 41200, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-18", jobNo: "J35663-J36617", customer: "Leiker", desc: "Install S/F wall sign + refurb pole sign + weld cross beam (overnight)", emp: "wk-lee", loc: "loc-hutch", day: 2, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-19", jobNo: "J37472", customer: "Farm Bureau", desc: "Install vinyl wrap", emp: "wk-danny", loc: "loc-dodge", day: 2, hours: 4, zip: "67801", invoice: 7600, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-20", jobNo: "GC-svc", customer: "G.C. Service", desc: "Service call", emp: "wk-danny", loc: "loc-dodge", day: 2, hours: 4, zip: "67801", invoice: 2400, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-21", jobNo: "J36364", customer: "Satanta Hospital", desc: "Replace damaged louvers", emp: "wk-thomas", loc: "loc-dodge", day: 2, hours: 8, zip: "67801", invoice: 5800, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-22", jobNo: "J28930", customer: "Childrens Mercy", desc: "Install channel letters", emp: "wk-don", loc: "loc-salina", day: 2, hours: 8, zip: "67401", invoice: 28400, crew: 1, trucks: 1, region: "WK" }),
+  // ============ Aiden (paired w/ AL all week) ============
+  mkLine({ id: "wk-aiden-mon-1", jobNo: "J31228", customer: "Iron Insurance", desc: "Install pan sign on building", emp: "wk-aiden", loc: "loc-hutch", day: 0, startHour: 8, hours: 4, zip: "67505", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-mon-2", jobNo: "J37189", customer: "Iron Insurance", desc: "Install interior sign", emp: "wk-aiden", loc: "loc-hutch", day: 0, startHour: 12, hours: 2, zip: "67505", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-mon-3", jobNo: "J31226", customer: "Iron Insurance", desc: "Remove faces for replacement", emp: "wk-aiden", loc: "loc-hutch", day: 0, startHour: 14, hours: 2, zip: "67505", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-tue", jobNo: "J32429", customer: "City of Andover (Capitol Fed)", desc: "Install channel letters on freestanding wall with curved wireway on the back", emp: "wk-aiden", loc: "loc-hutch", day: 1, hours: 8, zip: "67002", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-wed-1", jobNo: "J33723", customer: "Salina Public Library", desc: "Install interior logo and FCOs", emp: "wk-aiden", loc: "loc-hutch", day: 2, startHour: 8, hours: 4, zip: "67401", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-wed-2", jobNo: "J29256", customer: "MCP Group - Salina Fire Station #4", desc: "Install building letters", emp: "wk-aiden", loc: "loc-hutch", day: 2, startHour: 12, hours: 4, zip: "67401", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-thu-1", jobNo: "J36515", customer: "Children's Mercy", desc: "Set poles and mow pads", emp: "wk-aiden", loc: "loc-hutch", day: 3, startHour: 8, hours: 4, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-thu-2", jobNo: "J36516", customer: "Children's Mercy", desc: "Set poles and mow pads", emp: "wk-aiden", loc: "loc-hutch", day: 3, startHour: 12, hours: 4, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-aiden-fri", jobNo: "J31226", customer: "Iron Insurance", desc: "Install new monument faces", emp: "wk-aiden", loc: "loc-hutch", day: 4, hours: 8, zip: "67505", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
 
-  // ============ Thursday ============
-  mkLine({ id: "wk-23", jobNo: "J36734", customer: "First Security", desc: "Remove old cabinet + install new flex face cabinet", emp: "wk-al", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 22300, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-24", jobNo: "J36219", customer: "First Security", desc: "Install channel letters", emp: "wk-al", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 9400, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-25", jobNo: "J36734", customer: "First Security", desc: "Remove old cabinet + install new flex face cabinet", emp: "wk-aiden", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-26", jobNo: "J36219", customer: "First Security", desc: "Install channel letters", emp: "wk-aiden", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-27", jobNo: "J36734", customer: "First Security", desc: "Remove old cabinet + install new flex face cabinet", emp: "wk-jason", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-28", jobNo: "J36219", customer: "First Security", desc: "Install channel letters", emp: "wk-jason", loc: "loc-hutch", day: 3, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-29", jobNo: "J35663-J36617", customer: "Leiker (overnight Russel?/Oneok?)", desc: "Install S/F wall sign + refurb pole + weld transition", emp: "wk-doug", loc: "loc-hutch", day: 3, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-30", jobNo: "J35663-J36617", customer: "Leiker (overnight Russel?/Oneok?)", desc: "Install S/F wall sign + refurb pole + weld transition", emp: "wk-lee", loc: "loc-hutch", day: 3, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-31", jobNo: "J32903", customer: "Minneola Healthcare", desc: "Set base pipe", emp: "wk-danny", loc: "loc-dodge", day: 3, hours: 8, zip: "67865", invoice: 6700, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-32", jobNo: "J32903", customer: "Minneola Healthcare", desc: "Set base pipe", emp: "wk-thomas", loc: "loc-dodge", day: 3, hours: 8, zip: "67865", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  // ============ Jason / CCO (60) ============
+  mkLine({ id: "wk-jason-mon-1", jobNo: "J37440", customer: "Citizens Bank of Kansas", desc: "Service call", emp: "wk-jason", loc: "loc-hutch", day: 0, startHour: 8, hours: 4, zip: "67010", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-jason-mon-2", jobNo: "svc-wichita", customer: "Wichita Service", desc: "Wichita service", emp: "wk-jason", loc: "loc-hutch", day: 0, startHour: 12, hours: 4, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-jason-tue", jobNo: "svc-salina", customer: "Salina Service", desc: "Salina service", emp: "wk-jason", loc: "loc-hutch", day: 1, hours: 8, zip: "67401", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-jason-wed", jobNo: "J36944", customer: "City of Wichita", desc: "Light columns", emp: "wk-jason", loc: "loc-hutch", day: 2, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 1, lifts: 1, region: "WK" }),
+  mkLine({ id: "wk-jason-thu", jobNo: "svc-greatbend", customer: "Great Bend Service", desc: "Great Bend service", emp: "wk-jason", loc: "loc-hutch", day: 3, hours: 8, zip: "67530", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-jason-fri", jobNo: "svc-hutch", customer: "Hutchinson Service", desc: "Hutchinson service", emp: "wk-jason", loc: "loc-hutch", day: 4, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
 
-  // ============ Friday ============
-  mkLine({ id: "wk-33", jobNo: "J36228", customer: "First Security (Conway)", desc: "Install raceway mounted channel letters", emp: "wk-al", loc: "loc-hutch", day: 4, hours: 4, zip: "67501", invoice: 16200, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-34", jobNo: "J36253", customer: "First Security (Norwich)", desc: "Install S/F routed cabinet", emp: "wk-al", loc: "loc-hutch", day: 4, hours: 4, zip: "67118", invoice: 18700, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-35", jobNo: "J36228", customer: "First Security (Conway)", desc: "Install raceway mounted channel letters", emp: "wk-aiden", loc: "loc-hutch", day: 4, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-36", jobNo: "J36253", customer: "First Security (Norwich)", desc: "Install S/F routed cabinet", emp: "wk-aiden", loc: "loc-hutch", day: 4, hours: 4, zip: "67118", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-37", jobNo: "J36228", customer: "First Security (Conway)", desc: "Install raceway mounted channel letters", emp: "wk-jason", loc: "loc-hutch", day: 4, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-38", jobNo: "J36253", customer: "First Security (Norwich)", desc: "Install S/F routed cabinet", emp: "wk-jason", loc: "loc-hutch", day: 4, hours: 4, zip: "67118", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
-  mkLine({ id: "wk-39", jobNo: "J36515-J36516", customer: "Childrens Mercy", desc: "Set poles and mow pads", emp: "wk-doug", loc: "loc-hutch", day: 4, hours: 8, zip: "67401", invoice: 26800, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-40", jobNo: "J36314", customer: "KS State Bank", desc: "Install letter faces", emp: "wk-lee", loc: "loc-hutch", day: 4, hours: 4, zip: "67501", invoice: 7400, crew: 1, trucks: 1, region: "WK" }),
-  mkLine({ id: "wk-41", jobNo: "J36343", customer: "Presbyterian Manors", desc: "Remove faces and bring back for refurb", emp: "wk-lee", loc: "loc-hutch", day: 4, hours: 4, zip: "67501", invoice: 3200, crew: 1, trucks: 0, region: "WK" }),
+  // ============ Doug / CCO (F-38) ============
+  mkLine({ id: "wk-doug-mon-1", jobNo: "J36416", customer: "Hutchinson Regional Med. Center", desc: "Install FCOs on bars — meet at shop 9am for new vinyl", emp: "wk-doug", loc: "loc-hutch", day: 0, startHour: 9, hours: 4, zip: "67514", invoice: 5664.09, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-doug-mon-2", jobNo: "J35716", customer: "Greater Wichita YMCA", desc: "Install I/I logo and FCOs", emp: "wk-doug", loc: "loc-hutch", day: 0, startHour: 13, hours: 3, zip: "67501", invoice: 5789.20, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-tue-1", jobNo: "J36681", customer: "NEO Home Loan (Newton)", desc: "Remove faces and bring back to shop for new vinyl", emp: "wk-doug", loc: "loc-hutch", day: 1, startHour: 8, hours: 4, zip: "67114", invoice: 1589.35, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-doug-tue-2", jobNo: "J35594", customer: "Cooper Tire", desc: "Pick up asphalt and fill in by Cooper Tire sign — get packer from Reger Rental", emp: "wk-doug", loc: "loc-hutch", day: 1, startHour: 12, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-wed-1", jobNo: "J36681", customer: "NEO Home Loan (Newton)", desc: "Install faces", emp: "wk-doug", loc: "loc-hutch", day: 2, startHour: 8, hours: 3, zip: "67114", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-doug-wed-2", jobNo: "J36876", customer: "Central National Bank (Halstead)", desc: "Install overlay panels", emp: "wk-doug", loc: "loc-hutch", day: 2, startHour: 11, hours: 3, zip: "67056", invoice: 3110.00, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-wed-3", jobNo: "J36854", customer: "Park City City Hall", desc: "Install post and panel", emp: "wk-doug", loc: "loc-hutch", day: 2, startHour: 14, hours: 2, zip: "67219", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-thu-1", jobNo: "J37097", customer: "Intellicents", desc: "Remove and install FCOs", emp: "wk-doug", loc: "loc-hutch", day: 3, startHour: 8, hours: 4, zip: "67202", invoice: 2676.89, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-doug-thu-2", jobNo: "J37350", customer: "Vona Private Studio", desc: "Install plex face", emp: "wk-doug", loc: "loc-hutch", day: 3, startHour: 12, hours: 4, zip: "67202", invoice: 2239.18, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-fri-1", jobNo: "J34578", customer: "Jimmy's Egg", desc: "Replace logo faces", emp: "wk-doug", loc: "loc-hutch", day: 4, startHour: 8, hours: 2, zip: "67202", invoice: 1267.40, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-doug-fri-2", jobNo: "J34579", customer: "Jimmy's Egg", desc: "Replace logo faces", emp: "wk-doug", loc: "loc-hutch", day: 4, startHour: 10, hours: 2, zip: "67202", invoice: 1767.06, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-fri-3", jobNo: "J37569", customer: "Davis Liquor Outlet", desc: "Meet Tanner for vinyl", emp: "wk-doug", loc: "loc-hutch", day: 4, startHour: 12, hours: 2, zip: "67202", invoice: 643.02, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-doug-fri-4", jobNo: "J34645", customer: "Builders Inc Parklane Shopping", desc: "Install new tenant panel", emp: "wk-doug", loc: "loc-hutch", day: 4, startHour: 14, hours: 2, zip: "67202", invoice: 24425.50, crew: 1, trucks: 0, region: "WK" }),
 
-  // ============ Saturday ============
-  mkLine({ id: "wk-42", jobNo: "J-CN-GB", customer: "Central National Great Bend", desc: "Install monument faces, S/F wall sign, small pan sign, window vinyl", emp: "wk-don", loc: "loc-salina", day: 5, hours: 8, zip: "67530", invoice: 38900, crew: 1, trucks: 1, region: "WK" }),
+  // ============ Ray / CCO (F52) — Off all week ============
+  mkLine({ id: "wk-ray-off-mon", jobNo: "PTO", customer: "Off", desc: "Off", emp: "wk-ray", loc: "loc-wichita", day: 0, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#FAB0B0" }),
+  mkLine({ id: "wk-ray-off-tue", jobNo: "PTO", customer: "Off", desc: "Off", emp: "wk-ray", loc: "loc-wichita", day: 1, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#FAB0B0" }),
+  mkLine({ id: "wk-ray-off-wed", jobNo: "PTO", customer: "Off", desc: "Off", emp: "wk-ray", loc: "loc-wichita", day: 2, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#FAB0B0" }),
+  mkLine({ id: "wk-ray-off-thu", jobNo: "PTO", customer: "Off", desc: "Off", emp: "wk-ray", loc: "loc-wichita", day: 3, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#FAB0B0" }),
+  mkLine({ id: "wk-ray-off-fri", jobNo: "PTO", customer: "Off", desc: "Off", emp: "wk-ray", loc: "loc-wichita", day: 4, hours: 8, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#FAB0B0" }),
+
+  // ============ Lee (F81/F50/Chevy 54) ============
+  mkLine({ id: "wk-lee-mon", jobNo: "J36311", customer: "Wichita Bio Med", desc: "To Salina to strap and bring back letters and logos on 30ft trailer", emp: "wk-lee", loc: "loc-hutch", day: 0, hours: 8, zip: "67401", invoice: 268549.47, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-lee-tue", jobNo: "J31949", customer: "Stone Creek Station (GC Investments)", desc: "Refinery steel work", emp: "wk-lee", loc: "loc-hutch", day: 1, hours: 8, zip: "67846", invoice: 10408.44, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-lee-pto-wed", jobNo: "PTO", customer: "PTO", desc: "PTO", emp: "wk-lee", loc: "loc-hutch", day: 2, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#F4C2E0" }),
+  mkLine({ id: "wk-lee-pto-thu", jobNo: "PTO", customer: "PTO", desc: "PTO", emp: "wk-lee", loc: "loc-hutch", day: 3, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#F4C2E0" }),
+  mkLine({ id: "wk-lee-pto-fri", jobNo: "PTO", customer: "PTO", desc: "PTO", emp: "wk-lee", loc: "loc-hutch", day: 4, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK", isLocked: true, isCustom: true, customColor: "#F4C2E0" }),
+
+  // ============ Bill Day (one-off Thursday) ============
+  mkLine({ id: "wk-bill-thu", jobNo: "J36343", customer: "Presbyterian Manors of Mid-America", desc: "Paint monument sign", emp: "wk-bill", loc: "loc-hutch", day: 3, hours: 8, zip: "66044", invoice: 11159.52, crew: 1, trucks: 1, region: "WK" }),
+
+  // ============ Tanner (one-off Friday) ============
+  mkLine({ id: "wk-tanner-fri-1", jobNo: "J37501", customer: "Fidelity Bank", desc: "Fidelity Bank install", emp: "wk-tanner", loc: "loc-hutch", day: 4, startHour: 8, hours: 4, zip: "67202", invoice: 1805.00, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-tanner-fri-2", jobNo: "J37591", customer: "Fidelity Bank", desc: "Fidelity Bank install", emp: "wk-tanner", loc: "loc-hutch", day: 4, startHour: 12, hours: 4, zip: "67202", invoice: 2595.67, crew: 1, trucks: 0, region: "WK" }),
+
+  // ============ Danny / CCO (420) — Dodge City ============
+  mkLine({ id: "wk-danny-mon-1", jobNo: "J37472", customer: "Farm Bureau Financial (Kelley Linn)", desc: "Install vinyl wrap", emp: "wk-danny", loc: "loc-dodge", day: 0, startHour: 8, hours: 4, zip: "67877", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-danny-mon-2", jobNo: "J36927", customer: "Lewis Automotive Group", desc: "Pattern letter and more", emp: "wk-danny", loc: "loc-dodge", day: 0, startHour: 12, hours: 4, zip: "67846", invoice: 1046.03, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-danny-tue-1", jobNo: "J34499", customer: "McDonald's G.C. (Milligan Enterprises)", desc: "Service", emp: "wk-danny", loc: "loc-dodge", day: 1, startHour: 8, hours: 4, zip: "67846", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-danny-tue-2", jobNo: "J34500", customer: "McDonald's G.C. (Milligan Enterprises)", desc: "Service", emp: "wk-danny", loc: "loc-dodge", day: 1, startHour: 12, hours: 4, zip: "67846", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-danny-wed", jobNo: "J37773", customer: "Holly School District", desc: "EMC service", emp: "wk-danny", loc: "loc-dodge", day: 2, hours: 8, zip: "81047", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-danny-thu", jobNo: "svc-hugoton-liberal", customer: "Hugoton & Liberal Service", desc: "Hugoton and Liberal service", emp: "wk-danny", loc: "loc-dodge", day: 3, hours: 8, zip: "67901", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
+  mkLine({ id: "wk-danny-fri", jobNo: "J36364", customer: "Satanta District Hospital", desc: "Louver replacement and module replacement", emp: "wk-danny", loc: "loc-dodge", day: 4, hours: 8, zip: "67870", invoice: 5348.40, crew: 1, trucks: 1, region: "WK" }),
+
+  // ============ Thomas (D90) — Dodge City paired w/ Doug ============
+  mkLine({ id: "wk-thomas-mon-1", jobNo: "J36416", customer: "Hutchinson Regional Med. Center", desc: "Install FCOs on bars — meet at shop 9am for new vinyl", emp: "wk-thomas", loc: "loc-dodge", day: 0, startHour: 9, hours: 4, zip: "67514", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-mon-2", jobNo: "J35716", customer: "Greater Wichita YMCA", desc: "Install I/I logo and FCOs", emp: "wk-thomas", loc: "loc-dodge", day: 0, startHour: 13, hours: 3, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-tue-1", jobNo: "J36681", customer: "NEO Home Loan (Newton)", desc: "Remove faces and bring back to shop for new vinyl", emp: "wk-thomas", loc: "loc-dodge", day: 1, startHour: 8, hours: 4, zip: "67114", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-tue-2", jobNo: "J35594", customer: "Cooper Tire", desc: "Pick up asphalt and fill in by Cooper Tire sign — get packer from Reger Rental", emp: "wk-thomas", loc: "loc-dodge", day: 1, startHour: 12, hours: 4, zip: "67501", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-wed-1", jobNo: "J36681", customer: "NEO Home Loan (Newton)", desc: "Install faces", emp: "wk-thomas", loc: "loc-dodge", day: 2, startHour: 8, hours: 3, zip: "67114", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-wed-2", jobNo: "J36876", customer: "Central National Bank (Halstead)", desc: "Install overlay panels", emp: "wk-thomas", loc: "loc-dodge", day: 2, startHour: 11, hours: 3, zip: "67056", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-wed-3", jobNo: "J36854", customer: "Park City City Hall", desc: "Install post and panel", emp: "wk-thomas", loc: "loc-dodge", day: 2, startHour: 14, hours: 2, zip: "67219", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-thu-1", jobNo: "J37097", customer: "Intellicents", desc: "Remove and install FCOs", emp: "wk-thomas", loc: "loc-dodge", day: 3, startHour: 8, hours: 4, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-thu-2", jobNo: "J37350", customer: "Vona Private Studio", desc: "Install plex face", emp: "wk-thomas", loc: "loc-dodge", day: 3, startHour: 12, hours: 4, zip: "67202", invoice: 0, crew: 1, trucks: 0, region: "WK" }),
+  mkLine({ id: "wk-thomas-fri", jobNo: "svc-return-dc", customer: "Return to D.C.", desc: "Take back signage", emp: "wk-thomas", loc: "loc-dodge", day: 4, hours: 8, zip: "67801", invoice: 0, crew: 1, trucks: 1, region: "WK" }),
 ];
 
 export const WK_WORK_HOURS: WorkHoursOverride[] = [];
@@ -155,51 +198,78 @@ export const NEK_CREWS: Employee[] = [
   { id: "nek-kevinb", name: "Kevin B", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
   { id: "nek-morganm", name: "Morgan M", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
   { id: "nek-connerp", name: "Conner P", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
-  { id: "nek-aaronw", name: "Aaron W", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
-  { id: "nek-jarrodl", name: "Jarrod L", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
-  { id: "nek-justinj", name: "Justin J", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
+  { id: "nek-hunter", name: "Hunter", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 55 },
   { id: "nek-joshs", name: "Josh S", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
+  { id: "nek-justinj", name: "Justin J", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
+  { id: "nek-jarrodl", name: "Jarrod L", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
+  { id: "nek-aaronw", name: "Aaron W", departmentId: "loc-nek", productivityRate: 1, standardHoursPerDay: 8, maxOvertimePerDay: 2, worksWeekends: false, hourlyRate: 60 },
 ];
 
+// NKC-018 sign package = the multi-job NKC Health install rolled up.
+// CSV total across major NKC Health jobs that haven't been called out
+// individually elsewhere comes to ~$254K — use that as the package value
+// on the lead crew's entry, with paired crew rows at $0.
+const NKC018_PACKAGE_VALUE = 254160.0;
+const NKC021_013_PACKAGE_VALUE = 28413.34; // J36400 ($15,477.96) + J36291 ($12,935.38)
+const FJ_BLD_VALUE = 8732.0; // J34769 Faith Journey Church
+
 export const NEK_LINES: ScheduleLine[] = [
-  // Tuesday — NKC-017 sign packages + CMH J31961
-  mkLine({ id: "nek-1", jobNo: "NKC-017 / J36394-J36398", customer: "NKC-017 Sign Package", desc: "Install sign package", emp: "nek-stanc", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 84200, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-2", jobNo: "NKC-017 / J36394-J36398", customer: "NKC-017 Sign Package", desc: "Install sign package", emp: "nek-morganm", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-3", jobNo: "NKC-017 / J36394-J36398", customer: "NKC-017 Sign Package", desc: "Install sign package", emp: "nek-connerp", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-4", jobNo: "NKC-017 / J36394-J36398", customer: "NKC-017 Sign Package", desc: "Install sign package", emp: "nek-justinj", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-5", jobNo: "NKC-011 / J36201-J36205", customer: "NKC-011 Sign Package", desc: "Install sign package", emp: "nek-jarrodl", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 92500, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-6", jobNo: "NKC-011 / J36201-J36205", customer: "NKC-011 Sign Package", desc: "Install sign package", emp: "nek-joshs", loc: "loc-nek", day: 1, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-7", jobNo: "J31961", customer: "CMH", desc: "Install digital print (on site 9:30)", emp: "nek-aaronw", loc: "loc-nek", day: 1, hours: 8, zip: "64108", invoice: 18600, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-8", jobNo: "svc-sprinkler", customer: "Site Maintenance", desc: "Fix broken sprinkler line", emp: "nek-kevinb", loc: "loc-nek", day: 1, hours: 6, zip: "64106", invoice: 1800, crew: 1, trucks: 1, region: "NEK" }),
+  // ============ Stan C ============
+  mkLine({ id: "nek-stan-mon-1", jobNo: "J34769", customer: "Faith Journey Church", desc: "FJ bld sign install", emp: "nek-stanc", loc: "loc-nek", day: 0, startHour: 8, hours: 4, zip: "66061", invoice: FJ_BLD_VALUE, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-stan-mon-2", jobNo: "J37858", customer: "First National Bank of Louisburg", desc: "EMC service · Louisburg", emp: "nek-stanc", loc: "loc-nek", day: 0, startHour: 12, hours: 4, zip: "66053", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-stan-tue", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-stanc", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: NKC018_PACKAGE_VALUE, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-stan-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-stanc", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-stan-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-stanc", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-stan-fri", jobNo: "J34368", customer: "Goodwin Outdoors · Walnut Reserve", desc: "Walnut Reserve monument", emp: "nek-stanc", loc: "loc-nek", day: 4, hours: 8, zip: "66212", invoice: 17800.0, crew: 1, trucks: 1, region: "NEK" }),
 
-  // Wednesday — NKC-019 packages, NKC-011, CMH J36200, Cap Fed J37163, Foley J36696
-  mkLine({ id: "nek-9", jobNo: "NKC-019", customer: "NKC-019 Sign Package", desc: "Install sign package", emp: "nek-stanc", loc: "loc-nek", day: 2, hours: 8, zip: "64106", invoice: 76800, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-10", jobNo: "NKC-019", customer: "NKC-019 Sign Package", desc: "Install sign package", emp: "nek-morganm", loc: "loc-nek", day: 2, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-11", jobNo: "NKC-019", customer: "NKC-019 Sign Package", desc: "Install sign package", emp: "nek-connerp", loc: "loc-nek", day: 2, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-12", jobNo: "NKC-011 / J36201-J36205", customer: "NKC-011 Sign Package", desc: "Install sign package", emp: "nek-jarrodl", loc: "loc-nek", day: 2, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-13", jobNo: "NKC-011 / J36201-J36205", customer: "NKC-011 Sign Package", desc: "Install sign package", emp: "nek-joshs", loc: "loc-nek", day: 2, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-14", jobNo: "J36200", customer: "CMH", desc: "Install vinyl (J36408/J36394-J36398, NKC-019/NKC-017)", emp: "nek-aaronw", loc: "loc-nek", day: 2, hours: 8, zip: "64108", invoice: 12400, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-15", jobNo: "J37163", customer: "Cap Fed", desc: "Interior install", emp: "nek-justinj", loc: "loc-nek", day: 2, hours: 4, zip: "66102", invoice: 14600, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-16", jobNo: "J36696", customer: "Foley", desc: "Install panels", emp: "nek-justinj", loc: "loc-nek", day: 2, hours: 4, zip: "66102", invoice: 7800, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-17", jobNo: "svc-meet-elec", customer: "Site Meeting", desc: "Meet electrician", emp: "nek-kevinb", loc: "loc-nek", day: 2, hours: 4, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  // ============ Morgan M ============
+  mkLine({ id: "nek-morgan-mon", jobNo: "J34769", customer: "Faith Journey Church", desc: "FJ bld sign install", emp: "nek-morganm", loc: "loc-nek", day: 0, hours: 8, zip: "66061", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-morgan-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-morganm", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: NKC021_013_PACKAGE_VALUE, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-morgan-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-morganm", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-morgan-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-morganm", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-morgan-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-morganm", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
 
-  // Thursday — NKC-018, CMH-Don Chisolm J31961, lots of numbers
-  mkLine({ id: "nek-18", jobNo: "J31961", customer: "CMH - Don Chisolm", desc: "Install sign package", emp: "nek-stanc", loc: "loc-nek", day: 3, hours: 8, zip: "64108", invoice: 19200, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-19", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-morganm", loc: "loc-nek", day: 3, hours: 8, zip: "64106", invoice: 102400, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-20", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-connerp", loc: "loc-nek", day: 3, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-21", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-jarrodl", loc: "loc-nek", day: 3, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-22", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 3, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-23", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-justinj", loc: "loc-nek", day: 3, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  // ============ Conner P ============
+  mkLine({ id: "nek-conner-mon", jobNo: "J34769", customer: "Faith Journey Church", desc: "FJ bld sign install", emp: "nek-connerp", loc: "loc-nek", day: 0, hours: 8, zip: "66061", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-conner-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-connerp", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-conner-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-connerp", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-conner-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-connerp", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-conner-fri", jobNo: "svc-hutch-pickup", customer: "Hutchinson Pickup", desc: "Pick up sign faces", emp: "nek-connerp", loc: "loc-nek", day: 4, hours: 8, zip: "67501", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
 
-  // Friday — NKC-018 continues, Kevin B Lee help on J36343
-  mkLine({ id: "nek-24", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-stanc", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-25", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-morganm", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-26", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-connerp", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-27", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-jarrodl", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-28", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-29", jobNo: "NKC-018", customer: "NKC-018 Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-justinj", loc: "loc-nek", day: 4, hours: 8, zip: "64106", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
-  mkLine({ id: "nek-30", jobNo: "svc-meet-roof", customer: "Roofing Co Meeting", desc: "Meet Roofing Co · 11 AM · 6450 N Chatam Ave", emp: "nek-kevinb", loc: "loc-nek", day: 4, hours: 3, zip: "64151", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
-  mkLine({ id: "nek-31", jobNo: "J36343", customer: "Presbyterian Manors (Lawrence)", desc: "Lee needs help", emp: "nek-kevinb", loc: "loc-nek", day: 4, hours: 5, zip: "66044", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  // ============ Hunter ============
+  mkLine({ id: "nek-hunter-mon", jobNo: "svc-kdem", customer: "KDEM", desc: "KDEM service call", emp: "nek-hunter", loc: "loc-nek", day: 0, hours: 8, zip: "66603", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-hunter-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-hunter", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-hunter-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-hunter", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-hunter-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-hunter", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-hunter-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-hunter", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+
+  // ============ Josh S ============
+  mkLine({ id: "nek-josh-mon", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 0, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-josh-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-joshs", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-josh-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-josh-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-josh-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-joshs", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+
+  // ============ Justin J ============
+  mkLine({ id: "nek-justinj-mon", jobNo: "svc-kdem", customer: "KDEM", desc: "KDEM service call", emp: "nek-justinj", loc: "loc-nek", day: 0, hours: 8, zip: "66603", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-justinj-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-justinj", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-justinj-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-justinj", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-justinj-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-justinj", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-justinj-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-justinj", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+
+  // ============ Jarrod L ============
+  mkLine({ id: "nek-jarrod-mon", jobNo: "svc-regional", customer: "Regional Service", desc: "Regional service call", emp: "nek-jarrodl", loc: "loc-nek", day: 0, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-jarrod-tue", jobNo: "J36400 / J36291 · NKC-021/013", customer: "NKC Health", desc: "Install sign package", emp: "nek-jarrodl", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-jarrod-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-jarrodl", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-jarrod-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-jarrodl", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+  mkLine({ id: "nek-jarrod-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-jarrodl", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 0, region: "NEK" }),
+
+  // ============ Aaron W ============
+  mkLine({ id: "nek-aaron-mon", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers) · 9401 N Oak", emp: "nek-aaronw", loc: "loc-nek", day: 0, hours: 8, zip: "64155", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-aaron-tue", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-aaronw", loc: "loc-nek", day: 1, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-aaron-wed", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-aaronw", loc: "loc-nek", day: 2, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-aaron-thu", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-aaronw", loc: "loc-nek", day: 3, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
+  mkLine({ id: "nek-aaron-fri", jobNo: "NKC-018", customer: "NKC Health · Sign Package", desc: "Install sign package (a lot of numbers)", emp: "nek-aaronw", loc: "loc-nek", day: 4, hours: 8, zip: "64116", invoice: 0, crew: 1, trucks: 1, region: "NEK" }),
 ];
 
 export const NEK_WORK_HOURS: WorkHoursOverride[] = [];
