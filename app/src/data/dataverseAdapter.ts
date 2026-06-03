@@ -66,6 +66,10 @@ function toRow(spec: SignSpec): DataverseColumns {
     lum_outsourced:      spec.outsourced,
     lum_notes:           spec.notes,
     lum_status:          statusToOptionSet(spec.status),
+    lum_jobid:           spec.jobId ?? null,
+    lum_opportunityid:   spec.opportunityId ?? null,
+    lum_approvedby:      spec.approvedBy,
+    lum_approvedat:      spec.approvedAt || null,
   };
 }
 
@@ -112,6 +116,10 @@ function fromRow(row: DataverseColumns): SignSpec {
     outsourced:    Boolean(row.lum_outsourced ?? false),
     notes:         String(row.lum_notes ?? ""),
     status:        optionSetToStatus(Number(row.lum_status ?? 100000000)),
+    jobId:         row.lum_jobid ? String(row.lum_jobid) : undefined,
+    opportunityId: row.lum_opportunityid ? String(row.lum_opportunityid) : undefined,
+    approvedBy:    String(row.lum_approvedby ?? ""),
+    approvedAt:    String(row.lum_approvedat ?? ""),
   };
 }
 

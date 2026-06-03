@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSpec } from "../app/SpecContext";
-import { useLaunchParams } from "../app/launchParams";
+import { useLaunchParams, isOps } from "../app/launchParams";
 import { SIGN_TYPES, getSignType, isLetter, isPan, POLE_FOOTING_TYPES } from "../domain/signTypes";
 import type { SignTypeCode } from "../domain/signTypes";
 import { Banner } from "../ui/Banner";
@@ -24,22 +24,37 @@ import { SpecReferenceImage } from "../builder/SpecReferenceImage";
 import { statusTone } from "../ui/specStatus";
 
 export function Builder() {
-  const { spec, recent, projects, loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml } = useSpec();
-  const { specId } = useLaunchParams();
+  const {
+    spec, recent, projects,
+    loadSpec, update, clearAll, saveSpec, saveStatus, exportSpecHtml,
+    newSpec, approveSpec,
+  } = useSpec();
+  const launch = useLaunchParams();
+  const { specId, jobId, opportunityId, userEmail, role } = launch;
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [deepLinked, setDeepLinked] = useState(false);
 
-  // Deep-link from Switchboard / Project Scheduler: ?specId=... preloads a
-  // saved spec on first mount. Runs once per specId, after recent has loaded.
+  // Deep-link from Switchboard / Project Scheduler / Sales Hub:
+  // - ?specId=...        → preload an existing spec for editing
+  // - ?jobId=...         → start a new spec already linked to that Job
+  // - ?opportunityId=... → start a new spec already linked to that Opportunity
+  // Runs once after recent has loaded so spec lookups can resolve.
   useEffect(() => {
-    if (!specId || deepLinked || recent.length === 0) return;
-    const target = recent.find((s) => s.id === specId);
-    if (target) {
-      loadSpec(target);
+    if (deepLinked || recent.length === 0) return;
+    if (specId) {
+      const target = recent.find((s) => s.id === specId);
+      if (target) {
+        loadSpec(target);
+        setDeepLinked(true);
+      }
+      return;
+    }
+    if (jobId || opportunityId) {
+      newSpec({ jobId, opportunityId });
       setDeepLinked(true);
     }
-  }, [specId, recent, deepLinked, loadSpec]);
+  }, [specId, jobId, opportunityId, recent, deepLinked, loadSpec, newSpec]);
 
   const filtered = useMemo(() => recent.filter((s) => {
     if (typeFilter && s.signTypeCode !== typeFilter) return false;
@@ -165,6 +180,18 @@ export function Builder() {
             >
               {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save Spec"}
             </button>
+            {isOps(launch) && spec.signTypeCode && spec.status !== "Approved" && spec.status !== "Built" ? (
+              <button
+                type="button"
+                className="lum-btn is-primary"
+                style={{ background: "var(--lum-green)" }}
+                onClick={() => approveSpec(userEmail || role)}
+                disabled={saveStatus === "saving"}
+                title="Ops-only — marks the spec as Approved and records you as the approver"
+              >
+                ✓ Approve
+              </button>
+            ) : null}
             <button
               type="button"
               className="lum-btn is-danger"
@@ -194,6 +221,17 @@ export function Builder() {
           >
             {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save"}
           </button>
+          {isOps(launch) && spec.signTypeCode && spec.status !== "Approved" && spec.status !== "Built" ? (
+            <button
+              type="button"
+              className="lum-btn is-primary"
+              style={{ background: "var(--lum-green)" }}
+              onClick={() => approveSpec(userEmail || role)}
+              disabled={saveStatus === "saving"}
+            >
+              ✓ Approve
+            </button>
+          ) : null}
           <button
             type="button"
             className="lum-btn is-danger"
@@ -211,6 +249,21 @@ export function Builder() {
               Editing saved spec <strong>{spec.productCode || spec.id}</strong>
               {spec.customerName ? <> · {spec.customerName}</> : null}
               {spec.projectName ? <> · {spec.projectName}</> : null}
+              {spec.jobId ? <> · Job <code>{spec.jobId}</code></> : null}
+              {spec.opportunityId ? <> · Opp <code>{spec.opportunityId}</code></> : null}
+              {spec.approvedBy && spec.status === "Approved" ? (
+                <> · Approved by {spec.approvedBy} on {new Date(spec.approvedAt).toLocaleDateString()}</>
+              ) : null}
+            </Banner>
+          ) : null}
+
+          {/* Show launch-time linkages on a fresh new spec too, so the user
+              can see that ?jobId= or ?opportunityId= has been picked up. */}
+          {!spec.id && (spec.jobId || spec.opportunityId) ? (
+            <Banner tone="info">
+              {spec.jobId ? <>New spec linked to Job <strong><code>{spec.jobId}</code></strong></> : null}
+              {spec.jobId && spec.opportunityId ? " · " : null}
+              {spec.opportunityId ? <>New spec linked to Opportunity <strong><code>{spec.opportunityId}</code></strong></> : null}
             </Banner>
           ) : null}
 

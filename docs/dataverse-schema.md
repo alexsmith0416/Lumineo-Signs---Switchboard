@@ -44,6 +44,24 @@ and mirrored in `app/src/domain/SignSpec.ts`.
 | Outsourced             | lum_outsourced            | Two options      | false default |
 | Notes                  | lum_notes                 | Multiline text   | |
 | Status                 | lum_status                | Whole number     | 100000000 = Draft on create |
+| Job Lookup             | lum_jobid                 | Single line text | Project Scheduler `Job` UUID — populated when launched with `?jobId=` or linked manually by Ops |
+| Opportunity Lookup     | lum_opportunityid         | Single line text | Sales Hub `Opportunity` UUID — populated when launched with `?opportunityId=` from a Quote flow |
+| Approved By            | lum_approvedby            | Single line text | Ops user email recorded when the Approve action runs |
+| Approved At            | lum_approvedat            | Date and Time    | Approval timestamp (ISO) |
+
+## Cross-sub-app launch contract
+
+Sign Builder Pro honors the launch contract defined in
+[`docs/07-sub-apps.md`](https://github.com/alexsmith0416/Lumineo-Signs---Switchboard/blob/claude/master-power-apps-design-05pjY/docs/07-sub-apps.md).
+URL params read by `useLaunchParams()`:
+
+| Param | Source | Behavior |
+| --- | --- | --- |
+| `userEmail` | Switchboard | Surfaced in the header role-switcher trigger |
+| `role` | Switchboard | Gates the Ops-only **Approve** action in the Builder top bar |
+| `specId` | Project Scheduler / Gallery deep-link | Preloads that saved spec for editing |
+| `jobId` | Project Scheduler | Starts a new spec already linked to that Job (`lum_jobid` populated on save) |
+| `opportunityId` | Sales Hub | Starts a new spec already linked to that Opportunity (`lum_opportunityid` populated on save) |
 
 ## Spec reference images (SharePoint)
 

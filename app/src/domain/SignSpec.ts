@@ -21,8 +21,19 @@ export type SignSpec = {
   id?: string;
   productCode: string;
   status: SignSpecStatus;
-  /** Optional belongs-to link; signs created outside a Project workspace have no projectId. */
+  /** Sign Builder Pro-internal grouping (Preview-style). Sibling of the
+      Project Scheduler `Job` concept — a SignSpec can live under both at
+      once: the local Project keeps signs bundled for the build sheet,
+      jobId links across to Project Scheduler when work is scheduled. */
   projectId?: string;
+  /** Cross-sub-app lookup — Project Scheduler Job UUID. Set when the
+      spec is launched with `?jobId=<id>` from Project Scheduler, or
+      when an Ops user explicitly links the spec to a Job. */
+  jobId?: string;
+  /** Cross-sub-app lookup — Sales Hub Opportunity UUID. Set when Sales
+      Hub launches Sign Builder Pro with `?opportunityId=<id>` to attach
+      a fresh spec to an in-flight quote. */
+  opportunityId?: string;
   /** Short human label — replaces "New Sign" when the user types one in. Independent of customerName/projectName. */
   name: string;
 
@@ -82,6 +93,10 @@ export type SignSpec = {
   conduitSize: string;
   panelLocation: string;
 
+  // approval (Ops only)
+  approvedBy: string;        // user email of the Ops approver
+  approvedAt: string;        // ISO timestamp
+
   // notes + routing
   notes: string;
   departments: string;
@@ -126,6 +141,8 @@ export function emptySignSpec(): SignSpec {
     electrical: "",
     conduitSize: "",
     panelLocation: "",
+    approvedBy: "",
+    approvedAt: "",
     notes: "",
     departments: "",
   };

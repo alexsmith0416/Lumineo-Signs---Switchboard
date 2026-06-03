@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
 import { Pill } from "../ui/Pill";
@@ -7,18 +7,35 @@ import { SwipeRow } from "../ui/SwipeRow";
 import { SIGN_TYPES, getSignType } from "../domain/signTypes";
 import type { SignSpec } from "../domain/SignSpec";
 
+// Status filter values mirror SignSpecStatus + a sentinel "" for "All".
+const STATUS_OPTIONS = ["", "Draft", "Submitted", "Approved", "Built"] as const;
+
 export function Gallery() {
   const navigate = useNavigate();
   const { recent, loadSpec, duplicateSpec, deleteSpec } = useSpec();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
   const [confirming, setConfirming] = useState<string | null>(null);
+
+  // Unique customer list sourced from saved specs — populates the customer
+  // filter dropdown. Per docs/07-sub-apps.md the spec list filters by
+  // (customer, status, linked job); we already had type, this adds the
+  // other two coordinates.
+  const customers = useMemo(() => {
+    const seen = new Set<string>();
+    for (const s of recent) if (s.customerName) seen.add(s.customerName);
+    return Array.from(seen).sort();
+  }, [recent]);
 
   const filtered = recent.filter((s) => {
     if (typeFilter && s.signTypeCode !== typeFilter) return false;
+    if (statusFilter && s.status !== statusFilter) return false;
+    if (customerFilter && s.customerName !== customerFilter) return false;
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
-    return [s.customerName, s.projectName, s.productCode]
+    return [s.customerName, s.projectName, s.productCode, s.name]
       .filter(Boolean)
       .some((v) => v.toLowerCase().includes(q));
   });
@@ -49,7 +66,7 @@ export function Gallery() {
         <input
           type="search"
           className="lum-input"
-          placeholder="Search by customer, project, or code…"
+          placeholder="Search by customer, project, name, or code…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ flex: "2 1 220px", minWidth: 140 }}
@@ -63,6 +80,27 @@ export function Gallery() {
           <option value="">All sign types</option>
           {SIGN_TYPES.map((t) => (
             <option key={t.code} value={t.code}>{t.name}</option>
+          ))}
+        </select>
+        <select
+          className="lum-select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ flex: "1 1 140px", minWidth: 110 }}
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s || "all"} value={s}>{s || "All statuses"}</option>
+          ))}
+        </select>
+        <select
+          className="lum-select"
+          value={customerFilter}
+          onChange={(e) => setCustomerFilter(e.target.value)}
+          style={{ flex: "1 1 160px", minWidth: 120 }}
+        >
+          <option value="">All customers</option>
+          {customers.map((c) => (
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
       </div>

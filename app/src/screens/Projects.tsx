@@ -74,7 +74,7 @@ export function Projects() {
 
   function openNewSign() {
     if (!active?.id) return;
-    newSpec(active.id, active.name);
+    newSpec({ projectId: active.id, projectName: active.name });
     navigate("/builder");
   }
 

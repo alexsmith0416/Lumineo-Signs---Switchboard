@@ -16,6 +16,7 @@ describe("emptySignSpec", () => {
       "poleType", "poleDiameter", "poleMaterial",
       "footingType", "footingDepth", "footingMethod",
       "electrical", "conduitSize", "panelLocation",
+      "approvedBy", "approvedAt",
       "notes", "departments",
     ];
     for (const k of stringKeys) {

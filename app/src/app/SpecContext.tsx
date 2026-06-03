@@ -41,13 +41,21 @@ type SpecContextValue = {
 
   loadSpec: (s: SignSpec) => void;
   clearAll: () => void;
-  /** Start a new spec, optionally pre-bound to a project. */
-  newSpec: (projectId?: string, projectName?: string) => void;
+  /** Start a new spec, optionally pre-bound to a project or to a cross-
+      sub-app job / opportunity. Used by Projects.tsx ("+ New Sign") and
+      by the Builder's deep-link effect when ?jobId= or ?opportunityId=
+      is in the launch URL but no ?specId= is. */
+  newSpec: (opts?: { projectId?: string; projectName?: string; jobId?: string; opportunityId?: string }) => void;
   saveSpec: () => Promise<void>;
   duplicateSpec: (s: SignSpec) => void;
   deleteSpec: (id: string) => Promise<void>;
   exportSpecHtml: () => void;
   copyProductCode: () => void;
+
+  /** Ops-only: mark the current spec as Approved, recording who and
+      when. Per docs/07-sub-apps.md the Approval view belongs to
+      Operations; the caller should gate this action via isOps(launch). */
+  approveSpec: (approverEmail: string) => Promise<void>;
 
   saveProject: (p: Project) => Promise<Project>;
   deleteProject: (id: string) => Promise<void>;
@@ -204,13 +212,44 @@ export function SpecProvider({ children }: { children: ReactNode }) {
   // Start a blank spec, optionally pre-bound to a project. Used from the
   // Projects workspace "+ New Sign" button so saves automatically belong to
   // the right project.
-  const newSpec = useCallback((projectId?: string, projectName?: string) => {
+  const newSpec = useCallback((opts?: {
+    projectId?: string;
+    projectName?: string;
+    jobId?: string;
+    opportunityId?: string;
+  }) => {
     const fresh = emptySignSpec();
-    if (projectId)  fresh.projectId  = projectId;
-    if (projectName) fresh.projectName = projectName;
+    if (opts?.projectId)     fresh.projectId     = opts.projectId;
+    if (opts?.projectName)   fresh.projectName   = opts.projectName;
+    if (opts?.jobId)         fresh.jobId         = opts.jobId;
+    if (opts?.opportunityId) fresh.opportunityId = opts.opportunityId;
     setSpec(fresh);
     setSaveStatus("idle");
   }, []);
+
+  const approveSpec = useCallback(async (approverEmail: string) => {
+    if (!liveSpec.signTypeCode) return;
+    const approved: SignSpec = {
+      ...liveSpec,
+      status: "Approved",
+      approvedBy: approverEmail,
+      approvedAt: new Date().toISOString(),
+    };
+    setSaveStatus("saving");
+    try {
+      const saved = await signSpecs.save(approved);
+      setSpec(saved);
+      const all = await signSpecs.list();
+      setRecent(all);
+      setSaveStatus("saved");
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      window.setTimeout(() => {
+        setSaveStatus((s) => (s === "saved" ? "idle" : s));
+      }, 2000);
+    } catch {
+      setSaveStatus("error");
+    }
+  }, [liveSpec]);
 
   const saveProject = useCallback(async (p: Project) => {
     const saved = await projectRepo.save(p);
@@ -366,6 +405,7 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     deleteSpec,
     exportSpecHtml,
     copyProductCode,
+    approveSpec,
     saveProject,
     deleteProject,
   };
