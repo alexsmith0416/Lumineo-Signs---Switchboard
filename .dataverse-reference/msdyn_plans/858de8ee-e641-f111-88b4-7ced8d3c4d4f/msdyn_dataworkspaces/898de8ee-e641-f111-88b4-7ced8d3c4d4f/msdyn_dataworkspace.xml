@@ -1,0 +1,9 @@
+<msdyn_dataworkspace msdyn_dataworkspaceid="898de8ee-e641-f111-88b4-7ced8d3c4d4f">
+  <iscustomizable>1</iscustomizable>
+  <msdyn_content mimetype="application/octet-stream">content</msdyn_content>
+  <msdyn_contentschemaversion>1.0</msdyn_contentschemaversion>
+  <msdyn_description>Data workspace for - Production Scheduler App</msdyn_description>
+  <msdyn_name>Data workspace (Production Scheduler App)</msdyn_name>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</msdyn_dataworkspace>

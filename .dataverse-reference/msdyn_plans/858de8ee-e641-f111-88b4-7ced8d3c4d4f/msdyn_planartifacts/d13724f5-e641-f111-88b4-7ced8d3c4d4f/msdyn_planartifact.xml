@@ -1,0 +1,13 @@
+<msdyn_planartifact msdyn_planartifactid="d13724f5-e641-f111-88b4-7ced8d3c4d4f">
+  <iscustomizable>1</iscustomizable>
+  <msdyn_artifactmetadata mimetype="application/octet-stream">content</msdyn_artifactmetadata>
+  <msdyn_artifactmetadataschemaversion>1.0</msdyn_artifactmetadataschemaversion>
+  <msdyn_artifactstatus>419550001</msdyn_artifactstatus>
+  <msdyn_description>A comprehensive scheduling app for production schedulers, supervisors, and employees to manage jobs, resources, and schedules effectively.</msdyn_description>
+  <msdyn_name>Production scheduling app</msdyn_name>
+  <msdyn_proposal mimetype="application/octet-stream">content</msdyn_proposal>
+  <msdyn_proposalschemaversion>1.0</msdyn_proposalschemaversion>
+  <msdyn_type>PowerAppsCanvasApp</msdyn_type>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</msdyn_planartifact>

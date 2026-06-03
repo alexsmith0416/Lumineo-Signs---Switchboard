@@ -1,0 +1,2494 @@
+{
+  "inMemoryTables": [
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "2f70e492-18ec-4411-8832-cce8ea8c96b3",
+        "Attributes": [
+          {
+            "MetadataId": "f190f86d-c526-4c68-b140-71a489806aef",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_EmployeeName",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Employee Name",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "a8693c09-26a8-4807-9d50-c25ac52a7dab",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Department",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Department",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_department1"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_Employee1",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains records of employees with work schedules and capacities",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Employees",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Employee",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [
+          {
+            "MetadataId": "b993d0f2-bf91-4991-9799-7fe232b0a880",
+            "SchemaName": "crfdf_employee1_crfdf_department_crfdf_department1",
+            "ReferencingAttribute": "crfdf_department",
+            "ReferencedEntity": "crfdf_department1",
+            "ReferencingEntity": "crfdf_employee1",
+            "ReferencedAttribute": "crfdf_departmentid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Department",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          }
+        ],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_employee1",
+          "SchemaName": "crfdf_Employee1",
+          "MetadataId": "2f70e492-18ec-4411-8832-cce8ea8c96b3",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains records of employees with work schedules and capacities",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Employees",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Employee",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    },
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "28d933fd-2259-4ec2-a914-5d3ae8eb8518",
+        "Attributes": [
+          {
+            "MetadataId": "b92345ab-f80b-44ed-95ea-14f2627ef3bf",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_DepartmentName",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Department Name",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_Department1",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains records of production departments",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Departments",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Department",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_department1",
+          "SchemaName": "crfdf_Department1",
+          "MetadataId": "28d933fd-2259-4ec2-a914-5d3ae8eb8518",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains records of production departments",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Departments",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Department",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    },
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "6fa21787-9d63-4d95-b645-2aed3f6dc67c",
+        "Attributes": [
+          {
+            "MetadataId": "67de9a10-ed69-4a18-ad56-42b79532e9dc",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_JobName",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Job Name",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "47b0bafd-747d-41c0-8655-952ec19125fe",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_CustomerName",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Customer Name",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 100,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "c3abe85e-1a54-4668-89aa-ba15018452ac",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_DueDate",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Due Date",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "ImeMode": "Auto",
+            "Format": "DateOnly",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "8203720d-38d9-4b98-bd5c-b0993c5990ee",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Department",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Department",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_department1"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          },
+          {
+            "MetadataId": "fa1a12b2-14f2-4ad5-a211-e7cd62575fd5",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_EstimatedLaborHours",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Estimated Labor Hours",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "Decimal",
+            "AttributeTypeName": {
+              "Value": "DecimalType"
+            },
+            "ImeMode": "Auto",
+            "MaxValue": 100000000000,
+            "MinValue": -100000000000,
+            "Precision": 2,
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata"
+          },
+          {
+            "MetadataId": "606408fc-5ac4-4504-b32f-4327f27c3696",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_PlanningLineReference",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Planning Line Reference",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 100,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "801c4c36-1adf-407c-9e4c-9c299ab3e687",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Status",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Status",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "Picklist",
+            "AttributeTypeName": {
+              "Value": "PicklistType"
+            },
+            "DefaultFormValue": -1,
+            "OptionSet": {
+              "IsCustomOptionSet": true,
+              "IsGlobal": false,
+              "IsCustomizable": {
+                "Value": true,
+                "CanBeChanged": false,
+                "ManagedPropertyLogicalName": "iscustomizable"
+              },
+              "ExternalTypeName": "",
+              "OptionSetType": "Picklist",
+              "Description": {
+                "LocalizedLabels": [
+                  {
+                    "Label": "",
+                    "LanguageCode": 1033
+                  }
+                ]
+              },
+              "DisplayName": {
+                "LocalizedLabels": [
+                  {
+                    "Label": "Status",
+                    "LanguageCode": 1033
+                  }
+                ]
+              },
+              "Options": [
+                {
+                  "Value": 890950000,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Not Started",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950001,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "In Progress",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950002,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Completed",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Name": ""
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_JobEstimateLine",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains job estimate lines with labor hours and status",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Job Estimate Lines",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Job Estimate Line",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [
+          {
+            "MetadataId": "14c99d14-f2fe-4ce6-a54e-d5dbe89e5650",
+            "SchemaName": "crfdf_jobestimateline_crfdf_department_crfdf_department1",
+            "ReferencingAttribute": "crfdf_department",
+            "ReferencedEntity": "crfdf_department1",
+            "ReferencingEntity": "crfdf_jobestimateline",
+            "ReferencedAttribute": "crfdf_departmentid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Department",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          }
+        ],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_jobestimateline",
+          "SchemaName": "crfdf_JobEstimateLine",
+          "MetadataId": "6fa21787-9d63-4d95-b645-2aed3f6dc67c",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains job estimate lines with labor hours and status",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Job Estimate Lines",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Job Estimate Line",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    },
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "83040fb3-84fb-4f21-bced-401ba4aa7ea4",
+        "Attributes": [
+          {
+            "MetadataId": "9c389253-2313-4c28-928d-bfe2e2ae8a57",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_ScheduleBlockName",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Schedule Block Name",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "16143a74-0c7d-403c-95bc-deb3fdbbe52b",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Job",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Job",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_jobestimateline"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          },
+          {
+            "MetadataId": "310fd021-a016-4e5d-bda8-393636f49473",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Department",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Department",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_department1"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          },
+          {
+            "MetadataId": "c44670aa-4361-4dbc-9d2d-5ccc81454e58",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Employee",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Employee",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_employee1"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          },
+          {
+            "MetadataId": "f18d51cd-d5a7-46ff-8b93-fad879ca7b15",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_StartDateTime",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Start DateTime",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "76291ce7-8b3b-43a1-9726-0e7195ab79e3",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_EndDateTime",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "End DateTime",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "cc2ede5a-d403-46e5-9daa-385f585cb5e0",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_ScheduledHours",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Scheduled Hours",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Decimal",
+            "AttributeTypeName": {
+              "Value": "DecimalType"
+            },
+            "ImeMode": "Auto",
+            "MaxValue": 100000000000,
+            "MinValue": -100000000000,
+            "Precision": 2,
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata"
+          },
+          {
+            "MetadataId": "f2de3c19-7c05-457d-acb1-ae00d756f943",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_CompletionDateTime",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Completion DateTime",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "fb1f5cb7-d144-435f-939d-286a2c76da33",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_OvertimeUsed",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Overtime Used",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "Decimal",
+            "AttributeTypeName": {
+              "Value": "DecimalType"
+            },
+            "ImeMode": "Auto",
+            "MaxValue": 100000000000,
+            "MinValue": -100000000000,
+            "Precision": 2,
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata"
+          },
+          {
+            "MetadataId": "06881ef6-a6a7-4487-a8aa-4088362f2aea",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Notes",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Notes",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "None"
+            },
+            "AttributeType": "Memo",
+            "AttributeTypeName": {
+              "Value": "MemoType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 2000,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_ProductionScheduleLine",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains scheduled production blocks with timing and assignments",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Production Schedule Lines",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Production Schedule Line",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [
+          {
+            "MetadataId": "9283094d-3435-48ae-bb7b-835c85f39e6e",
+            "SchemaName": "crfdf_ProductionScheduleLine_crfdf_Job_crfdf_JobEstimateLine",
+            "ReferencingAttribute": "crfdf_job",
+            "ReferencedEntity": "crfdf_jobestimateline",
+            "ReferencingEntity": "crfdf_productionscheduleline",
+            "ReferencedAttribute": "crfdf_jobestimatelineid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Job",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          },
+          {
+            "MetadataId": "2f31d3e4-6b56-4f07-8c38-f9f7f6f948a1",
+            "SchemaName": "crfdf_productionscheduleline_crfdf_department_crfdf_department1",
+            "ReferencingAttribute": "crfdf_department",
+            "ReferencedEntity": "crfdf_department1",
+            "ReferencingEntity": "crfdf_productionscheduleline",
+            "ReferencedAttribute": "crfdf_departmentid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Department",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          },
+          {
+            "MetadataId": "294e5e25-8154-4eee-b607-189e8c621c4c",
+            "SchemaName": "crfdf_productionscheduleline_crfdf_employee_crfdf_employee1",
+            "ReferencingAttribute": "crfdf_employee",
+            "ReferencedEntity": "crfdf_employee1",
+            "ReferencingEntity": "crfdf_productionscheduleline",
+            "ReferencedAttribute": "crfdf_employeeid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Employee",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          }
+        ],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_productionscheduleline",
+          "SchemaName": "crfdf_ProductionScheduleLine",
+          "MetadataId": "83040fb3-84fb-4f21-bced-401ba4aa7ea4",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains scheduled production blocks with timing and assignments",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Production Schedule Lines",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Production Schedule Line",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    },
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "e2dfff3e-b4c1-4db5-b76a-04683d8c5cce",
+        "Attributes": [
+          {
+            "MetadataId": "05ee668f-3637-49d6-8da0-af23534b443d",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_WorkHourDescription",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Work Hour Description",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "24bc6a2e-0dc6-4cb9-8bea-36ac5ef658cd",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_WorkDays",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Work Days",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Virtual",
+            "AttributeTypeName": {
+              "Value": "MultiSelectPicklistType"
+            },
+            "DefaultFormValue": -1,
+            "OptionSet": {
+              "IsCustomOptionSet": true,
+              "IsGlobal": false,
+              "ExternalTypeName": "",
+              "OptionSetType": "Picklist",
+              "Description": {
+                "LocalizedLabels": [
+                  {
+                    "Label": "",
+                    "LanguageCode": 1033
+                  }
+                ]
+              },
+              "DisplayName": {
+                "LocalizedLabels": [
+                  {
+                    "Label": "Work Days",
+                    "LanguageCode": 1033
+                  }
+                ]
+              },
+              "Options": [
+                {
+                  "Value": 890950000,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "emp_001",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950001,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "emp_002",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950002,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "emp_003",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950003,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "emp_004",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950004,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "emp_005",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950005,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Monday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950006,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Tuesday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950007,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Wednesday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950008,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Thursday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950009,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Friday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950010,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Saturday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                },
+                {
+                  "Value": 890950011,
+                  "ExternalValue": "",
+                  "IsManaged": false,
+                  "Label": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "Sunday",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  },
+                  "Description": {
+                    "LocalizedLabels": [
+                      {
+                        "Label": "",
+                        "LanguageCode": 1033
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Name": ""
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.MultiSelectPicklistAttributeMetadata"
+          },
+          {
+            "MetadataId": "299f8b17-87d6-4954-a02b-cf97c44ee478",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_StartTime",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Start Time",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "37e10130-08e9-429d-8367-7ae94af4fa8a",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_EndTime",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "End Time",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "5eb78492-1ad0-449d-8170-774ff58a037c",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_LunchStart",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Lunch Start",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "ImeMode": "Auto",
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          },
+          {
+            "MetadataId": "0b2b9843-1dc1-4450-81b7-58b0fdfbb89a",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_LunchDurationminutes",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Lunch Duration (minutes)",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Integer",
+            "AttributeTypeName": {
+              "Value": "IntegerType"
+            },
+            "MaxValue": 2147483647,
+            "MinValue": -2147483648,
+            "Format": "None",
+            "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata"
+          },
+          {
+            "MetadataId": "c4375d21-2cec-4b30-adbd-4f9d926585fc",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_DailyCapacityHours",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Daily Capacity Hours",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Decimal",
+            "AttributeTypeName": {
+              "Value": "DecimalType"
+            },
+            "ImeMode": "Auto",
+            "MaxValue": 100000000000,
+            "MinValue": -100000000000,
+            "Precision": 2,
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_EmployeeWorkHour",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains employee normal work days and hours",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Employee Work Hours",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Employee Work Hour",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_employeeworkhour",
+          "SchemaName": "crfdf_EmployeeWorkHour",
+          "MetadataId": "e2dfff3e-b4c1-4db5-b76a-04683d8c5cce",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains employee normal work days and hours",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Employee Work Hours",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Employee Work Hour",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    },
+    {
+      "data": [],
+      "entity": {
+        "MetadataId": "fbb4db73-f4e8-4c82-b97e-0801d3e56cda",
+        "Attributes": [
+          {
+            "MetadataId": "c7c95754-1930-4889-a928-a99bcc03c980",
+            "IsPrimaryName": true,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_OvertimeDescription",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Overtime Description",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "String",
+            "AttributeTypeName": {
+              "Value": "StringType"
+            },
+            "ImeMode": "Auto",
+            "MaxLength": 850,
+            "FormatName": {
+              "Value": "Text"
+            },
+            "Format": "Text",
+            "AutoNumberFormat": null,
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+          },
+          {
+            "MetadataId": "d3e09ab4-de49-4c20-9cf4-93cfd96593a4",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_Employee",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Employee",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Lookup",
+            "AttributeTypeName": {
+              "Value": "LookupType"
+            },
+            "Targets": [
+              "crfdf_employee1"
+            ],
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+          },
+          {
+            "MetadataId": "0852d3b7-12f2-4e03-83ac-35702d6dc872",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_OvertimeHours",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Overtime Hours",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "Decimal",
+            "AttributeTypeName": {
+              "Value": "DecimalType"
+            },
+            "ImeMode": "Auto",
+            "MaxValue": 100000000000,
+            "MinValue": -100000000000,
+            "Precision": 2,
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata"
+          },
+          {
+            "MetadataId": "5e18845e-45bd-4d99-9d57-d046cf87bacc",
+            "IsPrimaryName": false,
+            "IsSecured": false,
+            "IsValidForUpdate": true,
+            "IsValidForRead": true,
+            "SchemaName": "crfdf_EffectiveDate",
+            "SourceType": 0,
+            "ExternalName": null,
+            "Description": {
+              "LocalizedLabels": [
+                {
+                  "Label": "",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "DisplayName": {
+              "LocalizedLabels": [
+                {
+                  "Label": "Effective Date",
+                  "LanguageCode": 1033
+                }
+              ]
+            },
+            "RequiredLevel": {
+              "Value": "ApplicationRequired"
+            },
+            "AttributeType": "DateTime",
+            "AttributeTypeName": {
+              "Value": "DateTimeType"
+            },
+            "ImeMode": "Auto",
+            "Format": "DateOnly",
+            "DateTimeBehavior": {
+              "Value": "UserLocal"
+            },
+            "CanChangeDateTimeBehavior": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "canmodifybehavior"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+          }
+        ],
+        "OwnershipType": "UserOwned",
+        "PrimaryNameAttribute": "",
+        "SchemaName": "crfdf_OvertimeOverride",
+        "HasNotes": false,
+        "HasActivities": false,
+        "IsAvailableOffline": false,
+        "IsActivity": false,
+        "ActivityTypeMask": 0,
+        "IsSolutionAware": false,
+        "Description": {
+          "LocalizedLabels": [
+            {
+              "Label": "This table contains optional overtime hours overrides for employees",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayCollectionName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Overtime Overrides",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "DisplayName": {
+          "LocalizedLabels": [
+            {
+              "Label": "Overtime Override",
+              "LanguageCode": 1033
+            }
+          ]
+        },
+        "IsAuditEnabled": {
+          "Value": false
+        },
+        "IsValidForQueue": {
+          "Value": false
+        },
+        "IsConnectionsEnabled": {
+          "Value": false
+        },
+        "IsDuplicateDetectionEnabled": {
+          "Value": true
+        },
+        "IsDocumentManagementEnabled": false,
+        "EntityColor": null,
+        "IsRetentionEnabled": false,
+        "SyncToExternalSearchIndex": false,
+        "AutoRouteToOwnerQueue": false,
+        "IsSLAEnabled": false,
+        "IsQuickCreateEnabled": false,
+        "IsActivityParty": false,
+        "HasFeedback": false,
+        "AutoCreateAccessTeams": false,
+        "ChangeTrackingEnabled": false,
+        "IsKnowledgeManagementEnabled": false,
+        "EntityHelpUrlEnabled": false,
+        "EntityHelpUrl": null,
+        "IsMailMergeEnabled": {
+          "Value": true
+        },
+        "IsOfflineInMobileClient": {
+          "Value": false
+        },
+        "ManyToOneRelationships": [
+          {
+            "MetadataId": "98a1f4d0-ff90-4350-951f-4d80e1ac1667",
+            "SchemaName": "crfdf_overtimeoverride_crfdf_employee_crfdf_employee1",
+            "ReferencingAttribute": "crfdf_employee",
+            "ReferencedEntity": "crfdf_employee1",
+            "ReferencingEntity": "crfdf_overtimeoverride",
+            "ReferencedAttribute": "crfdf_employeeid",
+            "ReferencingEntityNavigationPropertyName": "crfdf_Employee",
+            "RelationshipType": "OneToManyRelationship",
+            "IsCustomRelationship": true,
+            "IsValidForAdvancedFind": true,
+            "IsCustomizable": {
+              "Value": true,
+              "CanBeChanged": true,
+              "ManagedPropertyLogicalName": "iscustomizable"
+            },
+            "CascadeConfiguration": {
+              "Assign": "NoCascade",
+              "Delete": "RemoveLink",
+              "Merge": "NoCascade",
+              "Reparent": "NoCascade",
+              "Share": "NoCascade",
+              "Unshare": "NoCascade",
+              "RollupView": "NoCascade",
+              "Archive": "RemoveLink"
+            },
+            "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+          }
+        ],
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata"
+      },
+      "dataPayloadFormat": "Dataverse",
+      "additionalMetadata": {
+        "existingEntityInfo": {
+          "LogicalName": "crfdf_overtimeoverride",
+          "SchemaName": "crfdf_OvertimeOverride",
+          "MetadataId": "fbb4db73-f4e8-4c82-b97e-0801d3e56cda",
+          "Description": {
+            "LocalizedLabels": [
+              {
+                "Label": "This table contains optional overtime hours overrides for employees",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayCollectionName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Overtime Overrides",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "DisplayName": {
+            "LocalizedLabels": [
+              {
+                "Label": "Overtime Override",
+                "LanguageCode": 1033
+              }
+            ]
+          },
+          "OwnershipType": "UserOwned",
+          "PrimaryIdAttribute": "",
+          "PrimaryNameAttribute": "",
+          "HasNotes": false,
+          "HasActivities": false,
+          "ExternalName": "",
+          "ExternalCollectionName": "",
+          "EntitySetName": ""
+        }
+      },
+      "tableSourceType": "ExistingTable",
+      "updatedByCopilotSessionId": "f2a1828d-d096-4bef-8be1-66daaea49d71",
+      "isExistingEntity": true
+    }
+  ]
+}

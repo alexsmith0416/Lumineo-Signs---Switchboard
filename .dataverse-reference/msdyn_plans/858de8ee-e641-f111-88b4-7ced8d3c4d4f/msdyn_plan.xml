@@ -1,0 +1,98 @@
+<msdyn_plan msdyn_planid="858de8ee-e641-f111-88b4-7ced8d3c4d4f">
+  <iscustomizable>1</iscustomizable>
+  <msdyn_content mimetype="application/octet-stream">content</msdyn_content>
+  <msdyn_contentschemaversion>1.1</msdyn_contentschemaversion>
+  <msdyn_description>This app empowers schedulers, supervisors, and employees to plan, visualize, and manage production jobs easily for efficient sign manufacturing.</msdyn_description>
+  <msdyn_languagecode>1033</msdyn_languagecode>
+  <msdyn_name>Production Scheduler App</msdyn_name>
+  <msdyn_prompt>Build a canvas app for production scheduling connected to Microsoft Business Central data where possible, but do not require custom APIs or admin-only changes.
+
+Goal:
+Create a scheduling app for a sign manufacturing company that helps schedule jobs, departments, resources, and employees based on estimated labor hours.
+
+Main requirements:
+1. Create a dashboard with department tiles:
+- All Active Production Work
+- Metal Fab
+- Paint
+- Vinyl / Graphics
+- Assembly
+- Routing
+- Install / Loading
+- QC / Ready to Ship
+- Overloaded / At Risk
+
+Each tile should show job count, total estimated hours, scheduled hours, unscheduled hours, and capacity remaining.
+
+2. Create a Job Search screen:
+- Search by Job No.
+- Show job name, customer, due date, department/resource, estimated labor hours, planning line reference, and status.
+- Allow imported or manually entered estimate/resource lines if Business Central connector access is limited.
+
+3. Create an Employee Setup screen:
+Track employee name, department, normal work days, start time, end time, lunch start, lunch duration, daily capacity hours, and optional overtime hours.
+
+Example:
+Monday–Friday, 7:00 AM–3:30 PM, 30-minute lunch at 12:00 PM.
+
+4. Create a Scheduling screen:
+Allow the user to select:
+- Job No.
+- Department/resource line
+- Employee
+- Estimated labor hours
+- Required completion date/time
+- Optional overtime hours
+
+The app should calculate a realistic start date/time by back-scheduling from the completion date based on the employee’s available working hours.
+
+If estimated hours exceed one day, split the work across multiple workdays instead of scheduling after hours.
+
+5. Create schedule blocks:
+Each scheduled block should include:
+- Job No.
+- Department
+- Employee
+- Start DateTime
+- End DateTime
+- Scheduled Hours
+- Completion DateTime
+- Overtime Used
+- Notes
+
+6. Add conflict detection:
+Flag overlapping work for the same employee where:
+Existing StartDateTime &lt; New EndDateTime
+and
+Existing EndDateTime &gt; New StartDateTime
+
+Show conflicts in red and create an “Overloaded / At Risk” view.
+
+7. Create a weekly calendar view:
+- Rows = employees
+- Columns = Monday through Saturday
+- Show scheduled job cards inside each employee/day cell
+- Allow filtering by department
+- Include unscheduled work queue on the right side
+
+8. Store scheduling data in a SharePoint list or Dataverse for Teams table called Production Schedule Lines.
+Use Business Central as the source for job/estimate information where the connector allows, but keep scheduling assignments in the app database.
+
+9. Include a Review &amp; Commit screen:
+Before finalizing schedules, show all schedule blocks, conflicts, unscheduled hours, and overloaded employees.
+Allow export/print so the schedule can be manually updated in Business Central if write-back permissions are not available.
+
+10. Use a clean modern layout with dark navy primary color #141464, red accent #E8151B, white cards, rounded corners, and clear department status colors.
+
+Build the app with the following tables:
+- Employees
+- Departments
+- Job Estimate Lines
+- Production Schedule Lines
+- Employee Work Hours
+- Overtime Overrides
+
+Make the app beginner-friendly, with clear screens, simple forms, editable galleries, and formulas that can be expanded later.</msdyn_prompt>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</msdyn_plan>

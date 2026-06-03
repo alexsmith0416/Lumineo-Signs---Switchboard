@@ -1,0 +1,19 @@
+{
+  "name": "Scheduling notification flow",
+  "description": "Automated notifications to inform employees about updates or changes to their assigned jobs and schedules.",
+  "typesOfUsers": [
+    "Employee"
+  ],
+  "tableSchemaNames": [
+    "crfdf_Employee1",
+    "crfdf_ProductionScheduleLine"
+  ],
+  "userStories": [
+    {
+      "id": "us17",
+      "description": "See updates or changes to my work assignments so that I stay informed of new tasks.",
+      "userType": "Employee"
+    }
+  ],
+  "version": 1
+}

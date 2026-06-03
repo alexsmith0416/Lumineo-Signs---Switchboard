@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": "4ed31b48-ef55-4425-a993-5bbe3dc439e2",
+  "appDisplayName": "LNI Production Schedule",
+  "region": "prod",
+  "environmentId": "484cdd3c-4409-e741-bbd5-7c210e00310e",
+  "description": " ",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5173",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}

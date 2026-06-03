@@ -1,0 +1,85 @@
+{
+  "name": "Production scheduling app",
+  "description": "A comprehensive scheduling app for production schedulers, supervisors, and employees to manage jobs, resources, and schedules effectively.",
+  "typesOfUsers": [
+    "Production scheduler",
+    "Production supervisor",
+    "Employee"
+  ],
+  "tableSchemaNames": [
+    "crfdf_Employee1",
+    "crfdf_Department1",
+    "crfdf_JobEstimateLine",
+    "crfdf_ProductionScheduleLine",
+    "crfdf_EmployeeWorkHour",
+    "crfdf_OvertimeOverride"
+  ],
+  "userStories": [
+    {
+      "id": "us01",
+      "description": "View a dashboard of department tiles with job count, estimated hours, and capacity so that I can monitor workload and status instantly.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us02",
+      "description": "Search for jobs by Job No. so that I can quickly find details and assign resources.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us04",
+      "description": "Set up employee profiles with regular work hours and overtime options so that schedules reflect true capacity.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us05",
+      "description": "Create, edit, or split scheduled blocks across multiple workdays so that jobs are assigned within regular working hours.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us06",
+      "description": "Back-schedule from a required completion date based on job and employee availability so that start dates are realistic.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us08",
+      "description": "View and filter a weekly employee calendar with job cards so that I can visualize assignments across the team.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us10",
+      "description": "Review all schedule blocks, conflicts, and unscheduled hours before committing so that schedules are complete and errors are avoided.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us12",
+      "description": "Monitor department workloads and capacity in real time so that I can adjust priorities and balance resources.",
+      "userType": "Production supervisor"
+    },
+    {
+      "id": "us14",
+      "description": "Filter the weekly calendar by department so that I can track multiple teams efficiently.",
+      "userType": "Production supervisor"
+    },
+    {
+      "id": "us15",
+      "description": "Review conflict flags and department statuses so that I am aware of issues requiring action.",
+      "userType": "Production supervisor"
+    },
+    {
+      "id": "us16",
+      "description": "View my assigned jobs and daily schedule so that I know what I am working on each day.",
+      "userType": "Employee"
+    },
+    {
+      "id": "us17",
+      "description": "See updates or changes to my work assignments so that I stay informed of new tasks.",
+      "userType": "Employee"
+    },
+    {
+      "id": "us18",
+      "description": "Access notes and timing details for each scheduled block so that I have all information to perform my duties.",
+      "userType": "Employee"
+    }
+  ],
+  "version": 1
+}
