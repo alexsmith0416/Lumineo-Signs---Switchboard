@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "Lumineo Estimating",
+  "region": "prod",
+  "environmentId": "484cdd3c-4409-e741-bbd5-7c210e00310e",
+  "description": "Estimating sub-app for the Lumineo Switchboard — build, price, and export Business Central jobs.",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5173",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}

@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "canvas-apps@power-platform-skills": true,
+    "vercel@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "linear@claude-plugins-official": true,
+    "code-apps-preview@power-platform-skills": true,
+    "model-apps@power-platform-skills": true
+  }
+}

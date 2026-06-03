@@ -1,0 +1,60 @@
+/* Lumineo Estimating — global styles. Design tokens live in @lumineo/ui. */
+:root {
+  --color-navy: #141464;
+  --color-navy-light: #2a2a8a;
+  --color-navy-bg: #e8eaf5;
+  --color-red: #e8151b;
+  --color-red-dark: #c4111a;
+  --color-white: #fff;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-500: #71717a;
+  --color-gray-700: #3f3f46;
+  --color-gray-900: #18181b;
+
+  --header-h: 64px;
+
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 20, 100, 0.06);
+  --shadow-md: 0 2px 8px rgba(20, 20, 100, 0.08);
+  --shadow-lg: 0 4px 16px rgba(20, 20, 100, 0.10);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--color-gray-900);
+  background: var(--color-gray-50);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a { color: var(--color-navy); text-decoration: none; }
+a:hover { text-decoration: underline; }

@@ -1,0 +1,19 @@
+{
+  "name": "lumineo-switchboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lumineo Signs Switchboard monorepo — master Power Apps shell + sub-apps.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "extract:estimating": "python scripts/extract-workbook.py",
+    "build:estimating": "npm run build --workspace apps/estimating",
+    "dev:estimating": "npm run dev --workspace apps/estimating",
+    "test:estimating": "npm test --workspace apps/estimating"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

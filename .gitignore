@@ -1,0 +1,29 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.cache/
+.parcel-cache/
+.vite/
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# Power Platform local artifacts
+.pac/
+*.zip
+out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor
+.vscode/*
+!.vscode/settings.example.json
+.idea/
+
+# Excel temp / lockfiles
+~$*.xlsx
