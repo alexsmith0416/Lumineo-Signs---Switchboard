@@ -19,7 +19,7 @@ export function Dashboard() {
   const clockOut = useStore((s) => s.clockOut);
   const elapsed = useElapsed(active?.clockIn);
   const [modalOpen, setModalOpen] = useState(false);
-  const [completedTask, setCompletedTask] = useState(true);
+  const [completedTask, setCompletedTask] = useState(false);
 
   const now = new Date();
   const today = `${now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} · ${formatTime(now.toISOString())}`;

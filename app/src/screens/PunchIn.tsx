@@ -14,7 +14,7 @@ export function PunchIn() {
 
   const [selectedJob, setSelectedJob] = useState<string>("24-1187");
   const [selectedTask, setSelectedTask] = useState<string>("30");
-  const [completedPrior, setCompletedPrior] = useState<boolean>(true);
+  const [completedPrior, setCompletedPrior] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const filteredJobs = useMemo(() => {
