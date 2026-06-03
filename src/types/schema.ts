@@ -2,6 +2,7 @@ export type FieldType =
   | 'text'
   | 'multiline'
   | 'select'
+  | 'multiselect'
   | 'date'
   | 'number'
   | 'currency'

@@ -79,7 +79,7 @@ const records = dataRows
     process:          g(row, 'Process'),
     priority:         g(row, 'Priority'),
     region:           g(row, 'Region'),
-    sales:            g(row, 'Sales'),
+    sales:            g(row, 'Sales').replace(/,\s*/g, ','), // keep all comma-separated reps
     signType:         '',
     location:         g(row, 'Location'),
     orderDate:        parseDate(g(row, 'Order Date (Received)')),

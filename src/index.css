@@ -213,6 +213,12 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--navy); cur
 .cdd-item:hover { background: var(--navy-mid); }
 .cdd-item.sel { background: var(--navy-mid); font-weight: 600; }
 .cdd-empty { padding: 10px; color: var(--text3); text-align: center; }
+.cdd-check { font-size: 14px; min-width: 16px; line-height: 1; }
+.cdd-footer { display: flex; gap: 6px; padding: 7px 10px; border-top: 1px solid var(--border); background: var(--bg); }
+.cdd-done { padding: 4px 12px; background: var(--navy); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; }
+.cdd-done:hover { background: var(--navy-mid2, #2a2a8a); }
+.cdd-clear { padding: 4px 10px; background: none; color: var(--text3); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; }
+.cdd-clear:hover { color: var(--red); border-color: var(--red); }
 
 /* ── GROUP HEADERS ──────────────────────────────────────────────────────────── */
 .grp-header { background: var(--bg2); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }

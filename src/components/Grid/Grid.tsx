@@ -6,7 +6,7 @@ import Badge from '../Badge/Badge';
 import type { SortCriterion } from '../../hooks/useGrid';
 
 interface ActiveCell { rowId: string; field: string }
-interface DDState { rowId: string; field: string; rect: DOMRect }
+interface DDState { rowId: string; field: string; rect: DOMRect; isMulti?: boolean }
 
 interface Props {
   records: LniRecord[];
@@ -79,11 +79,11 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
       return;
     }
 
-    if (def.type === 'select') {
+    if (def.type === 'select' || def.type === 'multiselect') {
       activateCell(rowId, field);
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setDdSearch('');
-      setTimeout(() => setDd({ rowId, field, rect }), 0);
+      setTimeout(() => setDd({ rowId, field, rect, isMulti: def.type === 'multiselect' }), 0);
       return;
     }
 
@@ -301,11 +301,19 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
           rowId={dd.rowId}
           field={dd.field}
           rect={dd.rect}
+          isMulti={dd.isMulti}
           currentValue={String((records.find(r => r.id === dd.rowId) ?? {})[dd.field as keyof LniRecord] ?? '')}
           search={ddSearch}
           onSearch={setDdSearch}
-          onPick={(val) => { commit(dd.rowId, dd.field, val); }}
-          onClose={() => setDd(null)}
+          onPick={(val) => {
+            if (dd.isMulti) {
+              // Multi-select: patch and keep dropdown open
+              onPatch(dd.rowId, dd.field, val);
+            } else {
+              commit(dd.rowId, dd.field, val);
+            }
+          }}
+          onClose={() => { setDd(null); setActive(null); }}
         />
       )}
     </div>
@@ -358,6 +366,16 @@ function CellDisplay({ record, field }: { record: LniRecord; field: string }) {
     return <span>{dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</span>;
   }
 
+  if (def?.type === 'multiselect') {
+    const vals = String(val).split(',').map(v => v.trim()).filter(Boolean);
+    if (vals.length === 0) return <span style={{ color: 'var(--text3)' }}>—</span>;
+    return (
+      <span style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        {vals.map(v => <Badge key={v} field={field} value={v} />)}
+      </span>
+    );
+  }
+
   if (BADGE_FIELDS.has(field)) {
     return <Badge field={field} value={String(val)} />;
   }
@@ -395,6 +413,18 @@ function CellEditor({
   if (def?.type === 'select') {
     // Select shows current badge while dropdown is open (dropdown is rendered at portal level)
     return <Badge field={field} value={String(val ?? '')} />;
+  }
+
+  if (def?.type === 'multiselect') {
+    // Multi-select shows current badges while dropdown is open
+    const vals = String(val ?? '').split(',').map(v => v.trim()).filter(Boolean);
+    return (
+      <span style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        {vals.length > 0
+          ? vals.map(v => <Badge key={v} field={field} value={v} />)
+          : <span style={{ color: 'var(--text3)' }}>—</span>}
+      </span>
+    );
   }
 
   if (def?.type === 'multiline') {
@@ -575,23 +605,38 @@ function CustomCellEditor({
 
 // ── SELECT DROPDOWN ───────────────────────────────────────────────────────────
 
-import { forwardRef } from 'react';
+import { forwardRef, useState as useLocalState } from 'react';
 
 const SelectDropdown = forwardRef<HTMLDivElement, {
   rowId: string; field: string; rect: DOMRect;
+  isMulti?: boolean;
   currentValue: string; search: string;
   onSearch: (q: string) => void;
   onPick: (val: string) => void;
   onClose: () => void;
-}>(function SelectDropdown({ field, rect, currentValue, search, onSearch, onPick, onClose }, ref) {
+}>(function SelectDropdown({ field, rect, isMulti, currentValue, search, onSearch, onPick, onClose }, ref) {
   const def = FIELD_DEFS[field];
   const opts = def?.opts ?? [];
   const filtered = opts.filter(o => o.toLowerCase().includes(search.toLowerCase()));
+
+  // Multi-select internal state — initialized from currentValue once
+  const [selected, setSelected] = useLocalState<Set<string>>(
+    () => new Set(currentValue.split(',').map(v => v.trim()).filter(Boolean))
+  );
 
   const style: React.CSSProperties = {
     top: rect.bottom + 2,
     left: rect.left,
     minWidth: Math.max(rect.width, 200),
+  };
+
+  const handleToggle = (opt: string) => {
+    const next = new Set(selected);
+    if (next.has(opt)) next.delete(opt); else next.add(opt);
+    setSelected(next);
+    // Preserve original order of opts for the stored value
+    const ordered = opts.filter(o => next.has(o));
+    onPick(ordered.join(','));
   };
 
   return (
@@ -616,17 +661,41 @@ const SelectDropdown = forwardRef<HTMLDivElement, {
         {filtered.map(opt => {
           const c = getBadgeColor(field, opt);
           const { bg, text } = COLOR_MAP[c];
+          const isChecked = isMulti ? selected.has(opt) : opt === currentValue;
           return (
             <div
               key={opt}
-              className={`cdd-item${opt === currentValue ? ' sel' : ''}`}
-              onClick={() => onPick(opt)}
+              className={`cdd-item${isChecked ? ' sel' : ''}`}
+              onClick={() => isMulti ? handleToggle(opt) : onPick(opt)}
             >
+              {isMulti && (
+                <span className="cdd-check" style={{ opacity: isChecked ? 1 : 0.25 }}>
+                  {isChecked ? '☑' : '☐'}
+                </span>
+              )}
               <span className="badge" style={{ background: bg, color: text }}>{opt}</span>
             </div>
           );
         })}
       </div>
+      {isMulti && (
+        <div className="cdd-footer">
+          <button
+            className="cdd-done"
+            onClick={() => onClose()}
+          >
+            Done
+          </button>
+          {selected.size > 0 && (
+            <button
+              className="cdd-clear"
+              onClick={() => { setSelected(new Set()); onPick(''); }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 });

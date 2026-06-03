@@ -10,7 +10,7 @@ export const FIELD_DEFS: Record<string, FieldDef> = {
     opts:['RED DATE','Rush','SIP','WI','ILM','DNI','PI','Priority'] },
   region:           { key:'region',           label:'Region',             dvColumn:'lni_region',                type:'select',    width:90,
     opts:['WK','NEK'] },
-  sales:            { key:'sales',            label:'Sales',              dvColumn:'lni_sales',                 type:'select',    width:90,
+  sales:            { key:'sales',            label:'Sales',              dvColumn:'lni_sales',                 type:'multiselect', width:130,
     opts:['LNI','CC','NH','DW','MM','AS','DP','VB','SP','AW','QT','MS','TC','DD','JA','JL','TN'] },
   signType:         { key:'signType',         label:'Sign Type',          dvColumn:'lni_sign_types',            type:'select',    width:160,
     opts:['Flat Aluminum','Pan Sign','Monument','Pylon','Flex Cabinet','ID Cabinet','Interior Sign / FCOs','Misc','Billboards','Post & Panels','Graphics','Trim Cap Face','EMC','Refurb','Wall Sign','Pole Sign w/ ID','Projecting Sign','Channel Letter','Plex Face','Site Sign','Ship In','Flex Face Replacement','Removal','Wrap','EMC Upgrade'] },
