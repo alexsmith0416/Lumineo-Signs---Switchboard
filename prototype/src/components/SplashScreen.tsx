@@ -8,6 +8,8 @@ import {
   photos,
   resourcesByRole,
   safetyMetric,
+  salesActiveJobs,
+  upcomingTargets,
 } from "../data/mockData";
 import DaysCounter from "./DaysCounter";
 import KpiStrip from "./KpiStrip";
@@ -17,6 +19,8 @@ import AppLauncher from "./AppLauncher";
 import MyScheduleSection from "./MyScheduleSection";
 import PhotoReel from "./PhotoReel";
 import RoleWidgets from "./RoleWidgets";
+import SalesActiveJobsWidget from "./SalesActiveJobsWidget";
+import UpcomingTargetDates from "./UpcomingTargetDates";
 
 interface Props {
   role: Role;
@@ -75,9 +79,23 @@ export default function SplashScreen({
 
       <AppLauncher tiles={appTiles} role={role} itemWidth={tileWidth} cols={tileCols} />
 
-      <div style={fullStyle}>
-        <MyScheduleSection me={me} jobs={myJobs} onOpenFull={onOpenMySchedule} />
-      </div>
+      {role === "Operations" && (
+        <div style={fullStyle}>
+          <UpcomingTargetDates targets={upcomingTargets} />
+        </div>
+      )}
+
+      {role === "Sales" && (
+        <div style={fullStyle}>
+          <SalesActiveJobsWidget jobs={salesActiveJobs} />
+        </div>
+      )}
+
+      {role !== "Operations" && role !== "Sales" && (
+        <div style={fullStyle}>
+          <MyScheduleSection me={me} jobs={myJobs} onOpenFull={onOpenMySchedule} />
+        </div>
+      )}
 
       {visibleAnnouncements.length > 0 && (
         <div className="announcements" style={fullStyle}>

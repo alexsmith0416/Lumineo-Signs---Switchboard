@@ -18,6 +18,7 @@ export interface Kpi {
   value: number;
   valueFormat: "currency" | "int" | "hours" | "percent" | "text";
   textValue?: string;
+  goal?: string;
   delta?: number;
   deltaDirection?: "up" | "down" | "flat";
   deltaIsGood?: boolean;
@@ -126,6 +127,47 @@ export interface ShippingWidgets {
   readyToShip: ListItem[];
   inTransit: ListItem[];
   receivingToday: ListItem[];
+}
+
+/* ============ Operations: upcoming target dates ============ */
+
+export type TargetDept = "Production" | "Installation";
+export type TargetStatus = "On track" | "At risk" | "Behind";
+
+export interface UpcomingTarget {
+  id: string;
+  jobNumber: string;
+  customer: string;
+  scope: string;
+  dept: TargetDept;
+  targetDateISO: string;     // "2026-06-08"
+  targetDateLabel: string;   // "Mon Jun 8"
+  daysUntil: number;
+  status: TargetStatus;
+  partnerLabel?: string;
+}
+
+/* ============ Sales: active jobs in flight ============ */
+
+export type JobDept =
+  | "Sales"
+  | "Estimating"
+  | "Spec / Design"
+  | "Production"
+  | "Shipping"
+  | "Installation"
+  | "Invoicing";
+
+export interface SalesActiveJob {
+  id: string;
+  jobNumber: string;
+  customer: string;
+  scope: string;
+  currentDept: JobDept;
+  estCompletionISO: string;
+  estCompletionLabel: string;
+  daysUntil: number;
+  value: number;
 }
 
 /* ============ Per-resource personal schedule ============ */

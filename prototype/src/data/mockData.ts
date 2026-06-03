@@ -10,9 +10,11 @@ import type {
   Resource,
   Role,
   SafetyMetric,
+  SalesActiveJob,
   SalesWidgets,
   ScheduledJob,
   ShippingWidgets,
+  UpcomingTarget,
   User,
 } from "../types";
 
@@ -42,6 +44,7 @@ const kpi_revApril: Kpi = {
   label: "Completions Invoiced — April",
   value: 890833,
   valueFormat: "currency",
+  goal: "$1.1M",
   delta: 21,
   deltaDirection: "down",
   deltaIsGood: false,
@@ -53,6 +56,7 @@ const kpi_revYtd: Kpi = {
   label: "Completions Invoiced — YTD",
   value: 3665935,
   valueFormat: "currency",
+  goal: "$4.4M",
   delta: 32,
   deltaDirection: "up",
   deltaIsGood: true,
@@ -64,6 +68,7 @@ const kpi_gmApril: Kpi = {
   label: "GM % — April",
   value: 58.3,
   valueFormat: "percent",
+  goal: "48%",
   delta: 15,
   deltaDirection: "up",
   deltaIsGood: true,
@@ -75,6 +80,7 @@ const kpi_gmYtd: Kpi = {
   label: "GM % — YTD",
   value: 46.6,
   valueFormat: "percent",
+  goal: "48%",
   delta: 3,
   deltaDirection: "up",
   deltaIsGood: true,
@@ -86,6 +92,7 @@ const kpi_dip: Kpi = {
   label: "Avg Days Job Open (DIP)",
   value: 66,
   valueFormat: "int",
+  goal: "48 days",
   delta: 10,
   deltaDirection: "up",
   deltaIsGood: false,
@@ -97,6 +104,7 @@ const kpi_openJobs: Kpi = {
   label: "Value of Open Jobs",
   value: 3098338,
   valueFormat: "currency",
+  goal: "$2.2M",
   delta: 11,
   deltaDirection: "up",
   deltaIsGood: false,
@@ -108,6 +116,7 @@ const kpi_newOrdApril: Kpi = {
   label: "New Orders — April",
   value: 1360447,
   valueFormat: "currency",
+  goal: "$1.02M",
   delta: 31,
   deltaDirection: "down",
   deltaIsGood: false,
@@ -119,6 +128,7 @@ const kpi_newOrdYtd: Kpi = {
   label: "New Orders — YTD",
   value: 5072801,
   valueFormat: "currency",
+  goal: "$4.32M",
   delta: 37,
   deltaDirection: "up",
   deltaIsGood: true,
@@ -131,6 +141,7 @@ const kpi_empSat: Kpi = {
   value: 3.9,
   valueFormat: "text",
   textValue: "3.9 / 5",
+  goal: "> 4.0 / 5",
   deltaDirection: "flat",
   delta: 0,
   sparkline: [4.1, 3.9, 3.9, 3.9],
@@ -425,3 +436,44 @@ export const shippingWidgets: ShippingWidgets = {
   ],
 };
 
+
+/* ============ Operations: 3-week upcoming target dates ============
+ * Centered on today (system date 2026-06-03). Production targets are
+ * fabrication-complete dates; Installation targets are install-complete dates.
+ * Sorted nearest → furthest by `targetDateISO`.
+ */
+export const upcomingTargets: UpcomingTarget[] = [
+  // ---- Production (fab-complete) ----
+  { id: "tp-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Backlit channel letters — fab complete",      dept: "Production", targetDateISO: "2026-06-05", targetDateLabel: "Fri Jun 5",  daysUntil: 2,  status: "On track", partnerLabel: "Marcus L." },
+  { id: "tp-2", jobNumber: "J123512", customer: "Westfield Mall",          scope: "Monument cabinet — frame fab",                dept: "Production", targetDateISO: "2026-06-09", targetDateLabel: "Tue Jun 9",  daysUntil: 6,  status: "At risk",  partnerLabel: "Hunter B." },
+  { id: "tp-3", jobNumber: "J123488", customer: "Sunoco — Route 9",        scope: "LED retrofit kit — bracket weld",             dept: "Production", targetDateISO: "2026-06-10", targetDateLabel: "Wed Jun 10", daysUntil: 7,  status: "On track", partnerLabel: "Chris O." },
+  { id: "tp-4", jobNumber: "J123524", customer: "UConn — wayfinding",      scope: "Cabinet runs — laser cut + form (batch 1)",   dept: "Production", targetDateISO: "2026-06-12", targetDateLabel: "Fri Jun 12", daysUntil: 9,  status: "On track", partnerLabel: "Hunter B." },
+  { id: "tp-5", jobNumber: "J123478", customer: "Route 9 pylons",          scope: "Refurb — strip & re-skin",                    dept: "Production", targetDateISO: "2026-06-15", targetDateLabel: "Mon Jun 15", daysUntil: 12, status: "Behind",   partnerLabel: "Marcus L." },
+  { id: "tp-6", jobNumber: "J123533", customer: "Dunkin' franchise",       scope: "Window vinyl — print + weed",                 dept: "Production", targetDateISO: "2026-06-18", targetDateLabel: "Thu Jun 18", daysUntil: 15, status: "On track", partnerLabel: "Lila R." },
+  { id: "tp-7", jobNumber: "J123501", customer: "Stop & Shop",             scope: "Cabinet sign — paint + assemble",             dept: "Production", targetDateISO: "2026-06-20", targetDateLabel: "Sat Jun 20", daysUntil: 17, status: "At risk",  partnerLabel: "Chris O." },
+  { id: "tp-8", jobNumber: "J123524", customer: "UConn — wayfinding",      scope: "Cabinet runs — laser cut + form (batch 2)",   dept: "Production", targetDateISO: "2026-06-23", targetDateLabel: "Tue Jun 23", daysUntil: 20, status: "On track", partnerLabel: "Hunter B." },
+
+  // ---- Installation (install-complete) ----
+  { id: "ti-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Channel letters — face install + power",      dept: "Installation", targetDateISO: "2026-06-04", targetDateLabel: "Thu Jun 4",  daysUntil: 1,  status: "On track", partnerLabel: "Crew 2" },
+  { id: "ti-2", jobNumber: "J123501", customer: "Stop & Shop",             scope: "Cabinet sign install",                        dept: "Installation", targetDateISO: "2026-06-08", targetDateLabel: "Mon Jun 8",  daysUntil: 5,  status: "On track", partnerLabel: "Crew 2" },
+  { id: "ti-3", jobNumber: "J123488", customer: "Sunoco — Route 9",        scope: "LED retrofit on canopy",                      dept: "Installation", targetDateISO: "2026-06-11", targetDateLabel: "Thu Jun 11", daysUntil: 8,  status: "On track", partnerLabel: "Crew 2 + 1L" },
+  { id: "ti-4", jobNumber: "J123512", customer: "Westfield Mall",          scope: "Monument set — crane + footings",             dept: "Installation", targetDateISO: "2026-06-14", targetDateLabel: "Sun Jun 14", daysUntil: 11, status: "At risk",  partnerLabel: "Crew 2 + crane" },
+  { id: "ti-5", jobNumber: "J123524", customer: "UConn — wayfinding",      scope: "Wayfinding cabinet install (phase 1)",        dept: "Installation", targetDateISO: "2026-06-19", targetDateLabel: "Fri Jun 19", daysUntil: 16, status: "On track", partnerLabel: "Crew 1" },
+  { id: "ti-6", jobNumber: "J123478", customer: "Route 9 pylons",          scope: "Pylon set — crane",                           dept: "Installation", targetDateISO: "2026-06-22", targetDateLabel: "Mon Jun 22", daysUntil: 19, status: "Behind",   partnerLabel: "Crew 2 + crane" },
+  { id: "ti-7", jobNumber: "J123533", customer: "Dunkin' franchise",       scope: "Window vinyl — apply",                        dept: "Installation", targetDateISO: "2026-06-25", targetDateLabel: "Thu Jun 25", daysUntil: 22, status: "On track", partnerLabel: "1M 1T" },
+];
+
+/* ============ Sales: active jobs in flight (per salesperson) ============
+ * Jamie Rivera's jobs that have been sold and are now somewhere in the
+ * production/install pipeline. Sorted nearest → furthest by estCompletionISO.
+ */
+export const salesActiveJobs: SalesActiveJob[] = [
+  { id: "sa-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Backlit channel letter set",        currentDept: "Installation",   estCompletionISO: "2026-06-04", estCompletionLabel: "Thu Jun 4",  daysUntil: 1,  value: 18400 },
+  { id: "sa-2", jobNumber: "J123501", customer: "Stop & Shop",             scope: "Cabinet sign install",              currentDept: "Production",     estCompletionISO: "2026-06-08", estCompletionLabel: "Mon Jun 8",  daysUntil: 5,  value: 9800  },
+  { id: "sa-3", jobNumber: "J123488", customer: "Sunoco — Route 9",        scope: "LED retrofit — corporate program",  currentDept: "Spec / Design",  estCompletionISO: "2026-06-11", estCompletionLabel: "Thu Jun 11", daysUntil: 8,  value: 22400 },
+  { id: "sa-4", jobNumber: "J123512", customer: "Westfield Mall",          scope: "Monument cabinet sign",             currentDept: "Production",     estCompletionISO: "2026-06-14", estCompletionLabel: "Sun Jun 14", daysUntil: 11, value: 84000 },
+  { id: "sa-5", jobNumber: "J123524", customer: "UConn — wayfinding",      scope: "Wayfinding cabinet rollout",        currentDept: "Production",     estCompletionISO: "2026-06-19", estCompletionLabel: "Fri Jun 19", daysUntil: 16, value: 32000 },
+  { id: "sa-6", jobNumber: "J123478", customer: "Route 9 pylons",          scope: "Pylon refurb",                      currentDept: "Production",     estCompletionISO: "2026-06-22", estCompletionLabel: "Mon Jun 22", daysUntil: 19, value: 12200 },
+  { id: "sa-7", jobNumber: "J123533", customer: "Dunkin' franchise",       scope: "Window vinyl — 14 locations",       currentDept: "Estimating",     estCompletionISO: "2026-06-25", estCompletionLabel: "Thu Jun 25", daysUntil: 22, value: 7600  },
+  { id: "sa-8", jobNumber: "J123541", customer: "Hartford Med — annex",    scope: "Interior wayfinding refresh",       currentDept: "Sales",          estCompletionISO: "2026-07-10", estCompletionLabel: "Fri Jul 10", daysUntil: 37, value: 14800 },
+];

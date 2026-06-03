@@ -431,7 +431,7 @@ button {
   transition: border-color 0.12s ease;
   cursor: pointer;
   overflow: hidden;
-  min-height: 64px;
+  min-height: 80px;
 }
 
 .kpi:hover {
@@ -466,12 +466,34 @@ button {
   white-space: normal;
 }
 
+.kpi__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  min-height: 14px;
+}
+
+.kpi__goal {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .kpi__delta {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   font-size: 10px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .kpi__delta.is-good { color: var(--green); }
@@ -1700,4 +1722,311 @@ button {
   .myschedule-screen__summary { padding: 12px; }
   .myschedule-screen__totals { gap: 14px; width: 100%; justify-content: space-between; }
   .myschedule-screen__totals-value { font-size: 16px; }
+}
+
+/* ============ Upcoming Target Dates (Operations) ============ */
+.targets {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.targets__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.targets__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.targets__sub {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.targets__toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg2);
+}
+
+.targets__toggle-btn {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  background: transparent;
+  border: 0;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.targets__toggle-btn + .targets__toggle-btn {
+  border-left: 1px solid var(--border);
+}
+
+.targets__toggle-btn.is-active {
+  background: var(--navy);
+  color: white;
+}
+
+.targets__toggle-btn:not(.is-active):hover {
+  background: var(--navy-mid);
+  color: var(--navy);
+}
+
+.targets__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.targets__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.targets__row:last-child { border-bottom: 0; }
+
+.targets__when {
+  flex: 0 0 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.targets__date {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.targets__until {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--navy-mid);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.3px;
+}
+
+.targets__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.targets__customer {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.targets__scope {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.targets__partner {
+  color: var(--text-mid);
+  font-weight: 600;
+}
+
+.targets__status {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  align-self: center;
+}
+
+.targets__status--green { background: var(--green-soft); color: var(--green); }
+.targets__status--amber { background: var(--amber-soft); color: #b06715; }
+.targets__status--red   { background: var(--red-soft);   color: var(--red); }
+
+.targets__empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 12px 0;
+}
+
+/* ============ Sales Active Jobs (Sales) ============ */
+.salesjobs {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.salesjobs__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.salesjobs__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.salesjobs__sub {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.salesjobs__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.salesjobs__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.salesjobs__row:last-child { border-bottom: 0; }
+
+.salesjobs__when {
+  flex: 0 0 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.salesjobs__date {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.salesjobs__until {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--navy-mid);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.salesjobs__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.salesjobs__customer {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.salesjobs__scope {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.salesjobs__right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.salesjobs__dept {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.salesjobs__dept--navy  { background: var(--navy-mid);   color: var(--navy); }
+.salesjobs__dept--amber { background: var(--amber-soft); color: #b06715; }
+.salesjobs__dept--green { background: var(--green-soft); color: var(--green); }
+.salesjobs__dept--red   { background: var(--red-soft);   color: var(--red); }
+.salesjobs__dept--gray  { background: var(--bg2);        color: var(--text-mid); }
+
+.salesjobs__value {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.salesjobs__empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 12px 0;
+}
+
+@media (max-width: 540px) {
+  .targets__head, .salesjobs__head { flex-wrap: wrap; }
+  .targets__when, .salesjobs__when { flex-basis: 66px; }
+  .targets__date, .salesjobs__date { font-size: 11px; }
+  .targets__customer, .salesjobs__customer { font-size: 12px; }
+  .targets__scope, .salesjobs__scope { font-size: 10px; }
+  .targets__row, .salesjobs__row { padding: 9px 0; gap: 8px; }
+  .salesjobs__value { font-size: 10px; }
 }

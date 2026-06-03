@@ -54,7 +54,10 @@ export default function KpiStrip({ kpis, itemWidth, cols = 2 }: Props) {
             <span className={`kpi__value ${isText ? "kpi__value--text" : ""}`}>
               {formatValue(k)}
             </span>
-            <DeltaBadge k={k} />
+            <div className="kpi__foot">
+              {k.goal && <span className="kpi__goal">Goal {k.goal}</span>}
+              <DeltaBadge k={k} />
+            </div>
           </div>
         );
       })}
