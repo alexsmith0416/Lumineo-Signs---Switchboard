@@ -5,7 +5,7 @@ import { SubBar } from "../components/SubBar";
 import { jobByNo, MOCK_JOBS, tasksFor } from "../lib/mockData";
 import { activePunch, useStore } from "../store";
 import { useMemo, useState } from "react";
-import { AlertIcon, Check, CheckCircle } from "../components/icons";
+import { AlertIcon, CheckCircle } from "../components/icons";
 
 export function PunchIn() {
   const navigate = useNavigate();
@@ -137,7 +137,9 @@ export function PunchIn() {
             </div>
           </StepCard>
 
-          {/* Switch-job warning */}
+          {/* Switch-job warning — informational only; the completion choice
+              lives in its own card below so it also appears when switching
+              tasks within the same job. */}
           {switchingFrom && (
             <div className="bg-[#fff8e1] border border-[#fde68a] px-3 py-2.5 rounded-[10px] mt-2.5 flex gap-2.5">
               <AlertIcon className="text-[#92400e] shrink-0 mt-0.5" size={18} />
@@ -148,26 +150,36 @@ export function PunchIn() {
                 <div className="text-[11px] text-[#92400e] mt-0.5">
                   Punching in here will clock you out automatically.
                 </div>
-                <label className="flex gap-1.5 items-center mt-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={completedPrior}
-                    onChange={(e) => setCompletedPrior(e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`w-[18px] h-[18px] rounded-[4px] flex items-center justify-center ${
-                      completedPrior ? "bg-[#92400e]" : "bg-white border border-[#92400e]"
-                    }`}
-                  >
-                    {completedPrior && <Check size={12} className="text-white" />}
-                  </span>
-                  <span className="text-xs font-bold text-[#92400e]">
-                    Completed Task {switchingFrom.taskNo} on previous job
-                  </span>
-                </label>
               </div>
             </div>
+          )}
+
+          {/* Prior-task completion — mirrors the Clock Out modal so you
+              always get to mark the current task done before starting the
+              next punch, whether you're switching jobs or just tasks. */}
+          {active && (
+            <label className="flex items-start gap-2.5 p-3 bg-label-bg rounded-[10px] mt-2.5 cursor-pointer border border-gray-200">
+              <input
+                type="checkbox"
+                checked={completedPrior}
+                onChange={(e) => setCompletedPrior(e.target.checked)}
+                className="sr-only"
+              />
+              <span
+                className={`w-[22px] h-[22px] rounded-md border-2 border-navy flex items-center justify-center shrink-0 mt-0.5 ${
+                  completedPrior ? "bg-navy" : "bg-white"
+                }`}
+              >
+                {completedPrior && <CheckCircle size={12} className="text-white" />}
+              </span>
+              <span>
+                <div className="text-[13px] font-bold text-navy">Completed Current Task</div>
+                <div className="text-[11px] text-gray-500 mt-0.5 font-medium leading-snug">
+                  Check this if Task {active.taskNo} on Job {active.jobNo} is finished.
+                  Otherwise it remains open for further work.
+                </div>
+              </span>
+            </label>
           )}
 
           <button
