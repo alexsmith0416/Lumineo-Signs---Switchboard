@@ -1,0 +1,26 @@
+{
+  "name": "Weekly calendar view",
+  "description": "A visual calendar view for production supervisors and schedulers to track employee assignments, filter by department, and manage unscheduled work.",
+  "typesOfUsers": [
+    "Production scheduler",
+    "Production supervisor"
+  ],
+  "tableSchemaNames": [
+    "crfdf_ProductionScheduleLine",
+    "crfdf_Employee1",
+    "crfdf_Department1"
+  ],
+  "userStories": [
+    {
+      "id": "us08",
+      "description": "View and filter a weekly employee calendar with job cards so that I can visualize assignments across the team.",
+      "userType": "Production scheduler"
+    },
+    {
+      "id": "us14",
+      "description": "Filter the weekly calendar by department so that I can track multiple teams efficiently.",
+      "userType": "Production supervisor"
+    }
+  ],
+  "version": 1
+}

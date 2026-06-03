@@ -1,0 +1,669 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.1.0.0" SolutionPackageVersion="9.1" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entities>
+  <Entity>
+    <Name LocalizedName="LNI Production Schedule" OriginalName="lni_productionschedule">lni_productionschedule</Name>
+    <EntityInfo>
+      <entity Name="lni_productionschedule">
+        <LocalizedNames>
+          <LocalizedName description="LNI Production Schedule" languagecode="1033" />
+        </LocalizedNames>
+        <LocalizedCollectionNames>
+          <LocalizedCollectionName description="LNI Production Schedules" languagecode="1033" />
+        </LocalizedCollectionNames>
+        <Descriptions>
+          <Description description="" languagecode="1033" />
+        </Descriptions>
+        <attributes>
+        <attribute PhysicalName="Lni_Name">
+          <Type>nvarchar</Type>
+          <Name>lni_name</Name>
+          <LogicalName>lni_name</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>PrimaryName|ValidForAdvancedFind|ValidForForm|ValidForGrid|RequiredForForm</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>100</MaxLength>
+          <displaynames><displayname description="Name" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Current_Status">
+          <Type>nvarchar</Type>
+          <Name>lni_current_status</Name>
+          <LogicalName>lni_current_status</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Current Status" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Process">
+          <Type>nvarchar</Type>
+          <Name>lni_process</Name>
+          <LogicalName>lni_process</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Process" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Priority">
+          <Type>nvarchar</Type>
+          <Name>lni_priority</Name>
+          <LogicalName>lni_priority</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Priority" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Region">
+          <Type>nvarchar</Type>
+          <Name>lni_region</Name>
+          <LogicalName>lni_region</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Region" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Sales">
+          <Type>nvarchar</Type>
+          <Name>lni_sales</Name>
+          <LogicalName>lni_sales</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Sales" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Sign_Types">
+          <Type>nvarchar</Type>
+          <Name>lni_sign_types</Name>
+          <LogicalName>lni_sign_types</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Sign Types" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Location">
+          <Type>nvarchar</Type>
+          <Name>lni_location</Name>
+          <LogicalName>lni_location</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Location" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Order_Date">
+          <Type>datetime</Type>
+          <Name>lni_order_date</Name>
+          <LogicalName>lni_order_date</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Order Date" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Expeditor">
+          <Type>datetime</Type>
+          <Name>lni_expeditor</Name>
+          <LogicalName>lni_expeditor</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Expeditor" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Scheduled_Install">
+          <Type>datetime</Type>
+          <Name>lni_scheduled_install</Name>
+          <LogicalName>lni_scheduled_install</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Scheduled Install" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Mfg_Target_Modified">
+          <Type>datetime</Type>
+          <Name>lni_mfg_target_modified</Name>
+          <LogicalName>lni_mfg_target_modified</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Mfg Target Modified" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Red_Date">
+          <Type>datetime</Type>
+          <Name>lni_red_date</Name>
+          <LogicalName>lni_red_date</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Red Date" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Vendor_Ship_Date">
+          <Type>datetime</Type>
+          <Name>lni_vendor_ship_date</Name>
+          <LogicalName>lni_vendor_ship_date</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>date</Format>
+          <DateTimeBehavior>DateOnly</DateTimeBehavior>
+          <displaynames><displayname description="Vendor Ship Date" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Value">
+          <Type>money</Type>
+          <Name>lni_value</Name>
+          <LogicalName>lni_value</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <PrecisionSource>0</PrecisionSource>
+          <MinValue>0</MinValue>
+          <MaxValue>10000000</MaxValue>
+          <displaynames><displayname description="Value" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Ready_For_Install">
+          <Type>nvarchar</Type>
+          <Name>lni_ready_for_install</Name>
+          <LogicalName>lni_ready_for_install</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Ready for Install" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Powerlines">
+          <Type>nvarchar</Type>
+          <Name>lni_powerlines</Name>
+          <LogicalName>lni_powerlines</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Powerlines" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Locates">
+          <Type>nvarchar</Type>
+          <Name>lni_locates</Name>
+          <LogicalName>lni_locates</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Locates" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Mfg_Region">
+          <Type>nvarchar</Type>
+          <Name>lni_mfg_region</Name>
+          <LogicalName>lni_mfg_region</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="MFG Region" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Install_Region">
+          <Type>nvarchar</Type>
+          <Name>lni_install_region</Name>
+          <LogicalName>lni_install_region</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Install Region" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Install_Area">
+          <Type>nvarchar</Type>
+          <Name>lni_install_area</Name>
+          <LogicalName>lni_install_area</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Install Area" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Vendor">
+          <Type>nvarchar</Type>
+          <Name>lni_vendor</Name>
+          <LogicalName>lni_vendor</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Vendor" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Po_Number">
+          <Type>nvarchar</Type>
+          <Name>lni_po_number</Name>
+          <LogicalName>lni_po_number</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="PO Number" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Vendor_Status">
+          <Type>nvarchar</Type>
+          <Name>lni_vendor_status</Name>
+          <LogicalName>lni_vendor_status</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Vendor Status" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Graphics">
+          <Type>nvarchar</Type>
+          <Name>lni_graphics</Name>
+          <LogicalName>lni_graphics</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Graphics" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Routing_Type">
+          <Type>nvarchar</Type>
+          <Name>lni_routing_type</Name>
+          <LogicalName>lni_routing_type</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Routing Type" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Metal">
+          <Type>nvarchar</Type>
+          <Name>lni_metal</Name>
+          <LogicalName>lni_metal</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>50</MaxLength>
+          <displaynames><displayname description="Metal" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Assembly">
+          <Type>nvarchar</Type>
+          <Name>lni_assembly</Name>
+          <LogicalName>lni_assembly</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>50</MaxLength>
+          <displaynames><displayname description="Assembly" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Plex_Application">
+          <Type>nvarchar</Type>
+          <Name>lni_plex_application</Name>
+          <LogicalName>lni_plex_application</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>50</MaxLength>
+          <displaynames><displayname description="Plex Application" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Paint_Prep_Paint">
+          <Type>nvarchar</Type>
+          <Name>lni_paint_prep_paint</Name>
+          <LogicalName>lni_paint_prep_paint</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>50</MaxLength>
+          <displaynames><displayname description="Paint Prep / Paint" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Material_Cut">
+          <Type>nvarchar</Type>
+          <Name>lni_material_cut</Name>
+          <LogicalName>lni_material_cut</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>50</MaxLength>
+          <displaynames><displayname description="Material Cut" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Paint_Prep_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_paint_prep_hrs</Name>
+          <LogicalName>lni_paint_prep_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Paint Prep Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Paint_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_paint_hrs</Name>
+          <LogicalName>lni_paint_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Paint Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Steel_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_steel_hrs</Name>
+          <LogicalName>lni_steel_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Steel Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Install_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_install_hrs</Name>
+          <LogicalName>lni_install_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Install Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Travel_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_travel_hrs</Name>
+          <LogicalName>lni_travel_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Travel Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Routing_Hrs">
+          <Type>decimal</Type>
+          <Name>lni_routing_hrs</Name>
+          <LogicalName>lni_routing_hrs</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>disabled</ImeMode>
+          <Precision>2</Precision>
+          <MinValue>0</MinValue>
+          <MaxValue>10000</MaxValue>
+          <displaynames><displayname description="Routing Hrs" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Ul_Sign">
+          <Type>bit</Type>
+          <Name>lni_ul_sign</Name>
+          <LogicalName>lni_ul_sign</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <DefaultValue>0</DefaultValue>
+          <displaynames><displayname description="UL Sign" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Qt">
+          <Type>bit</Type>
+          <Name>lni_qt</Name>
+          <LogicalName>lni_qt</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <DefaultValue>0</DefaultValue>
+          <displaynames><displayname description="Q.T." languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Deposit">
+          <Type>nvarchar</Type>
+          <Name>lni_deposit</Name>
+          <LogicalName>lni_deposit</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>100</MaxLength>
+          <displaynames><displayname description="Deposit" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Storage_Location">
+          <Type>nvarchar</Type>
+          <Name>lni_storage_location</Name>
+          <LogicalName>lni_storage_location</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="Storage Location" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Job_Notes">
+          <Type>nvarchar</Type>
+          <Name>lni_job_notes</Name>
+          <LogicalName>lni_job_notes</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>4000</MaxLength>
+          <displaynames><displayname description="Job Notes" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Admin_Notes">
+          <Type>nvarchar</Type>
+          <Name>lni_admin_notes</Name>
+          <LogicalName>lni_admin_notes</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>4000</MaxLength>
+          <displaynames><displayname description="Admin Notes" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Mfg_Notes">
+          <Type>nvarchar</Type>
+          <Name>lni_mfg_notes</Name>
+          <LogicalName>lni_mfg_notes</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>4000</MaxLength>
+          <displaynames><displayname description="Mfg Notes" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        </attributes>
+        <EntitySetName>lni_productionschedules</EntitySetName>
+        <OwnershipTypeMask>UserOwned</OwnershipTypeMask>
+        <IsAuditEnabled>0</IsAuditEnabled>
+        <IsActivity>0</IsActivity>
+        <IsActivityParty>0</IsActivityParty>
+      </entity>
+    </EntityInfo>
+    <FormXml><forms type="main" /></FormXml>
+    <Views />
+    <Dashboards />
+    <Visualizations />
+    <CommandDefinitions />
+    <RibbonDiffXml />
+  </Entity>
+  <Entity>
+    <Name LocalizedName="LNI User View Preferences" OriginalName="lni_userviewpreferences">lni_userviewpreferences</Name>
+    <EntityInfo>
+      <entity Name="lni_userviewpreferences">
+        <LocalizedNames>
+          <LocalizedName description="LNI User View Preferences" languagecode="1033" />
+        </LocalizedNames>
+        <LocalizedCollectionNames>
+          <LocalizedCollectionName description="LNI User View Preferences" languagecode="1033" />
+        </LocalizedCollectionNames>
+        <Descriptions>
+          <Description description="" languagecode="1033" />
+        </Descriptions>
+        <attributes>
+        <attribute PhysicalName="Lni_Name">
+          <Type>nvarchar</Type>
+          <Name>lni_name</Name>
+          <LogicalName>lni_name</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>PrimaryName|ValidForAdvancedFind|ValidForForm|ValidForGrid|RequiredForForm</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>100</MaxLength>
+          <displaynames><displayname description="Name" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Userid">
+          <Type>nvarchar</Type>
+          <Name>lni_userid</Name>
+          <LogicalName>lni_userid</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="User ID" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Viewname">
+          <Type>nvarchar</Type>
+          <Name>lni_viewname</Name>
+          <LogicalName>lni_viewname</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>500</MaxLength>
+          <displaynames><displayname description="View Name" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Hiddencolumns">
+          <Type>nvarchar</Type>
+          <Name>lni_hiddencolumns</Name>
+          <LogicalName>lni_hiddencolumns</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>4000</MaxLength>
+          <displaynames><displayname description="Hidden Columns" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        <attribute PhysicalName="Lni_Columnorder">
+          <Type>nvarchar</Type>
+          <Name>lni_columnorder</Name>
+          <LogicalName>lni_columnorder</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <Format>text</Format>
+          <MaxLength>4000</MaxLength>
+          <displaynames><displayname description="Column Order" languagecode="1033" /></displaynames>
+          <Descriptions><Description description="" languagecode="1033" /></Descriptions>
+        </attribute>
+        </attributes>
+        <EntitySetName>lni_userviewpreferences</EntitySetName>
+        <OwnershipTypeMask>UserOwned</OwnershipTypeMask>
+        <IsAuditEnabled>0</IsAuditEnabled>
+        <IsActivity>0</IsActivity>
+        <IsActivityParty>0</IsActivityParty>
+      </entity>
+    </EntityInfo>
+    <FormXml><forms type="main" /></FormXml>
+    <Views />
+    <Dashboards />
+    <Visualizations />
+    <CommandDefinitions />
+    <RibbonDiffXml />
+  </Entity>
+  </Entities>
+  <Roles />
+  <Workflows />
+  <FieldSecurityProfiles />
+  <Templates />
+  <EntityMaps />
+  <EntityRelationships />
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+  <EntityDataProviders />
+  <CanvasApps />
+  <AIModels />
+  <Dashboards />
+  <Reports />
+</ImportExportXml>

@@ -1,0 +1,12 @@
+<msdyn_planartifact msdyn_planartifactid="6c3924f5-e641-f111-88b4-7ced8d3c4d4f">
+  <iscustomizable>1</iscustomizable>
+  <msdyn_artifactmetadataschemaversion>1.0</msdyn_artifactmetadataschemaversion>
+  <msdyn_artifactstatus>419550000</msdyn_artifactstatus>
+  <msdyn_description>A visual calendar view for production supervisors and schedulers to track employee assignments, filter by department, and manage unscheduled work.</msdyn_description>
+  <msdyn_name>Weekly calendar view</msdyn_name>
+  <msdyn_proposal mimetype="application/octet-stream">content</msdyn_proposal>
+  <msdyn_proposalschemaversion>1.0</msdyn_proposalschemaversion>
+  <msdyn_type>PowerAppsCanvasApp</msdyn_type>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</msdyn_planartifact>

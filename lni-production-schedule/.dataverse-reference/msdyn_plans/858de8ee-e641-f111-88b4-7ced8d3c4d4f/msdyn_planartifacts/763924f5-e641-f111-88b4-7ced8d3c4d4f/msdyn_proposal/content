@@ -1,0 +1,19 @@
+{
+  "name": "Schedule export flow",
+  "description": "A flow to export or print the finalized production schedule for manual updates in Business Central.",
+  "typesOfUsers": [
+    "Production scheduler",
+    "Production supervisor"
+  ],
+  "tableSchemaNames": [
+    "crfdf_ProductionScheduleLine"
+  ],
+  "userStories": [
+    {
+      "id": "us11",
+      "description": "Export or print the current schedule so that updates can be shared or entered into Business Central if needed.",
+      "userType": "Production scheduler"
+    }
+  ],
+  "version": 1
+}

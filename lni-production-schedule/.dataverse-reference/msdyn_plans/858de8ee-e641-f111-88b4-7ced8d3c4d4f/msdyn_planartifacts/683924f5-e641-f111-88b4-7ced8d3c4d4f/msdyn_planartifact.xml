@@ -1,0 +1,12 @@
+<msdyn_planartifact msdyn_planartifactid="683924f5-e641-f111-88b4-7ced8d3c4d4f">
+  <iscustomizable>1</iscustomizable>
+  <msdyn_artifactmetadataschemaversion>1.0</msdyn_artifactmetadataschemaversion>
+  <msdyn_artifactstatus>419550000</msdyn_artifactstatus>
+  <msdyn_description>An AI-powered agent that detects scheduling conflicts, flags overloaded employees, and highlights unscheduled work.</msdyn_description>
+  <msdyn_name>Conflict detection agent</msdyn_name>
+  <msdyn_proposal mimetype="application/octet-stream">content</msdyn_proposal>
+  <msdyn_proposalschemaversion>1.0</msdyn_proposalschemaversion>
+  <msdyn_type>CopilotStudioAgent</msdyn_type>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</msdyn_planartifact>
