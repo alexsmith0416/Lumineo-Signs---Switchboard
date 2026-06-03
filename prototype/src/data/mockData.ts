@@ -7,9 +7,11 @@ import type {
   OpsWidgets,
   Photo,
   ProductionWidgets,
+  Resource,
   Role,
   SafetyMetric,
   SalesWidgets,
+  ScheduledJob,
   ShippingWidgets,
   User,
 } from "../types";
@@ -215,6 +217,92 @@ export const installationWidgets: InstallationWidgets = {
     { id: "mp2", primary: "LED module 12V 4500K — qty 24", secondary: "Sunoco · J123488",      badge: { text: "Need", tone: "red" } },
     { id: "mp3", primary: "Anchor bolts ½″×6 — qty 8",     secondary: "Stop & Shop · J123501", badge: { text: "Low",  tone: "amber" } },
     { id: "mp4", primary: "Vinyl 3M IJ180 white — 5 yd",   secondary: "Dunkin' · J123533",     badge: { text: "OK",   tone: "green" } },
+  ],
+};
+
+/* ============ Per-resource personal schedule ============ */
+
+export const resourcesByRole: Record<Role, Resource> = {
+  Operations: {
+    id: "res-ops-01",
+    name: "Alex Smith",
+    email: "alex@lumineosigns.com",
+    initials: "AS",
+    role: "Operations",
+    department: "Operations",
+    trade: "Operations Manager",
+    resourceNumber: "R-014",
+  },
+  Sales: {
+    id: "res-sal-03",
+    name: "Jamie Rivera",
+    email: "jamie@lumineosigns.com",
+    initials: "JR",
+    role: "Sales",
+    department: "Sales",
+    trade: "Account Executive",
+    resourceNumber: "R-031",
+  },
+  Production: {
+    id: "res-prd-07",
+    name: "Chris Owen",
+    email: "chris@lumineosigns.com",
+    initials: "CO",
+    role: "Production",
+    department: "Production · Team U",
+    trade: "Metal Fabricator",
+    resourceNumber: "R-072",
+  },
+  Installation: {
+    id: "res-ins-05",
+    name: "Aiden Park",
+    email: "aiden@lumineosigns.com",
+    initials: "AP",
+    role: "Installation",
+    department: "Installation · Crew 2",
+    trade: "Lead Installer",
+    resourceNumber: "R-054",
+  },
+  Shipping: {
+    id: "res-shp-02",
+    name: "Priya Desai",
+    email: "priya@lumineosigns.com",
+    initials: "PD",
+    role: "Shipping",
+    department: "Shipping",
+    trade: "Logistics Lead",
+    resourceNumber: "R-021",
+  },
+};
+
+export const myJobsByRole: Record<Role, ScheduledJob[]> = {
+  Operations: [
+    { id: "j-ops-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Backlit channel letters — review & approval",   priority: 1, weekBucket: "This week", startLabel: "Mon", dueLabel: "Fri",        estimatedHours: 6,  actualHours: 4,  status: "In progress" },
+    { id: "j-ops-2", jobNumber: "J123512", customer: "Westfield Mall",           scope: "Monument fab schedule alignment",               priority: 2, weekBucket: "This week", startLabel: "Tue", dueLabel: "Thu",        estimatedHours: 4,  actualHours: 1,  status: "Not started" },
+    { id: "j-ops-3", jobNumber: "J123478", customer: "Route 9 pylons",            scope: "Permit + crane scheduling",                     priority: 3, weekBucket: "Next week", startLabel: "Mon",   dueLabel: "Wed",        estimatedHours: 5,  actualHours: 0,  status: "Not started" },
+  ],
+  Sales: [
+    { id: "j-sal-1", jobNumber: "Q-2026-118", customer: "Hartford Medical Center", scope: "Final quote walkthrough + close",              priority: 1, weekBucket: "This week", startLabel: "Tue", dueLabel: "Fri",        estimatedHours: 3,  actualHours: 2,  status: "In progress" },
+    { id: "j-sal-2", jobNumber: "Q-2026-122", customer: "Westfield Mall",           scope: "Monument quote — revise & resend",             priority: 2, weekBucket: "This week", startLabel: "Wed", dueLabel: "Thu",        estimatedHours: 2,  actualHours: 0,  status: "Not started" },
+    { id: "j-sal-3", jobNumber: "Q-2026-131", customer: "UConn facilities",          scope: "Wayfinding scope + site visit",                priority: 3, weekBucket: "Next week", startLabel: "Tue",   dueLabel: "Thu",        estimatedHours: 6,  actualHours: 0,  status: "Not started" },
+  ],
+  Production: [
+    { id: "j-prd-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Cut & weld aluminum returns — channel letters", priority: 1, weekBucket: "This week", startLabel: "Mon", dueLabel: "Tue",        estimatedHours: 12, actualHours: 7,  status: "In progress", partnerLabel: "with Marcus L." },
+    { id: "j-prd-2", jobNumber: "J123512", customer: "Westfield Mall",           scope: "Monument cabinet — frame fabrication",          priority: 2, weekBucket: "This week", startLabel: "Wed", dueLabel: "Thu",        estimatedHours: 14, actualHours: 0,  status: "Not started", partnerLabel: "with Hunter B." },
+    { id: "j-prd-3", jobNumber: "J123488", customer: "Sunoco — Route 9",         scope: "LED retrofit kit — bracket weld",                priority: 3, weekBucket: "This week", startLabel: "Thu", dueLabel: "Fri",        estimatedHours: 4,  actualHours: 0,  status: "Not started" },
+    { id: "j-prd-4", jobNumber: "J123524", customer: "UConn — wayfinding",       scope: "Cabinet runs — laser cut + form",                priority: 4, weekBucket: "Next week", startLabel: "Mon",   dueLabel: "Wed",        estimatedHours: 16, actualHours: 0,  status: "Not started" },
+    { id: "j-prd-5", jobNumber: "J123478", customer: "Route 9 pylons",            scope: "Refurb — strip & re-skin",                       priority: 5, weekBucket: "Next week", startLabel: "Thu",   dueLabel: "Fri",        estimatedHours: 10, actualHours: 0,  status: "Not started" },
+  ],
+  Installation: [
+    { id: "j-ins-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Channel letter install — face install + power",priority: 1, weekBucket: "This week", startLabel: "Wed", dueLabel: "Wed",        estimatedHours: 6,  actualHours: 0,  status: "Not started", partnerLabel: "Crew 2" },
+    { id: "j-ins-2", jobNumber: "J123488", customer: "Sunoco — Route 9",         scope: "LED retrofit on canopy",                         priority: 2, weekBucket: "This week", startLabel: "Thu", dueLabel: "Thu",        estimatedHours: 5,  actualHours: 0,  status: "Not started", partnerLabel: "Crew 2" },
+    { id: "j-ins-3", jobNumber: "J123501", customer: "Stop & Shop",              scope: "Cabinet sign install",                           priority: 3, weekBucket: "This week", startLabel: "Fri", dueLabel: "Fri",        estimatedHours: 4,  actualHours: 0,  status: "Not started", partnerLabel: "Crew 2" },
+    { id: "j-ins-4", jobNumber: "J123512", customer: "Westfield Mall",           scope: "Monument set — crane + footings",               priority: 4, weekBucket: "Next week", startLabel: "Tue",   dueLabel: "Wed",        estimatedHours: 12, actualHours: 0,  status: "Not started", partnerLabel: "Crew 2 + crane" },
+  ],
+  Shipping: [
+    { id: "j-shp-1", jobNumber: "J123456", customer: "Hartford Medical Center", scope: "Crate channel letter set — 1 crate, 240 lb",    priority: 1, weekBucket: "This week", startLabel: "Tue", dueLabel: "Tue",        estimatedHours: 2,  actualHours: 1,  status: "In progress" },
+    { id: "j-shp-2", jobNumber: "J123512", customer: "Westfield Mall",           scope: "Crate monument cabinet — 2 crates, 580 lb",     priority: 2, weekBucket: "This week", startLabel: "Wed", dueLabel: "Wed",        estimatedHours: 3,  actualHours: 0,  status: "Not started" },
+    { id: "j-shp-3", jobNumber: "J123488", customer: "Sunoco — Route 9",         scope: "Box LED retrofit kit — 4 boxes",                 priority: 3, weekBucket: "Next week", startLabel: "Mon",   dueLabel: "Mon",        estimatedHours: 2,  actualHours: 0,  status: "Not started" },
   ],
 };
 

@@ -1906,6 +1906,187 @@ covered here, flag it and update this doc.
 
 ---
 
+## My Schedule — per-resource personal queue
+
+Login → resource lookup → personalized "what's on my plate this week + next."
+The splash gets a compact `My Schedule` section (top 3 this week + 2 look-ahead).
+The full screen `scrMySchedule` is the priority-ordered list with a Domino's-style
+hours tracker on every card.
+
+### Identity → resource lookup (`gblMe`)
+
+The login email already gives us `User().Email`. Map that to a `lum_resource`
+row so every job filter can use a stable resource ID, not the email.
+
+Add this block to `App.OnStart` **right after** `gblUser` is set:
+
+```powerquery
+// gblMe — the logged-in person as a *production resource*
+Set(
+    gblMe,
+    With(
+        { r: LookUp(lum_resources, lum_email = User().Email) },
+        If(
+            IsBlank(r),
+            // No matching resource — render a "not provisioned" banner upstream
+            { id: GUID(), name: User().FullName, email: User().Email,
+              department: "Unassigned", trade: "Unassigned",
+              resourceNumber: "—", isProvisioned: false },
+            { id: r.lum_resourceid, name: r.lum_name, email: r.lum_email,
+              department: r.lum_department, trade: r.lum_trade,
+              resourceNumber: r.lum_resourcenumber, isProvisioned: true }
+        )
+    )
+);
+```
+
+If `lum_resources` isn't connected yet, drop in a static fallback so the
+splash compiles:
+
+```powerquery
+Set(
+    gblMe,
+    { id: GUID("00000000-0000-0000-0000-000000000001"),
+      name: Coalesce(User().FullName, "Chris Owen"),
+      email: Coalesce(User().Email,    "chris@lumineosigns.com"),
+      department: "Production · Team U",
+      trade: "Metal Fabricator",
+      resourceNumber: "R-072",
+      isProvisioned: true }
+);
+```
+
+### `lum_scheduledjob` (or whichever table the Weekly Scheduler writes to)
+
+The schedule app already produces resource-assigned, week-bucketed job rows.
+The fields My Schedule reads:
+
+| Field                       | Type        | Purpose                                |
+|-----------------------------|-------------|----------------------------------------|
+| `lum_scheduledjobid`        | GUID        | Row PK                                 |
+| `lum_resource`              | Lookup      | → `lum_resources` (the assignee)       |
+| `lum_jobnumber`             | Text        | "J123456"                              |
+| `lum_customer`              | Text        | Display name                           |
+| `lum_scope`                 | Text        | Short scope summary                    |
+| `lum_priority`              | Whole #     | 1 = top, increasing = lower            |
+| `lum_startdate`             | Date        | Used to bucket This-week / Next-week   |
+| `lum_duedate`               | Date        | Same                                   |
+| `lum_estimatedhours`        | Decimal     | From estimate / spec                   |
+| `lum_actualhours`           | Decimal     | Rolled up from Time & Photo            |
+| `lum_status`                | Choice      | NotStarted, InProgress, Blocked, Done  |
+| `lum_partnerlabel`          | Text        | "Crew 2", "with Marcus L."             |
+
+### Splash section formula (`conMySchedule.Items` source)
+
+Drop a `galMySchedule` gallery inside `conContent` between `conAppLauncher`
+and `conAnnouncements`. Its `Items`:
+
+```powerquery
+With(
+    { todayWk: WeekNum(Today()) },
+    SortByColumns(
+        Filter(
+            lum_scheduledjobs,
+            lum_resource.lum_resourceid = gblMe.id,
+            WeekNum(lum_startdate) >= todayWk,
+            WeekNum(lum_startdate) <= todayWk + 1
+        ),
+        "lum_priority", Ascending,
+        "lum_startdate", Ascending
+    )
+)
+```
+
+Cap visible rows at 5 on the splash (3 this-week + 2 next-week). The "See full
+schedule →" button does `Navigate(scrMySchedule)`.
+
+### Job card layout (`cmpJobCard`)
+
+Reusable canvas component — used on the splash (compact) and on `scrMySchedule`
+(detail). Inputs:
+
+| Input             | Type    | Default      |
+|-------------------|---------|--------------|
+| `Job`             | Record  | —            |
+| `Variant`         | Text    | "compact"    |
+| `OnSelectJob`     | Behavior| —            |
+
+Structure (top to bottom):
+
+1. **Header row** — priority chip · customer + job# / scope · status pill
+   - Priority chip: navy 24×24 (28×28 in detail), white bold number
+   - Status pill colors: Not started → navy-mid, In progress → amber-soft,
+     Blocked → red-soft, Done → green-soft
+2. **Meta row** — `start–due` (bold) · partner (dim) · `actual h / estimated h` (right)
+3. **Progress bar** — 3 segments, full width:
+   - `seg_actual` (navy) = min(actual, estimated) / denom
+   - `seg_remain` (navy-mid) = max(estimated − actual, 0) / denom
+   - `seg_over`   (red)  = max(actual − estimated, 0) / denom
+   - `denom` = estimated + over (so the bar fills 100% even when over)
+   - Compact: 6 px tall, pill radius. Detail: 14 px tall, 7 px radius.
+4. **Legend** (detail only) — 3 swatches: Hours logged · Remaining · Over
+
+Power Fx for the three segment widths (each is a rectangle inside the bar
+container; bar container has `Width = Parent.TemplateWidth - 28`):
+
+```powerquery
+// Shared
+Set(
+    varDenom,
+    Max(Self.Parent.Job.lum_estimatedhours
+        + Max(Self.Parent.Job.lum_actualhours - Self.Parent.Job.lum_estimatedhours, 0),
+        1)
+);
+
+// seg_actual.Width
+Self.Parent.Width
+    * (Min(Self.Parent.Job.lum_actualhours, Self.Parent.Job.lum_estimatedhours) / varDenom)
+
+// seg_remain.Width
+Self.Parent.Width
+    * (Max(Self.Parent.Job.lum_estimatedhours - Self.Parent.Job.lum_actualhours, 0) / varDenom)
+
+// seg_over.Width
+Self.Parent.Width
+    * (Max(Self.Parent.Job.lum_actualhours - Self.Parent.Job.lum_estimatedhours, 0) / varDenom)
+```
+
+`seg_remain.X = seg_actual.X + seg_actual.Width`, and
+`seg_over.X = seg_remain.X + seg_remain.Width`.
+
+### Full screen `scrMySchedule`
+
+Top to bottom inside `conContent`:
+
+1. **Topbar** — `← Home` button + "MY SCHEDULE" crumb
+2. **Summary card** — name + trade + resource# + department on the left,
+   three totals on the right: `Jobs` / `Logged (h)` / `Estimated (h)`
+3. **`galThisWeek`** — Filter where `lum_startdate` is in current week,
+   sorted by `lum_priority` ascending. Repeats `cmpJobCard` with `Variant="detail"`.
+4. **`galNextWeek`** — Same, current week + 1.
+
+`OnSelect` on any card → `Navigate(scrJobDetail, ScreenTransition.None,
+{ jobId: ThisItem.lum_scheduledjobid })`. The detail screen reuses
+`cmpJobCard` with `Variant="detail"` at the top, then surfaces the
+weekly-scheduler-edit and time-photo deep-links (per [doc 15](15-launch-contract.md)).
+
+### Splash placement
+
+Insert between AppLauncher and Announcements in `scrHomeOps` /
+`scrHomeProd` / `scrHomeInst` / `scrHomeShip`. Skip on `scrHomeSales`
+unless Sales actually gets resource-assigned jobs (likely no).
+
+### Empty / unprovisioned states
+
+- `gblMe.isProvisioned = false` → render a single banner card in the My Schedule
+  slot: "Your account isn't linked to a production resource yet. Ask Ops to
+  set you up in Resources." (Don't crash, don't fall through to an empty
+  filter.)
+- `CountRows(galMySchedule.AllItems) = 0` → render an empty-state row:
+  "No jobs scheduled for you in the current window."
+
+---
+
 ## Open questions / known gaps
 
 These need to be resolved as part of platform setup:

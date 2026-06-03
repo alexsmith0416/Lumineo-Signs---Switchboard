@@ -126,3 +126,34 @@ export interface ShippingWidgets {
   inTransit: ListItem[];
   receivingToday: ListItem[];
 }
+
+/* ============ Per-resource personal schedule ============ */
+
+export interface Resource {
+  id: string;
+  name: string;
+  email: string;
+  initials: string;
+  role: Role;
+  department: string;
+  trade: string;
+  resourceNumber: string;
+}
+
+export type JobStatus = "Not started" | "In progress" | "Blocked" | "Done";
+export type WeekBucket = "This week" | "Next week";
+
+export interface ScheduledJob {
+  id: string;
+  jobNumber: string;
+  customer: string;
+  scope: string;
+  priority: number;
+  weekBucket: WeekBucket;
+  startLabel: string;
+  dueLabel: string;
+  estimatedHours: number;
+  actualHours: number;
+  status: JobStatus;
+  partnerLabel?: string;
+}

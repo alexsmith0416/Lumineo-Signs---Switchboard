@@ -1346,3 +1346,358 @@ button {
   .apptile { padding: 10px 8px; min-height: 78px; }
   .apptile__label { font-size: 11px; }
 }
+
+/* ============ My Schedule — splash section ============ */
+.myschedule {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.myschedule__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.myschedule__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.myschedule__sub {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+.myschedule__action {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: white;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.myschedule__action:hover {
+  background: var(--navy-mid);
+}
+
+.myschedule__bucket {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-top: 4px;
+}
+
+.myschedule__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.myschedule__empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 12px 0;
+}
+
+/* ============ JobCard ============ */
+.jobcard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jobcard--detail {
+  padding: 14px 14px 12px;
+  gap: 10px;
+}
+
+.jobcard__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.jobcard__priority {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--navy);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jobcard--detail .jobcard__priority {
+  flex-basis: 28px;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.jobcard__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jobcard__customer {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.jobcard--detail .jobcard__customer {
+  font-size: 14px;
+}
+
+.jobcard__job {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.jobcard--detail .jobcard__job {
+  font-size: 12px;
+  -webkit-line-clamp: 3;
+}
+
+.jobcard__status {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.jobcard__status--navy  { background: var(--navy-mid);  color: var(--navy); }
+.jobcard__status--amber { background: var(--amber-soft); color: #b06715; }
+.jobcard__status--red   { background: var(--red-soft);   color: var(--red); }
+.jobcard__status--green { background: var(--green-soft); color: var(--green); }
+
+.jobcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-mid);
+  font-variant-numeric: tabular-nums;
+}
+
+.jobcard__when {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.jobcard__partner {
+  color: var(--text-dim);
+}
+
+.jobcard__hours {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+
+.jobcard__bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg2);
+  overflow: hidden;
+}
+
+.jobcard__bar--detail {
+  height: 14px;
+  border-radius: 7px;
+}
+
+.jobcard__bar-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.jobcard__bar-seg--actual { background: var(--navy); }
+.jobcard__bar-seg--remain { background: var(--navy-mid); }
+.jobcard__bar-seg--over   { background: var(--red); }
+
+.jobcard__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+.jobcard__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.jobcard__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.jobcard__swatch--actual { background: var(--navy); }
+.jobcard__swatch--remain { background: var(--navy-mid); }
+.jobcard__swatch--over   { background: var(--red); }
+
+/* ============ My Schedule — full screen ============ */
+.myschedule-screen {
+  padding: 10px 0 24px;
+}
+
+.myschedule-screen__topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.myschedule-screen__back {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: white;
+}
+
+.myschedule-screen__back:hover {
+  background: var(--navy-mid);
+}
+
+.myschedule-screen__crumb {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.myschedule-screen__summary {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.myschedule-screen__name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.myschedule-screen__role {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+
+.myschedule-screen__totals {
+  display: flex;
+  gap: 18px;
+}
+
+.myschedule-screen__totals-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.myschedule-screen__totals-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.myschedule-screen__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.myschedule-screen__bucket {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding: 2px 2px;
+}
+
+.myschedule-screen__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 540px) {
+  .myschedule { padding: 10px 12px; }
+  .myschedule__head { flex-wrap: wrap; }
+  .jobcard { padding: 10px; }
+  .jobcard--detail { padding: 12px; }
+  .jobcard__customer { font-size: 12px; }
+  .jobcard__job { font-size: 11px; }
+  .jobcard__meta { font-size: 10px; }
+  .jobcard__hours { margin-left: 0; flex-basis: 100%; }
+  .myschedule-screen__summary { padding: 12px; }
+  .myschedule-screen__totals { gap: 14px; width: 100%; justify-content: space-between; }
+  .myschedule-screen__totals-value { font-size: 16px; }
+}

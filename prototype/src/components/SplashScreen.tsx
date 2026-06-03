@@ -4,7 +4,9 @@ import {
   appTiles,
   birthdays,
   kpisByRole,
+  myJobsByRole,
   photos,
+  resourcesByRole,
   safetyMetric,
 } from "../data/mockData";
 import DaysCounter from "./DaysCounter";
@@ -12,6 +14,7 @@ import KpiStrip from "./KpiStrip";
 import AnnouncementCard from "./AnnouncementCard";
 import BirthdayStrip from "./BirthdayStrip";
 import AppLauncher from "./AppLauncher";
+import MyScheduleSection from "./MyScheduleSection";
 import PhotoReel from "./PhotoReel";
 import RoleWidgets from "./RoleWidgets";
 
@@ -24,6 +27,7 @@ interface Props {
   widgetWidth: number | null;
   widgetCols: number;
   contentW: number | null;
+  onOpenMySchedule: () => void;
 }
 
 export default function SplashScreen({
@@ -35,8 +39,11 @@ export default function SplashScreen({
   widgetWidth,
   widgetCols,
   contentW,
+  onOpenMySchedule,
 }: Props) {
   const kpis = kpisByRole[role];
+  const me = resourcesByRole[role];
+  const myJobs = myJobsByRole[role];
   const visibleAnnouncements = announcements.filter(
     (a) => a.audience === "All" || a.audience === role,
   );
@@ -67,6 +74,10 @@ export default function SplashScreen({
       </section>
 
       <AppLauncher tiles={appTiles} role={role} itemWidth={tileWidth} cols={tileCols} />
+
+      <div style={fullStyle}>
+        <MyScheduleSection me={me} jobs={myJobs} onOpenFull={onOpenMySchedule} />
+      </div>
 
       {visibleAnnouncements.length > 0 && (
         <div className="announcements" style={fullStyle}>

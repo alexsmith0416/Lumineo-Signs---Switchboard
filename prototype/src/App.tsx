@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import type { Role } from "./types";
-import { usersByRole } from "./data/mockData";
+import { myJobsByRole, resourcesByRole, usersByRole } from "./data/mockData";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
+import MyScheduleScreen from "./components/MyScheduleScreen";
+
+type View = "splash" | "mySchedule";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -55,7 +58,10 @@ function useLayoutVars(screenW: number | null): void {
 
 export default function App() {
   const [role, setRole] = useState<Role>("Operations");
+  const [view, setView] = useState<View>("splash");
   const user = usersByRole[role];
+  const me = resourcesByRole[role];
+  const myJobs = myJobsByRole[role];
   const screenW = useActualScreenWidth();
   useLayoutVars(screenW);
 
@@ -97,17 +103,34 @@ export default function App() {
 
   return (
     <div className="app" style={pinStyle}>
-      <Header user={user} role={role} onChangeRole={setRole} />
-      <SplashScreen
+      <Header
+        user={user}
         role={role}
-        kpiWidth={kpiW}
-        kpiCols={kpiCols}
-        tileWidth={tileW}
-        tileCols={tileCols}
-        widgetWidth={widgetW}
-        widgetCols={roleGridCols}
-        contentW={contentW}
+        onChangeRole={(r) => {
+          setRole(r);
+          setView("splash");
+        }}
       />
+      {view === "splash" ? (
+        <SplashScreen
+          role={role}
+          kpiWidth={kpiW}
+          kpiCols={kpiCols}
+          tileWidth={tileW}
+          tileCols={tileCols}
+          widgetWidth={widgetW}
+          widgetCols={roleGridCols}
+          contentW={contentW}
+          onOpenMySchedule={() => setView("mySchedule")}
+        />
+      ) : (
+        <MyScheduleScreen
+          me={me}
+          jobs={myJobs}
+          contentW={contentW}
+          onBack={() => setView("splash")}
+        />
+      )}
       <div className="footer">
         Switchboard prototype · role-switch demo · mocked data
       </div>
