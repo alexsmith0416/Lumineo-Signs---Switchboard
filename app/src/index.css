@@ -43,3 +43,13 @@ body {
 .scroll-x-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Camera capture flash */
+@keyframes fadeOut {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
