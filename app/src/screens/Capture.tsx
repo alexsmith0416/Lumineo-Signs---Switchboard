@@ -140,7 +140,9 @@ export function Capture() {
       <AppHeader />
       <SubBar title="Add Photos" />
       <Body>
-        <section className="px-3.5 pt-3">
+        <div className="lg:grid lg:grid-cols-[1fr_1.2fr] lg:gap-6 lg:items-start">
+        <div className="lg:space-y-4">
+        <section className="px-3.5 pt-3 lg:px-0 lg:pt-0">
           <SectionLabel>Job</SectionLabel>
           <select
             value={jobNo}
@@ -155,7 +157,7 @@ export function Capture() {
           </select>
         </section>
 
-        <section className="px-3.5 mt-3.5">
+        <section className="px-3.5 mt-3.5 lg:px-0 lg:mt-0">
           <SectionLabel>Category</SectionLabel>
           <div className="grid grid-cols-2 gap-2.5">
             <CategoryCard
@@ -177,11 +179,42 @@ export function Capture() {
           </div>
         </section>
 
-        <section className="px-3.5 mt-3.5">
+        </div>
+
+        {/* === RIGHT COLUMN on desktop: upload-focused panel.
+             Mobile keeps the live camera viewfinder + shutter row. === */}
+        <div className="lg:space-y-4">
+        <section className="px-3.5 mt-3.5 lg:px-0 lg:mt-0">
           <SectionLabel>Capture</SectionLabel>
         </section>
 
-        <div className="mx-3.5 bg-[#0c0c14] aspect-[3/4] rounded-xl relative overflow-hidden">
+        {/* Desktop upload panel — camera viewfinder isn't useful here. */}
+        <div className="hidden lg:block">
+          <button
+            type="button"
+            onClick={() => galleryInput.current?.click()}
+            className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-navy hover:bg-navy-bg/50 rounded-xl p-10 flex flex-col items-center justify-center gap-3 text-navy transition-colors"
+          >
+            <div className="w-16 h-16 rounded-full bg-navy-bg flex items-center justify-center">
+              <ImageIcon size={32} className="text-navy" />
+            </div>
+            <div className="text-[15px] font-extrabold">Upload Photos</div>
+            <div className="text-[12px] text-gray-500 text-center max-w-sm leading-snug">
+              Click to choose files from this computer.
+              The photo is attached to <span className="font-bold text-navy">{jobNo}</span> as a{" "}
+              <span className="font-bold text-navy">{category}</span> photo.
+            </div>
+            <div className="mt-2 inline-flex items-center gap-2 bg-navy text-white text-[12px] font-bold px-4 py-2 rounded-lg">
+              Browse files
+            </div>
+          </button>
+          <div className="text-[11px] text-gray-500 mt-2 text-center">
+            On a phone, the same screen shows a live camera viewfinder for capturing photos on-site.
+          </div>
+        </div>
+
+        {/* Mobile viewfinder */}
+        <div className="mx-3.5 bg-[#0c0c14] aspect-[3/4] rounded-xl relative overflow-hidden lg:hidden">
           <video
             ref={videoRef}
             playsInline
@@ -262,7 +295,7 @@ export function Capture() {
           className="hidden"
         />
 
-        <div className="flex justify-around items-center px-3.5 py-4">
+        <div className="flex justify-around items-center px-3.5 py-4 lg:hidden">
           <button
             onClick={openGalleryConfirm}
             className="w-11 h-11 rounded-[10px] bg-navy-bg text-navy flex items-center justify-center hover:bg-gray-200"
@@ -288,7 +321,7 @@ export function Capture() {
           </button>
         </div>
 
-        <section className="px-3.5 pb-4">
+        <section className="px-3.5 pb-4 lg:px-0 lg:pb-0">
           <SectionLabel>Recently Captured</SectionLabel>
           <div className="flex gap-2 overflow-x-auto scroll-x-hide pb-1">
             {jobPhotos.length === 0 ? (
@@ -317,6 +350,8 @@ export function Capture() {
             View All Job Photos
           </button>
         </section>
+        </div>
+        </div>
       </Body>
 
       {showGalleryConfirm && (

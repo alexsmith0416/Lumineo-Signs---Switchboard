@@ -39,15 +39,22 @@ export function Dashboard() {
     <>
       <AppHeader />
       <Body>
+        <div className="lg:grid lg:grid-cols-[1.6fr_1fr] lg:gap-5 lg:items-start">
         {/* Greeting */}
-        <div className="bg-white p-3.5 rounded-xl shadow-sm mx-3.5 mt-3">
-          <div className="text-base font-extrabold text-navy">Hi, {firstName}</div>
-          <div className="text-[11px] text-gray-500 mt-0.5">{today}</div>
+        <div className="bg-white p-3.5 rounded-xl shadow-sm mx-3.5 mt-3 lg:mx-0 lg:mt-0 lg:col-span-2 lg:p-5 lg:flex lg:items-center lg:justify-between">
+          <div>
+            <div className="text-base font-extrabold text-navy lg:text-xl">Hi, {firstName}</div>
+            <div className="text-[11px] text-gray-500 mt-0.5 lg:text-[13px]">{today}</div>
+          </div>
+          <div className="hidden lg:block text-right">
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today</div>
+            <div className="text-xl font-extrabold text-navy tabular-nums">{formatHMShort(todayTotalMs)}</div>
+          </div>
         </div>
 
         {/* Offline banner */}
         {isOffline && (
-          <div className="bg-[#fff8e1] border border-[#fde68a] rounded-[10px] px-3 py-2.5 flex items-center gap-2.5 mx-3.5 mt-3">
+          <div className="bg-[#fff8e1] border border-[#fde68a] rounded-[10px] px-3 py-2.5 flex items-center gap-2.5 mx-3.5 mt-3 lg:mx-0 lg:mt-0 lg:col-span-2">
             <div className="w-[30px] h-[30px] rounded-lg bg-[#fde68a] text-[#92400e] flex items-center justify-center shrink-0">
               <WifiOffIcon />
             </div>
@@ -61,9 +68,12 @@ export function Dashboard() {
           </div>
         )}
 
+        {/* === LEFT COLUMN on desktop === */}
+        <div className="lg:space-y-4">
+
         {/* Active punch */}
         {active ? (
-          <section className="px-3.5 mt-3.5">
+          <section className="px-3.5 mt-3.5 lg:px-0 lg:mt-0">
             <SectionLabel>Active Punch</SectionLabel>
             <div className="bg-gradient-to-br from-navy to-navy-light text-white rounded-xl p-3.5 shadow-punch-card">
               <div className="flex justify-between items-center gap-2">
@@ -107,14 +117,14 @@ export function Dashboard() {
         {/* Punch in CTA */}
         <button
           onClick={() => navigate("/punch-in")}
-          className="w-[calc(100%-28px)] mx-3.5 mt-3 bg-red hover:bg-red-dark text-white h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2.5 shadow-red-cta"
+          className="w-[calc(100%-28px)] mx-3.5 mt-3 bg-red hover:bg-red-dark text-white h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2.5 shadow-red-cta lg:w-full lg:mx-0 lg:mt-0"
         >
           <PlusCircle size={22} className="text-white" />
           {active ? "Switch Jobs" : "Punch In to a Job"}
         </button>
 
         {/* Quick actions */}
-        <section className="px-3.5 mt-4">
+        <section className="px-3.5 mt-4 lg:px-0 lg:mt-0">
           <SectionLabel>Quick Actions</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
             <QuickAction
@@ -145,9 +155,13 @@ export function Dashboard() {
           </div>
         </section>
 
+        </div>
+        {/* === RIGHT COLUMN on desktop === */}
+        <div className="lg:space-y-4">
+
         {/* Queue / sync */}
         {queue.length > 0 && (
-          <section className="px-3.5 mt-4">
+          <section className="px-3.5 mt-4 lg:px-0 lg:mt-0">
             <SectionLabel>Waiting to Sync ({queue.length})</SectionLabel>
             <div className="bg-white rounded-[10px] border border-gray-200 overflow-hidden">
               {queue.slice(0, 4).map((q) => (
@@ -173,7 +187,7 @@ export function Dashboard() {
         )}
 
         {/* Today's history */}
-        <section className="px-3.5 mt-4 pb-4">
+        <section className="px-3.5 mt-4 pb-4 lg:px-0 lg:mt-0 lg:pb-0">
           <SectionLabel>Today's History</SectionLabel>
           {todayPunches.filter((p) => p.clockOut !== null).length === 0 ? (
             <div className="bg-white rounded-xl p-5 text-center text-xs text-gray-500 border border-dashed border-gray-200">
@@ -214,6 +228,9 @@ export function Dashboard() {
             </div>
           )}
         </section>
+
+        </div>
+        </div>
       </Body>
 
       {modalOpen && active && (

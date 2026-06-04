@@ -21,7 +21,7 @@ export function Toast() {
         : "bg-navy";
 
   return (
-    <div className="absolute left-3 right-3 bottom-6 z-50 pointer-events-none flex justify-center">
+    <div className="fixed left-3 right-3 bottom-6 z-50 pointer-events-none flex justify-center">
       <div
         className={`${bg} text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg max-w-[80%] text-center pointer-events-auto`}
       >

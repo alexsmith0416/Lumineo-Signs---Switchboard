@@ -13,7 +13,7 @@ export function AppHeader({ subtitle = "TIME & PHOTO", adminBadge = false }: Pro
   const isOffline = useStore((s) => s.isOffline);
 
   return (
-    <div className="h-11 bg-navy flex items-center px-2.5 gap-2.5 text-white shrink-0">
+    <div className="h-11 bg-navy flex items-center px-2.5 gap-2.5 text-white shrink-0 lg:hidden">
       <Link
         to="/"
         className="flex items-center justify-center shrink-0"
