@@ -10,9 +10,6 @@ import type { CatalogRepo, EstimateRepo } from './types';
 import type { Project } from '../lib/engine';
 
 const LS_KEY = 'lumineo.estimating.projects.v1';
-// Set once after the first-run seed so a user who deletes the sample doesn't
-// get it resurrected on the next reload.
-const SEED_KEY = 'lumineo.estimating.seeded.v1';
 
 export const LocalCatalogRepo: CatalogRepo = {
   async list() {
@@ -44,25 +41,22 @@ function writeStore(projects: readonly Project[]): void {
   localStorage.setItem(LS_KEY, JSON.stringify(projects));
 }
 
-/** First-run seed: drop the completed CNB job (J36938) into an empty store so
- *  the app opens with a real, fully worked estimate to look over. Runs once —
- *  guarded by SEED_KEY — and only when the user has no estimates of their own. */
-function ensureSeeded(): void {
-  if (typeof localStorage === 'undefined') return;
-  if (localStorage.getItem(SEED_KEY)) return;
-  if (readStore().length === 0) {
-    writeStore([CNB_SAMPLE_ESTIMATE]);
-  }
-  localStorage.setItem(SEED_KEY, '1');
+/** Always surface the completed CNB job (J36938) as a built-in example so the
+ *  app ships with a real, fully worked estimate and proposal to look over. It
+ *  is prepended to whatever the user has saved unless they've saved their own
+ *  edit of it (same id), in which case theirs wins. Deleting it only clears it
+ *  for the session — it returns on reload, by design. */
+function withSample(stored: readonly Project[]): Project[] {
+  if (stored.some(p => p.id === CNB_SAMPLE_ESTIMATE.id)) return [...stored];
+  return [CNB_SAMPLE_ESTIMATE, ...stored];
 }
 
 export const LocalEstimateRepo: EstimateRepo = {
   async list() {
-    ensureSeeded();
-    return readStore();
+    return withSample(readStore());
   },
   async get(id) {
-    return readStore().find(p => p.id === id);
+    return withSample(readStore()).find(p => p.id === id);
   },
   async save(project) {
     const all = readStore();
