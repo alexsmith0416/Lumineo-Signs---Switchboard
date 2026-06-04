@@ -4,7 +4,7 @@ import { Body } from "../components/PhoneFrame";
 import { useStore, activePunch } from "../store";
 import { useElapsed } from "../hooks/useElapsed";
 import { formatElapsed, formatHMShort, formatTime, formatTimeRange, punchDurationMs } from "../lib/format";
-import { jobByNo } from "../lib/mockData";
+import { jobByNo, taskFor } from "../lib/mockData";
 import { CURRENT_EMPLOYEE } from "../lib/mockData";
 import { CameraIcon, CalendarIcon, CheckCircle, ClockIcon, EditIcon, PlusCircle, RefreshIcon, WifiOffIcon } from "../components/icons";
 import { useState } from "react";
@@ -236,17 +236,7 @@ export function Dashboard() {
 }
 
 function taskName(jobNo: string, taskNo: string): string {
-  // Inline lookup without importing tasksFor to avoid loops
-  const j = jobByNo(jobNo);
-  void j;
-  const lookup: Record<string, string> = {
-    "10": "Survey",
-    "20": "Assembly",
-    "30": "Paint",
-    "40": "Install",
-    "50": "Crating",
-  };
-  return lookup[taskNo] ?? `Task ${taskNo}`;
+  return taskFor(jobNo, taskNo)?.description ?? `Task ${taskNo}`;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

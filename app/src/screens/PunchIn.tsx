@@ -12,8 +12,8 @@ export function PunchIn() {
   const active = useStore(activePunch);
   const punchIn = useStore((s) => s.punchIn);
 
-  const [selectedJob, setSelectedJob] = useState<string>("24-1187");
-  const [selectedTask, setSelectedTask] = useState<string>("30");
+  const [selectedJob, setSelectedJob] = useState<string>("J33723");
+  const [selectedTask, setSelectedTask] = useState<string>("40");
   const [completedPrior, setCompletedPrior] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
 

@@ -75,71 +75,61 @@ function seedPunches(): Punch[] {
   };
 
   return [
-    // Today — earlier punches
+    // Today — early morning install at Salina Fire
     {
       punchId: uid("pun"),
       employeeEmail: CURRENT_EMPLOYEE.email,
-      jobNo: "24-0942",
-      taskNo: "50",
+      jobNo: "J29256",
+      taskNo: "40",
       clockIn: mkTime(6, 15),
       clockOut: mkTime(7, 0),
       completedTask: true,
       syncStatus: "Pending",
     },
-    {
-      punchId: uid("pun"),
-      employeeEmail: CURRENT_EMPLOYEE.email,
-      jobNo: "24-1187",
-      taskNo: "20",
-      clockIn: mkTime(7, 2),
-      clockOut: mkTime(10, 28),
-      completedTask: true,
-      syncStatus: "Pending",
-    },
-    // Active punch — clocked in 3h42m ago
+    // Active punch — clocked in 3h42m ago at Salina Public Library
     (() => {
       const start = new Date(Date.now() - (3 * 3600 + 42 * 60 + 18) * 1000);
       return {
         punchId: uid("pun"),
         employeeEmail: CURRENT_EMPLOYEE.email,
-        jobNo: "24-1187",
-        taskNo: "30",
+        jobNo: "J33723",
+        taskNo: "40",
         clockIn: start.toISOString(),
         clockOut: null,
         completedTask: false,
         syncStatus: "Local" as SyncStatus,
       };
     })(),
-    // Yesterday
+    // Yesterday — Capitol Fed (Andover) channel letters, full day
     {
       punchId: uid("pun"),
       employeeEmail: CURRENT_EMPLOYEE.email,
-      jobNo: "24-1024",
+      jobNo: "J32429",
       taskNo: "40",
       clockIn: mkTime(7, 0, 1),
-      clockOut: mkTime(12, 56, 1),
+      clockOut: mkTime(12, 30, 1),
       completedTask: false,
       syncStatus: "Pending",
     },
     {
       punchId: uid("pun"),
       employeeEmail: CURRENT_EMPLOYEE.email,
-      jobNo: "24-1187",
-      taskNo: "20",
+      jobNo: "J32429",
+      taskNo: "40",
       clockIn: mkTime(13, 14, 1),
       clockOut: mkTime(17, 32, 1),
       completedTask: true,
       syncStatus: "Pending",
     },
-    // 2 days ago
+    // 2 days ago — Iron Insurance pan sign install
     {
       punchId: uid("pun"),
       employeeEmail: CURRENT_EMPLOYEE.email,
-      jobNo: "24-1187",
-      taskNo: "20",
+      jobNo: "J31228",
+      taskNo: "40",
       clockIn: mkTime(7, 2, 2),
       clockOut: mkTime(15, 14, 2),
-      completedTask: false,
+      completedTask: true,
       syncStatus: "Pending",
     },
   ];

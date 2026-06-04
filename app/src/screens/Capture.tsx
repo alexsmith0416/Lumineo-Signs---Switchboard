@@ -19,7 +19,7 @@ export function Capture() {
   const photos = useStore((s) => s.photos);
   const gps = useGeolocation();
 
-  const [jobNo, setJobNo] = useState<string>(active?.jobNo ?? "24-1187");
+  const [jobNo, setJobNo] = useState<string>(active?.jobNo ?? "J33723");
   const [category, setCategory] = useState<PhotoCategory>("Survey");
 
   // Separate inputs: gallery has NO capture attr (picks from photo library);

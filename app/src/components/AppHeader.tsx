@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { HomeIcon, SunIcon } from "./icons";
+import { HomeIcon } from "./icons";
+import { LumineoLogo } from "./LumineoLogo";
 import { useStore } from "../store";
 
 interface Props {
@@ -18,7 +19,7 @@ export function AppHeader({ subtitle = "TIME & PHOTO", adminBadge = false }: Pro
         className="w-[38px] h-[38px] bg-red rounded-md flex items-center justify-center shrink-0"
         aria-label="Lumineo Signs"
       >
-        <SunIcon className="text-white" />
+        <LumineoLogo size={22} color="#ffffff" />
       </Link>
       <div className="flex flex-col leading-tight flex-1 min-w-0">
         <span className="text-[13px] font-extrabold tracking-wider">LUMINEO SIGNS</span>
