@@ -59,7 +59,7 @@ export function EditRequest() {
             >
               {MOCK_JOBS.map((j) => (
                 <option key={j.jobNo} value={j.jobNo}>
-                  {j.jobNo} — {j.description}
+                  {j.jobNo} — {j.customer}
                 </option>
               ))}
             </select>
@@ -73,7 +73,7 @@ export function EditRequest() {
             >
               {tasks.map((t) => (
                 <option key={t.taskNo} value={t.taskNo}>
-                  Task {t.taskNo} — {t.description}
+                  {t.taskNo} - {t.description}
                 </option>
               ))}
             </select>

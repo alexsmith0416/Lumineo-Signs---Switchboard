@@ -4,7 +4,7 @@ import { Body } from "../components/PhoneFrame";
 import { useStore, activePunch } from "../store";
 import { useElapsed } from "../hooks/useElapsed";
 import { formatElapsed, formatHMShort, formatTime, formatTimeRange, punchDurationMs } from "../lib/format";
-import { jobByNo, taskFor } from "../lib/mockData";
+import { jobByNo, jobLabel, taskLabel } from "../lib/mockData";
 import { CURRENT_EMPLOYEE } from "../lib/mockData";
 import { CameraIcon, CalendarIcon, CheckCircle, ClockIcon, EditIcon, PlusCircle, RefreshIcon, WifiOffIcon } from "../components/icons";
 import { useState } from "react";
@@ -67,18 +67,18 @@ export function Dashboard() {
             <SectionLabel>Active Punch</SectionLabel>
             <div className="bg-gradient-to-br from-navy to-navy-light text-white rounded-xl p-3.5 shadow-punch-card">
               <div className="flex justify-between items-center gap-2">
-                <span className="text-[11px] font-bold opacity-85 tracking-wider">
-                  JOB {active.jobNo}
+                <span className="text-[13px] font-extrabold tracking-wide min-w-0 truncate">
+                  {jobLabel(active.jobNo)}
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-white/[.16] px-2 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-white/[.16] px-2 py-1 rounded-full shrink-0">
                   <span className="w-[7px] h-[7px] bg-[#22c55e] rounded-full pulse-dot" />
                   {isOffline ? "Clocked In · Local" : "Clocked In"}
                 </span>
               </div>
-              <div className="text-base font-bold mt-1 leading-tight">
+              <div className="text-[12px] opacity-85 mt-1 leading-tight">
                 {jobByNo(active.jobNo)?.description}
               </div>
-              <div className="text-xs opacity-85 mt-0.5">Task {active.taskNo} — {jobByNo(active.jobNo) && active.taskNo ? "" : ""}{taskName(active.jobNo, active.taskNo)}</div>
+              <div className="text-xs font-semibold mt-1.5">{taskLabel(active.jobNo, active.taskNo)}</div>
               <div className="text-[26px] font-extrabold tracking-wider mt-2.5 tabular-nums">
                 {formatElapsed(elapsed)}
               </div>
@@ -189,11 +189,11 @@ export function Dashboard() {
                     className="flex justify-between items-center px-3 py-2.5 border-b border-gray-100 last:border-b-0 gap-2"
                   >
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold text-navy">
-                        {p.jobNo} · Task {p.taskNo}
+                      <div className="text-[12px] font-extrabold text-navy truncate">
+                        {jobLabel(p.jobNo)}
                       </div>
-                      <div className="text-xs text-gray-700 mt-0.5 truncate">
-                        {jobByNo(p.jobNo)?.description}
+                      <div className="text-[11px] text-gray-700 mt-0.5 truncate">
+                        {jobByNo(p.jobNo)?.description} · {taskLabel(p.jobNo, p.taskNo)}
                       </div>
                       <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
                         {formatTimeRange(p.clockIn, p.clockOut)}
@@ -218,8 +218,8 @@ export function Dashboard() {
 
       {modalOpen && active && (
         <ClockOutModal
-          punchJob={`${active.jobNo} — ${jobByNo(active.jobNo)?.description ?? ""}`}
-          punchTask={`Task ${active.taskNo} — ${taskName(active.jobNo, active.taskNo)}`}
+          punchJob={`${jobLabel(active.jobNo)} · ${jobByNo(active.jobNo)?.description ?? ""}`}
+          punchTask={taskLabel(active.jobNo, active.taskNo)}
           elapsedMs={elapsed}
           clockIn={active.clockIn}
           completedTask={completedTask}
@@ -235,9 +235,6 @@ export function Dashboard() {
   );
 }
 
-function taskName(jobNo: string, taskNo: string): string {
-  return taskFor(jobNo, taskNo)?.description ?? `Task ${taskNo}`;
-}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (

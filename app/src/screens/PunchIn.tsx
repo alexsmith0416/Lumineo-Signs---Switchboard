@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AppHeader } from "../components/AppHeader";
 import { Body } from "../components/PhoneFrame";
 import { SubBar } from "../components/SubBar";
-import { jobByNo, MOCK_JOBS, tasksFor } from "../lib/mockData";
+import { jobByNo, jobLabel, MOCK_JOBS, taskLabel, tasksFor } from "../lib/mockData";
 import { activePunch, useStore } from "../store";
 import { useMemo, useState } from "react";
 import { AlertIcon, CheckCircle } from "../components/icons";
@@ -13,7 +13,7 @@ export function PunchIn() {
   const punchIn = useStore((s) => s.punchIn);
 
   const [selectedJob, setSelectedJob] = useState<string>("J33723");
-  const [selectedTask, setSelectedTask] = useState<string>("40");
+  const [selectedTask, setSelectedTask] = useState<string>("4010");
   const [completedPrior, setCompletedPrior] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -61,7 +61,7 @@ export function PunchIn() {
                 onClick={() => setSearchQuery(" ")}
                 className="w-full"
               >
-                <SelectedPill kKey={`JOB ${jobObj.jobNo}`} v={jobObj.description} />
+                <SelectedPill kKey={jobLabel(jobObj.jobNo)} v={jobObj.description} />
               </button>
             ) : null}
 
@@ -90,11 +90,10 @@ export function PunchIn() {
                         : "bg-input-bg border-gray-200 text-navy hover:bg-gray-100"
                     }`}
                   >
-                    <div className="text-[11px] font-bold tracking-wider uppercase opacity-80">
-                      JOB {j.jobNo}
+                    <div className="text-[13px] font-extrabold mt-0">
+                      {j.jobNo} — {j.customer}
                     </div>
-                    <div className="text-sm font-bold mt-0.5">{j.description}</div>
-                    <div className="text-[11px] opacity-75 mt-0.5">{j.customer}</div>
+                    <div className="text-[11px] opacity-80 mt-0.5">{j.description}</div>
                   </button>
                 ))}
               </div>
@@ -123,7 +122,7 @@ export function PunchIn() {
                 >
                   <div>
                     <div className={`text-[13px] font-semibold ${selectedTask === t.taskNo ? "text-white" : "text-navy"}`}>
-                      Task {t.taskNo} · {t.description}
+                      {t.taskNo} - {t.description}
                     </div>
                     <div className={`text-[10px] mt-0.5 ${selectedTask === t.taskNo ? "text-white/80" : "text-gray-500"}`}>
                       Est. {t.estimatedHours} h · Remaining {t.remainingHours} h
@@ -145,7 +144,7 @@ export function PunchIn() {
               <AlertIcon className="text-[#92400e] shrink-0 mt-0.5" size={18} />
               <div>
                 <div className="text-xs font-bold text-[#92400e]">
-                  You're currently clocked into Job {switchingFrom.jobNo}
+                  You're currently clocked into {jobLabel(switchingFrom.jobNo)}
                 </div>
                 <div className="text-[11px] text-[#92400e] mt-0.5">
                   Punching in here will clock you out automatically.
@@ -175,7 +174,7 @@ export function PunchIn() {
               <span>
                 <div className="text-[13px] font-bold text-navy">Completed Current Task</div>
                 <div className="text-[11px] text-gray-500 mt-0.5 font-medium leading-snug">
-                  Check this if Task {active.taskNo} on Job {active.jobNo} is finished.
+                  Check this if {taskLabel(active.jobNo, active.taskNo)} on {jobLabel(active.jobNo)} is finished.
                   Otherwise it remains open for further work.
                 </div>
               </span>
@@ -188,7 +187,7 @@ export function PunchIn() {
             className="w-full mt-3.5 h-[52px] rounded-[10px] bg-red hover:bg-red-dark text-white font-bold text-[15px] flex items-center justify-center gap-2 shadow-red-cta disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <CheckCircle size={20} className="text-white" />
-            Start Punch — {selectedJob} / Task {selectedTask || "?"}
+            Start Punch — {jobObj ? jobLabel(jobObj.jobNo) : selectedJob} · {selectedTask ? taskLabel(selectedJob, selectedTask) : "?"}
           </button>
           <div className="text-center text-[11px] text-gray-500 mt-2 pb-4">
             Auto clock-out at 8:00 PM if you forget

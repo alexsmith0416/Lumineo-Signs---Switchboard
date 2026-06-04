@@ -13,7 +13,7 @@ import {
 } from "../lib/format";
 import { formatRangeDates, rangeBounds } from "../lib/range";
 import type { HistoryRange } from "../types";
-import { jobByNo } from "../lib/mockData";
+import { jobByNo, jobLabel, taskLabel } from "../lib/mockData";
 import { StatusPill } from "../components/StatusPill";
 import { EditIcon } from "../components/icons";
 
@@ -135,11 +135,11 @@ export function History() {
                     className="flex justify-between items-center px-3 py-2.5 border-b border-gray-100 last:border-b-0 gap-2"
                   >
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold text-navy">
-                        {p.jobNo} · Task {p.taskNo}
+                      <div className="text-[12px] font-extrabold text-navy truncate">
+                        {jobLabel(p.jobNo)}
                       </div>
-                      <div className="text-xs text-gray-700 mt-0.5 truncate">
-                        {jobByNo(p.jobNo)?.description}
+                      <div className="text-[11px] text-gray-700 mt-0.5 truncate">
+                        {jobByNo(p.jobNo)?.description} · {taskLabel(p.jobNo, p.taskNo)}
                       </div>
                       <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
                         {formatTimeRange(p.clockIn, p.clockOut)}

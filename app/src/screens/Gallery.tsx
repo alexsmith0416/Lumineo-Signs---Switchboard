@@ -6,7 +6,7 @@ import { useStore } from "../store";
 import { useMemo, useState } from "react";
 import { formatPhotoStamp, formatLongDate, isoDayKey } from "../lib/format";
 import type { PhotoCategory } from "../types";
-import { jobByNo, MOCK_JOBS } from "../lib/mockData";
+import { jobByNo, jobLabel, MOCK_JOBS } from "../lib/mockData";
 
 type Filter = "All" | PhotoCategory;
 
@@ -50,7 +50,7 @@ export function Gallery() {
   return (
     <>
       <AppHeader />
-      <SubBar title={`Job ${jobNo} — Photos`} />
+      <SubBar title={`${jobLabel(jobNo)} — Photos`} />
       <Body>
         <section className="px-3.5 pt-3">
           <select
@@ -60,7 +60,7 @@ export function Gallery() {
           >
             {MOCK_JOBS.map((j) => (
               <option key={j.jobNo} value={j.jobNo}>
-                {j.jobNo} — {j.description}
+                {j.jobNo} — {j.customer}
               </option>
             ))}
           </select>
@@ -138,7 +138,10 @@ export function Gallery() {
                 return (
                   <>
                     <div className="font-bold">
-                      {jobByNo(p.jobNo)?.description} · {p.category}
+                      {jobLabel(p.jobNo)} · {p.category}
+                    </div>
+                    <div className="opacity-80 mt-0.5">
+                      {jobByNo(p.jobNo)?.description}
                     </div>
                     <div className="opacity-80 mt-1">
                       {formatPhotoStamp(p.capturedAt)} · {p.uploaderEmail}

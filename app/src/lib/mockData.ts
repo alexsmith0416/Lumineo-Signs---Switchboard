@@ -12,100 +12,86 @@ export const CURRENT_EMPLOYEE: Employee = {
 };
 
 // Jobs on Al's week schedule (Mon 6/1 – Fri 6/5/2026).
+// `customer` is the short label shown next to the job number; `description`
+// is the specific work being done on this job.
 export const MOCK_JOBS: Job[] = [
   {
     jobNo: "J33723",
-    description: "Salina Public Library — Interior Logo & FCOs",
+    description: "Interior Logo & FCOs",
     customer: "Salina Public Library",
     status: "Install",
     sharePointFolderUrl: "https://lumineosigns.sharepoint.com/Jobs/J33723",
   },
   {
     jobNo: "J29256",
-    description: "Salina Fire — Building Letters",
-    customer: "City of Salina Fire Dept",
+    description: "Building Letters",
+    customer: "Salina Fire",
     status: "Install",
   },
   {
     jobNo: "J32429",
-    description: "Capitol Fed (Andover) — Channel Letters",
-    customer: "Capitol Federal / City of Andover",
+    description: "Channel Letters — Freestanding Wall",
+    customer: "Capitol Fed (Andover)",
     status: "Install",
   },
   {
     jobNo: "J31228",
-    description: "Iron Insurance — Pan Sign (Building)",
+    description: "Pan Sign — Building",
     customer: "Iron Insurance",
     status: "Install",
   },
   {
     jobNo: "J37189",
-    description: "Iron Insurance — Interior Sign",
+    description: "Interior Sign",
     customer: "Iron Insurance",
     status: "Install",
   },
   {
     jobNo: "J31226",
-    description: "Iron Insurance — Monument Face Replacement",
+    description: "Monument Face Replacement",
     customer: "Iron Insurance",
     status: "Install",
   },
   {
     jobNo: "J36515",
-    description: "Children's Mercy — Pole Set",
-    customer: "Children's Mercy Hospital",
+    description: "Pole Set",
+    customer: "Children's Mercy",
     status: "Install",
   },
   {
     jobNo: "J36516",
-    description: "Children's Mercy — Mow Pads",
-    customer: "Children's Mercy Hospital",
+    description: "Mow Pads",
+    customer: "Children's Mercy",
     status: "Install",
   },
 ];
 
-// Standard task codes: 10 Survey, 20 Assembly, 30 Paint, 40 Install, 50 Crating.
-export const MOCK_TASKS: Task[] = [
-  // J33723 — Salina Public Library
-  { jobNo: "J33723", taskNo: "10", description: "Survey", estimatedHours: 2, remainingHours: 0, status: "Done" },
-  { jobNo: "J33723", taskNo: "20", description: "Assembly", estimatedHours: 8, remainingHours: 0, status: "Done" },
-  { jobNo: "J33723", taskNo: "30", description: "Paint", estimatedHours: 6, remainingHours: 0, status: "Done" },
-  { jobNo: "J33723", taskNo: "40", description: "Install", estimatedHours: 6, remainingHours: 3.5, status: "Open" },
+// Every job clocks into the same BC task code — 4010 Install Labor.
+export const INSTALL_TASK_NO = "4010";
+export const INSTALL_TASK_DESCRIPTION = "Install Labor";
 
-  // J29256 — Salina Fire
-  { jobNo: "J29256", taskNo: "10", description: "Survey", estimatedHours: 1.5, remainingHours: 0, status: "Done" },
-  { jobNo: "J29256", taskNo: "20", description: "Assembly", estimatedHours: 6, remainingHours: 0, status: "Done" },
-  { jobNo: "J29256", taskNo: "40", description: "Install", estimatedHours: 4, remainingHours: 0, status: "Done" },
-
-  // J32429 — Capitol Fed (Andover)
-  { jobNo: "J32429", taskNo: "10", description: "Survey", estimatedHours: 2, remainingHours: 0, status: "Done" },
-  { jobNo: "J32429", taskNo: "20", description: "Assembly", estimatedHours: 10, remainingHours: 0, status: "Done" },
-  { jobNo: "J32429", taskNo: "30", description: "Paint", estimatedHours: 5, remainingHours: 0, status: "Done" },
-  { jobNo: "J32429", taskNo: "40", description: "Install", estimatedHours: 8, remainingHours: 0, status: "Done" },
-
-  // J31228 — Iron Insurance pan sign
-  { jobNo: "J31228", taskNo: "10", description: "Survey", estimatedHours: 1.5, remainingHours: 0, status: "Done" },
-  { jobNo: "J31228", taskNo: "20", description: "Assembly", estimatedHours: 7, remainingHours: 0, status: "Done" },
-  { jobNo: "J31228", taskNo: "30", description: "Paint", estimatedHours: 4, remainingHours: 0, status: "Done" },
-  { jobNo: "J31228", taskNo: "40", description: "Install", estimatedHours: 5, remainingHours: 0, status: "Done" },
-
-  // J37189 — Iron Insurance interior sign
-  { jobNo: "J37189", taskNo: "20", description: "Assembly", estimatedHours: 5, remainingHours: 0, status: "Done" },
-  { jobNo: "J37189", taskNo: "40", description: "Install", estimatedHours: 3, remainingHours: 0, status: "Done" },
-
-  // J31226 — Iron Insurance monument face replacement
-  { jobNo: "J31226", taskNo: "20", description: "Fabrication", estimatedHours: 4, remainingHours: 0, status: "Done" },
-  { jobNo: "J31226", taskNo: "40", description: "Install", estimatedHours: 3, remainingHours: 3, status: "Open" },
-
-  // J36515 — Children's Mercy pole set
-  { jobNo: "J36515", taskNo: "10", description: "Survey", estimatedHours: 2, remainingHours: 0, status: "Done" },
-  { jobNo: "J36515", taskNo: "40", description: "Install", estimatedHours: 6, remainingHours: 6, status: "Open" },
-
-  // J36516 — Children's Mercy mow pads
-  { jobNo: "J36516", taskNo: "40", description: "Install", estimatedHours: 4, remainingHours: 4, status: "Open" },
-];
+export const MOCK_TASKS: Task[] = MOCK_JOBS.map((j) => ({
+  jobNo: j.jobNo,
+  taskNo: INSTALL_TASK_NO,
+  description: INSTALL_TASK_DESCRIPTION,
+  estimatedHours: 6,
+  remainingHours: 6,
+  status: "Open",
+}));
 
 export const jobByNo = (jobNo: string) => MOCK_JOBS.find((j) => j.jobNo === jobNo);
 export const tasksFor = (jobNo: string) => MOCK_TASKS.filter((t) => t.jobNo === jobNo);
 export const taskFor = (jobNo: string, taskNo: string) =>
   MOCK_TASKS.find((t) => t.jobNo === jobNo && t.taskNo === taskNo);
+
+// Display helpers — keep the "J33723 — Salina Public Library" /
+// "4010 - Install Labor" formats consistent across the app.
+export const jobLabel = (jobNo: string) => {
+  const j = jobByNo(jobNo);
+  return j ? `${jobNo} — ${j.customer}` : jobNo;
+};
+
+export const taskLabel = (jobNo: string, taskNo: string) => {
+  const t = taskFor(jobNo, taskNo);
+  return t ? `${taskNo} - ${t.description}` : `${taskNo} - ${INSTALL_TASK_DESCRIPTION}`;
+};

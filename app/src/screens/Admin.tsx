@@ -3,7 +3,7 @@ import { AppHeader } from "../components/AppHeader";
 import { Body } from "../components/PhoneFrame";
 import { SubBar } from "../components/SubBar";
 import { useStore } from "../store";
-import { jobByNo } from "../lib/mockData";
+import { jobByNo, jobLabel, taskLabel } from "../lib/mockData";
 import {
   formatHM,
   formatTime,
@@ -166,12 +166,12 @@ export function Admin() {
                       >
                         {selected.has(p.punchId) && <Check className="text-white" size={12} />}
                       </span>
-                      <div className="text-[11px] font-bold text-navy">
-                        {CURRENT_EMPLOYEE.bcResourceNo} · {p.jobNo} / Task {p.taskNo}
+                      <div className="text-[11px] font-bold text-navy truncate">
+                        {CURRENT_EMPLOYEE.bcResourceNo} · {jobLabel(p.jobNo)}
                       </div>
                     </div>
                     <div className="text-sm font-bold text-gray-900 mt-1 truncate">
-                      {jobByNo(p.jobNo)?.description}
+                      {jobByNo(p.jobNo)?.description} · {taskLabel(p.jobNo, p.taskNo)}
                     </div>
                     <div className="text-[11px] text-gray-500 mt-1 tabular-nums">
                       {formatTime(p.clockIn)} → {p.clockOut ? formatTime(p.clockOut) : "—"} ·{" "}

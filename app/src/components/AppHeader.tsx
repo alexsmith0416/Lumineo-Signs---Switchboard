@@ -16,10 +16,10 @@ export function AppHeader({ subtitle = "TIME & PHOTO", adminBadge = false }: Pro
     <div className="h-11 bg-navy flex items-center px-2.5 gap-2.5 text-white shrink-0">
       <Link
         to="/"
-        className="w-[38px] h-[38px] bg-red rounded-md flex items-center justify-center shrink-0"
+        className="flex items-center justify-center shrink-0"
         aria-label="Lumineo Signs"
       >
-        <LumineoLogo size={22} color="#ffffff" />
+        <LumineoLogo size={32} color="#E8151B" />
       </Link>
       <div className="flex flex-col leading-tight flex-1 min-w-0">
         <span className="text-[13px] font-extrabold tracking-wider">LUMINEO SIGNS</span>

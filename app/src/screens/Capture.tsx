@@ -149,7 +149,7 @@ export function Capture() {
           >
             {MOCK_JOBS.map((j) => (
               <option key={j.jobNo} value={j.jobNo}>
-                {j.jobNo} — {j.description}
+                {j.jobNo} — {j.customer}
               </option>
             ))}
           </select>
