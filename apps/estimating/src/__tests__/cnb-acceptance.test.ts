@@ -29,6 +29,7 @@ import {
   type Piece,
 } from '../lib/engine';
 import type { ComputedMaterialLine, ComputedLaborLine } from '../data/pieceTypes';
+import { CNB_SAMPLE_ESTIMATE } from '../data/sampleEstimate';
 
 // CNB BCI sheet — 20 material lines from Sign365 LN Estimate - CNB.xlsx.
 const CNB_MATERIALS: readonly ComputedMaterialLine[] = [
@@ -140,5 +141,36 @@ describe('CNB acceptance — J36938 reconciles to the workbook', () => {
     expect(bc.bci[0].quantity).toBe(5);
     expect(bc.bcl).toHaveLength(1);
     expect(bc.bcl[0].runTime).toBe(3);
+  });
+});
+
+// The seeded sample (CNB_SAMPLE_ESTIMATE) is the same J36938 job broken out
+// one-piece-per-worksheet rather than as a single transcribed aggregate. It
+// must reconcile to the identical total and produce the identical BC import.
+describe('CNB sample estimate — per-piece breakdown matches the aggregate', () => {
+  it('reconciles to $30,030.52', () => {
+    const cp = computeProject(CNB_SAMPLE_ESTIMATE);
+    expect(round4(cp.materialTotal)).toBe(EXPECTED_MATERIAL_TOTAL);
+    expect(round4(cp.laborTotal)).toBe(EXPECTED_LABOR_TOTAL);
+    expect(round4(cp.total)).toBe(EXPECTED_TOTAL);
+    expect(Number(cp.total.toFixed(2))).toBe(30030.52);
+  });
+
+  it('aggregates to the same BCI lines and quantities as the fixture', () => {
+    const sample = aggregateForBC(CNB_SAMPLE_ESTIMATE);
+    const fixture = aggregateForBC(CNB_FIXTURE);
+    expect(sample.bci).toHaveLength(CNB_MATERIALS.length);
+    const sampleQty = Object.fromEntries(sample.bci.map(r => [r.itemNumber, round4(r.quantity)]));
+    const fixtureQty = Object.fromEntries(fixture.bci.map(r => [r.itemNumber, round4(r.quantity)]));
+    expect(sampleQty).toEqual(fixtureQty);
+  });
+
+  it('aggregates to the same BCL resources and hours as the fixture', () => {
+    const sample = aggregateForBC(CNB_SAMPLE_ESTIMATE);
+    const fixture = aggregateForBC(CNB_FIXTURE);
+    expect(sample.bcl).toHaveLength(CNB_LABOR.length);
+    const sampleHrs = Object.fromEntries(sample.bcl.map(r => [r.resourceNumber, round4(r.runTime)]));
+    const fixtureHrs = Object.fromEntries(fixture.bcl.map(r => [r.resourceNumber, round4(r.runTime)]));
+    expect(sampleHrs).toEqual(fixtureHrs);
   });
 });
