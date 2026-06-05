@@ -92,25 +92,26 @@ function CardModal({
   );
 }
 
-/* ---------- Collapsible (portrait) ---------- */
+/* ---------- Accordion-style collapsible (controlled) ---------- */
 function CollapsibleCard({
   title,
-  defaultOpen = false,
+  open,
+  onToggle,
   onExpand,
   children,
 }: {
   title: string;
-  defaultOpen?: boolean;
+  open: boolean;
+  onToggle: () => void;
   onExpand: () => void;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
     <article className={`dm-mob-card ${open ? "is-open" : ""}`}>
       <button
         type="button"
         className="dm-mob-card__head"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
         aria-expanded={open}
       >
         <span className={`dm-mob-card__chevron ${open ? "is-open" : ""}`}>▸</span>
@@ -129,35 +130,6 @@ function CollapsibleCard({
         </button>
       </button>
       {open && <div className="dm-mob-card__body">{children}</div>}
-    </article>
-  );
-}
-
-/* ---------- Stacked (landscape, always open) ---------- */
-function StackedCard({
-  title,
-  onExpand,
-  children,
-}: {
-  title: string;
-  onExpand: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <article className="dm-mob-card dm-mob-card--stacked is-open">
-      <div className="dm-mob-card__head dm-mob-card__head--static">
-        <span className="dm-mob-card__title">{title}</span>
-        <button
-          type="button"
-          className="dm-mob-card__expand"
-          onClick={onExpand}
-          aria-label={`Open ${title} full screen`}
-          title="Open full screen"
-        >
-          ⤢
-        </button>
-      </div>
-      <div className="dm-mob-card__body">{children}</div>
     </article>
   );
 }
@@ -221,9 +193,16 @@ export default function DashboardMobile({
   const orientation = useOrientation();
   const user = usersByRole[role];
   const [modalId, setModalId] = useState<string | null>(null);
+  // Accordion — only one section open at a time. Default to "targets" so
+  // the user sees content on first load without needing to tap.
+  const [openSection, setOpenSection] =
+    useState<"targets" | "kanban" | null>("targets");
 
   const openModal = (id: string) => setModalId(id);
   const closeModal = () => setModalId(null);
+
+  const toggleSection = (id: "targets" | "kanban") =>
+    setOpenSection((cur) => (cur === id ? null : id));
 
   return (
     <div
@@ -252,10 +231,13 @@ export default function DashboardMobile({
             type="button"
             className="dm-theme-toggle"
             onClick={() => onChangeTheme(theme === "light" ? "dark" : "light")}
-            aria-label="Toggle theme"
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
           >
             <span className="dm-theme-toggle__icon">
               {theme === "light" ? "🌙" : "☀️"}
+            </span>
+            <span className="dm-theme-toggle__label">
+              {theme === "light" ? "Dark" : "Light"}
             </span>
           </button>
           <div className="dm-mob-avatar">{user.initials}</div>
@@ -285,7 +267,8 @@ export default function DashboardMobile({
 
             <CollapsibleCard
               title="Upcoming Target Dates"
-              defaultOpen
+              open={openSection === "targets"}
+              onToggle={() => toggleSection("targets")}
               onExpand={() => openModal("targets")}
             >
               <TargetsBody />
@@ -293,6 +276,8 @@ export default function DashboardMobile({
 
             <CollapsibleCard
               title="Production Board"
+              open={openSection === "kanban"}
+              onToggle={() => toggleSection("kanban")}
               onExpand={() => openModal("kanban")}
             >
               <KanbanBody />
@@ -317,18 +302,22 @@ export default function DashboardMobile({
               </button>
             </div>
             <div className="dm-mob-land__right">
-              <StackedCard
+              <CollapsibleCard
                 title="Upcoming Target Dates"
+                open={openSection === "targets"}
+                onToggle={() => toggleSection("targets")}
                 onExpand={() => openModal("targets")}
               >
                 <TargetsBody />
-              </StackedCard>
-              <StackedCard
+              </CollapsibleCard>
+              <CollapsibleCard
                 title="Production Board"
+                open={openSection === "kanban"}
+                onToggle={() => toggleSection("kanban")}
                 onExpand={() => openModal("kanban")}
               >
                 <KanbanBody />
-              </StackedCard>
+              </CollapsibleCard>
             </div>
           </div>
         )}
