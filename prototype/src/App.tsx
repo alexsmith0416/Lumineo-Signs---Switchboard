@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Role } from "./types";
 import { myJobsByRole, resourcesByRole, usersByRole } from "./data/mockData";
+import DashboardMockup from "./components/DashboardMockup";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 import MyScheduleScreen from "./components/MyScheduleScreen";
 
-type View = "splash" | "mySchedule";
+type View = "splash" | "mySchedule" | "dashboardMockup";
 
 /** Detect the actual visible screen width even when innerWidth lies. */
 function useActualScreenWidth(): number | null {
@@ -101,6 +102,10 @@ export default function App() {
       }
     : {};
 
+  if (view === "dashboardMockup") {
+    return <DashboardMockup role={role} onBack={() => setView("splash")} />;
+  }
+
   return (
     <div className="app" style={pinStyle}>
       <Header
@@ -111,6 +116,15 @@ export default function App() {
           setView("splash");
         }}
       />
+      <div className="app__viewbar">
+        <button
+          type="button"
+          className="app__viewbtn"
+          onClick={() => setView("dashboardMockup")}
+        >
+          View Dashboard Mockup →
+        </button>
+      </div>
       {view === "splash" ? (
         <SplashScreen
           role={role}
