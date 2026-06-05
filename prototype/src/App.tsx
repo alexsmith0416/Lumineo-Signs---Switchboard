@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Role } from "./types";
 import { myJobsByRole, resourcesByRole, usersByRole } from "./data/mockData";
-import DashboardMockup from "./components/DashboardMockup";
+import DashboardCustomizable from "./components/DashboardCustomizable";
 import Header from "./components/Header";
 import SplashScreen from "./components/SplashScreen";
 import MyScheduleScreen from "./components/MyScheduleScreen";
@@ -103,7 +103,7 @@ export default function App() {
     : {};
 
   if (view === "dashboardMockup") {
-    return <DashboardMockup role={role} onBack={() => setView("splash")} />;
+    return <DashboardCustomizable role={role} onBack={() => setView("splash")} />;
   }
 
   return (
