@@ -17,7 +17,7 @@ interface Props {
   role: Role;
   theme: Theme;
   onChangeTheme: (t: Theme) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const NAV_ITEMS = [
@@ -213,14 +213,16 @@ export default function DashboardMobile({
       {/* Top bar */}
       <header className="dm-mob-top">
         <div className="dm-mob-top__left">
-          <button
-            type="button"
-            className="dm-mob-back"
-            onClick={onBack}
-            aria-label="Back to splash"
-          >
-            ←
-          </button>
+          {onBack && (
+            <button
+              type="button"
+              className="dm-mob-back"
+              onClick={onBack}
+              aria-label="Back to splash"
+            >
+              ←
+            </button>
+          )}
           <div>
             <div className="dm-mob-top__crumb">Dashboard</div>
             <div className="dm-mob-top__title">Hi {user.name.split(" ")[0]}</div>

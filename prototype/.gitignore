@@ -3,6 +3,7 @@
 .DS_Store
 .vite
 dist
+dist-standalone
 node_modules
 preview.html
 switchboard-*.html

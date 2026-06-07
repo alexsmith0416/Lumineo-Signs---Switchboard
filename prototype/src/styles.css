@@ -3648,3 +3648,123 @@ button {
   .dm-mob-kpis__card { flex-basis: 152px; padding: 10px 12px; }
   .dm-mob-top__title { font-size: 16px; }
 }
+
+/* ============================================================
+   Standalone dashboard build — corner role picker
+   ============================================================ */
+
+.standalone-role {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 70;
+}
+
+.standalone-role__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dm-card, white);
+  border: 1px solid var(--dm-border, #e4e5ea);
+  border-radius: 999px;
+  padding: 4px 12px 4px 4px;
+  color: var(--dm-text, #1F1F2E);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 20, 100, 0.10);
+}
+
+.standalone-role__avatar,
+.standalone-role__item-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--dm-red, #E8151B);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.standalone-role__role {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.standalone-role__caret {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.standalone-role__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--dm-card, white);
+  border: 1px solid var(--dm-border, #e4e5ea);
+  border-radius: 10px;
+  min-width: 220px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(20, 20, 100, 0.18);
+}
+
+.standalone-role__head {
+  padding: 9px 14px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--dm-text-dim, #8b91a3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--dm-border-soft, #eff0f3);
+  background: var(--dm-card-inner, #f4f5f8);
+}
+
+.standalone-role__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--dm-text, #1F1F2E);
+  border-bottom: 1px solid var(--dm-border-soft, #eff0f3);
+}
+
+.standalone-role__item:last-child { border-bottom: 0; }
+.standalone-role__item:hover { background: var(--dm-card-inner, #f4f5f8); }
+
+.standalone-role__item.is-active {
+  background: var(--dm-navy-mid, #e8eaf5);
+  border-left: 3px solid var(--dm-navy, #141464);
+  padding-left: 11px;
+}
+
+.standalone-role__item-role {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dm-navy, #141464);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.standalone-role__item-name {
+  font-size: 11px;
+  color: var(--dm-text-dim, #8b91a3);
+  margin-top: 1px;
+}
+
+/* On mobile, drop the picker slightly so it doesn't crash into the top bar */
+@media (max-width: 820px) {
+  .standalone-role { top: 76px; right: 10px; }
+  .standalone-role__role { display: none; }
+  .standalone-role__trigger { padding: 4px; }
+}

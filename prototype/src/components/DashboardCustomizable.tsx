@@ -17,7 +17,7 @@ const Grid = WidthProvider(GridLayout);
 
 interface Props {
   role: Role;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 type Theme = "light" | "dark";
@@ -359,7 +359,9 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
                 ✎ Edit dashboard
               </button>
             )}
-            <button type="button" className="dm-back" onClick={onBack}>← Splash</button>
+            {onBack && (
+              <button type="button" className="dm-back" onClick={onBack}>← Splash</button>
+            )}
             <div className="dm-user">
               <div className="dm-user__avatar">{user.initials}</div>
               <div>
