@@ -1,4 +1,5 @@
 import { useSpec } from "../../app/SpecContext";
+import { DimensionInput } from "../../ui/DimensionInput";
 
 const TYPES = ["New Footing / Excavation", "Existing Footing"];
 const METHODS = ["Auger / Caisson", "Excavated (Backhoe)", "Custom"];
@@ -28,13 +29,11 @@ export function Step11Footing() {
         {spec.footingType === "New Footing / Excavation" ? (
           <div className="sbp-step__twocol" style={{ marginTop: 14, gridTemplateColumns: "1fr 2fr" }}>
             <div>
-              <span className="lum-field-label">Depth (in)</span>
-              <input
-                className="lum-input"
-                inputMode="decimal"
+              <span className="lum-field-label">Depth</span>
+              <DimensionInput
                 value={spec.footingDepth}
-                onChange={(e) => update({ footingDepth: e.target.value })}
-                placeholder="e.g. 48"
+                onChange={(v) => update({ footingDepth: v })}
+                ariaLabel="Footing depth"
               />
             </div>
             <div>

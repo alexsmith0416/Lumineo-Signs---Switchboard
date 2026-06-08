@@ -1,38 +1,36 @@
-import { useSpec } from "../../app/SpecContext";
+// H / W / D for cabinets and pans. Each column takes a paired ft + in
+// input. Storage on SignSpec stays as total inches per docs/dimensions —
+// the conversion happens inside DimensionInput.
 
-// H/W/D — hidden for letter types; cabinet/pan/EMC only.
+import { useSpec } from "../../app/SpecContext";
+import { DimensionInput } from "../../ui/DimensionInput";
+
 export function Step3Dimensions() {
   const { spec, update } = useSpec();
 
   return (
     <div className="sbp-step">
       <div className="sbp-step__head is-threecol">
-        <span>3 · Height (in)</span>
-        <span>Width (in)</span>
-        <span>Depth (in)</span>
+        <span>3 · Height</span>
+        <span>Width</span>
+        <span>Depth</span>
       </div>
       <div className="sbp-step__body">
         <div className="sbp-step__threecol">
-          <input
-            className="lum-input"
-            placeholder="H"
-            inputMode="decimal"
+          <DimensionInput
             value={spec.heightIn}
-            onChange={(e) => update({ heightIn: e.target.value })}
+            onChange={(v) => update({ heightIn: v })}
+            ariaLabel="Height"
           />
-          <input
-            className="lum-input"
-            placeholder="W"
-            inputMode="decimal"
+          <DimensionInput
             value={spec.widthIn}
-            onChange={(e) => update({ widthIn: e.target.value })}
+            onChange={(v) => update({ widthIn: v })}
+            ariaLabel="Width"
           />
-          <input
-            className="lum-input"
-            placeholder="D"
-            inputMode="decimal"
+          <DimensionInput
             value={spec.depthIn}
-            onChange={(e) => update({ depthIn: e.target.value })}
+            onChange={(v) => update({ depthIn: v })}
+            ariaLabel="Depth"
           />
         </div>
       </div>

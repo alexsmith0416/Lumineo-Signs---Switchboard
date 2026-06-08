@@ -155,6 +155,24 @@ double-face = 2, letters = 1).
 5. Surface the SBP spec ID in the estimate header so navigating back
    to "Sign Builder Pro · this spec" works from the estimate view.
 
+## Dimensions convention
+
+Sign Builder Pro stores **all dimensions on the SignSpec as a string of
+TOTAL INCHES** (e.g. `"42"` for 3'6", `"120"` for 10'0"). This keeps
+the sqft math and the workbook's formulas (`H × L ÷ 144`) one line each,
+and avoids two-of-truth bugs where the ft + in fields drift.
+
+The Builder's UI shows two textboxes per dimension (`ft` and `in`) but
+the underlying value is always the joined total inches. See
+`app/src/domain/dimensions.ts` for `splitFtIn` / `joinFtIn` /
+`formatDimension` / `formatHWD` — pure helpers the UI uses.
+
+The handoff payload passes those total-inches strings straight through.
+The Estimating app should treat `heightIn`, `lengthIn`, `depthIn` as
+inches (matching the workbook). If Estimating renders them in its UI, it
+should adopt the same ft + in input + formatter convention for
+consistency across the two apps.
+
 ## Versioning
 
 If the payload shape changes, bump `ESTIMATING_PAYLOAD_VERSION` (in

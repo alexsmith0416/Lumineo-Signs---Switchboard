@@ -14,6 +14,7 @@ import {
 } from "react";
 import type { SignSpec } from "../domain/SignSpec";
 import type { Project } from "../domain/Project";
+import { formatDimension, formatHWD } from "../domain/dimensions";
 import { emptySignSpec } from "../domain/SignSpec";
 import { assembleProductCode, calculateDepartments } from "../domain/productCode";
 import { isLetter, isPan } from "../domain/signTypes";
@@ -334,7 +335,7 @@ export function SpecProvider({ children }: { children: ReactNode }) {
       ["QUANTITY",    String(liveSpec.quantity)],
       ["SIGN TYPE",   liveSpec.signTypeCode || "—"],
       ["FACES",       liveSpec.faces || "—"],
-      ["DIMENSIONS",  [liveSpec.heightIn, liveSpec.widthIn, liveSpec.depthIn].filter(Boolean).join(" × ") || "—"],
+      ["DIMENSIONS",  formatHWD(liveSpec.heightIn, liveSpec.widthIn, liveSpec.depthIn)],
       ["ILLUMINATION", liveSpec.illumination || "—"],
       ["LED COLOR",   (liveSpec.illumination === "IL" || liveSpec.illumination === "EL") ? liveSpec.ledColor : "—"],
       ["FACE TYPE",   liveSpec.faceType || "—"],
@@ -347,7 +348,7 @@ export function SpecProvider({ children }: { children: ReactNode }) {
       ["POLE",        liveSpec.poleType || "—"],
       ["POLE SPEC",   [liveSpec.poleDiameter, liveSpec.poleMaterial].filter(Boolean).join(" · ") || "—"],
       ["FOOTING",     liveSpec.footingType || "—"],
-      ["FOOTING SPEC", [liveSpec.footingDepth ? `${liveSpec.footingDepth}in` : "", liveSpec.footingMethod].filter(Boolean).join(" · ") || "—"],
+      ["FOOTING SPEC", [liveSpec.footingDepth ? formatDimension(liveSpec.footingDepth) : "", liveSpec.footingMethod].filter(Boolean).join(" · ") || "—"],
       ["ELECTRICAL",  liveSpec.electrical || "—"],
       ["ELECTRICAL SPEC", [liveSpec.conduitSize, liveSpec.panelLocation].filter(Boolean).join(" · ") || "—"],
       ["DEPARTMENTS", liveSpec.departments || "—"],
