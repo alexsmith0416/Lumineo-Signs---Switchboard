@@ -123,26 +123,8 @@ function KpiStrip({ role }: { role: Role }) {
   const kpis = getKpiList(role);
   const trackRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollBy = (dir: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * (el.clientWidth * 0.85), behavior: "smooth" });
-  };
-
   return (
     <section className="dm-kpi-strip" aria-label="KPIs">
-      <div className="dm-kpi-strip__head">
-        <div>
-          <h2 className="dm-kpi-strip__title">Key metrics</h2>
-          <div className="dm-kpi-strip__sub">
-            Swipe / scroll horizontally · {kpis.length} indicators
-          </div>
-        </div>
-        <div className="dm-kpi-strip__arrows">
-          <button type="button" className="dm-kpi-strip__arrow" onClick={() => scrollBy(-1)} aria-label="Scroll left">‹</button>
-          <button type="button" className="dm-kpi-strip__arrow" onClick={() => scrollBy(1)}  aria-label="Scroll right">›</button>
-        </div>
-      </div>
       <div className="dm-kpi-strip__track" ref={trackRef}>
         {kpis.map((k) => (
           <article key={k.key} className="dm-kpi-strip__card dm-kpi">
@@ -155,19 +137,6 @@ function KpiStrip({ role }: { role: Role }) {
 }
 
 /* ---------- Main component ---------- */
-
-function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
-  return (
-    <button
-      type="button"
-      className="dm-theme-toggle"
-      onClick={() => onChange(theme === "light" ? "dark" : "light")}
-    >
-      <span className="dm-theme-toggle__icon">{theme === "light" ? "🌙" : "☀️"}</span>
-      <span className="dm-theme-toggle__label">{theme === "light" ? "Dark" : "Light"}</span>
-    </button>
-  );
-}
 
 /** Hand off to the dedicated mobile layout below 820px. */
 function useIsMobile(): boolean {
@@ -312,6 +281,17 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
 
         <div className="dm-sidebar__section">Other</div>
         <ul className="dm-sidebar__list">
+          <li>
+            <button
+              type="button"
+              className="dm-sidebar__item dm-sidebar__theme"
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              <span className="dm-sidebar__icon">{theme === "light" ? "🌙" : "☀️"}</span>
+              <span className="dm-sidebar__label">{theme === "light" ? "Dark" : "Light"}</span>
+            </button>
+          </li>
           {SIDEBAR_OTHER.map((it) => (
             <li key={it.key}>
               <button className="dm-sidebar__item">
@@ -334,7 +314,6 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
               <span className="dm-search__icon">⌕</span>
               <span className="dm-search__placeholder">Search jobs, customers, people…</span>
             </div>
-            <ThemeToggle theme={theme} onChange={setTheme} />
             {editMode ? (
               <>
                 <button
