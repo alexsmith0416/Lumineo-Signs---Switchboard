@@ -17,7 +17,8 @@ seed-data/
 │   ├── install-schedule-week.json
 │   └── README-original-sideload.md
 ├── scripts/
-│   └── build-seeds.mjs                 ← regenerates everything below
+│   ├── build-seeds.mjs                 ← regenerates the LNI + crew-assignment artifacts
+│   └── build-install-seed.mjs          ← regenerates the Scheduling Hub install module
 ├── lni-production-schedule/
 │   ├── seed-production-jobs.json       728 × LniRecord  (app-native)
 │   └── lni_productionschedule.import.csv   728 rows, lni_* headers (Dataverse)
@@ -54,12 +55,26 @@ Columns are pre-mapped by logical name. Notes:
 - The calc columns `lni_dip` / `lni_total_hrs_mfg` / `lni_total_hrs_install` are
   intentionally **not** in the CSV (the app recomputes them).
 
-## Scheduling Hub
+## Scheduling Hub (`scheduling-app`)
 
-**Direct seed:** drop `scheduling-hub/seed-install-week.json` into the app's
-`src/data/` and hydrate the installation store from it (it already matches the
-`regions.WK/NEK → crews[] → entries[]` shape, plus a resolved `jobs[]` per entry).
-See `scheduling-app/src/services/dataverse.ts` for the `createMockDataSource(...)` pattern.
+**Already wired.** The installation calendar can't consume flat JSON — its lines are
+`ScheduleLine` objects with live `Date` values built relative to the current week. So
+`build-install-seed.mjs` generates a typed module instead:
+`scheduling-app/src/data/seed-install-week.generated.ts` (19 crews, 97 lines, WK+NEK,
+joined to the 728 production records for invoice $ and customer names). The
+installation data source now imports from it:
+```bash
+cd scheduling-app && npm run dev   # Installation calendar shows the 6/8 week
+```
+- Ray's PTO week renders as locked cards; placeholder NEK template cells are prefixed `[TEMPLATE]`.
+- **Revert:** in `src/services/installation-data.ts`, switch the import back to
+  `"../data/mock-installation"` (the hand-curated fixtures are untouched).
+- **Regenerate** after editing the source week: `node seed-data/scripts/build-install-seed.mjs`.
+- Note: the side-load JSON has no zips/crane/lift counts, so those default
+  (`installZip:""`, cranes/lifts `0`) — the weather chip needs a zip backfill if you want it.
+
+The flat `scheduling-hub/seed-install-week.json` (job-joined) is still produced for any
+view that wants the raw `regions.WK/NEK → crews[] → entries[]` shape.
 
 **Dataverse:** import `scheduling-hub/lum_crewassignment.import.csv` into
 `lum_crewassignment`. Placeholder NEK template cells are prefixed `[TEMPLATE]` so you
