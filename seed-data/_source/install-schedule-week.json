@@ -1,0 +1,1002 @@
+{
+  "generatedAt": "2026-06-08",
+  "weekStart": "2026-06-08",
+  "weekEnd": "2026-06-13",
+  "note": "Temporary side-load. NEK entries marked placeholder=true are unfilled template cells (NKC-018 / 'A lot of numbers').",
+  "regions": {
+    "WK": {
+      "label": "Wichita / Hutchinson / Salina / Dodge City",
+      "crews": [
+        {
+          "employee": "Dustin",
+          "crew": "F96",
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J31712"
+              ],
+              "customer": "HFG",
+              "task": "Reinstall refurbished sign"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J32429"
+              ],
+              "customer": "City of Andover (Capitol Fed)",
+              "task": "Caulk wireway"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J36515",
+                "J36516"
+              ],
+              "customer": "Childrens Mercy",
+              "task": "Set poles and mow pads"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J28930"
+              ],
+              "customer": "Childrens Mercy",
+              "task": "Install one set of face lit channel letters",
+              "note": "Sign is at Wichita shop; take EMT for thru-the-wall"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J37394"
+              ],
+              "customer": "Equity Ironstone",
+              "task": "Install site sign",
+              "note": "Haviland?"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J37921"
+              ],
+              "customer": "Early Head Start",
+              "task": "Remove signage"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": "sat",
+              "jobNumbers": [
+                "J35522",
+                "J35523"
+              ],
+              "customer": "Gallagher"
+            }
+          ]
+        },
+        {
+          "employee": "Aiden",
+          "crew": null,
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J31712"
+              ],
+              "customer": "HFG",
+              "task": "Reinstall refurbished sign"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J32429"
+              ],
+              "customer": "City of Andover (Capitol Fed)",
+              "task": "Caulk wireway"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J36515",
+                "J36516"
+              ],
+              "customer": "Childrens Mercy",
+              "task": "Set poles and mow pads"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J28930"
+              ],
+              "customer": "Childrens Mercy",
+              "task": "Install one set of face lit channel letters",
+              "note": "Sign is at Wichita shop; take EMT for thru-the-wall"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J37394"
+              ],
+              "customer": "Equity Ironstone",
+              "task": "Install site sign"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J37921"
+              ],
+              "customer": "Early Head Start",
+              "task": "Remove signage"
+            }
+          ]
+        },
+        {
+          "employee": "Jason",
+          "crew": "60",
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "Bushton/Great Bend",
+              "task": "Service"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "Eldorado/Benton",
+              "task": "Service"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "Salina",
+              "task": "Service",
+              "note": "With Lee"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "Wichita",
+              "task": "Service"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "Hutchinson",
+              "task": "Service"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": "sat",
+              "jobNumbers": [
+                "J35522",
+                "J35523"
+              ],
+              "customer": "Gallagher"
+            }
+          ]
+        },
+        {
+          "employee": "Doug",
+          "crew": "F-38",
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J37421"
+              ],
+              "customer": "Cris Corey State Farm",
+              "task": "Remove face and install new"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J37422"
+              ],
+              "customer": "Cris Corey State Farm",
+              "task": "Remove sign for refurb"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J37959"
+              ],
+              "customer": "State Farm (Amy)",
+              "task": "Face install"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "task": "Unload 30ft trailer"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J35775"
+              ],
+              "customer": "Goodwill",
+              "task": "Install donation letters"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J37573"
+              ],
+              "customer": "Fidelity Bank",
+              "task": "Replace trim cap letters"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J31666"
+              ],
+              "customer": "Sterling Pharmacy",
+              "task": "Install S/F cabinet"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J37290"
+              ],
+              "customer": "Fine Art",
+              "task": "Remove sign for refurb"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J33723"
+              ],
+              "customer": "Salina Public Library",
+              "task": "Install interior logo and FCOs"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J33489"
+              ],
+              "customer": "Family Dentistry",
+              "task": "Install vinyl wrap"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J36904"
+              ],
+              "customer": "Weddle and Son",
+              "task": "Install vinyl wrap"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J37469"
+              ],
+              "customer": "Memorial Art Company",
+              "task": "Install vinyl wrap (McPherson)"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J37471"
+              ],
+              "customer": "Memorial Art Company",
+              "task": "Install vinyl wrap (Great Bend)"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "Midway Motors",
+              "task": "Install vinyl wrap"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": "sat",
+              "jobNumbers": [
+                "J35522",
+                "J35523"
+              ],
+              "customer": "Gallagher"
+            }
+          ]
+        },
+        {
+          "employee": "Ray",
+          "crew": "F52",
+          "homeBase": "Wichita",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "status": "PTO"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "status": "PTO"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "status": "PTO"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "status": "PTO"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "status": "PTO"
+            }
+          ]
+        },
+        {
+          "employee": "Lee",
+          "crew": "F81/F50/Chevy/54",
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "status": "PTO"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "task": "To Dodge with 30ft trailer"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J36772"
+              ],
+              "customer": "Billboard Business",
+              "task": "Load pipe onto 30ft trailer"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "Salina",
+              "task": "Service",
+              "note": "with Jason"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J33723"
+              ],
+              "customer": "Salina Public Library",
+              "task": "Install interior logo and FCOs"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "task": "Steel work"
+            }
+          ]
+        },
+        {
+          "employee": "Tanner",
+          "crew": null,
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J37094"
+              ],
+              "customer": "Intellicents",
+              "task": "Interior vinyl"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J37648"
+              ],
+              "customer": "Disability Supports"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J36732"
+              ],
+              "customer": "CHCT Kansas",
+              "task": "Door/window vinyl"
+            }
+          ]
+        },
+        {
+          "employee": "Heath",
+          "crew": "CCO",
+          "homeBase": "Hutchinson",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "task": "Unload 30ft trailer"
+            }
+          ]
+        },
+        {
+          "employee": "Danny",
+          "crew": "420",
+          "homeBase": "Dodge City",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J30283"
+              ],
+              "customer": "Finney County",
+              "task": "Install interior panel sign"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J36364"
+              ],
+              "customer": "Casino wraps (Satanta)",
+              "task": "Replace louvers",
+              "note": "if too windy"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "G.C.",
+              "task": "Service",
+              "note": "Load pipe on trailer"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J36772"
+              ],
+              "customer": "Billboard Business",
+              "task": "Set base pipe",
+              "note": "Panhandle on site 9am"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J35655"
+              ],
+              "customer": "Lineage",
+              "task": "Concrete removal and set post and panel"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J32903"
+              ],
+              "customer": "Minneola Health",
+              "task": "Install cabinet"
+            }
+          ]
+        },
+        {
+          "employee": "Thomas",
+          "crew": "D90",
+          "homeBase": "Dodge City",
+          "region": "WK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J30283"
+              ],
+              "customer": "Finney County",
+              "task": "Install interior panel sign"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J36772"
+              ],
+              "customer": "Billboard Business",
+              "task": "Dig cube footing for billboard"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [
+                "J36772"
+              ],
+              "customer": "Billboard Business",
+              "task": "Set base pipe",
+              "note": "Panhandle on site 9am"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J35655"
+              ],
+              "customer": "Lineage",
+              "task": "Concrete removal and set post and panel"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J32903"
+              ],
+              "customer": "Minneola Health",
+              "task": "Install cabinet"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "Casino wraps"
+            }
+          ]
+        }
+      ]
+    },
+    "NEK": {
+      "label": "Northeast Kansas",
+      "crews": [
+        {
+          "employee": "Justin F",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": []
+        },
+        {
+          "employee": "Stan C",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            }
+          ]
+        },
+        {
+          "employee": "Kevin B",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": []
+        },
+        {
+          "employee": "Morgan M",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J36817"
+              ],
+              "customer": "Cap Fed",
+              "task": "Install directionals"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            }
+          ]
+        },
+        {
+          "employee": "Conner P",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [
+                "J36817"
+              ],
+              "customer": "Cap Fed",
+              "task": "Install directionals"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            }
+          ]
+        },
+        {
+          "employee": "Josh S",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [
+                "J37549",
+                "J37550"
+              ],
+              "customer": "McDonald's World Cup",
+              "task": "Soccer balls",
+              "note": "BEFORE 6/11"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            }
+          ]
+        },
+        {
+          "employee": "Justin J",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J36188"
+              ],
+              "customer": "O'Reilly Auto Parts (Emporia)",
+              "task": "Install sign package"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J36188"
+              ],
+              "customer": "O'Reilly Auto Parts (Emporia)",
+              "task": "Install sign package"
+            }
+          ]
+        },
+        {
+          "employee": "Jarrod L",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [
+                "J36188"
+              ],
+              "customer": "O'Reilly Auto Parts (Emporia)",
+              "task": "Install sign package"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J36188"
+              ],
+              "customer": "O'Reilly Auto Parts (Emporia)",
+              "task": "Install sign package"
+            }
+          ]
+        },
+        {
+          "employee": "Aaron W",
+          "crew": null,
+          "homeBase": "NEK",
+          "region": "NEK",
+          "entries": [
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": "mon",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": "tue",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": "wed",
+              "jobNumbers": [],
+              "customer": "NKC-018",
+              "task": "Install Sign Package",
+              "note": "A lot of numbers",
+              "placeholder": true
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": "thu",
+              "jobNumbers": [],
+              "customer": "NASB",
+              "task": "Cut reflective vinyl"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J37447"
+              ],
+              "customer": "Midwest Trust",
+              "task": "Cut vinyl"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": "fri",
+              "jobNumbers": [
+                "J35352"
+              ],
+              "customer": "Gene's Heartland Foods",
+              "task": "Vinyl must be ready"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

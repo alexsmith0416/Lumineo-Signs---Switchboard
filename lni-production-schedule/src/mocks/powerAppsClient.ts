@@ -4,74 +4,13 @@
 
 import type { LniRecord } from '../types/schema';
 import { computeCalcFields } from '../hooks/calcFields';
+import seedJobs from '../data/seed-production-jobs.json';
 
-const SAMPLE: LniRecord[] = [
-  {
-    id:'1', job:'LNI-2025-001 / Equity Bank Main', sales:'AS', region:'WK', location:'Wichita, KS',
-    status:'Manufacturing', process:'In Process', priority:'Rush', signType:'Monument',
-    readyInstall:'NO', powerlines:'?', locates:'?', mfgRegion:'WK', installRegion:'WK', installArea:'Wichita Area',
-    orderDate:'2025-04-01', expeditor:'2025-04-05', scheduledInstall:'2025-06-15',
-    value:12500, dip:null, totalMfg:null, totalInstall:null,
-    vendor:'GEMINI', vendorStatus:'ORDERED', graphics:'Here/Ready', routingType:'Metal & Backed',
-    metal:'/', assembly:'/', plex:'/', paintPrep:'/', materialCut:'/',
-    notes:'Awaiting routing completion', mfgNotes:'', adminNotes:'', redDate:'',
-    deposit:'YES', ulSign:false, qt:false,
-    steelHrs:8, installHrs:16, travelHrs:4, paintPrepHrs:6, paintHrs:8, routingHrs:4,
-    po:'PO-2025-001', vendorShipDate:'2025-05-20', mfgTargetMod:'', storageLocation:'',
-  },
-  {
-    id:'2', job:'LNI-2025-002 / First National Bank', sales:'DW', region:'WK', location:'Hutchinson, KS',
-    status:'Hold - Permit', process:'Hold', priority:'SIP', signType:'Pylon',
-    readyInstall:'Survey needed', powerlines:'YES', locates:'Needed', mfgRegion:'WK', installRegion:'WK', installArea:'Hutchinson Area',
-    orderDate:'2025-03-15', expeditor:'2025-03-22', scheduledInstall:'2025-07-01',
-    value:45000, dip:null, totalMfg:null, totalInstall:null,
-    vendor:'WATCHFIRE', vendorStatus:'RECEIVED', graphics:'Lawrence', routingType:'Metal w/ Push Thru',
-    metal:'/', assembly:'X', plex:'/', paintPrep:'/', materialCut:'/',
-    notes:'Permit pending city approval', mfgNotes:'Steel fab ready', adminNotes:'', redDate:'',
-    deposit:'NO', ulSign:true, qt:false,
-    steelHrs:24, installHrs:32, travelHrs:8, paintPrepHrs:12, paintHrs:16, routingHrs:8,
-    po:'PO-2025-002', vendorShipDate:'2025-04-10', mfgTargetMod:'', storageLocation:'Warehouse - Floor',
-  },
-  {
-    id:'3', job:'LNI-2025-003 / Dillons Grocery #5', sales:'TC', region:'NEK', location:'Lawrence, KS',
-    status:'Complete Invoiced', process:'Invoiced', priority:'', signType:'Channel Letter',
-    readyInstall:'YES', powerlines:'N/A', locates:'N/A', mfgRegion:'NEK', installRegion:'NEK', installArea:'NEK INSTALL',
-    orderDate:'2025-02-10', expeditor:'2025-02-18', scheduledInstall:'2025-04-20',
-    value:8750, dip:null, totalMfg:null, totalInstall:null,
-    vendor:'SIGN HOUSE', vendorStatus:'RECEIVED', graphics:'Complete', routingType:'1/2 Plex',
-    metal:'X', assembly:'/', plex:'/', paintPrep:'/', materialCut:'/',
-    notes:'', mfgNotes:'Complete', adminNotes:'Invoiced 4/22', redDate:'',
-    deposit:'YES', ulSign:false, qt:true,
-    steelHrs:0, installHrs:8, travelHrs:6, paintPrepHrs:4, paintHrs:6, routingHrs:0,
-    po:'PO-2025-003', vendorShipDate:'2025-03-28', mfgTargetMod:'', storageLocation:'',
-  },
-  {
-    id:'4', job:'LNI-2025-004 / Meritrust CU - West', sales:'NH', region:'WK', location:'Wichita, KS',
-    status:'MFG - Routing', process:'In Process', priority:'RED DATE', signType:'ID Cabinet',
-    readyInstall:'N/A', powerlines:'?', locates:'?', mfgRegion:'WK', installRegion:'WK', installArea:'Wichita Area',
-    orderDate:'2025-04-10', expeditor:'2025-04-14', scheduledInstall:'2025-06-01',
-    value:22300, dip:null, totalMfg:null, totalInstall:null,
-    vendor:'GREGORY', vendorStatus:'SHIPPING', graphics:'Hutch', routingType:'Metal & Plex',
-    metal:'/', assembly:'/', plex:'/', paintPrep:'/', materialCut:'/',
-    notes:'RED DATE hard deadline 6/1', mfgNotes:'Routing in progress', adminNotes:'', redDate:'2025-06-01',
-    deposit:'YES', ulSign:true, qt:false,
-    steelHrs:16, installHrs:20, travelHrs:4, paintPrepHrs:8, paintHrs:10, routingHrs:12,
-    po:'PO-2025-004', vendorShipDate:'2025-05-15', mfgTargetMod:'2025-05-25', storageLocation:'Bus Barn - Floor',
-  },
-  {
-    id:'5', job:'LNI-2025-005 / USD 259 Admin Bldg', sales:'VB', region:'WK', location:'Wichita, KS',
-    status:'Active', process:'In Process', priority:'', signType:'Flat Aluminum',
-    readyInstall:'N/A', powerlines:'N/A', locates:'N/A', mfgRegion:'WK', installRegion:'WK', installArea:'Wichita Area',
-    orderDate:'2025-04-20', expeditor:'2025-04-25', scheduledInstall:'2025-07-10',
-    value:5400, dip:null, totalMfg:null, totalInstall:null,
-    vendor:'GEMINI', vendorStatus:'ORDERED', graphics:'Outsourced', routingType:'Metal Only',
-    metal:'X', assembly:'/', plex:'/', paintPrep:'X', materialCut:'/',
-    notes:'', mfgNotes:'', adminNotes:'', redDate:'',
-    deposit:'in process', ulSign:false, qt:false,
-    steelHrs:4, installHrs:8, travelHrs:2, paintPrepHrs:0, paintHrs:0, routingHrs:0,
-    po:'', vendorShipDate:'', mfgTargetMod:'', storageLocation:'',
-  },
-].map(computeCalcFields);
+// Local-dev seed: 728 real jobs from the 6/8/2026 Airtable side-load
+// (seed-data/lni-production-schedule/seed-production-jobs.json). This file is
+// dev-only and is never bundled into the Power Apps deployment build, where
+// PowerAppsClientContext is injected by the host against lni_productionschedule.
+const SAMPLE: LniRecord[] = (seedJobs as LniRecord[]).map(computeCalcFields);
 
 let records = [...SAMPLE];
 let nextId = 100;
