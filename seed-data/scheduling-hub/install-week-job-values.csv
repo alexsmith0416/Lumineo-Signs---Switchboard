@@ -1,0 +1,58 @@
+region,employee,crew,date,dayOfWeek,jobNumber,scheduleCustomer,scheduleTask,matched,jobName,currentStatus,value,installRegion,mfgRegion,location,sales,vendor,scheduledInstall,dateInstalled,process,isActive
+WK,Dustin,F96,2026-06-08,mon,J31712,HFG,Reinstall refurbished sign,yes,HFG Architecture,Installation,9266.19,WK,WK,Wichita,DW,GREGORY,,,In Process,True
+WK,Dustin,F96,2026-06-08,mon,J32429,City of Andover (Capitol Fed),Caulk wireway,yes,CITY OF ANDOVER,Installation,22755.0,WK,WK,Andover,"VB,CC",steel art,,,In Process,True
+WK,Dustin,F96,2026-06-09,tue,J36515,Childrens Mercy,Set poles and mow pads,yes,Children's Mercy,MFG - Vinyl Application,20149.95,WK,WK,Wichita,CC,,,,In Process,True
+WK,Dustin,F96,2026-06-09,tue,J36516,Childrens Mercy,Set poles and mow pads,yes,Children's Mercy,MFG - Vinyl Application,15506.95,WK,WK,Wichita,CC,,,,In Process,True
+WK,Dustin,F96,2026-06-10,wed,J28930,Childrens Mercy,Install one set of face lit channel letters,yes,Dondlinger & Sons Construction -Children's Mercy,Installation,10182.1,WK,WK,Wichita,CC,SIGN HOUSE,,,In Process,True
+WK,Dustin,F96,2026-06-11,thu,J37394,Equity Ironstone,Install site sign,yes,EQUITY BANK,Service or Contract Order,,WK,WK,Park City,DW,,,,Service,True
+WK,Dustin,F96,2026-06-12,fri,J37921,Early Head Start,Remove signage,yes,HUTCHINSON PUBLIC SCHOOLS USD 308 ADMINISTRATION,Installation,,WK,WK,Hutchinson,DP,,,,In Process,True
+WK,Dustin,F96,2026-06-13,sat,J35522,Gallagher,,yes,Jones Sign,MFG - Assembly & Graphics,6748.37,WK,WK,Wichita,CC,,,,In Process,True
+WK,Dustin,F96,2026-06-13,sat,J35523,Gallagher,,yes,Jones Sign - Gallagher,Install - waiting on product,7496.0,WK,WK,Wichita,CC,,,,In Process,True
+WK,Aiden,,2026-06-08,mon,J31712,HFG,Reinstall refurbished sign,yes,HFG Architecture,Installation,9266.19,WK,WK,Wichita,DW,GREGORY,,,In Process,True
+WK,Aiden,,2026-06-08,mon,J32429,City of Andover (Capitol Fed),Caulk wireway,yes,CITY OF ANDOVER,Installation,22755.0,WK,WK,Andover,"VB,CC",steel art,,,In Process,True
+WK,Aiden,,2026-06-09,tue,J36515,Childrens Mercy,Set poles and mow pads,yes,Children's Mercy,MFG - Vinyl Application,20149.95,WK,WK,Wichita,CC,,,,In Process,True
+WK,Aiden,,2026-06-09,tue,J36516,Childrens Mercy,Set poles and mow pads,yes,Children's Mercy,MFG - Vinyl Application,15506.95,WK,WK,Wichita,CC,,,,In Process,True
+WK,Aiden,,2026-06-10,wed,J28930,Childrens Mercy,Install one set of face lit channel letters,yes,Dondlinger & Sons Construction -Children's Mercy,Installation,10182.1,WK,WK,Wichita,CC,SIGN HOUSE,,,In Process,True
+WK,Aiden,,2026-06-11,thu,J37394,Equity Ironstone,Install site sign,yes,EQUITY BANK,Service or Contract Order,,WK,WK,Park City,DW,,,,Service,True
+WK,Aiden,,2026-06-12,fri,J37921,Early Head Start,Remove signage,yes,HUTCHINSON PUBLIC SCHOOLS USD 308 ADMINISTRATION,Installation,,WK,WK,Hutchinson,DP,,,,In Process,True
+WK,Jason,60,2026-06-13,sat,J35522,Gallagher,,yes,Jones Sign,MFG - Assembly & Graphics,6748.37,WK,WK,Wichita,CC,,,,In Process,True
+WK,Jason,60,2026-06-13,sat,J35523,Gallagher,,yes,Jones Sign - Gallagher,Install - waiting on product,7496.0,WK,WK,Wichita,CC,,,,In Process,True
+WK,Doug,F-38,2026-06-08,mon,J37421,Cris Corey State Farm,Remove face and install new,yes,Cris Corey State Farm,Complete to Admin,937.54,WK,WK,Hutchinson,AS,MIRATEC,,2026-06-08,In Process,True
+WK,Doug,F-38,2026-06-08,mon,J37422,Cris Corey State Farm,Remove sign for refurb,yes,Cris Corey State Farm,MFG - Paint Prep / Paint,7091.19,WK,WK,Hutchinson,AS,MIRATEC,,,In Process,True
+WK,Doug,F-38,2026-06-08,mon,J37959,State Farm (Amy),Face install,yes,EVERBRITE (STATE FARM AMY LONG AGENCY),Install - waiting on product,786.0,WK,WK,Hutchinson,AS,,,,Added,True
+WK,Doug,F-38,2026-06-09,tue,J35775,Goodwill,Install donation letters,yes,Dondlinger & Sons Construction,Installation,6319.83,WK,WK,Wichita,DW,SIGN HOUSE,,,Hold,True
+WK,Doug,F-38,2026-06-09,tue,J37573,Fidelity Bank,Replace trim cap letters,yes,FIDELITY BANK,Installation,2779.37,WK,WK,Wichita,CC,SIGN HOUSE,,,In Process,True
+WK,Doug,F-38,2026-06-10,wed,J31666,Sterling Pharmacy,Install S/F cabinet,yes,Sterling Pharmacy Inc.,Installation,5126.31,WK,WK,Sterling,AS,GREGORY,,,In Process,True
+WK,Doug,F-38,2026-06-10,wed,J37290,Fine Art,Remove sign for refurb,yes,Fine Art of Family Dentistry,MFG - Paint Prep / Paint,5904.47,WK,WK,Salina,DP,GEMINI,,,In Process,True
+WK,Doug,F-38,2026-06-11,thu,J33723,Salina Public Library,Install interior logo and FCOs,yes,SALINA PUBLIC LIBRARY,Installation,2287.44,WK,WK,Salina,DP,GEMINI,,,In Process,True
+WK,Doug,F-38,2026-06-11,thu,J33489,Family Dentistry,Install vinyl wrap,yes,MIDWAY MOTORS SUPERCENTER,Installation,,WK,WK,Salina,DP,INDEPENDENT'S,,,In Process,True
+WK,Doug,F-38,2026-06-11,thu,J36904,Weddle and Son,Install vinyl wrap,yes,Weddle & Sons Roofing of Salina,Installation,,WK,WK,Salina,DP,INDEPENDENT'S,,,In Process,True
+WK,Doug,F-38,2026-06-12,fri,J37469,Memorial Art Company,Install vinyl wrap (McPherson),yes,MEMORIAL ART COMPANY,Installation,,WK,WK,McPherson,AS,INDEPENDENT'S,,,In Process,True
+WK,Doug,F-38,2026-06-12,fri,J37471,Memorial Art Company,Install vinyl wrap (Great Bend),yes,MEMORIAL ART COMPANY,Installation,,WK,WK,Great Bend,AS,INDEPENDENT'S,,,In Process,True
+WK,Doug,F-38,2026-06-13,sat,J35522,Gallagher,,yes,Jones Sign,MFG - Assembly & Graphics,6748.37,WK,WK,Wichita,CC,,,,In Process,True
+WK,Doug,F-38,2026-06-13,sat,J35523,Gallagher,,yes,Jones Sign - Gallagher,Install - waiting on product,7496.0,WK,WK,Wichita,CC,,,,In Process,True
+WK,Lee,F81/F50/Chevy/54,2026-06-09,tue,J36772,Billboard Business,Load pipe onto 30ft trailer,yes,BILLBOARD BUSINESS LLC,Installation,,WK,WK,Dodge CIty,NH,,,,In Process,True
+WK,Lee,F81/F50/Chevy/54,2026-06-11,thu,J33723,Salina Public Library,Install interior logo and FCOs,yes,SALINA PUBLIC LIBRARY,Installation,2287.44,WK,WK,Salina,DP,GEMINI,,,In Process,True
+WK,Tanner,,2026-06-09,tue,J37094,Intellicents,Interior vinyl,yes,Intellicents,MFG - Vinyl Install,952.06,WK,WK,Wichita,TC,,,,In Process,True
+WK,Tanner,,2026-06-10,wed,J37648,Disability Supports,,yes,DISABILITY SUPPORTS,MFG - Vinyl Install,665.6,WK,WK,Hutchinson,AS,GREGORY,,,In Process,True
+WK,Tanner,,2026-06-10,wed,J36732,CHCT Kansas,Door/window vinyl,yes,"CHCT Kansas, LLC",MFG - Vinyl Install,687.61,WK,WK,Wichita,TC,,,,In Process,True
+WK,Danny,420,2026-06-08,mon,J30283,Finney County,Install interior panel sign,yes,HUTTON CORPORATION - Finney Co. Health & EMS,Installation,,WK,WK,Garden City,"TN,DD",,,,In Process,True
+WK,Danny,420,2026-06-09,tue,J36364,Casino wraps (Satanta),Replace louvers,yes,Satanta District Hospital,Installation,5348.4,WK,WK,Santana,NH,WATCHFIRE,,,In Process,True
+WK,Danny,420,2026-06-10,wed,J36772,Billboard Business,Set base pipe,yes,BILLBOARD BUSINESS LLC,Installation,,WK,WK,Dodge CIty,NH,,,,In Process,True
+WK,Danny,420,2026-06-11,thu,J35655,Lineage,Concrete removal and set post and panel,yes,Lineage,Installation,11738.86,WK,WK,Dodge City,NH,GREGORY,,,In Process,True
+WK,Danny,420,2026-06-12,fri,J32903,Minneola Health,Install cabinet,yes,MINNEOLA HEALTHCARE,Installation,5015.53,WK,WK,Minneola,NH,MIRATEC,,,In Process,True
+WK,Thomas,D90,2026-06-08,mon,J30283,Finney County,Install interior panel sign,yes,HUTTON CORPORATION - Finney Co. Health & EMS,Installation,,WK,WK,Garden City,"TN,DD",,,,In Process,True
+WK,Thomas,D90,2026-06-09,tue,J36772,Billboard Business,Dig cube footing for billboard,yes,BILLBOARD BUSINESS LLC,Installation,,WK,WK,Dodge CIty,NH,,,,In Process,True
+WK,Thomas,D90,2026-06-10,wed,J36772,Billboard Business,Set base pipe,yes,BILLBOARD BUSINESS LLC,Installation,,WK,WK,Dodge CIty,NH,,,,In Process,True
+WK,Thomas,D90,2026-06-11,thu,J35655,Lineage,Concrete removal and set post and panel,yes,Lineage,Installation,11738.86,WK,WK,Dodge City,NH,GREGORY,,,In Process,True
+WK,Thomas,D90,2026-06-12,fri,J32903,Minneola Health,Install cabinet,yes,MINNEOLA HEALTHCARE,Installation,5015.53,WK,WK,Minneola,NH,MIRATEC,,,In Process,True
+NEK,Morgan M,,2026-06-08,mon,J36817,Cap Fed,Install directionals,yes,CAPITOL FEDERAL,Installation,3850.0,NEK,NEK,Overland Park,VB,,,,In Process,True
+NEK,Conner P,,2026-06-08,mon,J36817,Cap Fed,Install directionals,yes,CAPITOL FEDERAL,Installation,3850.0,NEK,NEK,Overland Park,VB,,,,In Process,True
+NEK,Josh S,,2026-06-09,tue,J37549,McDonald's World Cup,Soccer balls,yes,McDonald's #4164,Installation,,NEK,NEK,Lawrence,VB,,,,In Process,True
+NEK,Josh S,,2026-06-09,tue,J37550,McDonald's World Cup,Soccer balls,yes,McDonald's #1511,Installation,,NEK,NEK,Lawrence,VB,,,,In Process,True
+NEK,Justin J,,2026-06-11,thu,J36188,O'Reilly Auto Parts (Emporia),Install sign package,yes,O'REILLY AUTO PARTS,Install - waiting on product,5445.0,NEK,NEK,Emporia,VB,,,,In Process,True
+NEK,Justin J,,2026-06-12,fri,J36188,O'Reilly Auto Parts (Emporia),Install sign package,yes,O'REILLY AUTO PARTS,Install - waiting on product,5445.0,NEK,NEK,Emporia,VB,,,,In Process,True
+NEK,Jarrod L,,2026-06-11,thu,J36188,O'Reilly Auto Parts (Emporia),Install sign package,yes,O'REILLY AUTO PARTS,Install - waiting on product,5445.0,NEK,NEK,Emporia,VB,,,,In Process,True
+NEK,Jarrod L,,2026-06-12,fri,J36188,O'Reilly Auto Parts (Emporia),Install sign package,yes,O'REILLY AUTO PARTS,Install - waiting on product,5445.0,NEK,NEK,Emporia,VB,,,,In Process,True
+NEK,Aaron W,,2026-06-12,fri,J37447,Midwest Trust,Cut vinyl,yes,MIDWEST TRUST,Outsourced - Vendor,3471.0,NEK,NEK,Overland Park,SP,,,,In Process,True
+NEK,Aaron W,,2026-06-12,fri,J35352,Gene's Heartland Foods,Vinyl must be ready,yes,Gene's Heartland Foods,NEK - Production,1172.0,NEK,NEK,Eudora,JL,,,,In Process,True
