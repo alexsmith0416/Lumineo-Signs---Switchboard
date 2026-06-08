@@ -23,36 +23,61 @@ export function summarizeCascadeMoves(
   targetLineId: string,
 ): CascadeMove[] {
   const beforeById = new Map(before.schedule.map((l) => [l.id, l]));
-  const targetLine = beforeById.get(targetLineId);
-  if (!targetLine) return [];
+  const targetBefore = beforeById.get(targetLineId);
+  const targetAfter = after.context.schedule.find((l) => l.id === targetLineId);
+  if (!targetBefore || !targetAfter) return [];
+
+  // The dialog should only fire when the user's action causes a real
+  // problem — i.e. one of:
+  //   (a) same job, downstream department, where the target's NEW end
+  //       pushes the next stage forward
+  //   (b) same employee (target's new employee), where the target's NEW
+  //       time range actually overlaps an existing task on that employee
+  // Knock-on hops (move A → push B → push C, where C is on a third employee)
+  // and pull-backs (engine reverting a previously-pushed task to its
+  // preferred slot) are explicitly NOT shown — they're not user-actionable.
+  const MEANINGFUL_DELTA_MS = 60_000;
+  const targetDeptAfter = after.context.departments.get(targetAfter.departmentId);
 
   const moves: CascadeMove[] = [];
-  // Defensive threshold — a start-time delta under a minute is engine
-  // book-keeping (date-object identity churn, capacity recomputation
-  // round-trips), not a perceivable cascade. The user shouldn't get a
-  // confirm dialog for sub-minute drift.
-  const MEANINGFUL_DELTA_MS = 60_000;
   for (const movedId of after.moved) {
     if (movedId === targetLineId) continue;
     const afterLine = after.context.schedule.find((l) => l.id === movedId);
     const beforeLine = beforeById.get(movedId);
     if (!afterLine || !beforeLine) continue;
-    const startDelta = Math.abs(
-      afterLine.startDateTime.getTime() - beforeLine.startDateTime.getTime(),
-    );
-    // The dialog cares about start-time shifts only — end-time drift
-    // alone (capacity recomputation due to a same-day move) isn't a
-    // scheduling cascade in the user-facing sense.
-    if (startDelta < MEANINGFUL_DELTA_MS) {
-      continue;
-    }
-    const reason: CascadeMove["reason"] =
-      beforeLine.jobNo === targetLine.jobNo &&
-      beforeLine.departmentId !== targetLine.departmentId
-        ? "department-flow"
-        : beforeLine.employeeId === targetLine.employeeId
-          ? "employee-queue"
-          : "other";
+
+    // Only forward shifts (push) count. A backward shift is the engine
+    // pulling a previously-displaced task back toward its preferred slot —
+    // that's an improvement, not a warning condition.
+    const startDelta =
+      afterLine.startDateTime.getTime() - beforeLine.startDateTime.getTime();
+    if (startDelta < MEANINGFUL_DELTA_MS) continue;
+
+    // (a) Same-job downstream — the moved line shares the target's job
+    // number and sits in a department that flows AFTER the target's
+    // (post-move) department.
+    const movedDept = before.departments.get(beforeLine.departmentId);
+    const sameJobDownstream =
+      !!targetBefore.jobNo &&
+      beforeLine.jobNo === targetBefore.jobNo &&
+      !!targetDeptAfter &&
+      !!movedDept &&
+      movedDept.flowOrder > targetDeptAfter.flowOrder;
+
+    // (b) Same employee overlap — the moved line lives on the same
+    // employee the target lands on, and the target's new [start,end)
+    // actually intersects the moved line's BEFORE [start,end).
+    const sameEmployeeOverlap =
+      beforeLine.employeeId === targetAfter.employeeId &&
+      targetAfter.startDateTime.getTime() < beforeLine.endDateTime.getTime() &&
+      targetAfter.endDateTime.getTime() > beforeLine.startDateTime.getTime();
+
+    if (!sameJobDownstream && !sameEmployeeOverlap) continue;
+
+    const reason: CascadeMove["reason"] = sameJobDownstream
+      ? "department-flow"
+      : "employee-queue";
+
     moves.push({
       line: beforeLine,
       beforeStart: beforeLine.startDateTime,
