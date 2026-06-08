@@ -8,12 +8,10 @@ import type {
   ShiftResult,
 } from "./types";
 
-// Cascade is iterative — each pass may push tasks that then conflict with
-// other tasks, requiring another pass. 200 iterations is enough for any
-// reasonable schedule (Lumineo's largest single-job chains are <10 lines).
-// If we ever hit the cap we log and bail with what we've got rather than
-// running unbounded.
-const MAX_ITERATIONS = 200;
+// Safety cap on BFS push propagation iterations. Realistic Lumineo schedules
+// have a few hundred lines per region; the chain length for a single move
+// should never come close to this.
+const MAX_ITERATIONS = 1000;
 
 export function cloneContext(ctx: ScheduleContext): ScheduleContext {
   return {
@@ -73,25 +71,137 @@ export interface ShiftOptions {
 }
 
 /** Each task's "preferred" start = the user's last explicit position for
- *  it. Falls back to its current startDateTime when the field is unset
- *  (legacy data, freshly-loaded rows). The cascade uses this as a floor
- *  so a pushed task pulls back to where the user wanted it once the
- *  cause of the push moves back. */
+ *  it. Falls back to its current startDateTime when the field is unset. The
+ *  cascade uses this as the pull-back floor — once whatever caused a task
+ *  to be pushed moves out of the way, the task returns to its preferred. */
 function preferredOf(task: ScheduleLine): Date {
   return task.preferredStart || task.startDateTime;
 }
 
-function computeDepFloor(task: ScheduleLine, schedule: ScheduleLine[], ctx: ScheduleContext): Date | null {
-  const myDept = ctx.departments.get(task.departmentId);
-  if (!myDept) return null;
-  let latest: Date | null = null;
-  for (const other of schedule) {
-    if (other.id === task.id || other.jobNo !== task.jobNo) continue;
-    const od = ctx.departments.get(other.departmentId);
-    if (!od || od.flowOrder >= myDept.flowOrder) continue;
-    if (!latest || other.endDateTime > latest) latest = other.endDateTime;
+function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
+  return aStart.getTime() < bEnd.getTime() && aEnd.getTime() > bStart.getTime();
+}
+
+function recomputeEnd(line: ScheduleLine, ctx: ScheduleContext): Date {
+  const emp = ctx.employees.get(line.employeeId);
+  if (!emp) return line.endDateTime;
+  return calculateEndTime(
+    line.startDateTime,
+    effectiveHours(line, emp),
+    emp,
+    ctx,
+    line.id,
+  );
+}
+
+/** Forward BFS push: starting from the just-moved target, push any task
+ *  that the target (or transitively pushed task) now collides with — but
+ *  ONLY for the two relationships the user reasons about:
+ *    (a) same-employee overlap with the pusher's new range, or
+ *    (b) same-job task in a downstream department whose start falls
+ *        before the pusher's new end (dept-flow violation introduced by
+ *        the move).
+ *  Crucially, pre-existing violations involving tasks unrelated to the
+ *  target are left alone — the user's mental model is that one drag
+ *  should only ripple to things directly downstream of it. */
+function pushPropagate(work: ScheduleContext, target: ScheduleLine, moved: Set<string>): void {
+  const stack: ScheduleLine[] = [target];
+  let safety = 0;
+  while (stack.length > 0 && safety < MAX_ITERATIONS) {
+    safety++;
+    const pusher = stack.pop()!;
+    const pusherDept = work.departments.get(pusher.departmentId);
+
+    for (const other of work.schedule) {
+      if (other.id === pusher.id || other.isLocked) continue;
+
+      let mustStartAt: Date | null = null;
+
+      // (a) Same employee overlap
+      if (other.employeeId === pusher.employeeId) {
+        if (rangesOverlap(pusher.startDateTime, pusher.endDateTime, other.startDateTime, other.endDateTime)) {
+          mustStartAt = new Date(pusher.endDateTime);
+        }
+      }
+
+      // (b) Same-job downstream dep-flow
+      if (other.jobNo && other.jobNo === pusher.jobNo && pusherDept) {
+        const otherDept = work.departments.get(other.departmentId);
+        if (otherDept && otherDept.flowOrder > pusherDept.flowOrder) {
+          if (other.startDateTime.getTime() < pusher.endDateTime.getTime()) {
+            const cand = new Date(pusher.endDateTime);
+            if (!mustStartAt || cand.getTime() > mustStartAt.getTime()) {
+              mustStartAt = cand;
+            }
+          }
+        }
+      }
+
+      if (mustStartAt && mustStartAt.getTime() > other.startDateTime.getTime()) {
+        other.startDateTime = mustStartAt;
+        other.endDateTime = recomputeEnd(other, work);
+        moved.add(other.id);
+        stack.push(other);
+      }
+    }
   }
-  return latest;
+  if (safety >= MAX_ITERATIONS && typeof console !== "undefined") {
+    console.warn(`[cascade] push propagation hit MAX_ITERATIONS (${MAX_ITERATIONS}); returning partial result`);
+  }
+}
+
+/** Pull-back: any task whose current start is later than its preferred
+ *  is a candidate to return — but only if the slot at its preferred is
+ *  actually free now (no same-employee overlap, no same-job upstream
+ *  ending later). Processed in preferred-ASC order so earlier tasks
+ *  settle first. */
+function pullBack(work: ScheduleContext, moved: Set<string>): void {
+  const candidates = work.schedule
+    .filter(
+      (t) =>
+        !t.isLocked &&
+        t.preferredStart instanceof Date &&
+        t.startDateTime.getTime() > t.preferredStart.getTime(),
+    )
+    .sort((a, b) => preferredOf(a).getTime() - preferredOf(b).getTime());
+
+  for (const task of candidates) {
+    const preferred = preferredOf(task);
+
+    // depFloor against current schedule (after pushes)
+    let earliest = new Date(preferred);
+    const myDept = work.departments.get(task.departmentId);
+    if (myDept) {
+      for (const other of work.schedule) {
+        if (other.id === task.id || other.jobNo !== task.jobNo || !task.jobNo) continue;
+        const od = work.departments.get(other.departmentId);
+        if (!od || od.flowOrder >= myDept.flowOrder) continue;
+        if (other.endDateTime.getTime() > earliest.getTime()) earliest = new Date(other.endDateTime);
+      }
+    }
+
+    if (earliest.getTime() >= task.startDateTime.getTime()) continue;
+
+    // Build a hypothetical placement and check same-employee overlap
+    const emp = work.employees.get(task.employeeId);
+    if (!emp) continue;
+    const candidateLine: ScheduleLine = { ...task, startDateTime: earliest };
+    const candidateEnd = recomputeEnd(candidateLine, work);
+
+    let conflicts = false;
+    for (const other of work.schedule) {
+      if (other.id === task.id || other.employeeId !== task.employeeId) continue;
+      if (rangesOverlap(earliest, candidateEnd, other.startDateTime, other.endDateTime)) {
+        conflicts = true;
+        break;
+      }
+    }
+    if (conflicts) continue;
+
+    task.startDateTime = earliest;
+    task.endDateTime = candidateEnd;
+    moved.add(task.id);
+  }
 }
 
 export function shiftTask(
@@ -103,7 +213,7 @@ export function shiftTask(
 ): ShiftResult {
   const { cascade = true, previewOnly = false } = options;
   const work = cloneContext(ctx);
-  void previewOnly; // both branches clone — `previewOnly` is informational
+  void previewOnly;
 
   const target = work.schedule.find((l) => l.id === lineId);
   if (!target) {
@@ -113,103 +223,31 @@ export function shiftTask(
     return { context: work, moved: [], conflicts: detectConflicts(work) };
   }
 
+  const origStart = target.startDateTime.getTime();
+
   if (newEmployeeId && newEmployeeId !== target.employeeId) {
     target.employeeId = newEmployeeId;
     const emp = work.employees.get(newEmployeeId);
     if (emp) target.departmentId = emp.departmentId;
   }
 
-  const origStart = target.startDateTime.getTime();
   target.startDateTime = new Date(newStart);
   // User explicitly placed the target here, so it becomes the new preferred.
   target.preferredStart = new Date(newStart);
-
-  const emp = work.employees.get(target.employeeId);
-  if (emp) {
-    target.endDateTime = calculateEndTime(
-      target.startDateTime,
-      effectiveHours(target, emp),
-      emp,
-      work,
-      target.id,
-    );
-  }
+  target.endDateTime = recomputeEnd(target, work);
 
   const moved = new Set<string>();
-  if (origStart !== target.startDateTime.getTime() || newEmployeeId) {
+  const targetActuallyMoved = origStart !== target.startDateTime.getTime() || !!newEmployeeId;
+  if (targetActuallyMoved) {
     moved.add(target.id);
   }
 
-  if (!cascade) {
+  if (!cascade || !targetActuallyMoved) {
     return { context: work, moved: [...moved], conflicts: detectConflicts(work) };
   }
 
-  // Bidirectional cascade. For every non-target non-locked task, place it
-  // at max(preferred, depFloor, queueFloor). Iterate per-employee queues in
-  // preferred-ascending order so earlier-preferred tasks anchor the queue.
-  // Convergence: stop when a pass makes no changes.
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    let changedThisPass = false;
-
-    // Build employee queues sorted by preferred (then id for ties)
-    const byEmployee = new Map<string, ScheduleLine[]>();
-    for (const l of work.schedule) {
-      const arr = byEmployee.get(l.employeeId) ?? [];
-      arr.push(l);
-      byEmployee.set(l.employeeId, arr);
-    }
-
-    for (const queue of byEmployee.values()) {
-      queue.sort((a, b) => {
-        const ap = preferredOf(a).getTime();
-        const bp = preferredOf(b).getTime();
-        if (ap !== bp) return ap - bp;
-        return a.id.localeCompare(b.id);
-      });
-
-      let lastEnd: Date | null = null;
-      for (const task of queue) {
-        const isImmutable = task.id === target.id || task.isLocked;
-        const preferred = preferredOf(task);
-        const depFloor = computeDepFloor(task, work.schedule, work);
-
-        // Candidate = max(preferred, lastEnd, depFloor). For immutable
-        // tasks we don't move them, but they still contribute to lastEnd.
-        let candidate = preferred;
-        if (lastEnd && lastEnd > candidate) candidate = lastEnd;
-        if (depFloor && depFloor > candidate) candidate = depFloor;
-
-        if (!isImmutable && candidate.getTime() !== task.startDateTime.getTime()) {
-          task.startDateTime = new Date(candidate);
-          const tEmp = work.employees.get(task.employeeId);
-          if (tEmp) {
-            task.endDateTime = calculateEndTime(
-              task.startDateTime,
-              effectiveHours(task, tEmp),
-              tEmp,
-              work,
-              task.id,
-            );
-          }
-          moved.add(task.id);
-          changedThisPass = true;
-        }
-
-        if (!lastEnd || task.endDateTime > lastEnd) lastEnd = task.endDateTime;
-      }
-    }
-
-    if (!changedThisPass) break;
-
-    if (i === MAX_ITERATIONS - 1) {
-      if (typeof console !== "undefined") {
-        console.warn(
-          `[cascade] hit MAX_ITERATIONS (${MAX_ITERATIONS}) for shift of line ${lineId}. ` +
-            `Schedule may not have fully converged. Returning partial result with ${moved.size} moved tasks.`,
-        );
-      }
-    }
-  }
+  pushPropagate(work, target, moved);
+  pullBack(work, moved);
 
   return {
     context: work,
@@ -229,24 +267,20 @@ export function updateDuration(
   if (!target) return { context: work, moved: [], conflicts: [] };
 
   target.overrideHours = overrideHours;
-  const emp = work.employees.get(target.employeeId);
-  if (emp) {
-    target.endDateTime = calculateEndTime(
-      target.startDateTime,
-      effectiveHours(target, emp),
-      emp,
-      work,
-      target.id,
-    );
-  }
+  target.endDateTime = recomputeEnd(target, work);
 
+  const moved = new Set<string>([target.id]);
   if (!cascade) {
-    return { context: work, moved: [target.id], conflicts: detectConflicts(work) };
+    return { context: work, moved: [...moved], conflicts: detectConflicts(work) };
   }
 
-  return shiftTask(work, lineId, target.startDateTime, undefined, {
-    cascade: true,
-  });
+  // Resize keeps the start fixed but extends the end, so we run push
+  // propagation directly from the resized target — going through
+  // shiftTask's no-op guard would skip cascade since the start didn't move.
+  pushPropagate(work, target, moved);
+  pullBack(work, moved);
+
+  return { context: work, moved: [...moved], conflicts: detectConflicts(work) };
 }
 
 export const _internal = { findEarliestEmployeeSlot };
