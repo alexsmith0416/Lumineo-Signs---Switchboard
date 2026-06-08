@@ -122,7 +122,8 @@ export function formatValue(value: number, fmt: string, textValue?: string): str
 
 function Sparkline({ data, color = "var(--dm-navy)" }: { data: number[]; color?: string }) {
   if (!data.length) return null;
-  const W = 110, H = 32, P = 2;
+  // viewBox uses normalized units; container CSS controls actual pixel size.
+  const W = 100, H = 100, P = 3;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -137,23 +138,38 @@ function Sparkline({ data, color = "var(--dm-navy)" }: { data: number[]; color?:
   const last = data[data.length - 1];
   const lastX = P + (data.length - 1) * stepX;
   const lastY = P + (1 - (last - min) / range) * (H - P * 2);
+  // Area fill underneath line for visual richness
+  const areaPts = `${pts} ${(P + (data.length - 1) * stepX).toFixed(1)},${H - P} ${P},${H - P}`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="dm-mini-chart" preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={lastX} cy={lastY} r="2.4" fill={color} />
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="dm-mini-chart"
+      preserveAspectRatio="none"
+      width="100%"
+      height="100%"
+    >
+      <polygon points={areaPts} fill={color} opacity="0.12" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={lastX} cy={lastY} r="3" fill={color} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
 
 function MiniBars({ data, color = "var(--dm-navy)" }: { data: number[]; color?: string }) {
   if (!data.length) return null;
-  const W = 110, H = 32, gap = 3;
+  const W = 100, H = 100, gap = 4;
   const max = Math.max(...data) || 1;
   const bw = (W - gap * (data.length - 1)) / data.length;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="dm-mini-chart" preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="dm-mini-chart"
+      preserveAspectRatio="none"
+      width="100%"
+      height="100%"
+    >
       {data.map((v, i) => {
-        const h = (v / max) * (H - 2);
+        const h = (v / max) * (H - 4);
         return (
           <rect
             key={i}
@@ -193,22 +209,27 @@ function ProgressBar({ pct, color = "var(--dm-navy)" }: { pct: number; color?: s
 
 function Gauge({ value, max, color = "var(--dm-navy)" }: { value: number; max: number; color?: string }) {
   const pct = Math.max(0, Math.min(value / max, 1));
-  const W = 110, H = 56, r = 38, cx = W / 2, cy = H - 6;
+  const W = 100, H = 56, r = 40, cx = W / 2, cy = H - 4;
   const start = Math.PI; // 180°
   const end = start + pct * Math.PI;
   const x1 = cx + r * Math.cos(start);
   const y1 = cy + r * Math.sin(start);
   const x2 = cx + r * Math.cos(end);
   const y2 = cy + r * Math.sin(end);
-  // Background arc
   const bgEnd = start + Math.PI;
   const bgX2 = cx + r * Math.cos(bgEnd);
   const bgY2 = cy + r * Math.sin(bgEnd);
   const largeArc = pct > 0.5 ? 1 : 0;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="dm-mini-chart dm-mini-chart--gauge" preserveAspectRatio="none">
-      <path d={`M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 1 1 ${bgX2.toFixed(1)} ${bgY2.toFixed(1)}`} fill="none" stroke="var(--dm-border-soft)" strokeWidth="6" strokeLinecap="round" />
-      <path d={`M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" />
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="dm-mini-chart dm-mini-chart--gauge"
+      preserveAspectRatio="xMidYMax meet"
+      width="100%"
+      height="100%"
+    >
+      <path d={`M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 1 1 ${bgX2.toFixed(1)} ${bgY2.toFixed(1)}`} fill="none" stroke="var(--dm-border-soft)" strokeWidth="7" strokeLinecap="round" />
+      <path d={`M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" />
     </svg>
   );
 }
@@ -251,6 +272,7 @@ export function KpiCardBody({ k }: { k: KpiVm }) {
     k.deltaDirection === "up" ? "▲" : k.deltaDirection === "down" ? "▼" : "▬";
   const cls =
     k.deltaDirection === "flat" ? "is-flat" : k.deltaIsGood ? "is-good" : "is-bad";
+  const hasChart = k.chart !== "none" && k.valueFormat !== "text";
   return (
     <div className="dm-kpi-body">
       <div className="dm-kpi__topline">
@@ -261,14 +283,14 @@ export function KpiCardBody({ k }: { k: KpiVm }) {
           </span>
         )}
       </div>
-      <div className="dm-kpi__valuewrap">
-        <div className={`dm-kpi__value ${k.valueFormat === "text" ? "is-text" : ""}`}>
-          {formatValue(k.value, k.valueFormat, k.textValue)}
-        </div>
-        <div className="dm-kpi__chart">
+      <div className={`dm-kpi__value ${k.valueFormat === "text" ? "is-text" : ""}`}>
+        {formatValue(k.value, k.valueFormat, k.textValue)}
+      </div>
+      {hasChart && (
+        <div className="dm-kpi__chart" data-chart={k.chart}>
           <KpiMiniChart k={k} />
         </div>
-      </div>
+      )}
       <div className="dm-kpi__foot">
         {k.goal && <span className="dm-kpi__goal">Goal {k.goal}</span>}
       </div>
