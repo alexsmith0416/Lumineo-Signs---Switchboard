@@ -6,111 +6,141 @@ function build(o: Partial<SignSpec>): SignSpec {
   return { ...emptySignSpec(), ...o };
 }
 
-describe("mapSpecToEstimatePieces — primary piece selection", () => {
-  it("WC + DF + RFPB → Df Routed Cabinet (per ALE-244 acceptance)", () => {
+describe("mapSpecToEstimatePieces — typeIds match Estimating's registry", () => {
+  it("WC + DF + RFPB → df-routed-cabinet with pushThrough='No'", () => {
     const pieces = mapSpecToEstimatePieces(build({
       signTypeCode: "WC", faces: "DF", illumination: "IL", faceType: "RFPB",
       heightIn: "48", widthIn: "84", depthIn: "12", quantity: 1,
     }));
     const primary = pieces[0];
-    expect(primary.pieceType).toBe("Df Routed Cabinet");
-    expect(primary.heightIn).toBe("48");
-    expect(primary.lengthIn).toBe("84");
-    expect(primary.depthIn).toBe("12");
+    expect(primary.typeId).toBe("df-routed-cabinet");
+    expect(primary.inputs.H).toBe(48);
+    expect(primary.inputs.L).toBe(84);
+    expect(primary.inputs.D).toBe(12);
+    expect(primary.inputs.pushThrough).toBe("No");
   });
 
-  it("WC + SF + PT → Sf Acrylic Cabinet", () => {
-    const p = mapSpecToEstimatePieces(build({
-      signTypeCode: "WC", faces: "SF", faceType: "PT",
+  it("WC + DF + RFPT routes push-through input correctly", () => {
+    const pieces = mapSpecToEstimatePieces(build({
+      signTypeCode: "WC", faces: "DF", faceType: "RFPT", heightIn: "36", widthIn: "120",
     }));
-    expect(p[0].pieceType).toBe("Sf Acrylic Cabinet");
+    expect(pieces[0].typeId).toBe("df-routed-cabinet");
+    expect(pieces[0].inputs.pushThrough).toBe("Yes");
   });
 
-  it("WC + DF + DF (direct print) → Df Flex Cabinet", () => {
-    const p = mapSpecToEstimatePieces(build({
-      signTypeCode: "WC", faces: "DF", faceType: "DF",
-    }));
-    expect(p[0].pieceType).toBe("Df Flex Cabinet");
+  it("WC + SF + PT → sf-acrylic-cabinet", () => {
+    const p = mapSpecToEstimatePieces(build({ signTypeCode: "WC", faces: "SF", faceType: "PT" }));
+    expect(p[0].typeId).toBe("sf-acrylic-cabinet");
   });
 
-  it("PP → Post & Panel", () => {
+  it("WC + DF + DF → df-flex-cabinet", () => {
+    const p = mapSpecToEstimatePieces(build({ signTypeCode: "WC", faces: "DF", faceType: "DF" }));
+    expect(p[0].typeId).toBe("df-flex-cabinet");
+  });
+
+  it("PP → post-and-panel", () => {
     const p = mapSpecToEstimatePieces(build({ signTypeCode: "PP", faces: "SF", faceType: "AT" }));
-    expect(p[0].pieceType).toBe("Post & Panel");
+    expect(p[0].typeId).toBe("post-and-panel");
   });
 
-  it("AP → Alum/Economy Pan with Aluminum option; EP → economy option", () => {
+  it("AP → alum-pan-sign; EP → economy-pan-sign (two different piece types)", () => {
     const ap = mapSpecToEstimatePieces(build({ signTypeCode: "AP", faces: "SF", faceType: "AT" }));
     const ep = mapSpecToEstimatePieces(build({ signTypeCode: "EP", faces: "SF", faceType: "AT" }));
-    expect(ap[0].pieceType).toBe("Alum/Economy Pan");
-    expect(ap[0].options).toBe("Aluminum");
-    expect(ep[0].options).toBe("Economy");
+    expect(ap[0].typeId).toBe("alum-pan-sign");
+    expect(ep[0].typeId).toBe("economy-pan-sign");
   });
 
-  it("FL → Channel Letter Fabrication (Front-Lit)", () => {
-    const p = mapSpecToEstimatePieces(build({ signTypeCode: "FL", faces: "NA", faceType: "AT" }));
-    expect(p[0].pieceType).toBe("Channel Letter Fabrication");
-    expect(p[0].options).toBe("Front-Lit");
+  it("FL → channel-letter-fabrication with face='block' default", () => {
+    const p = mapSpecToEstimatePieces(build({
+      signTypeCode: "FL", faces: "NA", faceType: "AT", heightIn: "12", widthIn: "60",
+    }));
+    expect(p[0].typeId).toBe("channel-letter-fabrication");
+    expect(p[0].inputs.face).toBe("block");
+    // Rough perimeter seeded from H + L: (12 + 60) * 2 = 144 inches
+    expect(p[0].inputs.inches).toBe(144);
   });
 
-  it("EM → EMC Assembly", () => {
+  it("AL → routed-alum-faces-letters; AC → routed-push-through-acrylic", () => {
+    const al = mapSpecToEstimatePieces(build({ signTypeCode: "AL", faces: "NA", faceType: "AT" }));
+    const ac = mapSpecToEstimatePieces(build({ signTypeCode: "AC", faces: "NA", faceType: "AT" }));
+    expect(al[0].typeId).toBe("routed-alum-faces-letters");
+    expect(ac[0].typeId).toBe("routed-push-through-acrylic");
+  });
+
+  it("CA + PL fall back to freeform-tm (no exact piece type in registry)", () => {
+    const ca = mapSpecToEstimatePieces(build({ signTypeCode: "CA", faces: "NA", faceType: "AT" }));
+    const pl = mapSpecToEstimatePieces(build({ signTypeCode: "PL", faces: "NA", faceType: "AT" }));
+    expect(ca[0].typeId).toBe("freeform-tm");
+    expect(pl[0].typeId).toBe("freeform-tm");
+  });
+
+  it("EM → emc-assembly", () => {
     const p = mapSpecToEstimatePieces(build({ signTypeCode: "EM", faces: "SF", faceType: "EM" }));
-    expect(p[0].pieceType).toBe("EMC Assembly");
+    expect(p[0].typeId).toBe("emc-assembly");
   });
 });
 
 describe("mapSpecToEstimatePieces — additional pieces driven by options", () => {
-  it("adds Vinyl Cutting + Apply Vinyl Graphics when vinyl=CV", () => {
+  it("vinyl=CV adds vinyl-cutting + apply-vinyl-graphics", () => {
     const types = mapSpecToEstimatePieces(build({
       signTypeCode: "WC", faces: "SF", faceType: "PT",
       vinyl: "CV", vinylColor: "3M 3630 — 022 Black",
-    })).map((p) => p.pieceType);
-    expect(types).toContain("Vinyl Cutting");
-    expect(types).toContain("Apply Vinyl Graphics");
+    })).map((p) => p.typeId);
+    expect(types).toContain("vinyl-cutting");
+    expect(types).toContain("apply-vinyl-graphics");
   });
 
-  it("adds Apply Vinyl only (no Vinyl Cutting) for digital print", () => {
+  it("vinyl=DV adds apply-vinyl-graphics only (no cutting)", () => {
     const types = mapSpecToEstimatePieces(build({
       signTypeCode: "WC", faces: "SF", faceType: "PT", vinyl: "DV",
-    })).map((p) => p.pieceType);
-    expect(types).toContain("Apply Vinyl Graphics");
-    expect(types).not.toContain("Vinyl Cutting");
+    })).map((p) => p.typeId);
+    expect(types).toContain("apply-vinyl-graphics");
+    expect(types).not.toContain("vinyl-cutting");
   });
 
-  it("adds Paint Calculation with qty=2 for double-face shop-painted", () => {
+  it("finish=P + faces=DF adds paint-calculation with faces=2", () => {
     const paint = mapSpecToEstimatePieces(build({
       signTypeCode: "WC", faces: "DF", faceType: "AT", finish: "P", paintColor: "PMS 286",
-    })).find((p) => p.pieceType === "Paint Calculation");
+    })).find((p) => p.typeId === "paint-calculation");
     expect(paint).toBeDefined();
-    expect(paint!.qty).toBe(2);
-    expect(paint!.notes).toBe("PMS 286");
+    expect(paint!.inputs.faces).toBe(2);
+    expect(paint!.label).toBe("Paint — PMS 286");
   });
 
-  it("adds LED Wiring for illuminated NON-letter signs", () => {
-    const cabinet = mapSpecToEstimatePieces(build({
+  it("illumination=IL on non-letters adds led-wiring", () => {
+    const cab = mapSpecToEstimatePieces(build({
       signTypeCode: "WC", faces: "SF", faceType: "AT", illumination: "IL",
-    })).map((p) => p.pieceType);
-    expect(cabinet).toContain("LED Wiring");
+    })).map((p) => p.typeId);
+    expect(cab).toContain("led-wiring");
 
-    // Front-lit letters bundle LED into the fabrication piece; no separate LED Wiring.
+    // Channel letters bundle LED — no separate piece.
     const fl = mapSpecToEstimatePieces(build({
       signTypeCode: "FL", faces: "NA", faceType: "AT", illumination: "IL",
-    })).map((p) => p.pieceType);
-    expect(fl).not.toContain("LED Wiring");
+    })).map((p) => p.typeId);
+    expect(fl).not.toContain("led-wiring");
   });
 
-  it("adds Pole Cover + Structural Steel for MN with New Pole", () => {
+  it("FL adds trimcap-letter-face on top of channel-letter-fabrication", () => {
+    const types = mapSpecToEstimatePieces(build({
+      signTypeCode: "FL", faces: "NA", faceType: "AT",
+    })).map((p) => p.typeId);
+    expect(types).toContain("channel-letter-fabrication");
+    expect(types).toContain("trimcap-letter-face");
+  });
+
+  it("MN + New Pole adds pole-cover + structural-steel", () => {
     const types = mapSpecToEstimatePieces(build({
       signTypeCode: "MN", faces: "SF", faceType: "AT",
       poleType: "New Pole", poleDiameter: "6in", poleMaterial: "Steel",
-    })).map((p) => p.pieceType);
-    expect(types).toContain("Pole Cover");
-    expect(types).toContain("Structural Steel");
+    })).map((p) => p.typeId);
+    expect(types).toContain("pole-cover");
+    expect(types).toContain("structural-steel");
   });
 
-  it("does NOT add Pole Cover when poleType is Existing Pole", () => {
+  it("MN + Existing Pole does NOT add pole-cover", () => {
     const types = mapSpecToEstimatePieces(build({
       signTypeCode: "MN", faces: "SF", faceType: "AT", poleType: "Existing Pole",
-    })).map((p) => p.pieceType);
-    expect(types).not.toContain("Pole Cover");
+    })).map((p) => p.typeId);
+    expect(types).not.toContain("pole-cover");
   });
 });

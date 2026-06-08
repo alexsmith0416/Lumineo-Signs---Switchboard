@@ -1,73 +1,66 @@
-// Ballpark pricing — rough $/piece numbers computed locally in Sign Builder
-// Pro. The REAL estimate comes from the Estimating app once the BC catalog
-// (lum_invitem / lum_workcode / lum_ratedata) is connected. Until then
-// these multipliers give Sales a same-order-of-magnitude figure to quote
-// from in-conversation; they are explicitly NOT a binding price.
+// Ballpark pricing — rough $/piece numbers computed locally. The REAL
+// estimate comes from the Estimating app's calc engine against the BC
+// catalog; these multipliers are for in-conversation quoting only.
 //
-// Multipliers come from a quick survey of recent jobs and from the
-// workbook's process-rate sheet — see comments per piece type. All hourly
-// labor uses $92/hr (the shop's default from the workbook's WC sheet).
+// Keyed by Estimating piece-type id (kebab-case slugs from
+// apps/estimating/src/data/pieceTypes.ts) so the same SBP→piece mapping
+// drives both this rough number and the actual handoff.
 
-import type { EstimatingPieceDraft, EstimatingPieceType } from "./estimateMapping";
+import type { EstimatingPieceDraft, PieceTypeId } from "./estimateMapping";
 
-const SHOP_LABOR_RATE = 92; // $/hr — from the workbook's WC sheet default
+const SHOP_LABOR_RATE = 92; // $/hr — workbook's WC sheet default
 
-// Per-piece-type cost approximations. `materialPerSqft` is the rough
-// installed material cost we'd quote per square foot of face area;
-// `laborSqftPerHour` is how many sqft the shop turns per hour (so labor
-// hours = sqft / laborSqftPerHour). Both are deliberately conservative.
 type PieceMultiplier = {
   /** Rough material $/sqft. Use 0 for labor-only pieces. */
   materialPerSqft: number;
-  /** Process rate — sqft of face area per labor hour. */
+  /** Sqft turned per labor hour. 0 means the piece is labor-by-input
+      (the user enters hours directly — only the `fixedCost` / setup
+      hours apply). */
   laborSqftPerHour: number;
   /** Fixed setup hours added on top of variable labor. */
   setupHours?: number;
-  /** Optional fixed cost added once regardless of size (e.g. crating). */
+  /** Fixed cost added once regardless of size (e.g. crating, pole). */
   fixedCost?: number;
 };
 
-const MULTIPLIERS: Record<EstimatingPieceType, PieceMultiplier> = {
-  // — Cabinets — face material drives the spread. Routed > Acrylic > Flex
-  //   for material cost; flex faces are cheaper but slower to build.
-  "Sf Routed Cabinet":   { materialPerSqft: 75, laborSqftPerHour: 8 },
-  "Df Routed Cabinet":   { materialPerSqft: 95, laborSqftPerHour: 6 },
-  "Sf Acrylic Cabinet":  { materialPerSqft: 55, laborSqftPerHour: 10 },
-  "Df Acrylic Cabinet":  { materialPerSqft: 75, laborSqftPerHour: 8 },
-  "Economy Acrylic Cabinet": { materialPerSqft: 35, laborSqftPerHour: 12 },
-  "Sf Flex Cabinet":     { materialPerSqft: 45, laborSqftPerHour: 9 },
-  "Df Flex Cabinet":     { materialPerSqft: 65, laborSqftPerHour: 7 },
-
-  "Alum/Economy Pan":    { materialPerSqft: 30, laborSqftPerHour: 14 },
-  "Post & Panel":        { materialPerSqft: 35, laborSqftPerHour: 12 },
-  "Pole Cover":          { materialPerSqft: 60, laborSqftPerHour: 8, fixedCost: 250 },
-  "Structural Steel":    { materialPerSqft: 0,  laborSqftPerHour: 10, fixedCost: 800 },
-
-  // Letters — slow to build, face-area drives both inputs.
-  "Channel Letter Fabrication": { materialPerSqft: 120, laborSqftPerHour: 3, setupHours: 1 },
-  "Trimcap Letter Face":        { materialPerSqft: 25,  laborSqftPerHour: 6 },
-  "Routed Alum Faces Letters":  { materialPerSqft: 90,  laborSqftPerHour: 4 },
-  "Routed Push-Through Acrylic":{ materialPerSqft: 110, laborSqftPerHour: 3 },
-  "Cast Aluminum Letters":      { materialPerSqft: 180, laborSqftPerHour: 2 },
-  "Formed Plastic Letters":     { materialPerSqft: 60,  laborSqftPerHour: 6 },
-  "FCO Acrylic Letters":        { materialPerSqft: 70,  laborSqftPerHour: 5 },
-
+const MULTIPLIERS: Record<PieceTypeId, PieceMultiplier> = {
+  "freeform-tm":               { materialPerSqft: 0,  laborSqftPerHour: 0, fixedCost: 300 },
+  // Graphics
+  "apply-vinyl-graphics":      { materialPerSqft: 0,  laborSqftPerHour: 32 },
+  "vinyl-cutting":             { materialPerSqft: 5,  laborSqftPerHour: 20 },
+  "paint-calculation":         { materialPerSqft: 1.5, laborSqftPerHour: 11 },
+  "routed-panel-shapes":       { materialPerSqft: 25, laborSqftPerHour: 50, setupHours: 1 },
+  // Pan / post-panel
+  "alum-pan-sign":             { materialPerSqft: 35, laborSqftPerHour: 14 },
+  "economy-pan-sign":          { materialPerSqft: 22, laborSqftPerHour: 18 },
+  "post-and-panel":            { materialPerSqft: 35, laborSqftPerHour: 12 },
+  "flat-panels":               { materialPerSqft: 18, laborSqftPerHour: 72 },
+  // Faces / letters
+  "routed-face-only":          { materialPerSqft: 70, laborSqftPerHour: 6 },
+  "routed-alum-faces-letters": { materialPerSqft: 90, laborSqftPerHour: 4, setupHours: 1 },
+  "routed-push-through-acrylic": { materialPerSqft: 110, laborSqftPerHour: 3, setupHours: 1 },
+  // Cabinets — face material drives the spread.
+  "sf-routed-cabinet":         { materialPerSqft: 75, laborSqftPerHour: 8 },
+  "df-routed-cabinet":         { materialPerSqft: 95, laborSqftPerHour: 6 },
+  "sf-acrylic-cabinet":        { materialPerSqft: 55, laborSqftPerHour: 10 },
+  "economy-sf-acrylic":        { materialPerSqft: 35, laborSqftPerHour: 12 },
+  "df-acrylic-cabinet":        { materialPerSqft: 75, laborSqftPerHour: 8 },
+  "sf-flex-cabinet":           { materialPerSqft: 45, laborSqftPerHour: 9 },
+  "df-flex-cabinet":           { materialPerSqft: 65, laborSqftPerHour: 7 },
+  // Structure
+  "pole-cover":                { materialPerSqft: 60, laborSqftPerHour: 8,  fixedCost: 250 },
+  "structural-steel":          { materialPerSqft: 0,  laborSqftPerHour: 0,  fixedCost: 800 },
+  // Letters
+  "trimcap-letter-face":       { materialPerSqft: 25, laborSqftPerHour: 6 },
+  "channel-letter-fabrication":{ materialPerSqft: 120, laborSqftPerHour: 3, setupHours: 1 },
   // Electronics
-  "EMC Assembly":  { materialPerSqft: 250, laborSqftPerHour: 4, setupHours: 2 },
-  "LED Wiring":    { materialPerSqft: 8,   laborSqftPerHour: 12 },
-
-  // Graphics — Apply Vinyl is labor-only (vinyl line lives on Vinyl
-  // Cutting); both use the workbook's explicit sqft/hr values.
-  "Vinyl Cutting":         { materialPerSqft: 5, laborSqftPerHour: 20 },
-  "Apply Vinyl Graphics":  { materialPerSqft: 0, laborSqftPerHour: 32 },
-
-  // Paint — workbook splits prime + topcoat (20 / 25 sqft/hr each). We
-  // collapse to a single combined rate for the ballpark.
-  "Paint Calculation": { materialPerSqft: 1.5, laborSqftPerHour: 11 },
+  "emc-assembly":              { materialPerSqft: 250, laborSqftPerHour: 4, setupHours: 2 },
+  "led-wiring":                { materialPerSqft: 8,  laborSqftPerHour: 12 },
 };
 
 export type BallparkLine = {
-  pieceType: EstimatingPieceType;
+  typeId: PieceTypeId;
+  label: string;
   qty: number;
   sqftEach: number;
   materialEach: number;
@@ -86,31 +79,34 @@ export type BallparkQuote = {
   total: number;
 };
 
-/** Compute the rough ballpark for an array of piece drafts (from
-    `mapSpecToEstimatePieces`). Returns one line per piece + a roll-up. */
+/** Compute the rough ballpark from piece drafts. Reads dimensions from
+    each piece's `inputs.H` / `inputs.L` (Estimating's input keys) so the
+    same payload shape feeds both this rough number and the real
+    handoff. */
 export function computeBallpark(pieces: EstimatingPieceDraft[]): BallparkQuote {
   const lines: BallparkLine[] = pieces.map((p) => {
-    const h = Number(p.heightIn) || 0;
-    const l = Number(p.lengthIn) || 0;
-    // sqft from H × L in inches → square feet. Some pieces don't have a
-    // sqft basis (e.g. crating, fixed-cost) — for those we set sqft = 0
-    // and rely on fixedCost / setup hours.
+    const h = numberInput(p.inputs.H);
+    const l = numberInput(p.inputs.L);
+    const qty = Math.max(1, numberInput(p.inputs.qty) || 1);
     const sqft = h && l ? (h * l) / 144 : 0;
-    const m = MULTIPLIERS[p.pieceType];
+    const m = MULTIPLIERS[p.typeId] ?? { materialPerSqft: 0, laborSqftPerHour: 0 };
     const materialEach = sqft * m.materialPerSqft + (m.fixedCost ?? 0);
     const laborHoursEach =
-      sqft && m.laborSqftPerHour ? sqft / m.laborSqftPerHour + (m.setupHours ?? 0) : (m.setupHours ?? 0);
+      sqft && m.laborSqftPerHour
+        ? sqft / m.laborSqftPerHour + (m.setupHours ?? 0)
+        : (m.setupHours ?? 0);
     const laborCostEach = laborHoursEach * SHOP_LABOR_RATE;
     const totalEach = materialEach + laborCostEach;
     return {
-      pieceType: p.pieceType,
-      qty: p.qty,
+      typeId: p.typeId,
+      label: p.label ?? prettifyTypeId(p.typeId),
+      qty,
       sqftEach: sqft,
       materialEach,
       laborHoursEach,
       laborCostEach,
       totalEach,
-      total: totalEach * p.qty,
+      total: totalEach * qty,
     };
   });
 
@@ -119,14 +115,7 @@ export function computeBallpark(pieces: EstimatingPieceDraft[]): BallparkQuote {
   const materialCost = lines.reduce((s, l) => s + l.materialEach * l.qty, 0);
   const laborHours = lines.reduce((s, l) => s + l.laborHoursEach * l.qty, 0);
 
-  return {
-    lines,
-    subtotal,
-    laborCost,
-    materialCost,
-    laborHours,
-    total: subtotal,
-  };
+  return { lines, subtotal, laborCost, materialCost, laborHours, total: subtotal };
 }
 
 export function formatUsd(n: number): string {
@@ -135,4 +124,20 @@ export function formatUsd(n: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   });
+}
+
+function numberInput(v: number | string | undefined): number {
+  if (typeof v === "number") return isFinite(v) ? v : 0;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    return isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function prettifyTypeId(id: PieceTypeId): string {
+  return id
+    .split("-")
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ");
 }

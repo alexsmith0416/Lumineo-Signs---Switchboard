@@ -1,73 +1,57 @@
 // Sign Builder Pro → Estimating handoff. Sends the saved spec to the
-// Estimating app via URL parameter so it can pre-fill a `lum_estimate`
-// with one or more `lum_estimatepiece` rows.
+// Estimating app (apps/estimating in the same repo, branch
+// `claude/estimating-app`) so it can pre-fill one or more `Piece` rows.
 //
-// Contract — see docs/estimating-integration.md. Estimating reads the
-// `?payload=` URL param on mount, base64-decodes it, parses as JSON, and
-// uses `pieces[]` to seed its piece list. The Estimating app's URL is
-// resolved from `getEstimatingBaseUrl()` so it can be swapped at deploy
-// time without a rebuild.
+// Payload shape v2 — aligned with the actual Piece / PieceInputs types
+// from apps/estimating/src/lib/engine.ts and the piece-type registry in
+// apps/estimating/src/data/pieceTypes.ts.
 
 import type { EstimatingPieceDraft } from "../domain/estimateMapping";
 import { mapSpecToEstimatePieces } from "../domain/estimateMapping";
 import type { SignSpec } from "../domain/SignSpec";
 
-/** v1 of the payload contract. Bump the version if the shape changes so
-    Estimating can detect old / new payloads and degrade gracefully. */
-export const ESTIMATING_PAYLOAD_VERSION = 1;
+/** Bumped from 1 → 2 to reflect the shape change (kebab-case typeIds +
+    piece-type-specific input keys). */
+export const ESTIMATING_PAYLOAD_VERSION = 2;
 
 export type EstimatingHandoffPayload = {
-  version: number;
+  version: 2;
   source: "sign-builder-pro";
-  sentAt: string;       // ISO timestamp
-  /** Sign Builder Pro spec ID, so Estimating can link the resulting
+  sentAt: string;
+  /** Sign Builder Pro spec id, so Estimating can link the resulting
       `lum_estimate` back to the originating `lum_signspecification`. */
   specId?: string;
-  /** Inheritance from the SBP launch contract — when SBP was itself
-      launched with ?jobId= or ?opportunityId=, the Estimating app picks
-      up the same context. */
+  /** Cross-sub-app linkage inherited from the SBP launch contract. */
   jobId?: string;
   opportunityId?: string;
-  /** Customer + project metadata to seed the `lum_estimate` header. */
+  /** Header metadata for seeding the `Project` (`lum_estimate`). */
   customerName?: string;
   projectName?: string;
-  /** Human label that becomes the Estimating piece's description. */
   signName?: string;
-  /** Full SBP product code, for the proposal summary. */
   productCode?: string;
-  /** Notes carried over from SBP's StepNotesStatus card. */
   notes?: string;
-  /** The piece-type drafts. Estimating creates one row per element with
-      this piece type pre-selected and the dimensions / hints filled in. */
+  /** Pieces draft — drop straight into Estimating's pieces list. */
   pieces: EstimatingPieceDraft[];
 };
 
-/** Where to send the user. Override at deploy time once the Estimating
-    app is hosted. The query string is appended by `buildEstimatingUrl`. */
+/** Estimating app URL. Override at deploy time via:
+      window.LUMINEO_ESTIMATING_URL = "https://..." */
 const DEFAULT_ESTIMATING_BASE = "https://estimating.lumineosigns.com/";
 
 export function getEstimatingBaseUrl(): string {
   if (typeof window === "undefined") return DEFAULT_ESTIMATING_BASE;
-  // Optional runtime override — drop a global on window when the
-  // Estimating app's URL is known at deploy time. Lets Switchboard /
-  // Power Apps Code apps swap the URL without a Vite rebuild.
   const w = window as unknown as { LUMINEO_ESTIMATING_URL?: string };
   return w.LUMINEO_ESTIMATING_URL ?? DEFAULT_ESTIMATING_BASE;
 }
 
-/** Pack a payload + base URL into the final navigation URL. Estimating
-    is a HashRouter app, so the payload goes after the hash so its
-    useLocation().search picks it up. */
+/** Build the final navigation URL: base + #import?payload=<base64url>. */
 export function buildEstimatingUrl(
   payload: EstimatingHandoffPayload,
   baseUrl: string = getEstimatingBaseUrl(),
 ): string {
-  const json = JSON.stringify(payload);
-  // base64url-safe so we don't have to URL-encode + signs.
-  const encoded = b64urlEncode(json);
-  const hasHash = baseUrl.includes("#");
-  if (!hasHash) return `${baseUrl}#/import?payload=${encoded}`;
-  // Already has a hash. Append to the existing path's search.
+  const encoded = b64urlEncode(JSON.stringify(payload));
+  if (!baseUrl.includes("#")) return `${baseUrl}#import?payload=${encoded}`;
+  // Preserve any existing hash path / query string.
   const hashIdx = baseUrl.indexOf("#");
   const pre = baseUrl.slice(0, hashIdx);
   const hash = baseUrl.slice(hashIdx + 1);
@@ -79,8 +63,6 @@ export function buildEstimatingUrl(
   return `${pre}#${hashPath}?${merged.toString()}`;
 }
 
-/** Build the handoff payload from a saved SignSpec + the optional launch
-    context (jobId / opportunityId). Pure function — no DOM access. */
 export function buildEstimatingPayload(
   spec: SignSpec,
   ctx: { jobId?: string; opportunityId?: string } = {},
@@ -101,8 +83,6 @@ export function buildEstimatingPayload(
   };
 }
 
-/** Fire-and-forget: opens the Estimating app in a new tab with the spec
-    pre-loaded. Returns the URL that was opened so callers can copy it. */
 export function sendSpecToEstimating(
   spec: SignSpec,
   ctx: { jobId?: string; opportunityId?: string } = {},
@@ -118,8 +98,6 @@ export function sendSpecToEstimating(
 // ─── base64url helpers (no padding, +→-, /→_) ─────────────────────────────
 
 function b64urlEncode(s: string): string {
-  // `btoa` only handles Latin-1; wrap in encodeURIComponent → escape so
-  // multibyte characters survive.
   const raw = btoa(unescape(encodeURIComponent(s)));
   return raw.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

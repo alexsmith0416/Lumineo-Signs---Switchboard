@@ -81,7 +81,7 @@ export function BallparkModal({ spec, onClose }: BallparkModalProps) {
             </div>
             {quote.lines.map((l, i) => (
               <div key={i} className="sbp-ballpark__row">
-                <span style={{ flex: 2, fontWeight: 700 }}>{l.pieceType}</span>
+                <span style={{ flex: 2, fontWeight: 700 }}>{l.label}</span>
                 <span style={{ flex: 1, textAlign: "right" }} className="lum-num">{l.qty}</span>
                 <span style={{ flex: 1, textAlign: "right" }} className="lum-num">{l.sqftEach.toFixed(1)}</span>
                 <span style={{ flex: 1, textAlign: "right" }} className="lum-num">{formatUsd(l.materialEach * l.qty)}</span>

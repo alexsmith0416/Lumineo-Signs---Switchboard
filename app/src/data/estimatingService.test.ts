@@ -27,7 +27,7 @@ describe("buildEstimatingPayload", () => {
     expect(p.opportunityId).toBe("opp-789");
     expect(p.customerName).toBe("Westview");
     expect(p.signName).toBe("Main Entry Cabinet");
-    expect(p.pieces[0].pieceType).toBe("Df Routed Cabinet");
+    expect(p.pieces[0].typeId).toBe("df-routed-cabinet");
   });
 
   it("launch-context jobId / opportunityId override the spec's stored values", () => {
@@ -40,7 +40,7 @@ describe("buildEstimatingPayload", () => {
 
 describe("buildEstimatingUrl", () => {
   const payload = {
-    version: 1,
+    version: 2 as const,
     source: "sign-builder-pro" as const,
     sentAt: "2026-01-01T00:00:00.000Z",
     pieces: [],
@@ -48,7 +48,7 @@ describe("buildEstimatingUrl", () => {
 
   it("appends a hash + payload param when the base URL has no hash", () => {
     const url = buildEstimatingUrl(payload, "https://estimating.lumineosigns.com/");
-    expect(url).toMatch(/^https:\/\/estimating\.lumineosigns\.com\/#\/import\?payload=[A-Za-z0-9_-]+$/);
+    expect(url).toMatch(/^https:\/\/estimating\.lumineosigns\.com\/#import\?payload=[A-Za-z0-9_-]+$/);
   });
 
   it("merges into an existing hash + query string", () => {
