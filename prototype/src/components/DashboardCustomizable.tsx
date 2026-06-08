@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GridLayout, { WidthProvider } from "react-grid-layout/legacy";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -57,20 +57,13 @@ interface CardDef {
   min: { w: number; h: number };
 }
 
-function buildCatalog(role: Role): CardDef[] {
-  const kpis = getKpiList(role);
-  const kpiCards: CardDef[] = kpis.map((k) => ({
-    id: `kpi:${k.key}`,
-    title: k.label,
-    category: "KPI",
-    default: { w: 3, h: 2 },
-    min: { w: 2, h: 2 },
-  }));
+function buildCatalog(_role: Role): CardDef[] {
+  // KPIs live in the fixed horizontal strip at the top — only larger
+  // cards are arrangeable inside the customizable grid.
   return [
-    ...kpiCards,
-    { id: "donut",   title: "Production Department Workloads", category: "Chart", default: { w: 6, h: 5 }, min: { w: 4, h: 4 } },
-    { id: "targets", title: "Upcoming Target Dates",            category: "List",  default: { w: 6, h: 5 }, min: { w: 4, h: 4 } },
-    { id: "kanban",  title: "Production Board (Kanban)",        category: "Board", default: { w: 12, h: 6 }, min: { w: 6, h: 5 } },
+    { id: "donut",   title: "Production Department Workloads", category: "Chart", default: { w: 6, h: 6 }, min: { w: 4, h: 4 } },
+    { id: "targets", title: "Upcoming Target Dates",            category: "List",  default: { w: 6, h: 6 }, min: { w: 4, h: 4 } },
+    { id: "kanban",  title: "Production Board (Kanban)",        category: "Board", default: { w: 12, h: 8 }, min: { w: 6, h: 6 } },
   ];
 }
 
@@ -78,26 +71,15 @@ function buildCatalog(role: Role): CardDef[] {
 
 type Item = { i: string; x: number; y: number; w: number; h: number; minW: number; minH: number };
 
-function defaultLayout(role: Role): Item[] {
-  const kpis = getKpiList(role).slice(0, 8);
-  const items: Item[] = [];
-  // Row 1 (y=0) — first 4 KPIs across, each 3w × 2h
-  kpis.slice(0, 4).forEach((k, i) => {
-    items.push({ i: `kpi:${k.key}`, x: i * 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 });
-  });
-  // Row 2 (y=2) — next 4 KPIs across
-  kpis.slice(4, 8).forEach((k, i) => {
-    items.push({ i: `kpi:${k.key}`, x: i * 3, y: 2, w: 3, h: 2, minW: 2, minH: 2 });
-  });
-  // Donut + Targets side-by-side at y=4
-  items.push({ i: "donut",   x: 0, y: 4, w: 6, h: 5, minW: 4, minH: 4 });
-  items.push({ i: "targets", x: 6, y: 4, w: 6, h: 5, minW: 4, minH: 4 });
-  // Kanban full-width at y=9
-  items.push({ i: "kanban", x: 0, y: 9, w: 12, h: 6, minW: 6, minH: 5 });
-  return items;
+function defaultLayout(_role: Role): Item[] {
+  return [
+    { i: "donut",   x: 0, y: 0, w: 6,  h: 6, minW: 4, minH: 4 },
+    { i: "targets", x: 6, y: 0, w: 6,  h: 6, minW: 4, minH: 4 },
+    { i: "kanban",  x: 0, y: 6, w: 12, h: 8, minW: 6, minH: 6 },
+  ];
 }
 
-const LS_KEY = (role: Role) => `dm-layout-v1-${role}`;
+const LS_KEY = (role: Role) => `dm-layout-v2-${role}`;
 
 function loadLayout(role: Role): Item[] {
   try {
@@ -121,27 +103,55 @@ function saveLayout(role: Role, items: Item[]) {
 
 /* ---------- Card renderer dispatch ---------- */
 
-function CardContent({ id, role }: { id: string; role: Role }) {
-  if (id.startsWith("kpi:")) {
-    const k = getKpiList(role).find((x) => `kpi:${x.key}` === id);
-    if (!k) return <div className="dm-card-body">Missing KPI</div>;
-    return <KpiCardBody k={k} />;
-  }
+function CardContent({ id }: { id: string }) {
   if (id === "donut")   return <DonutBody />;
   if (id === "targets") return <TargetsBody />;
   if (id === "kanban")  return <KanbanBody />;
   return null;
 }
 
-function cardTitleFor(id: string, role: Role): string {
-  if (id.startsWith("kpi:")) {
-    const k = getKpiList(role).find((x) => `kpi:${x.key}` === id);
-    return k?.label ?? id;
-  }
+function cardTitleFor(id: string): string {
   if (id === "donut")   return "Production Department Workloads";
   if (id === "targets") return "Upcoming Target Dates";
   if (id === "kanban")  return "Production Board";
   return id;
+}
+
+/* ---------- Horizontal-scrolling KPI strip ---------- */
+
+function KpiStrip({ role }: { role: Role }) {
+  const kpis = getKpiList(role);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * (el.clientWidth * 0.85), behavior: "smooth" });
+  };
+
+  return (
+    <section className="dm-kpi-strip" aria-label="KPIs">
+      <div className="dm-kpi-strip__head">
+        <div>
+          <h2 className="dm-kpi-strip__title">Key metrics</h2>
+          <div className="dm-kpi-strip__sub">
+            Swipe / scroll horizontally · {kpis.length} indicators
+          </div>
+        </div>
+        <div className="dm-kpi-strip__arrows">
+          <button type="button" className="dm-kpi-strip__arrow" onClick={() => scrollBy(-1)} aria-label="Scroll left">‹</button>
+          <button type="button" className="dm-kpi-strip__arrow" onClick={() => scrollBy(1)}  aria-label="Scroll right">›</button>
+        </div>
+      </div>
+      <div className="dm-kpi-strip__track" ref={trackRef}>
+        {kpis.map((k) => (
+          <article key={k.key} className="dm-kpi-strip__card dm-kpi">
+            <KpiCardBody k={k} />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 /* ---------- Main component ---------- */
@@ -372,6 +382,8 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
           </div>
         </header>
 
+        <KpiStrip role={role} />
+
         <div className={`dm-grid-wrap ${editMode ? "is-editing" : ""}`}>
           <Grid
             className="dm-grid"
@@ -395,7 +407,7 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
                   className={`dm-card dm-card--grid ${isKpi ? "dm-card--kpi" : ""}`}
                 >
                   <div className={`dm-card-handle ${editMode ? "is-visible" : ""}`}>
-                    <span className="dm-card-handle__title">{cardTitleFor(it.i, role)}</span>
+                    <span className="dm-card-handle__title">{cardTitleFor(it.i)}</span>
                     {editMode && (
                       <button
                         type="button"
@@ -408,7 +420,7 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
                       </button>
                     )}
                   </div>
-                  <CardContent id={it.i} role={role} />
+                  <CardContent id={it.i} />
                 </div>
               );
             })}
