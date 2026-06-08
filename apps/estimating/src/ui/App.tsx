@@ -6,6 +6,7 @@ import { computeProject } from '../lib/engine';
 import { buildProposal } from '../lib/proposal';
 import { downloadBCExport } from '../lib/bcExport';
 import { PIECE_TYPES } from '../data/pieceTypes';
+import { clearImportHash, parseSBPPayloadFromHash, projectFromPayload } from '../lib/sbpPayload';
 
 import { Header } from './Header';
 import { ProjectList } from './ProjectList';
@@ -32,6 +33,7 @@ export function App() {
   const [catalog, setCatalog] = useState<readonly CatalogItem[]>([]);
   const [workCodes, setWorkCodes] = useState<readonly WorkCode[]>([]);
   const [view, setView] = useState<View>('editor');
+  const [loaded, setLoaded] = useState(false);
 
   // Load saved projects + reference data on first mount.
   useEffect(() => {
@@ -47,10 +49,36 @@ export function App() {
       setCatalog(cat);
       setWorkCodes(wc);
       if (saved.length && !activeId) setActiveId(saved[0].id);
+      setLoaded(true);
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sign Builder Pro handoff — if the URL hash carries an import payload,
+  // build the project + pieces, persist them, and activate. Runs once
+  // after the initial load so we don't race the saved-projects fetch.
+  // See docs/estimating-integration.md on the SBP branch for the
+  // contract; sbpPayload.ts validates the payload shape + version.
+  useEffect(() => {
+    if (!loaded) return;
+    const payload = parseSBPPayloadFromHash();
+    if (!payload) return;
+    const project = projectFromPayload(payload);
+    if (project.pieces.length === 0) {
+      console.warn('[App] SBP payload had no recognised pieces — not creating project.');
+      clearImportHash();
+      return;
+    }
+    setProjects(prev => [...prev, project]);
+    void LocalEstimateRepo.save(project);
+    setActiveId(project.id);
+    setView('editor');
+    clearImportHash();
+    console.info(
+      `[App] imported ${project.pieces.length} piece(s) from Sign Builder Pro — "${project.jobName}"`,
+    );
+  }, [loaded]);
 
   const active = useMemo(() => projects.find(p => p.id === activeId) ?? null, [projects, activeId]);
   const computed = useMemo(() => (active ? computeProject(active) : null), [active]);
