@@ -1,9 +1,16 @@
+// Builder workspace — recent-specs rail on the left, form pane on the right.
+// Restyled to the design system: rails are now light raised panels (not the
+// old navy column), top bar wraps inputs naturally, action buttons are pill
+// buttons matching the rest of the app.
+
 import { useEffect, useMemo, useState } from "react";
 import { useSpec } from "../app/SpecContext";
 import { useLaunchParams, isOps } from "../app/launchParams";
 import { SIGN_TYPES, getSignType, isLetter, isPan, POLE_FOOTING_TYPES } from "../domain/signTypes";
 import type { SignTypeCode } from "../domain/signTypes";
 import { Banner } from "../ui/Banner";
+import { Pill } from "../ui/Pill";
+import { statusTone } from "../ui/specStatus";
 import { Step1SignType } from "../builder/steps/Step1SignType";
 import { Step1bFabrication } from "../builder/steps/Step1bFabrication";
 import { Step2Faces } from "../builder/steps/Step2Faces";
@@ -21,7 +28,6 @@ import { Step12Electrical } from "../builder/steps/Step12Electrical";
 import { StepNotesStatus } from "../builder/steps/StepNotesStatus";
 import { SpecSummary } from "../builder/SpecSummary";
 import { SpecReferenceImage } from "../builder/SpecReferenceImage";
-import { statusTone } from "../ui/specStatus";
 
 export function Builder() {
   const {
@@ -35,11 +41,7 @@ export function Builder() {
   const [typeFilter, setTypeFilter] = useState("");
   const [deepLinked, setDeepLinked] = useState(false);
 
-  // Deep-link from Switchboard / Project Scheduler / Sales Hub:
-  // - ?specId=...        → preload an existing spec for editing
-  // - ?jobId=...         → start a new spec already linked to that Job
-  // - ?opportunityId=... → start a new spec already linked to that Opportunity
-  // Runs once after recent has loaded so spec lookups can resolve.
+  // Deep-link from Switchboard / Project Scheduler / Sales Hub
   useEffect(() => {
     if (deepLinked || recent.length === 0) return;
     if (specId) {
@@ -60,24 +62,24 @@ export function Builder() {
     if (typeFilter && s.signTypeCode !== typeFilter) return false;
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
-    return [s.customerName, s.projectName, s.productCode]
+    return [s.customerName, s.projectName, s.productCode, s.name]
       .filter(Boolean)
       .some((v) => v.toLowerCase().includes(q));
   }), [recent, query, typeFilter]);
 
   return (
     <div className="sbp-builder">
-      <aside className="sbp-sidebar">
-        <div className="sbp-sidebar__title">Recent Specs</div>
+      <aside className="sbp-builder__sidebar">
+        <div className="sbp-builder__sidebar-head">Recent Specs</div>
         <input
-          className="sbp-sidebar__search"
+          className="lum-input"
           type="search"
           placeholder="Search…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="sbp-sidebar__filter"
+          className="lum-select"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
@@ -86,40 +88,33 @@ export function Builder() {
             <option key={t.code} value={t.code}>{t.name}</option>
           ))}
         </select>
-        <div className="sbp-sidebar__list">
-          {filtered.length === 0 ? (
-            <div className="sbp-sidebar__empty">No saved specs match.</div>
-          ) : (
-            filtered.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={"sbp-sidebar__item" + (s.id === spec.id ? " is-active" : "")}
-                onClick={() => loadSpec(s)}
-                title={`${s.customerName || ""} ${s.projectName || ""}`.trim()}
-              >
-                <div className="sbp-sidebar__item-head">
-                  <span className="sbp-sidebar__item-code">{s.productCode || "(no code)"}</span>
-                  <span className={`sbp-sidebar__item-status is-${statusTone(s.status)}`}>
-                    {s.status}
-                  </span>
-                </div>
-                <span className="sbp-sidebar__item-meta">
-                  {s.projectName || s.customerName || getSignType(s.signTypeCode || "")?.name || "—"}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
+        {filtered.length === 0 ? (
+          <div className="sbp-list-empty">No saved specs match.</div>
+        ) : (
+          filtered.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={"sbp-builder__sidebar-item" + (s.id === spec.id ? " is-active" : "")}
+              onClick={() => loadSpec(s)}
+              title={`${s.customerName || ""} ${s.projectName || ""}`.trim()}
+            >
+              <div className="sbp-builder__sidebar-item-head">
+                <span className="sbp-builder__sidebar-item-code">{s.productCode || "(no code)"}</span>
+                <Pill tone={statusTone(s.status)}>{s.status}</Pill>
+              </div>
+              <span className="sbp-builder__sidebar-item-meta">
+                {s.name || s.projectName || s.customerName || getSignType(s.signTypeCode || "")?.name || "—"}
+              </span>
+            </button>
+          ))
+        )}
       </aside>
 
       <section className="sbp-form">
-        <div className="sbp-topbar">
-          <span className="sbp-topbar__title">
-            {spec.id ? "Edit Spec" : "New Spec"}
-          </span>
-          <div className="sbp-topbar__field sbp-topbar__input">
-            <span className="sbp-topbar__field-label">Sign Name</span>
+        <div className="sbp-formbar">
+          <div className="sbp-formbar__field">
+            <span className="sbp-formbar__field-label">Sign Name</span>
             <input
               className="lum-input"
               value={spec.name}
@@ -127,8 +122,8 @@ export function Builder() {
               placeholder="e.g. Main Entry Cabinet"
             />
           </div>
-          <div className="sbp-topbar__field sbp-topbar__input">
-            <span className="sbp-topbar__field-label">Customer</span>
+          <div className="sbp-formbar__field">
+            <span className="sbp-formbar__field-label">Customer</span>
             <input
               className="lum-input"
               value={spec.customerName}
@@ -136,8 +131,8 @@ export function Builder() {
               placeholder="Customer name"
             />
           </div>
-          <div className="sbp-topbar__field sbp-topbar__input">
-            <span className="sbp-topbar__field-label">Project</span>
+          <div className="sbp-formbar__field">
+            <span className="sbp-formbar__field-label">Project</span>
             <select
               className="lum-select"
               value={spec.projectId ?? ""}
@@ -153,8 +148,8 @@ export function Builder() {
               ))}
             </select>
           </div>
-          <div className="sbp-topbar__field sbp-topbar__qty">
-            <span className="sbp-topbar__field-label">Qty</span>
+          <div className="sbp-formbar__field sbp-formbar__field--qty">
+            <span className="sbp-formbar__field-label">Qty</span>
             <input
               className="lum-input"
               type="number"
@@ -163,10 +158,10 @@ export function Builder() {
               onChange={(e) => update({ quantity: Math.max(1, Number(e.target.value) || 1) })}
             />
           </div>
-          <div className="sbp-topbar__actions">
+          <div className="sbp-formbar__actions">
             <button
               type="button"
-              className="lum-btn is-ghost"
+              className="lum-btn"
               onClick={exportSpecHtml}
               disabled={!spec.productCode}
             >
@@ -184,7 +179,7 @@ export function Builder() {
               <button
                 type="button"
                 className="lum-btn is-primary"
-                style={{ background: "var(--lum-green)" }}
+                style={{ background: "var(--status-green)", borderColor: "var(--status-green)" }}
                 onClick={() => approveSpec(userEmail || role)}
                 disabled={saveStatus === "saving"}
                 title="Ops-only — marks the spec as Approved and records you as the approver"
@@ -202,12 +197,11 @@ export function Builder() {
           </div>
         </div>
 
-        {/* Mobile-only bottom action bar — pinned to the viewport so the
-            primary actions stay reachable while the user scrolls the form. */}
+        {/* Mobile-only bottom action bar */}
         <div className="sbp-bottom-actions">
           <button
             type="button"
-            className="lum-btn is-ghost"
+            className="lum-btn"
             onClick={exportSpecHtml}
             disabled={!spec.productCode}
           >
@@ -225,7 +219,7 @@ export function Builder() {
             <button
               type="button"
               className="lum-btn is-primary"
-              style={{ background: "var(--lum-green)" }}
+              style={{ background: "var(--status-green)", borderColor: "var(--status-green)" }}
               onClick={() => approveSpec(userEmail || role)}
               disabled={saveStatus === "saving"}
             >
@@ -241,73 +235,65 @@ export function Builder() {
           </button>
         </div>
 
-        <div className="sbp-form__scroll">
-          <SpecSummary />
+        <SpecSummary />
 
-          {spec.id ? (
-            <Banner tone="info">
-              Editing saved spec <strong>{spec.productCode || spec.id}</strong>
-              {spec.customerName ? <> · {spec.customerName}</> : null}
-              {spec.projectName ? <> · {spec.projectName}</> : null}
-              {spec.jobId ? <> · Job <code>{spec.jobId}</code></> : null}
-              {spec.opportunityId ? <> · Opp <code>{spec.opportunityId}</code></> : null}
-              {spec.approvedBy && spec.status === "Approved" ? (
-                <> · Approved by {spec.approvedBy} on {new Date(spec.approvedAt).toLocaleDateString()}</>
-              ) : null}
-            </Banner>
-          ) : null}
+        {spec.id ? (
+          <Banner tone="info">
+            Editing saved spec <strong>{spec.productCode || spec.id}</strong>
+            {spec.customerName ? <> · {spec.customerName}</> : null}
+            {spec.projectName ? <> · {spec.projectName}</> : null}
+            {spec.jobId ? <> · Job <code>{spec.jobId}</code></> : null}
+            {spec.opportunityId ? <> · Opp <code>{spec.opportunityId}</code></> : null}
+            {spec.approvedBy && spec.status === "Approved" ? (
+              <> · Approved by {spec.approvedBy} on {new Date(spec.approvedAt).toLocaleDateString()}</>
+            ) : null}
+          </Banner>
+        ) : null}
 
-          {/* Show launch-time linkages on a fresh new spec too, so the user
-              can see that ?jobId= or ?opportunityId= has been picked up. */}
-          {!spec.id && (spec.jobId || spec.opportunityId) ? (
-            <Banner tone="info">
-              {spec.jobId ? <>New spec linked to Job <strong><code>{spec.jobId}</code></strong></> : null}
-              {spec.jobId && spec.opportunityId ? " · " : null}
-              {spec.opportunityId ? <>New spec linked to Opportunity <strong><code>{spec.opportunityId}</code></strong></> : null}
-            </Banner>
-          ) : null}
+        {!spec.id && (spec.jobId || spec.opportunityId) ? (
+          <Banner tone="info">
+            {spec.jobId ? <>New spec linked to Job <strong><code>{spec.jobId}</code></strong></> : null}
+            {spec.jobId && spec.opportunityId ? " · " : null}
+            {spec.opportunityId ? <>New spec linked to Opportunity <strong><code>{spec.opportunityId}</code></strong></> : null}
+          </Banner>
+        ) : null}
 
-          {saveStatus === "error" ? (
-            <Banner tone={spec.signTypeCode ? "red" : "amber"}>
-              {spec.signTypeCode
-                ? "Save failed — please try again, or check the network / Dataverse connection."
-                : "Please select a sign type first."}
-            </Banner>
-          ) : null}
+        {saveStatus === "error" ? (
+          <Banner tone={spec.signTypeCode ? "red" : "amber"}>
+            {spec.signTypeCode
+              ? "Save failed — please try again, or check the network / Dataverse connection."
+              : "Please select a sign type first."}
+          </Banner>
+        ) : null}
 
-          <Step1SignType />
-          {isLetter(spec.signTypeCode || "") ? <Step1bFabrication /> : null}
-          {spec.signTypeCode ? <Step2Faces /> : null}
-          {spec.faces && !isLetter(spec.signTypeCode || "") && !isPan(spec.signTypeCode || "") ? (
-            <Step3Dimensions />
-          ) : null}
-          {spec.faces ? <Step4Illumination /> : null}
-          {(spec.illumination === "IL" || spec.illumination === "EL") ? <Step5LED /> : null}
-          {spec.illumination ? <Step6FaceType /> : null}
-          {(spec.faceType === "RFPB" || spec.faceType === "RFPT") ? <Step6bRoutedBacker /> : null}
-          {spec.faceType && !spec.outsourced ? <Step7Finish /> : null}
-          {spec.faceType ? <Step8Vinyl /> : null}
-          {spec.faceType ? <Step9Mounting /> : null}
+        <Step1SignType />
+        {isLetter(spec.signTypeCode || "") ? <Step1bFabrication /> : null}
+        {spec.signTypeCode ? <Step2Faces /> : null}
+        {spec.faces && !isLetter(spec.signTypeCode || "") && !isPan(spec.signTypeCode || "") ? (
+          <Step3Dimensions />
+        ) : null}
+        {spec.faces ? <Step4Illumination /> : null}
+        {(spec.illumination === "IL" || spec.illumination === "EL") ? <Step5LED /> : null}
+        {spec.illumination ? <Step6FaceType /> : null}
+        {(spec.faceType === "RFPB" || spec.faceType === "RFPT") ? <Step6bRoutedBacker /> : null}
+        {spec.faceType && !spec.outsourced ? <Step7Finish /> : null}
+        {spec.faceType ? <Step8Vinyl /> : null}
+        {spec.faceType ? <Step9Mounting /> : null}
 
-          {/* Steps 10/11/12 — ground-mount cabinets only (MN/PS/PP), once mounting is set */}
-          {POLE_FOOTING_TYPES.includes(spec.signTypeCode as SignTypeCode) && spec.mounting ? (
-            <>
-              <Step10Pole />
-              <Step11Footing />
-              <Step12Electrical />
-            </>
-          ) : null}
+        {POLE_FOOTING_TYPES.includes(spec.signTypeCode as SignTypeCode) && spec.mounting ? (
+          <>
+            <Step10Pole />
+            <Step11Footing />
+            <Step12Electrical />
+          </>
+        ) : null}
 
-          {/* Spec reference image — once a face type is picked */}
-          {spec.faceType ? <SpecReferenceImage /> : null}
+        {spec.faceType ? <SpecReferenceImage /> : null}
+        {spec.signTypeCode ? <StepNotesStatus /> : null}
 
-          {/* Notes + status card always renders once the user has started a spec */}
-          {spec.signTypeCode ? <StepNotesStatus /> : null}
-
-          {!spec.signTypeCode ? (
-            <div className="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>
-          ) : null}
-        </div>
+        {!spec.signTypeCode ? (
+          <div className="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>
+        ) : null}
       </section>
     </div>
   );

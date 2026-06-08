@@ -1,3 +1,8 @@
+// Dashboard — aligned with docs/DESIGN.md Switchboard pattern:
+// KPI strip (horizontal scroll) + two-column row of panels. The hero block
+// stays for the launch CTAs but uses the indigo gradient from the design
+// system.
+
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
@@ -13,7 +18,8 @@ export function Dashboard() {
     const totalSigns = recent.length;
     const projects = new Set(recent.map((s) => s.projectName).filter(Boolean)).size;
     const totalUnits = recent.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
-    return { totalSigns, projects, totalUnits };
+    const approved = recent.filter((s) => s.status === "Approved").length;
+    return { totalSigns, projects, totalUnits, approved };
   }, [recent]);
 
   const projects = useMemo(() => {
@@ -29,7 +35,7 @@ export function Dashboard() {
   }, [recent]);
 
   return (
-    <main className="lum-page">
+    <>
       <section className="sbp-hero">
         <div className="sbp-hero__eyebrow">Sign Builder Pro</div>
         <h1 className="sbp-hero__title">Build. Spec. Deliver.</h1>
@@ -54,38 +60,54 @@ export function Dashboard() {
         </div>
       </section>
 
-      <section className="sbp-kpis">
-        <div className="lum-card">
-          <div className="sbp-kpi__value">{stats.totalSigns}</div>
+      <section className="sbp-kpi-strip">
+        <div className="sbp-kpi">
           <div className="sbp-kpi__label">Signs Built</div>
+          <div className="sbp-kpi__value lum-num">{stats.totalSigns}</div>
+          <div className="sbp-kpi__footer">
+            <span className="sbp-kpi__goal">Total saved specs</span>
+          </div>
         </div>
-        <div className="lum-card">
-          <div className="sbp-kpi__value">{stats.projects}</div>
+        <div className="sbp-kpi">
           <div className="sbp-kpi__label">Projects</div>
+          <div className="sbp-kpi__value lum-num">{stats.projects}</div>
+          <div className="sbp-kpi__footer">
+            <span className="sbp-kpi__goal">Active projects</span>
+          </div>
         </div>
-        <div className="lum-card">
-          <div className="sbp-kpi__value">{stats.totalUnits}</div>
+        <div className="sbp-kpi">
           <div className="sbp-kpi__label">Total Units</div>
+          <div className="sbp-kpi__value lum-num">{stats.totalUnits}</div>
+          <div className="sbp-kpi__footer">
+            <span className="sbp-kpi__goal">Across all specs</span>
+          </div>
+        </div>
+        <div className="sbp-kpi">
+          <div className="sbp-kpi__label">Approved</div>
+          <div className="sbp-kpi__value lum-num">{stats.approved}</div>
+          <div className="sbp-kpi__footer">
+            <span className="sbp-kpi__goal">Ready for production</span>
+          </div>
         </div>
       </section>
 
       <section className="sbp-twocol">
-        <div className="sbp-list">
-          <div className="sbp-list__head">
-            <span className="sbp-list__title">Individual Signs</span>
+        <div className="lum-panel">
+          <div className="lum-panel__head">
+            <span>Individual Signs</span>
             <button
               type="button"
-              className="lum-btn is-ghost"
-              style={{ padding: "4px 10px", fontSize: 11 }}
+              className="lum-btn"
+              style={{ padding: "5px 12px", fontSize: 11 }}
               onClick={() => { clearAll(); navigate("/builder"); }}
             >
               + New
             </button>
           </div>
           {loadingRecent ? (
-            <div className="sbp-list__empty">Loading…</div>
+            <div className="sbp-list-empty">Loading…</div>
           ) : recent.length === 0 ? (
-            <div className="sbp-list__empty">No signs yet — get started above.</div>
+            <div className="sbp-list-empty">No signs yet — get started above.</div>
           ) : (
             recent.slice(0, 6).map((s) => {
               const t = getSignType(s.signTypeCode || "");
@@ -93,22 +115,20 @@ export function Dashboard() {
                 <button
                   key={s.id}
                   type="button"
-                  className="sbp-list__row"
+                  className="sbp-list-row"
                   onClick={() => { loadSpec(s); navigate("/builder"); }}
+                  style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid var(--border-soft)" }}
                 >
-                  <div className="sbp-list__row-main">
-                    <span className="sbp-list__row-title">{s.projectName || s.productCode || "Untitled"}</span>
-                    <span className="sbp-list__row-meta">
-                      {t?.name ?? "—"} · Qty {s.quantity}
-                    </span>
+                  <div className="sbp-list-row__main">
+                    <span className="sbp-list-row__title">{s.name || s.projectName || s.productCode || "Untitled"}</span>
+                    <span className="sbp-list-row__sub">{t?.name ?? "—"} · Qty {s.quantity}</span>
                   </div>
-                  <div className="sbp-list__row-right">
+                  <div className="sbp-list-row__right">
                     {s.finish === "P" ? <Pill tone="green">Painted</Pill> : null}
                     {s.illumination === "IL" || s.illumination === "EL"
                       ? <Pill tone="amber">Lighted</Pill>
                       : null}
                     <Pill tone={statusTone(s.status)}>{s.status}</Pill>
-                    <span className="sbp-list__chevron">›</span>
                   </div>
                 </button>
               );
@@ -116,22 +136,22 @@ export function Dashboard() {
           )}
         </div>
 
-        <div className="sbp-list">
-          <div className="sbp-list__head">
-            <span className="sbp-list__title">Projects</span>
+        <div className="lum-panel">
+          <div className="lum-panel__head">
+            <span>Projects</span>
           </div>
           {projects.length === 0 ? (
-            <div className="sbp-list__empty">No projects yet.</div>
+            <div className="sbp-list-empty">No projects yet.</div>
           ) : (
             projects.map(([name, info]) => (
-              <div key={name} className="sbp-list__row" style={{ cursor: "default" }}>
-                <div className="sbp-list__row-main">
-                  <span className="sbp-list__row-title">{name}</span>
-                  <span className="sbp-list__row-meta">
+              <div key={name} className="sbp-list-row" style={{ cursor: "default" }}>
+                <div className="sbp-list-row__main">
+                  <span className="sbp-list-row__title">{name}</span>
+                  <span className="sbp-list-row__sub">
                     {info.count} sign{info.count === 1 ? "" : "s"} · {info.units} units
                   </span>
                 </div>
-                <div className="sbp-list__row-right">
+                <div className="sbp-list-row__right">
                   <Pill tone="navy">{info.lastCode || "—"}</Pill>
                 </div>
               </div>
@@ -139,6 +159,6 @@ export function Dashboard() {
           )}
         </div>
       </section>
-    </main>
+    </>
   );
 }

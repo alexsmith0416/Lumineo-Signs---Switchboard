@@ -1,8 +1,6 @@
-// Projects screen — top-level workspace ported from the Sign Builder Pro
-// Preview app's two-mode design. A Project is a named bundle of signs
-// (e.g. "Westview Medical — Main Entry" containing the cabinet + the
-// wayfinding + the parking signs). Individual signs that have no project
-// link still live in /gallery as standalone records.
+// Projects — two-pane workspace. Left: rail of all Projects. Right: selected
+// project metadata + KPI strip + signs-in-project list. Re-skinned to the
+// design system panel + list-row pattern; brand-fill cards for KPIs.
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,15 +27,12 @@ export function Projects() {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [savingError, setSavingError] = useState(false);
 
-  // Auto-select the first project when the list lands.
   useEffect(() => {
     if (!activeId && projects.length > 0) setActiveId(projects[0].id ?? null);
   }, [projects, activeId]);
 
   const active = projects.find((p) => p.id === activeId) ?? null;
 
-  // Signs that belong to the active project — pulled from the global recent
-  // list, no extra fetch needed.
   const projectSigns: SignSpec[] = useMemo(() => {
     if (!active?.id) return [];
     return recent.filter((s) => s.projectId === active.id);
@@ -78,10 +73,7 @@ export function Projects() {
     navigate("/builder");
   }
 
-  function openSign(s: SignSpec) {
-    loadSpec(s);
-    navigate("/builder");
-  }
+  function openSign(s: SignSpec) { loadSpec(s); navigate("/builder"); }
 
   async function confirmDelete(id: string) {
     setConfirming(null);
@@ -93,8 +85,8 @@ export function Projects() {
     <div className="sbp-projects">
       <aside className="sbp-projects__list">
         <div className="sbp-projects__list-head">
-          <span className="sbp-sidebar__title">Projects</span>
-          <button type="button" className="lum-btn is-ghost" onClick={startNew}>
+          <span className="lum-section-label">Projects</span>
+          <button type="button" className="lum-btn" style={{ padding: "5px 12px", fontSize: 11 }} onClick={startNew}>
             + New
           </button>
         </div>
@@ -132,9 +124,9 @@ export function Projects() {
               <Banner tone="red">Could not save — project must have a name.</Banner>
             ) : null}
 
-            <div className="lum-card sbp-projects__header">
+            <div className="lum-card">
               {editing && editing.id === active.id ? (
-                <div className="sbp-projects__edit">
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <span className="lum-field-label">Project Name</span>
                     <input
@@ -168,34 +160,30 @@ export function Projects() {
                     <button type="button" className="lum-btn is-primary" onClick={commitEdit}>
                       Save Project
                     </button>
-                    <button type="button" className="lum-btn is-ghost" onClick={() => setEditing(null)}>
+                    <button type="button" className="lum-btn" onClick={() => setEditing(null)}>
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="sbp-projects__header-row">
+                  <div className="sbp-projects__header">
                     <div className="sbp-projects__header-text">
                       <span className="lum-section-label">Project</span>
-                      <h2 style={{ margin: 0, fontSize: 22, color: "var(--lum-navy)" }}>
+                      <h2 style={{ margin: 0, fontSize: 22, color: "var(--text-primary)", fontWeight: 800 }}>
                         {active.name || "Untitled project"}
                       </h2>
                       {active.customerName ? (
-                        <p style={{ margin: "6px 0 0", color: "var(--lum-gray-500)", fontSize: 13 }}>
+                        <p style={{ margin: "6px 0 0", color: "var(--text-dim)", fontSize: 12 }}>
                           {active.customerName}
                         </p>
                       ) : null}
                     </div>
                     <div className="sbp-projects__header-actions">
-                      <button type="button" className="lum-btn is-ghost" onClick={() => setEditing(active)}>
+                      <button type="button" className="lum-btn" onClick={() => setEditing(active)}>
                         Edit
                       </button>
-                      <button
-                        type="button"
-                        className="lum-btn is-primary"
-                        onClick={openNewSign}
-                      >
+                      <button type="button" className="lum-btn is-primary" onClick={openNewSign}>
                         + New Sign
                       </button>
                       {confirming === active.id ? (
@@ -207,14 +195,14 @@ export function Projects() {
                           >
                             Confirm delete
                           </button>
-                          <button type="button" className="lum-btn is-ghost" onClick={() => setConfirming(null)}>
+                          <button type="button" className="lum-btn" onClick={() => setConfirming(null)}>
                             Cancel
                           </button>
                         </>
                       ) : (
                         <button
                           type="button"
-                          className="lum-btn is-ghost"
+                          className="lum-btn"
                           onClick={() => active.id && setConfirming(active.id)}
                         >
                           Delete
@@ -223,7 +211,7 @@ export function Projects() {
                     </div>
                   </div>
                   {active.notes ? (
-                    <p style={{ margin: "12px 0 0", color: "var(--lum-gray-700)", fontSize: 13, whiteSpace: "pre-wrap" }}>
+                    <p style={{ margin: "12px 0 0", color: "var(--text-mid)", fontSize: 12, whiteSpace: "pre-wrap" }}>
                       {active.notes}
                     </p>
                   ) : null}
@@ -231,46 +219,54 @@ export function Projects() {
               )}
             </div>
 
-            <div className="sbp-kpis">
-              <div className="lum-card"><div className="sbp-kpi__value">{projectSigns.length}</div><div className="sbp-kpi__label">Signs</div></div>
-              <div className="lum-card"><div className="sbp-kpi__value">{totalUnits}</div><div className="sbp-kpi__label">Total Units</div></div>
-              <div className="lum-card">
-                <div className="sbp-kpi__value" style={{ fontSize: 18 }}>{new Date(active.createdAt).toLocaleDateString()}</div>
+            <div className="sbp-kpi-strip">
+              <div className="sbp-kpi">
+                <div className="sbp-kpi__label">Signs</div>
+                <div className="sbp-kpi__value lum-num">{projectSigns.length}</div>
+              </div>
+              <div className="sbp-kpi">
+                <div className="sbp-kpi__label">Total Units</div>
+                <div className="sbp-kpi__value lum-num">{totalUnits}</div>
+              </div>
+              <div className="sbp-kpi">
                 <div className="sbp-kpi__label">Created</div>
+                <div className="sbp-kpi__value" style={{ fontSize: 14 }}>
+                  {new Date(active.createdAt).toLocaleDateString()}
+                </div>
               </div>
             </div>
 
-            <div className="sbp-list">
-              <div className="sbp-list__head">
-                <span className="sbp-list__title">Signs in this project</span>
+            <div className="lum-panel">
+              <div className="lum-panel__head">
+                <span>Signs in this project</span>
                 <button
                   type="button"
-                  className="lum-btn is-ghost"
-                  style={{ padding: "4px 10px", fontSize: 11 }}
+                  className="lum-btn"
+                  style={{ padding: "5px 12px", fontSize: 11 }}
                   onClick={openNewSign}
                 >
                   + Add Sign
                 </button>
               </div>
               {projectSigns.length === 0 ? (
-                <div className="sbp-list__empty">No signs in this project yet — start one with "+ Add Sign".</div>
+                <div className="sbp-list-empty">No signs in this project yet — start one with "+ Add Sign".</div>
               ) : (
                 projectSigns.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="sbp-list__row"
+                    className="sbp-list-row"
                     onClick={() => openSign(s)}
+                    style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid var(--border-soft)" }}
                   >
-                    <div className="sbp-list__row-main">
-                      <span className="sbp-list__row-title">{s.name || s.productCode || "Untitled"}</span>
-                      <span className="sbp-list__row-meta">
+                    <div className="sbp-list-row__main">
+                      <span className="sbp-list-row__title">{s.name || s.productCode || "Untitled"}</span>
+                      <span className="sbp-list-row__sub">
                         {s.signTypeCode || "—"} · Qty {s.quantity}{s.productCode ? ` · ${s.productCode}` : ""}
                       </span>
                     </div>
-                    <div className="sbp-list__row-right">
+                    <div className="sbp-list-row__right">
                       <Pill tone={statusTone(s.status)}>{s.status}</Pill>
-                      <span className="sbp-list__chevron">›</span>
                     </div>
                   </button>
                 ))

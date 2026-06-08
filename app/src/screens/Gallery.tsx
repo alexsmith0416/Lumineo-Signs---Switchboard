@@ -1,3 +1,7 @@
+// Gallery — saved-specs browser. Per docs/07-sub-apps.md the spec list filters
+// by (customer, status, sign type). Re-skinned to the design-system panel +
+// list-row pattern.
+
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSpec } from "../app/SpecContext";
@@ -7,7 +11,6 @@ import { SwipeRow } from "../ui/SwipeRow";
 import { SIGN_TYPES, getSignType } from "../domain/signTypes";
 import type { SignSpec } from "../domain/SignSpec";
 
-// Status filter values mirror SignSpecStatus + a sentinel "" for "All".
 const STATUS_OPTIONS = ["", "Draft", "Submitted", "Approved", "Built"] as const;
 
 export function Gallery() {
@@ -19,10 +22,6 @@ export function Gallery() {
   const [customerFilter, setCustomerFilter] = useState("");
   const [confirming, setConfirming] = useState<string | null>(null);
 
-  // Unique customer list sourced from saved specs — populates the customer
-  // filter dropdown. Per docs/07-sub-apps.md the spec list filters by
-  // (customer, status, linked job); we already had type, this adds the
-  // other two coordinates.
   const customers = useMemo(() => {
     const seen = new Set<string>();
     for (const s of recent) if (s.customerName) seen.add(s.customerName);
@@ -40,28 +39,12 @@ export function Gallery() {
       .some((v) => v.toLowerCase().includes(q));
   });
 
-  function edit(s: SignSpec) {
-    loadSpec(s);
-    navigate("/builder");
-  }
-
-  function duplicate(s: SignSpec) {
-    duplicateSpec(s);
-    navigate("/builder");
-  }
-
-  async function confirmDelete(id: string) {
-    setConfirming(null);
-    await deleteSpec(id);
-  }
+  function edit(s: SignSpec) { loadSpec(s); navigate("/builder"); }
+  function duplicate(s: SignSpec) { duplicateSpec(s); navigate("/builder"); }
+  async function confirmDelete(id: string) { setConfirming(null); await deleteSpec(id); }
 
   return (
-    <main className="lum-page">
-      <div>
-        <div className="lum-section-label">Gallery</div>
-        <h2 style={{ margin: 0, fontSize: 22, color: "var(--lum-navy)" }}>All saved specs</h2>
-      </div>
-
+    <>
       <div className="lum-card" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <input
           type="search"
@@ -105,26 +88,25 @@ export function Gallery() {
         </select>
       </div>
 
-      <div className="sbp-list sbp-list--swipe">
-        <div className="sbp-list__head">
-          <span className="sbp-list__title">{filtered.length} spec{filtered.length === 1 ? "" : "s"}</span>
-          <span className="sbp-list__head-hint">Swipe ◂ to edit / delete</span>
+      <div className="lum-panel">
+        <div className="lum-panel__head">
+          <span>{filtered.length} spec{filtered.length === 1 ? "" : "s"}</span>
         </div>
         {filtered.length === 0 ? (
-          <div className="sbp-list__empty">No specs match that filter.</div>
+          <div className="sbp-list-empty">No specs match that filter.</div>
         ) : (
           filtered.map((s) => {
             const t = getSignType(s.signTypeCode || "");
             const isConfirming = confirming === s.id;
             const rowBody = (
-              <div className="sbp-list__row" style={{ cursor: "pointer" }}>
-                <div className="sbp-gallery-row__main">
-                  <span className="sbp-list__row-title">{s.projectName || s.productCode || "Untitled"}</span>
-                  <span className="sbp-list__row-meta">
+              <div className="sbp-list-row" style={{ cursor: "pointer" }}>
+                <div className="sbp-list-row__main">
+                  <span className="sbp-list-row__title">{s.name || s.projectName || s.productCode || "Untitled"}</span>
+                  <span className="sbp-list-row__sub">
                     {s.customerName ? `${s.customerName} · ` : ""}{t?.name ?? "—"} · Qty {s.quantity}
                   </span>
                 </div>
-                <div className="sbp-list__row-right sbp-list__row-right--desktop">
+                <div className="sbp-list-row__right">
                   <Pill tone="navy">{s.productCode || "—"}</Pill>
                   <Pill tone={statusTone(s.status)}>{s.status}</Pill>
                   {isConfirming ? (
@@ -132,15 +114,15 @@ export function Gallery() {
                       <button
                         type="button"
                         className="lum-btn is-danger"
-                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        style={{ padding: "4px 10px", fontSize: 11 }}
                         onClick={(e) => { e.stopPropagation(); s.id && confirmDelete(s.id); }}
                       >
                         Confirm delete
                       </button>
                       <button
                         type="button"
-                        className="lum-btn is-ghost"
-                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        className="lum-btn"
+                        style={{ padding: "4px 10px", fontSize: 11 }}
                         onClick={(e) => { e.stopPropagation(); setConfirming(null); }}
                       >
                         Cancel
@@ -150,28 +132,22 @@ export function Gallery() {
                     <>
                       <button
                         type="button"
-                        className="lum-btn is-ghost"
-                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        className="lum-btn"
+                        style={{ padding: "4px 10px", fontSize: 11 }}
                         onClick={(e) => { e.stopPropagation(); duplicate(s); }}
-                        title="Duplicate as a new draft"
                       >
                         Duplicate
                       </button>
                       <button
                         type="button"
-                        className="lum-btn is-ghost"
-                        style={{ padding: "5px 10px", fontSize: 11 }}
+                        className="lum-btn"
+                        style={{ padding: "4px 10px", fontSize: 11 }}
                         onClick={(e) => { e.stopPropagation(); s.id && setConfirming(s.id); }}
-                        title="Delete spec"
                       >
                         Delete
                       </button>
                     </>
                   )}
-                </div>
-                <div className="sbp-list__row-right sbp-list__row-right--mobile">
-                  <Pill tone="navy">{s.productCode || "—"}</Pill>
-                  <Pill tone={statusTone(s.status)}>{s.status}</Pill>
                 </div>
               </div>
             );
@@ -190,6 +166,6 @@ export function Gallery() {
           })
         )}
       </div>
-    </main>
+    </>
   );
 }

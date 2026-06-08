@@ -1,43 +1,93 @@
 /*
- * lumineo-ui — shared design tokens + primitive component CSS used across the
- * Lumineo code-app fleet (Switchboard, Sign Builder Pro, LNI Production
- * Schedule). Values lifted verbatim from prototype/src/styles.css in the
- * Switchboard repo so all three apps render identically.
+ * Lumineo Signs Switchboard — Design System
+ * Single source of truth: docs/DESIGN.md
+ *
+ * Token-driven theming. Components reference --tokens; the theme is set by
+ * data-theme on the <html> element. Toggle persists via localStorage; first
+ * load respects prefers-color-scheme.
  */
 
-:root {
-  --lum-navy: #141464;
-  --lum-navy-light: #2a2a8a;
-  --lum-navy-bg: #e8eaf5;
-  --lum-navy-deep: #080828;
-  --lum-red: #E8151B;
-  --lum-red-soft: #ffe4e5;
-  --lum-green: #0F6E56;
-  --lum-green-soft: #d8efe7;
-  --lum-amber: #F2994A;
-  --lum-amber-soft: #fdebd5;
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap');
 
-  --lum-gray-50: #f7f8fa;
-  --lum-gray-100: #eef0f4;
-  --lum-gray-200: #dde0e8;
-  --lum-gray-300: #c4c9d4;
-  --lum-gray-500: #8b91a3;
-  --lum-gray-700: #4a4f5e;
-  --lum-text: #1a1a2e;
+:root,
+[data-theme="light"] {
+  /* surfaces */
+  --bg-page:           #f4f5f8;
+  --surface-raised:    #ffffff;
+  --surface-sunken:    #f4f5f8;
+  --surface-sidebar:   #141464;
 
-  --lum-radius: 12px;
-  --lum-radius-sm: 8px;
-  --lum-radius-lg: 16px;
+  /* borders */
+  --border-default:    #e4e5ea;
+  --border-soft:       #eff0f3;
 
-  --lum-shadow-sm: 0 1px 2px rgba(20, 20, 100, 0.06), 0 1px 3px rgba(20, 20, 100, 0.04);
-  --lum-shadow-md: 0 4px 8px rgba(20, 20, 100, 0.06), 0 2px 4px rgba(20, 20, 100, 0.05);
-  --lum-shadow-lg: 0 12px 24px rgba(20, 20, 100, 0.08), 0 4px 8px rgba(20, 20, 100, 0.05);
+  /* text */
+  --text-primary:      #1f1f2e;
+  --text-mid:          #4a4f5e;
+  --text-dim:          #8b91a3;
+  --text-on-accent:    #ffffff;
 
-  /* Height of the sticky header. Anything that pins itself below the
-     chrome (sidebars, second-row toolbars) should reference this rather
-     than hard-code pixel values. */
-  --lum-header-height: 60px;
-  --lum-chrome-height: 60px;
+  /* accent */
+  --accent-brand:      #141464;
+  --accent-brand-soft: #e8eaf5;
+
+  /* status */
+  --status-green:      #0f6e56;
+  --status-green-soft: #d8efe7;
+  --status-red:        #e8151b;
+  --status-red-soft:   #ffe4e5;
+  --status-amber:      #f2994a;
+  --status-amber-soft: #fdf0d9;
+
+  /* chart palette (categorical) */
+  --chart-green:       #2bb174;
+  --chart-indigo:      #5969e1;
+  --chart-blue:        #4ea7fc;
+  --chart-purple:      #7f77dd;
+  --chart-pink:        #e67be0;
+
+  /* segmented control / toggle */
+  --toggle-active:       #ffffff;
+  --toggle-active-text:  #1f1f2e;
+
+  /* sidebar active-tab fill — flush to the sidebar edge */
+  --sidebar-active-bg:   var(--bg-page);
+}
+
+[data-theme="dark"] {
+  --bg-page:           #0b0e1f;
+  --surface-raised:    #1a1f3d;
+  --surface-sunken:    #131734;
+  --surface-sidebar:   #131734;
+
+  --border-default:    #2a3056;
+  --border-soft:       #1f2542;
+
+  --text-primary:      #f3f4f8;
+  --text-mid:          #b3b8cc;
+  --text-dim:          #7b82a0;
+  --text-on-accent:    #ffffff;
+
+  --accent-brand:      #7388ff;
+  --accent-brand-soft: #2a3260;
+
+  --status-green:      #2dd4a4;
+  --status-green-soft: #1d4050;
+  --status-red:        #ff5158;
+  --status-red-soft:   #432842;
+  --status-amber:      #fcb85b;
+  --status-amber-soft: #433b42;
+
+  --chart-green:       #2dd4a4;
+  --chart-indigo:      #7388ff;
+  --chart-blue:        #4ea7fc;
+  --chart-purple:      #7f77dd;
+  --chart-pink:        #e67be0;
+
+  --toggle-active:       #7388ff;
+  --toggle-active-text:  #ffffff;
+
+  --sidebar-active-bg:   var(--surface-raised);
 }
 
 * { box-sizing: border-box; }
@@ -45,16 +95,18 @@
 html, body, #root {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-  color: var(--lum-text);
-  background: var(--lum-gray-50);
+  font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-variation-settings: "wdth" 100;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -72,408 +124,389 @@ input, select, textarea {
   color: inherit;
 }
 
-/* All numeric/KPI values use tabular figures across the fleet. */
 .lum-num { font-variant-numeric: tabular-nums; }
 
-/* ============ Page container ============ */
-.lum-page {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 28px;
+/* ============ App shell ============ */
+.lum-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.lum-shell__main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  background: var(--bg-page);
 }
 
-@media (max-width: 700px) {
-  .lum-page {
-    padding: 16px;
-    gap: 16px;
-  }
-}
-
-/* ============ Header (navy sticky bar) ============
-   Sign Builder Pro / LNI Production Schedule pattern — Lumineo's working
-   sub-apps use the navy header so they read as the active app inside the
-   tenant. The Switchboard prototype (launcher) uses a white variant. */
-.lum-header {
-  background: var(--lum-navy);
-  height: var(--lum-header-height);
-  padding: 0 20px;
+.lum-shell__content {
+  flex: 1;
+  padding: 0 28px 32px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: 0 2px 16px rgba(20, 20, 100, 0.45);
-}
-
-.lum-header__left {
-  display: flex;
-  align-items: center;
-  gap: 0;
+  flex-direction: column;
+  gap: 18px;
   min-width: 0;
 }
 
-.lum-header__brand {
+/* ============ Sidebar (248px, surface-sidebar) ============ */
+.lum-sidebar {
+  width: 248px;
+  flex-shrink: 0;
+  background: var(--surface-sidebar);
+  color: var(--text-on-accent);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 24px;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.lum-sidebar__brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-right: 20px;
+  padding: 0 6px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 6px;
+  opacity: 0.95;
 }
 
-.lum-header__brand-text {
+[data-theme="dark"] .lum-sidebar__brand {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .lum-sidebar__brand {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.lum-sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.lum-sidebar__brand-name {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-on-accent);
+  letter-spacing: 0.4px;
+}
+
+.lum-sidebar__brand-sub {
+  font-weight: 700;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.lum-sidebar__caption {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 12px 10px 6px;
+}
+
+[data-theme="light"] .lum-sidebar__caption {
+  color: var(--accent-brand-soft);
+  opacity: 0.7;
+}
+
+.lum-sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lum-sidebar__section--bottom { margin-top: auto; }
+
+.lum-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  text-decoration: none;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.lum-sidebar__link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lum-sidebar__link.is-active {
+  background: var(--sidebar-active-bg);
+  color: var(--accent-brand);
+  /* Flush to the sidebar's right edge — feels like a tab protruding from the rail */
+  margin-right: -14px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-right: 18px;
+}
+
+.lum-sidebar__link-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ============ Topbar ============ */
+.lum-topbar {
+  padding: 22px 28px 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lum-topbar__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lum-topbar__breadcrumb {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.lum-topbar__menu {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lum-topbar__spec-badge {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-brand);
+  background: var(--accent-brand-soft);
+  padding: 6px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 900px) {
+  .lum-topbar__menu { display: inline-flex; }
+}
+
+.lum-topbar__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.lum-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.lum-topbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 7px 14px;
+  width: 380px;
+  max-width: 100%;
+}
+
+.lum-topbar__search-icon {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.lum-topbar__search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.lum-topbar__search-input::placeholder {
+  color: var(--text-dim);
+}
+
+.lum-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 4px 12px 4px 4px;
+}
+
+.lum-topbar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--status-red);
+  color: var(--text-on-accent);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lum-topbar__userblock {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
 }
 
-.lum-header__brand-name {
-  font-weight: 900;
-  color: white;
-  font-size: 15px;
-  letter-spacing: 0.12em;
-}
-
-.lum-header__brand-sub {
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-
-.lum-header__divider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 18px;
-}
-
-.lum-header__nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.lum-header__navlink {
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  text-decoration: none;
-  transition: all 0.12s ease;
-}
-
-.lum-header__navlink:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-}
-
-.lum-header__navlink.is-active {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
-  font-weight: 700;
-}
-
-.lum-header__right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-/* ─── Role-switcher trigger (adapted for navy header — translucent border) */
-.lum-header__roleswitcher {
-  position: relative;
-}
-
-.lum-header__roleswitcher-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px 5px 6px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  transition: all 0.12s ease;
-  cursor: pointer;
-}
-
-.lum-header__roleswitcher-trigger:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.lum-header__avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--lum-red);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 11px;
-}
-
-.lum-header__userblock {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.15;
-}
-
-.lum-header__username {
-  font-weight: 600;
+.lum-topbar__username {
   font-size: 12px;
-  color: white;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.lum-header__userrole {
+.lum-topbar__userrole {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
 }
 
-.lum-header__caret {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.55);
-  margin-left: 2px;
-}
-
-.lum-header__demo-pill {
-  background: var(--lum-amber);
-  color: white;
-  padding: 4px 10px;
+/* ============ Theme toggle (sidebar pill) ============ */
+.lum-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
   border-radius: 999px;
-  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-on-accent);
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.12s ease;
+  width: fit-content;
+  margin: 4px 4px 10px;
 }
 
-.lum-header__spec-badge {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  padding: 5px 10px;
-  border-radius: 6px;
-  letter-spacing: 0.5px;
+.lum-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
-/* ─── Hamburger menu — mobile-only slide-down drawer ─────────────────────
-   Desktop hides the button entirely; mobile hides the inline nav and shows
-   the button. Tapping it opens a full-screen overlay with the routes
-   stacked as large touch targets. */
-.lum-hamburger {
-  display: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+.lum-theme-toggle__icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-  margin-right: 10px;
-  flex-shrink: 0;
-}
-.lum-hamburger:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-.lum-hamburger__bars {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 18px;
-}
-.lum-hamburger__bars > span {
-  display: block;
-  height: 2px;
-  background: white;
-  border-radius: 2px;
-  transition: transform 0.18s ease, opacity 0.18s ease;
-}
-.lum-hamburger__bars.is-open > span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-.lum-hamburger__bars.is-open > span:nth-child(2) { opacity: 0; }
-.lum-hamburger__bars.is-open > span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-
-.lum-hamburger-sheet {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: rgba(8, 8, 40, 0.78);
-  animation: lum-hamburger-fade-in 0.15s ease;
-}
-@keyframes lum-hamburger-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
-.lum-hamburger-sheet__inner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  padding: 12px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  box-shadow: 0 12px 32px rgba(8, 8, 40, 0.35);
-  animation: lum-hamburger-slide-in 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-@keyframes lum-hamburger-slide-in {
-  from { transform: translateY(-12px); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
+/* ============ Cards & panels ============ */
+.lum-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  padding: 16px;
 }
 
-.lum-hamburger-sheet__head {
+.lum-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.lum-panel__head {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px 10px;
-  border-bottom: 1px solid var(--lum-gray-100);
-  margin-bottom: 6px;
+  gap: 12px;
 }
 
-.lum-hamburger-sheet__label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--lum-gray-500);
-}
+.lum-panel__body { padding: 16px; }
 
-.lum-hamburger-sheet__close {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--lum-gray-100);
-  color: var(--lum-gray-700);
-  font-size: 22px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lum-hamburger-sheet__close:hover {
-  background: var(--lum-navy-bg);
-  color: var(--lum-navy);
-}
-
-.lum-hamburger-sheet__link {
-  padding: 14px 14px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--lum-text);
-  text-decoration: none;
-  display: block;
-  transition: background 0.1s ease, color 0.1s ease;
-}
-.lum-hamburger-sheet__link:hover {
-  background: var(--lum-gray-50);
-}
-.lum-hamburger-sheet__link.is-active {
-  background: var(--lum-navy-bg);
-  color: var(--lum-navy);
-  border-left: 3px solid var(--lum-red);
-}
-
-/* ─── Header mobile breakpoints (placed AFTER base rules so the cascade
-       lets display:none win at narrow viewports). */
-@media (max-width: 900px) {
-  .lum-header {
-    padding: 0 14px;
-    gap: 10px;
-  }
-  .lum-header__brand { padding-right: 12px; }
-  .lum-header__divider { display: none; }
-  .lum-header__left {
-    flex: 1;
-    min-width: 0;
-  }
-  .lum-header__nav { display: none; }
-  .lum-hamburger { display: inline-flex; }
-  .lum-header__brand-sub { display: none; }
-}
-
-@media (max-width: 600px) {
-  .lum-header__roleswitcher-trigger {
-    padding: 4px;
-    gap: 0;
-  }
-  .lum-header__userblock,
-  .lum-header__caret,
-  .lum-header__demo-pill,
-  .lum-header__spec-badge { display: none; }
-}
-
-/* ============ Cards ============ */
-.lum-card {
-  background: white;
-  border: 1px solid var(--lum-gray-200);
-  border-radius: var(--lum-radius);
-  padding: 18px;
-  box-shadow: var(--lum-shadow-sm);
-}
-
-.lum-card.is-clickable {
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.lum-card.is-clickable:hover {
-  border-color: var(--lum-navy);
-  box-shadow: var(--lum-shadow-md);
-  transform: translateY(-1px);
-}
-
-/* ============ Section label ============ */
+/* ============ Section caption (UPPERCASE) ============ */
 .lum-section-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--lum-gray-500);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 4px;
+  letter-spacing: 0.5px;
 }
 
-/* ============ Pills / badges ============ */
+/* ============ Pills / chips ============ */
 .lum-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 9.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  background: var(--lum-navy-bg);
-  color: var(--lum-navy);
+  letter-spacing: 0.4px;
+  background: var(--accent-brand-soft);
+  color: var(--accent-brand);
   white-space: nowrap;
 }
 
-.lum-pill.is-red    { background: var(--lum-red-soft);   color: var(--lum-red); }
-.lum-pill.is-green  { background: var(--lum-green-soft); color: var(--lum-green); }
-.lum-pill.is-amber  { background: var(--lum-amber-soft); color: #a85613; }
-.lum-pill.is-navy   { background: var(--lum-navy);       color: white; }
-.lum-pill.is-muted  { background: var(--lum-gray-100);   color: var(--lum-gray-700); }
+.lum-pill.is-red    { background: var(--status-red-soft);   color: var(--status-red); }
+.lum-pill.is-green  { background: var(--status-green-soft); color: var(--status-green); }
+.lum-pill.is-amber  { background: var(--status-amber-soft); color: var(--status-amber); }
+.lum-pill.is-navy   { background: var(--accent-brand);       color: var(--text-on-accent); }
+.lum-pill.is-muted  {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-dim);
+}
+
+.lum-count-pill {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 
 /* ============ Buttons ============ */
 .lum-btn {
@@ -481,55 +514,59 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-radius: var(--lum-radius);
-  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.3px;
-  border: 1px solid transparent;
-  background: white;
-  color: var(--lum-text);
-  transition: all 0.12s ease;
+  letter-spacing: 0.2px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  transition: background 0.12s ease, border-color 0.12s ease;
   white-space: nowrap;
 }
 
-.lum-btn:hover { box-shadow: var(--lum-shadow-sm); }
+.lum-btn:hover {
+  border-color: var(--accent-brand);
+}
 
 .lum-btn.is-primary {
-  background: var(--lum-navy);
-  color: white;
+  background: var(--accent-brand);
+  color: var(--text-on-accent);
+  border-color: var(--accent-brand);
 }
-.lum-btn.is-primary:hover { background: var(--lum-navy-light); }
+
+.lum-btn.is-primary:hover {
+  filter: brightness(1.08);
+}
 
 .lum-btn.is-danger {
-  background: var(--lum-red);
-  color: white;
+  background: var(--status-red);
+  color: var(--text-on-accent);
+  border-color: var(--status-red);
 }
+
 .lum-btn.is-danger:hover { filter: brightness(1.05); }
 
 .lum-btn.is-ghost {
   background: transparent;
-  border-color: var(--lum-gray-200);
-  color: var(--lum-navy);
-}
-.lum-btn.is-ghost:hover {
-  border-color: var(--lum-navy);
-  background: var(--lum-navy-bg);
+  color: var(--text-primary);
 }
 
 .lum-btn.is-toggle {
-  background: white;
-  border-color: var(--lum-gray-200);
-  color: var(--lum-gray-700);
+  background: var(--surface-raised);
+  border-color: var(--border-default);
+  color: var(--text-mid);
   flex: 1;
-  padding: 10px 12px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 .lum-btn.is-toggle.is-active {
-  background: var(--lum-navy);
-  border-color: var(--lum-navy);
-  color: white;
-  box-shadow: var(--lum-shadow-sm);
+  background: var(--accent-brand);
+  border-color: var(--accent-brand);
+  color: var(--text-on-accent);
 }
 
 .lum-btn[disabled],
@@ -544,63 +581,111 @@ input, select, textarea {
 .lum-select {
   width: 100%;
   padding: 9px 12px;
-  border-radius: var(--lum-radius-sm);
-  border: 1px solid var(--lum-gray-200);
-  background: white;
-  font-size: 13px;
-  color: var(--lum-text);
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  font-size: 12px;
+  color: var(--text-primary);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .lum-input:focus,
 .lum-select:focus {
   outline: none;
-  border-color: var(--lum-navy);
-  box-shadow: 0 0 0 3px rgba(20, 20, 100, 0.12);
+  border-color: var(--accent-brand);
+  box-shadow: 0 0 0 3px var(--accent-brand-soft);
 }
 
 .lum-input[disabled],
 .lum-select[disabled] {
-  background: var(--lum-gray-50);
-  color: var(--lum-gray-500);
+  background: var(--surface-sunken);
+  color: var(--text-dim);
 }
 
 .lum-field-label {
   display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--lum-gray-500);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   margin-bottom: 6px;
 }
 
-/* ============ Warning banners ============ */
+/* ============ Banners ============ */
 .lum-banner {
   padding: 10px 14px;
-  border-radius: var(--lum-radius-sm);
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
-  border-left: 4px solid;
+  border-left: 3px solid;
 }
 
 .lum-banner.is-amber {
-  background: var(--lum-amber-soft);
-  color: #8a4612;
-  border-left-color: var(--lum-amber);
+  background: var(--status-amber-soft);
+  color: var(--status-amber);
+  border-left-color: var(--status-amber);
 }
 
 .lum-banner.is-red {
-  background: var(--lum-red-soft);
-  color: #931217;
-  border-left-color: var(--lum-red);
+  background: var(--status-red-soft);
+  color: var(--status-red);
+  border-left-color: var(--status-red);
 }
 
 .lum-banner.is-info {
-  background: var(--lum-navy-bg);
-  color: var(--lum-navy);
-  border-left-color: var(--lum-navy);
+  background: var(--accent-brand-soft);
+  color: var(--accent-brand);
+  border-left-color: var(--accent-brand);
+}
+
+/* ============ Segmented control ============ */
+.lum-segmented {
+  display: inline-flex;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.lum-segmented__option {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.lum-segmented__option.is-active {
+  background: var(--toggle-active);
+  color: var(--toggle-active-text);
+}
+
+/* ============ Mobile shell collapse ============ */
+@media (max-width: 900px) {
+  .lum-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
+    z-index: 50;
+    box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+  }
+  .lum-sidebar.is-open { transform: translateX(0); }
+  .lum-shell__main { width: 100%; }
+  .lum-topbar {
+    padding: 14px 16px 12px;
+    flex-wrap: wrap;
+  }
+  .lum-topbar__search { width: 100%; order: 3; }
+  .lum-shell__content { padding: 0 16px 32px; }
 }
