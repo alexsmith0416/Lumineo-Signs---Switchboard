@@ -28,6 +28,8 @@ import { Step12Electrical } from "../builder/steps/Step12Electrical";
 import { StepNotesStatus } from "../builder/steps/StepNotesStatus";
 import { SpecSummary } from "../builder/SpecSummary";
 import { SpecReferenceImage } from "../builder/SpecReferenceImage";
+import { BallparkModal } from "../builder/BallparkModal";
+import { sendSpecToEstimating } from "../data/estimatingService";
 
 export function Builder() {
   const {
@@ -40,6 +42,7 @@ export function Builder() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [deepLinked, setDeepLinked] = useState(false);
+  const [showBallpark, setShowBallpark] = useState(false);
 
   // Deep-link from Switchboard / Project Scheduler / Sales Hub
   useEffect(() => {
@@ -159,6 +162,24 @@ export function Builder() {
             />
           </div>
           <div className="sbp-formbar__actions">
+            <button
+              type="button"
+              className="lum-btn"
+              onClick={() => setShowBallpark(true)}
+              disabled={!spec.signTypeCode || !spec.heightIn || !spec.widthIn}
+              title="Rough $ estimate computed locally — opens a breakdown modal with a 'Send to Estimating' action"
+            >
+              $ Ballpark
+            </button>
+            <button
+              type="button"
+              className="lum-btn"
+              onClick={() => sendSpecToEstimating(spec, { jobId, opportunityId })}
+              disabled={!spec.signTypeCode}
+              title="Opens the Estimating app in a new tab with this spec pre-loaded as a piece draft"
+            >
+              → Send to Estimating
+            </button>
             <button
               type="button"
               className="lum-btn"
@@ -295,6 +316,10 @@ export function Builder() {
           <div className="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>
         ) : null}
       </section>
+
+      {showBallpark ? (
+        <BallparkModal spec={spec} onClose={() => setShowBallpark(false)} />
+      ) : null}
     </div>
   );
 }

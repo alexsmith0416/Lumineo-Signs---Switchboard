@@ -831,6 +831,84 @@
   background: rgba(255,255,255,0.2);
 }
 
+/* ============ Ballpark modal ============ */
+.sbp-ballpark {
+  position: relative;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  padding: 24px;
+  width: min(880px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--text-primary);
+}
+
+.sbp-ballpark__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 40px;
+}
+
+.sbp-ballpark__title {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 4px 0 0;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sbp-ballpark__caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+
+.sbp-ballpark__table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sbp-ballpark__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.sbp-ballpark__row:last-child { border-bottom: none; }
+
+.sbp-ballpark__row--head {
+  background: var(--surface-sunken);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sbp-ballpark__row--foot {
+  background: var(--accent-brand-soft);
+  font-weight: 700;
+}
+
+.sbp-ballpark__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ============ Empty placeholder ============ */
 .sbp-empty {
   padding: 48px 24px;
