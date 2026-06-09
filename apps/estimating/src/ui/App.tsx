@@ -7,6 +7,7 @@ import { buildProposal } from '../lib/proposal';
 import { downloadBCExport } from '../lib/bcExport';
 import { PIECE_TYPES } from '../data/pieceTypes';
 import { clearImportHash, parseSBPPayloadFromHash, projectFromPayload } from '../lib/sbpPayload';
+import { signBuilderSpecUrl } from '../lib/config';
 
 import { Sidebar } from './Sidebar';
 import { Topbar, type View } from './Topbar';
@@ -36,7 +37,7 @@ export function App() {
   const [view, setView] = useState<View>('editor');
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState(false);
-  const [importBanner, setImportBanner] = useState<string | null>(null);
+  const [importBanner, setImportBanner] = useState<{ text: string; sbpHref?: string } | null>(null);
 
   // Load saved projects + reference data on first mount.
   useEffect(() => {
@@ -74,7 +75,7 @@ export function App() {
       const project = projectFromPayload(payload);
       if (project.pieces.length === 0) {
         console.warn('[App] SBP payload had no recognised pieces — not creating project.');
-        setImportBanner('Sign Builder Pro sent a sign with no recognised piece types — nothing to import.');
+        setImportBanner({ text: 'Sign Builder Pro sent a sign with no recognised piece types — nothing to import.' });
         clearImportHash();
         return;
       }
@@ -83,9 +84,10 @@ export function App() {
       setActiveId(project.id);
       setView('editor');
       clearImportHash();
-      setImportBanner(
-        `Imported ${project.pieces.length} piece${project.pieces.length === 1 ? '' : 's'} from Sign Builder Pro — review and finalize below.`,
-      );
+      setImportBanner({
+        text: `Imported ${project.pieces.length} piece${project.pieces.length === 1 ? '' : 's'} from Sign Builder Pro — review and finalize below.`,
+        sbpHref: payload.specId ? signBuilderSpecUrl(payload.specId) : undefined,
+      });
       console.info(`[App] imported "${project.jobName}" from Sign Builder Pro`);
     }
 
@@ -152,7 +154,12 @@ export function App() {
         <main className="app-main">
           {importBanner && (
             <div className="import-banner" role="status">
-              <span>{importBanner}</span>
+              <span>{importBanner.text}</span>
+              {importBanner.sbpHref && (
+                <a className="import-banner-link" href={importBanner.sbpHref} target="_blank" rel="noopener noreferrer">
+                  Open original in Sign Builder Pro ↗
+                </a>
+              )}
               <button className="import-banner-close" aria-label="Dismiss" onClick={() => setImportBanner(null)}>×</button>
             </div>
           )}

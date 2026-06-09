@@ -11,7 +11,12 @@
     "extract:estimating": "python scripts/extract-workbook.py",
     "build:estimating": "npm run build --workspace apps/estimating",
     "dev:estimating": "npm run dev --workspace apps/estimating",
-    "test:estimating": "npm test --workspace apps/estimating"
+    "test:estimating": "npm test --workspace apps/estimating",
+    "build:sign-builder": "npm run build --workspace apps/sign-builder",
+    "dev:sign-builder": "npm run dev --workspace apps/sign-builder",
+    "test:sign-builder": "npm test --workspace apps/sign-builder",
+    "build": "npm run build:estimating && npm run build:sign-builder",
+    "test": "npm run test:estimating && npm run test:sign-builder"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://aka.ms/powerapps-code-config-schema",
+  "displayName": "Sign Builder Pro",
+  "description": "Sign specification builder for Lumineo Signs — Power Apps Code app.",
+  "appType": "codeApp",
+  "tables": [
+    {
+      "logicalName": "lum_signspecification",
+      "displayName": "Sign Specifications",
+      "alias": "SignSpecifications"
+    },
+    {
+      "logicalName": "lum_signproject",
+      "displayName": "Sign Projects",
+      "alias": "SignProjects"
+    }
+  ],
+  "launchParams": ["userEmail", "role"]
+}

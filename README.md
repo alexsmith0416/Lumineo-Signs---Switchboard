@@ -2,6 +2,22 @@
 
 **Switchboard** is the master Power Apps "shell" that hosts five sub-apps under one roof, with role-based routing, a shared Dataverse, and a live connection to Microsoft Dynamics 365 Business Central.
 
+## Web apps in this monorepo
+
+Two of the sub-apps are built as React + Vite + TS web apps in `apps/*` and
+deploy independently. They share the Switchboard design system (`DESIGN.md`)
+and are wired together by a URL handoff:
+
+| App | Path | Run | Connection |
+|---|---|---|---|
+| **Sign Builder Pro** | `apps/sign-builder` | `npm run dev:sign-builder` | *Send to Estimating* → opens Estimating with the spec pre-loaded |
+| **Estimating** | `apps/estimating` | `npm run dev:estimating` | imports the SBP payload, links back to the originating spec |
+
+Shared design tokens live in `packages/ui`. **To deploy both and let others
+test the connection, see [docs/deploy.md](docs/deploy.md).** The payload
+contract between them is in
+[docs/estimating-integration.md](docs/estimating-integration.md).
+
 ## The five sub-apps
 
 | App | Group(s) that see it | Status |
