@@ -46,7 +46,7 @@ export default function SwitchboardSidebar() {
     <aside className="switchboard-sidebar" aria-label="Switchboard navigation">
       <div className="sb-brand">
         <div className="sb-brand__logo">
-          <LumineoLogo size={32} color="#ffffff" />
+          <LumineoLogo size={44} color="#EE0800" />
         </div>
         <div className="sb-brand__text">
           <span className="sb-brand__name">LUMINEO SIGNS</span>
