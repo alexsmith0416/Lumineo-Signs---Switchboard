@@ -6,14 +6,15 @@ import { computeProject } from '../lib/engine';
 import { buildProposal } from '../lib/proposal';
 import { downloadBCExport } from '../lib/bcExport';
 import { PIECE_TYPES } from '../data/pieceTypes';
+import { clearImportHash, parseSBPPayloadFromHash, projectFromPayload } from '../lib/sbpPayload';
 
-import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { Topbar, type View } from './Topbar';
 import { ProjectList } from './ProjectList';
 import { ProjectEditor } from './ProjectEditor';
 import { ProposalView } from './ProposalView';
 import { BCExportView } from './BCExportView';
-
-type View = 'editor' | 'proposal' | 'bc';
+import { useTheme } from './useTheme';
 
 function newProject(): Project {
   return {
@@ -27,11 +28,15 @@ function newProject(): Project {
 }
 
 export function App() {
+  const { theme, toggleTheme } = useTheme();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<readonly CatalogItem[]>([]);
   const [workCodes, setWorkCodes] = useState<readonly WorkCode[]>([]);
   const [view, setView] = useState<View>('editor');
+  const [search, setSearch] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [importBanner, setImportBanner] = useState<string | null>(null);
 
   // Load saved projects + reference data on first mount.
   useEffect(() => {
@@ -47,13 +52,58 @@ export function App() {
       setCatalog(cat);
       setWorkCodes(wc);
       if (saved.length && !activeId) setActiveId(saved[0].id);
+      setLoaded(true);
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sign Builder Pro handoff — if the URL hash carries an import payload,
+  // build the project + pieces, persist them, and activate. Runs after the
+  // initial load (so we don't race the saved-projects fetch) and again on any
+  // `hashchange`, so the import fires whether SBP opens a fresh tab
+  // (window.open) or navigates an already-open Estimating tab. See
+  // docs/16-estimating.md (§ "Send to Estimating") + the SBP contract in
+  // docs/estimating-integration.md; sbpPayload.ts validates shape + version.
+  useEffect(() => {
+    if (!loaded) return;
+
+    function runImport() {
+      const payload = parseSBPPayloadFromHash();
+      if (!payload) return;
+      const project = projectFromPayload(payload);
+      if (project.pieces.length === 0) {
+        console.warn('[App] SBP payload had no recognised pieces — not creating project.');
+        setImportBanner('Sign Builder Pro sent a sign with no recognised piece types — nothing to import.');
+        clearImportHash();
+        return;
+      }
+      setProjects(prev => [...prev, project]);
+      void LocalEstimateRepo.save(project);
+      setActiveId(project.id);
+      setView('editor');
+      clearImportHash();
+      setImportBanner(
+        `Imported ${project.pieces.length} piece${project.pieces.length === 1 ? '' : 's'} from Sign Builder Pro — review and finalize below.`,
+      );
+      console.info(`[App] imported "${project.jobName}" from Sign Builder Pro`);
+    }
+
+    runImport();
+    window.addEventListener('hashchange', runImport);
+    return () => window.removeEventListener('hashchange', runImport);
+  }, [loaded]);
+
   const active = useMemo(() => projects.find(p => p.id === activeId) ?? null, [projects, activeId]);
   const computed = useMemo(() => (active ? computeProject(active) : null), [active]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter(p =>
+      `${p.jobNumber} ${p.jobName} ${p.estimator} ${p.description}`.toLowerCase().includes(q),
+    );
+  }, [projects, search]);
 
   function saveProject(next: Project) {
     setProjects(prev => {
@@ -80,59 +130,76 @@ export function App() {
   }
 
   function exportBC() {
-    if (!active) return;
-    downloadBCExport(active);
+    if (!computed) return;
+    downloadBCExport(computed);
   }
 
   return (
     <div className="app-shell">
-      <Header
-        active={active}
-        view={view}
-        onChangeView={setView}
-        onExportBC={exportBC}
-        onNewProject={createProject}
-      />
-      <main className="app-main">
-        <aside className="app-sidebar">
-          <ProjectList
-            projects={projects}
-            activeId={activeId}
-            onPick={(id) => { setActiveId(id); setView('editor'); }}
-            onCreate={createProject}
-            onDelete={deleteProject}
-          />
-        </aside>
-        <section className="app-content">
-          {!active && (
-            <div className="empty-state">
-              <h2>No estimate selected</h2>
-              <p>Create a new estimate to start adding sign pieces, or pick one from the list.</p>
-              <button className="primary" onClick={createProject}>+ New estimate</button>
-              <p className="muted" style={{ marginTop: 32 }}>
-                {PIECE_TYPES.length} sign piece types available
-                {' · '}
-                {catalog.length} catalog items
-                {' · '}
-                {workCodes.length} work codes
-              </p>
+      <Sidebar theme={theme} onToggleTheme={toggleTheme} />
+
+      <div className="app-body">
+        <Topbar
+          active={active}
+          view={view}
+          search={search}
+          onSearch={setSearch}
+          onChangeView={setView}
+          onExportBC={exportBC}
+          onNewProject={createProject}
+        />
+
+        <main className="app-main">
+          {importBanner && (
+            <div className="import-banner" role="status">
+              <span>{importBanner}</span>
+              <button className="import-banner-close" aria-label="Dismiss" onClick={() => setImportBanner(null)}>×</button>
             </div>
           )}
-          {active && view === 'editor' && computed && (
-            <ProjectEditor
-              project={active}
-              computed={computed}
-              catalog={catalog}
-              workCodes={workCodes}
-              onChange={saveProject}
-            />
-          )}
-          {active && view === 'proposal' && computed && (
-            <ProposalView lines={buildProposal(computed.pieces)} total={computed.total} project={active} />
-          )}
-          {active && view === 'bc' && computed && <BCExportView project={active} computed={computed} />}
-        </section>
-      </main>
+
+          <div className="app-grid">
+            <aside className="panel app-estimates">
+              <ProjectList
+                projects={filtered}
+                activeId={activeId}
+                onPick={(id) => { setActiveId(id); setView('editor'); }}
+                onCreate={createProject}
+                onDelete={deleteProject}
+              />
+            </aside>
+
+            <section className="panel app-content">
+              {!active && (
+                <div className="empty-state">
+                  <h2>No estimate selected</h2>
+                  <p>Create a new estimate to start adding sign pieces, or pick one from the list. Signs sent over from <b>Sign Builder Pro</b> land here automatically.</p>
+                  <button className="btn-primary" onClick={createProject}>+ New estimate</button>
+                  <p className="muted" style={{ marginTop: 32 }}>
+                    {PIECE_TYPES.length} sign piece types available
+                    {' · '}
+                    {catalog.length} catalog items
+                    {' · '}
+                    {workCodes.length} work codes
+                  </p>
+                </div>
+              )}
+              {active && view === 'editor' && computed && (
+                <ProjectEditor
+                  project={active}
+                  computed={computed}
+                  catalog={catalog}
+                  workCodes={workCodes}
+                  onChange={saveProject}
+                />
+              )}
+              {active && view === 'proposal' && computed && (
+                <ProposalView lines={buildProposal(computed.pieces)} total={computed.total} project={active} />
+              )}
+              {active && view === 'bc' && computed && <BCExportView project={active} computed={computed} />}
+            </section>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

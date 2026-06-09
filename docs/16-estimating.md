@@ -89,18 +89,39 @@ workbook sheet. The next author replaces those compute functions.
   the exact BCI/BCL shape the workbook imports.
 - **Proposal summary** — short plain-language sign description per
   piece (`buildProposal` in `src/lib/proposal.ts`).
-- **Sign Builder Pro import** — `importFromSBP(spec)` stub in
-  `src/lib/sbpImport.ts` maps SBP categories to Estimating piece-type
-  ids and pre-fills H/L/qty/faces/panels + optional vinyl material
-  line. The actual SBP wire-up is `TODO`.
+- **Sign Builder Pro handoff (live)** — when an estimator clicks
+  **Send to Estimating** on a built sign in Sign Builder Pro, SBP opens
+  `https://estimating.lumineosigns.com/#import?payload=<base64url-json>`.
+  The reader on this side is `src/lib/sbpPayload.ts`
+  (`parseSBPPayloadFromHash` → validate `version === 2` → `projectFromPayload`).
+  `App.tsx` runs it on mount **and** on `hashchange`, so the handoff fires
+  whether SBP opens a fresh tab or navigates an already-open one. It builds
+  a new `Project` from the header fields (`signName`/`projectName` →
+  `jobName`, `productCode`/`specId`/`jobId` → `description`), maps each
+  `EstimatingPieceDraft` to a `Piece` (typeId + inputs + optional
+  extra material/labor lines), activates it, shows a confirmation banner,
+  and clears the URL hash so a refresh doesn't re-import. The estimator
+  reviews and finalizes — nothing auto-saves to BC. The canonical contract
+  (payload schema + SBP→Estimating typeId mapping) lives in
+  `docs/estimating-integration.md` on the SBP branch; round-trip is covered
+  by `src/__tests__/sbp-payload.test.ts`. The older
+  `importFromSBP(spec)` category stub in `src/lib/sbpImport.ts` remains for
+  callers that hand over a single loose spec object rather than the URL
+  payload.
 
 ## Design + platform
 
-- Uses the design tokens from `packages/ui` (`@lumineo/ui`) — navy
-  `#141464`, navy-light `#2a2a8a`, navy-bg `#e8eaf5`, red `#E8151B`,
-  red-dark `#c4111a`, Open Sans, 64px header, radii `sm5 / md7 / lg10`.
-- Mobile-responsive: two-column piece-list/detail collapses to one
-  column below 900px; usable at 600 / 900 / 1200.
+- Adopts the **Switchboard design system** (`DESIGN.md`): the standard
+  two-region shell (248px `Sidebar` + `Topbar` + `bg/page` main), the
+  semantic light/dark token set (driven by `data-theme` on `<html>`, with
+  the legacy `--color-*` names aliased onto the tokens), Open Sans, the
+  spacing/radius scale, and the shared component patterns (segmented
+  control, panels, list rows, chips). A theme toggle pill in the sidebar
+  **OTHER** section persists the choice and respects
+  `prefers-color-scheme` (`src/ui/useTheme.ts`). Test every screen in both
+  themes.
+- Mobile-responsive: the estimates panel + piece-list/detail collapse to
+  one column on narrow viewports; the sidebar hides below 820px.
 - Data layer behind `CatalogRepo` / `EstimateRepo` interfaces so a
   Dataverse implementation can plug in without touching the UI.
 - Power Apps code app: `pac code init` has been run, `power.config.json`
