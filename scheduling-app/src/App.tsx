@@ -1,5 +1,6 @@
 import { useState } from "react";
-import AppHeader from "./components/AppHeader";
+import AppTopbar from "./components/AppTopbar";
+import SwitchboardSidebar from "./components/SwitchboardSidebar";
 import NavDrawer from "./components/NavDrawer";
 import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
@@ -31,7 +32,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <AppHeader title={VIEW_TITLES[view]} onMenu={() => setDrawerOpen(true)} />
+      <SwitchboardSidebar />
 
       <NavDrawer
         open={drawerOpen}
@@ -42,18 +43,49 @@ export default function App() {
       />
 
       <main className="app-main">
-        {view === "production" && (
-          <ProductionCalendar onNavigate={(v) => setView(v as View)} />
-        )}
-        {view === "installation" && (
-          <InstallationCalendar onNavigate={(v) => setView(v as View)} />
-        )}
-        {view === "shipping" && (
-          <ShippingCalendar onNavigate={(v) => setView(v as View)} />
-        )}
-        {view === "scenario" && <ScenarioSandbox />}
-        {view === "monthly" && <MonthlyPlanView />}
+        <AppTopbar title={VIEW_TITLES[view]} onMenu={() => setDrawerOpen(true)} />
+        <SubNav view={view} onChange={setView} />
+        <div className="app-content">
+          {view === "production" && (
+            <ProductionCalendar onNavigate={(v) => setView(v as View)} />
+          )}
+          {view === "installation" && (
+            <InstallationCalendar onNavigate={(v) => setView(v as View)} />
+          )}
+          {view === "shipping" && (
+            <ShippingCalendar onNavigate={(v) => setView(v as View)} />
+          )}
+          {view === "scenario" && <ScenarioSandbox />}
+          {view === "monthly" && <MonthlyPlanView />}
+        </div>
       </main>
+    </div>
+  );
+}
+
+const SUB_TABS: Array<{ id: View; label: string }> = [
+  { id: "production", label: "Production" },
+  { id: "installation", label: "Installation" },
+  { id: "shipping", label: "Shipping" },
+  { id: "monthly", label: "Monthly Plan" },
+  { id: "scenario", label: "Scenarios" },
+];
+
+function SubNav({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  return (
+    <div className="sub-nav" role="tablist" aria-label="Project Scheduler views">
+      {SUB_TABS.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={view === t.id}
+          className={`sub-nav__tab${view === t.id ? " sub-nav__tab--active" : ""}`}
+          onClick={() => onChange(t.id)}
+        >
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }

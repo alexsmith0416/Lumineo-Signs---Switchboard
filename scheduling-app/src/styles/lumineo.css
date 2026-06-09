@@ -1,15 +1,56 @@
-:root {
-  --lumineo-navy: #141464;
-  --lumineo-red: #e8151b;
-  --label-bg: #e8ebf5;
-  --input-bg: #f2f4f8;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f8fa;
+/* ============================================================
+   Lumineo Switchboard — Design System v1
+   See docs DESIGN.md for the full token reference. Tokens are
+   theme-scoped via [data-theme]; never hard-code hex in components.
+============================================================ */
+
+:root,
+[data-theme="light"] {
+  /* Surfaces */
+  --bg-page: #f4f5f8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f4f5f8;
+  --surface-sidebar: #141464;
+  /* Borders */
+  --border-default: #e4e5ea;
+  --border-soft: #eff0f3;
+  /* Text */
+  --text-primary: #1f1f2e;
+  --text-mid: #4a4f5e;
+  --text-dim: #8b91a3;
+  --text-on-accent: #ffffff;
+  /* Brand / accent */
+  --accent-brand: #141464;
+  --accent-brand-soft: #e8eaf5;
+  /* Status */
+  --status-green: #0f6e56;
+  --status-green-soft: #d8efe7;
+  --status-red: #e8151b;
+  --status-red-soft: #ffe4e5;
+  --status-amber: #f2994a;
+  --status-amber-soft: #fdf0d9;
+  /* Chart palette */
+  --chart-green: #2bb174;
+  --chart-indigo: #5969e1;
+  --chart-blue: #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink: #e67be0;
+  /* Toggle */
+  --toggle-active: #ffffff;
+  --toggle-active-text: #1f1f2e;
+
+  /* Legacy aliases — keep existing components working until they
+     migrate to the new tokens. Do not add new references here. */
+  --lumineo-navy: var(--accent-brand);
+  --lumineo-red: var(--status-red);
+  --label-bg: var(--accent-brand-soft);
+  --input-bg: var(--surface-sunken);
+  --bg-primary: var(--surface-raised);
+  --bg-secondary: var(--surface-sunken);
   --bg-tertiary: #eef0f4;
-  --border: #e1e4ea;
-  --text-primary: #1a1d23;
-  --text-secondary: #5a6172;
-  --text-tertiary: #8b91a0;
+  --border: var(--border-default);
+  --text-secondary: var(--text-mid);
+  --text-tertiary: var(--text-dim);
   --dept-metal-bg: #bed7ff;
   --dept-metal-text: #042c53;
   --dept-paint-bg: #fac775;
@@ -20,6 +61,52 @@
   --dept-vinyl-text: #04342c;
   --scenario-amber-1: #fcd34d;
   --scenario-amber-2: #f59e0b;
+}
+
+[data-theme="dark"] {
+  --bg-page: #0b0e1f;
+  --surface-raised: #1a1f3d;
+  --surface-sunken: #131734;
+  --surface-sidebar: #131734;
+
+  --border-default: #2a3056;
+  --border-soft: #1f2542;
+
+  --text-primary: #f3f4f8;
+  --text-mid: #b3b8cc;
+  --text-dim: #7b82a0;
+  --text-on-accent: #ffffff;
+
+  --accent-brand: #7388ff;
+  --accent-brand-soft: #2a3260;
+
+  --status-green: #2dd4a4;
+  --status-green-soft: #1d4050;
+  --status-red: #ff5158;
+  --status-red-soft: #432842;
+  --status-amber: #fcb85b;
+  --status-amber-soft: #433b42;
+
+  --chart-green: #2dd4a4;
+  --chart-indigo: #7388ff;
+  --chart-blue: #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink: #e67be0;
+
+  --toggle-active: #7388ff;
+  --toggle-active-text: #ffffff;
+
+  /* Legacy aliases (dark) */
+  --lumineo-navy: var(--accent-brand);
+  --lumineo-red: var(--status-red);
+  --label-bg: var(--accent-brand-soft);
+  --input-bg: var(--surface-sunken);
+  --bg-primary: var(--surface-raised);
+  --bg-secondary: var(--surface-sunken);
+  --bg-tertiary: #1a1f3d;
+  --border: var(--border-default);
+  --text-secondary: var(--text-mid);
+  --text-tertiary: var(--text-dim);
 }
 
 * {
@@ -33,10 +120,11 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
+  font-variation-settings: "wdth" 100;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  background: var(--bg-page);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
 }
@@ -52,32 +140,321 @@ input, select, textarea {
   font-size: inherit;
 }
 
-/* ============ App shell ============ */
+/* ============ Switchboard app shell ============
+   Two-region layout per DESIGN.md §5:
+   - Sidebar: fixed 248px, surface/sidebar, full height.
+   - Main: bg/page, with topbar + content rows.
+   Mobile (<900px): sidebar collapses, topbar gets a hamburger that
+   opens the drawer overlay.
+============================================================ */
 
 .app-shell {
   display: grid;
-  grid-template-rows: 48px 1fr;
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    "header"
-    "main";
+  grid-template-columns: 248px 1fr;
+  grid-template-rows: minmax(0, 1fr);
   height: 100vh;
+  background: var(--bg-page);
 }
 
-.app-header {
-  grid-area: header;
-  background: var(--lumineo-navy);
-  color: #fff;
+.switchboard-sidebar,
+.app-main {
+  min-height: 0;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .switchboard-sidebar {
+    display: none;
+  }
+}
+
+/* ---- Sidebar ---- */
+
+.switchboard-sidebar {
+  background: var(--surface-sidebar);
+  color: var(--text-on-accent);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 24px;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.sb-brand {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  gap: 10px;
+  padding: 4px 6px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+[data-theme="light"] .sb-brand {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .sb-brand {
+  border-bottom-color: var(--border-soft);
+}
+
+.sb-brand__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--status-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+}
+
+.sb-brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.sb-brand__name {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: var(--text-on-accent);
+}
+
+.sb-brand__sub {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+[data-theme="light"] .sb-brand__sub {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.sb-caption {
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent-brand-soft);
+  padding: 8px 10px 6px;
+}
+[data-theme="light"] .sb-caption {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-nav__item {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.sb-nav__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .sb-nav__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sb-nav__item--active {
+  background: var(--bg-page);
+  color: var(--accent-brand);
+}
+.sb-nav__item--active:hover {
+  background: var(--bg-page);
+}
+
+.sb-nav__icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sb-spacer {
+  flex: 1;
+}
+
+.sb-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.sb-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .sb-theme-toggle {
+  border-color: var(--border-default);
+}
+
+/* ---- Topbar ---- */
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px 14px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.app-topbar__lead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-topbar__eyebrow {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.app-topbar__title {
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.app-topbar__cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-topbar__menu {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 8px;
+  display: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+@media (max-width: 900px) {
+  .app-topbar__menu {
+    display: inline-flex;
+  }
+  .app-topbar {
+    padding: 14px 16px 12px;
+  }
+}
+
+.app-topbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 280px;
+}
+@media (max-width: 900px) {
+  .app-topbar__search {
+    display: none;
+  }
+}
+
+.app-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+}
+
+.app-topbar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--status-red);
+  color: var(--text-on-accent);
+  font-weight: 800;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-topbar__user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.app-topbar__user-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.app-topbar__user-role {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ---- Legacy header (mobile only) ---- */
+
+.app-header {
+  display: none;
 }
 
 .app-header__menu {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   padding: 4px 6px;
   display: inline-flex;
   align-items: center;
@@ -93,10 +470,10 @@ input, select, textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--lumineo-red);
-  color: #fff;
+  background: var(--status-red);
+  color: var(--text-on-accent);
   padding: 4px 10px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.5px;
 }
 
@@ -111,7 +488,7 @@ input, select, textarea {
 
 .app-header__title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   flex: 1;
 }
 
@@ -126,13 +503,70 @@ input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--lumineo-red);
+  background: var(--status-red);
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   border-radius: 4px;
 }
 
 .app-header__action:hover { filter: brightness(1.1); }
+
+/* ---- Sub-nav (Project Scheduler view tabs) ---- */
+
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 8px 28px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-soft);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 900px) {
+  .sub-nav {
+    padding: 8px 16px;
+  }
+}
+
+.sub-nav__tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-mid);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.sub-nav__tab:hover {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.sub-nav__tab--active,
+.sub-nav__tab--active:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-default);
+  color: var(--accent-brand);
+}
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-page);
+}
+
+.app-content > * {
+  flex: 1;
+  min-height: 0;
+}
 
 /* ============ Nav drawer (hamburger menu) ============ */
 
@@ -230,12 +664,9 @@ input, select, textarea {
   to { transform: translateX(0); }
 }
 
-.app-main {
-  grid-area: main;
-  overflow: auto;
-  background: var(--bg-primary);
-  padding: 16px;
-}
+/* `.app-main` shell layout is defined up in §App shell. This rule
+   only customizes the inner-content scroll/background — the topbar +
+   sub-nav + .app-content slot handle the actual layout. */
 
 /* ============ Calendar ============ */
 
