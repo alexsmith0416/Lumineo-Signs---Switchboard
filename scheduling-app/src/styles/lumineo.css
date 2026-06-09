@@ -200,13 +200,10 @@ input, select, textarea {
 .sb-brand__logo {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
-  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  overflow: hidden;
 }
 
 .sb-brand__text {
