@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Role } from "../types";
 import { kpisByRole, safetyMetric } from "../data/mockData";
 
@@ -411,47 +411,94 @@ export function TargetsBody({
   );
 }
 
-/* ============ Drag-and-drop Kanban (test card + add buttons) ============ */
+/* ============ Drag-and-drop Kanban — generic Task Board ============ */
 
-export type KanbanColumnId = "To Do" | "In Progress" | "Review" | "Completed";
 export type KanbanPriority = "High" | "Medium" | "Low";
+
+export interface KanbanColumn {
+  id: string;
+  name: string;
+  color: string; // CSS color value: a var(--chart-*) reference or a hex code.
+}
 
 export interface KanbanCard {
   id: string;
-  jobName: string;
+  taskName: string;
   description: string;
   dueDate: string;
   importance: KanbanPriority;
-  column: KanbanColumnId;
+  columnId: string;
 }
 
-const COLS: { id: KanbanColumnId; tone: string }[] = [
-  { id: "To Do",       tone: "navy"  },
-  { id: "In Progress", tone: "blue"  },
-  { id: "Review",      tone: "amber" },
-  { id: "Completed",   tone: "green" },
+const DEFAULT_COLUMNS: KanbanColumn[] = [
+  { id: "col-todo", name: "To Do",       color: "var(--chart-indigo)" },
+  { id: "col-prog", name: "In Progress", color: "var(--chart-blue)"   },
+  { id: "col-rev",  name: "Review",      color: "var(--status-amber)" },
+  { id: "col-done", name: "Completed",   color: "var(--chart-green)"  },
 ];
 
 const SEED_CARDS: KanbanCard[] = [
   {
     id: "card-test-1",
-    jobName: "Test Job",
+    taskName: "Test Task",
     description: "Sample card — drag me between columns to try it out.",
     dueDate: "Fri Jun 12",
     importance: "Medium",
-    column: "To Do",
+    columnId: "col-todo",
   },
 ];
+
+const PRESET_COLORS: { name: string; value: string }[] = [
+  { name: "Indigo", value: "var(--chart-indigo)" },
+  { name: "Blue",   value: "var(--chart-blue)"   },
+  { name: "Green",  value: "var(--chart-green)"  },
+  { name: "Amber",  value: "var(--status-amber)" },
+  { name: "Purple", value: "var(--chart-purple)" },
+  { name: "Pink",   value: "var(--chart-pink)"   },
+  { name: "Red",    value: "var(--status-red)"   },
+];
+
+const EMPTY_DRAFT = {
+  taskName: "",
+  description: "",
+  dueDate: "",
+  importance: "Medium" as KanbanPriority,
+};
 
 function priorityTone(p: KanbanPriority): string {
   return p === "High" ? "red" : p === "Medium" ? "amber" : "navy";
 }
 
+function newId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+}
+
+function PencilGlyph() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+         aria-hidden focusable={false}>
+      <path d="M14.4 4.6l5 5L9.2 19.8l-5.4 1.2 1.2-5.4Z" />
+      <path d="M12.6 6.4l5 5" />
+    </svg>
+  );
+}
+
 export function KanbanBody() {
-  const storageKey = useRef("dm-kanban-v1");
+  const [columns, setColumns] = useState<KanbanColumn[]>(() => {
+    try {
+      const raw = localStorage.getItem("dm-kanban-cols-v2");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as KanbanColumn[];
+      }
+    } catch {/* ignore */}
+    return DEFAULT_COLUMNS;
+  });
+
   const [cards, setCards] = useState<KanbanCard[]>(() => {
     try {
-      const raw = localStorage.getItem(storageKey.current);
+      const raw = localStorage.getItem("dm-kanban-cards-v2");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed as KanbanCard[];
@@ -461,164 +508,247 @@ export function KanbanBody() {
   });
 
   useEffect(() => {
-    try { localStorage.setItem(storageKey.current, JSON.stringify(cards)); } catch {/* ignore */}
+    try { localStorage.setItem("dm-kanban-cols-v2", JSON.stringify(columns)); } catch {/* ignore */}
+  }, [columns]);
+
+  useEffect(() => {
+    try { localStorage.setItem("dm-kanban-cards-v2", JSON.stringify(cards)); } catch {/* ignore */}
   }, [cards]);
 
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [draftCol, setDraftCol] = useState<KanbanColumnId | null>(null);
-  const [draft, setDraft] = useState<Omit<KanbanCard, "id" | "column">>({
-    jobName: "", description: "", dueDate: "", importance: "Medium",
-  });
+  const [draggingId, setDraggingId]         = useState<string | null>(null);
+  const [draftCol, setDraftCol]             = useState<string | null>(null);
+  const [editingId, setEditingId]           = useState<string | null>(null);
+  const [draft, setDraft]                   = useState(EMPTY_DRAFT);
+  const [confirmDeleteCardId, setConfirmDeleteCardId] = useState<string | null>(null);
+  const [confirmDeleteColId,  setConfirmDeleteColId]  = useState<string | null>(null);
+  const [addingColumn, setAddingColumn]     = useState(false);
+  const [newColName, setNewColName]         = useState("");
+  const [newColColor, setNewColColor]       = useState<string>(PRESET_COLORS[0].value);
 
-  function moveTo(cardId: string, col: KanbanColumnId) {
-    setCards((cs) =>
-      cs.map((c) => (c.id === cardId ? { ...c, column: col } : c)),
-    );
+  function moveCardTo(cardId: string, columnId: string) {
+    setCards((cs) => cs.map((c) => (c.id === cardId ? { ...c, columnId } : c)));
   }
 
-  function addCard(col: KanbanColumnId) {
-    if (!draft.jobName.trim()) return;
+  function addCard(columnId: string) {
+    if (!draft.taskName.trim()) return;
     setCards((cs) => [
       ...cs,
       {
-        id: `card-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
-        jobName: draft.jobName.trim(),
+        id: newId("card"),
+        taskName: draft.taskName.trim(),
         description: draft.description.trim() || "—",
         dueDate: draft.dueDate.trim() || "TBD",
         importance: draft.importance,
-        column: col,
+        columnId,
       },
     ]);
-    setDraft({ jobName: "", description: "", dueDate: "", importance: "Medium" });
+    setDraft(EMPTY_DRAFT);
     setDraftCol(null);
   }
 
-  function removeCard(cardId: string) {
+  function startEdit(card: KanbanCard) {
+    setEditingId(card.id);
+    setDraftCol(null);
+    setDraft({
+      taskName: card.taskName,
+      description: card.description === "—" ? "" : card.description,
+      dueDate: card.dueDate === "TBD" ? "" : card.dueDate,
+      importance: card.importance,
+    });
+  }
+
+  function saveEdit(cardId: string) {
+    if (!draft.taskName.trim()) return;
+    setCards((cs) =>
+      cs.map((c) =>
+        c.id === cardId
+          ? {
+              ...c,
+              taskName: draft.taskName.trim(),
+              description: draft.description.trim() || "—",
+              dueDate: draft.dueDate.trim() || "TBD",
+              importance: draft.importance,
+            }
+          : c,
+      ),
+    );
+    setEditingId(null);
+    setDraft(EMPTY_DRAFT);
+  }
+
+  function reallyDeleteCard(cardId: string) {
     setCards((cs) => cs.filter((c) => c.id !== cardId));
+    setConfirmDeleteCardId(null);
+  }
+
+  function reallyDeleteColumn(columnId: string) {
+    setColumns((cs) => cs.filter((c) => c.id !== columnId));
+    setCards((cs) => cs.filter((c) => c.columnId !== columnId));
+    setConfirmDeleteColId(null);
+  }
+
+  function addColumn() {
+    if (!newColName.trim()) return;
+    setColumns((cs) => [...cs, { id: newId("col"), name: newColName.trim(), color: newColColor }]);
+    setNewColName("");
+    setNewColColor(PRESET_COLORS[0].value);
+    setAddingColumn(false);
+  }
+
+  function cancelAddColumn() {
+    setNewColName("");
+    setNewColColor(PRESET_COLORS[0].value);
+    setAddingColumn(false);
+  }
+
+  // ----- card form (used for both Add and Edit) -----
+  function renderCardForm({ onSave, onCancel, saveLabel }: {
+    onSave: () => void; onCancel: () => void; saveLabel: string;
+  }) {
+    return (
+      <div
+        className="dm-kanban__add-form"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          autoFocus
+          type="text"
+          placeholder="Task Name"
+          value={draft.taskName}
+          onChange={(e) => setDraft({ ...draft, taskName: e.target.value })}
+        />
+        <textarea
+          placeholder="Description"
+          rows={2}
+          value={draft.description}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+        />
+        <input
+          type="text"
+          placeholder="Due date (e.g. Fri Jun 12)"
+          value={draft.dueDate}
+          onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })}
+        />
+        <div className="dm-kanban__add-importance">
+          {(["High", "Medium", "Low"] as KanbanPriority[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`dm-pill dm-pill--${priorityTone(p)} dm-pill--xs ${draft.importance === p ? "is-selected" : ""}`}
+              onClick={() => setDraft({ ...draft, importance: p })}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="dm-kanban__add-actions">
+          <button type="button" className="dm-kanban__add-cancel" onClick={onCancel}>Cancel</button>
+          <button type="button" className="dm-kanban__add-save"   onClick={onSave}>{saveLabel}</button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="dm-card-body">
       <div className="dm-kanban__cols">
-        {COLS.map(({ id: colId }) => {
-          const colCards = cards.filter((c) => c.column === colId);
+        {columns.map((col) => {
+          const colCards = cards.filter((c) => c.columnId === col.id);
           return (
             <div
-              key={colId}
+              key={col.id}
               className="dm-kanban__col"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const id = e.dataTransfer.getData("text/x-kanban-id");
-                if (id) moveTo(id, colId);
+                if (id) moveCardTo(id, col.id);
                 setDraggingId(null);
               }}
             >
               <div className="dm-kanban__colhead">
-                <span className="dm-kanban__coldot" data-col={colId} />
-                <span className="dm-kanban__colname">{colId}</span>
+                <span className="dm-kanban__coldot" style={{ background: col.color }} />
+                <span className="dm-kanban__colname">{col.name}</span>
                 <span className="dm-kanban__colcount">{colCards.length}</span>
+                <button
+                  type="button"
+                  className="dm-kanban__col-x"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteColId(col.id); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  aria-label="Delete column"
+                  title="Delete column"
+                >×</button>
               </div>
 
-              {colCards.map((c) => (
-                <article
-                  key={c.id}
-                  className={`dm-kanban__task ${draggingId === c.id ? "is-dragging" : ""}`}
-                  draggable
-                  onDragStart={(e) => {
-                    e.stopPropagation();
-                    e.dataTransfer.setData("text/x-kanban-id", c.id);
-                    e.dataTransfer.effectAllowed = "move";
-                    setDraggingId(c.id);
-                  }}
-                  onDragEnd={() => setDraggingId(null)}
-                >
-                  <div className="dm-kanban__task-head">
-                    <span className={`dm-pill dm-pill--${priorityTone(c.importance)} dm-pill--xs`}>
-                      {c.importance}
-                    </span>
-                    <button
-                      type="button"
-                      className="dm-kanban__task-x"
-                      onClick={(e) => { e.stopPropagation(); removeCard(c.id); }}
-                      aria-label="Delete card"
-                      title="Delete"
-                    >
-                      ×
-                    </button>
+              {colCards.map((c) =>
+                editingId === c.id ? (
+                  <div key={c.id}>
+                    {renderCardForm({
+                      onSave: () => saveEdit(c.id),
+                      onCancel: () => { setEditingId(null); setDraft(EMPTY_DRAFT); },
+                      saveLabel: "Save",
+                    })}
                   </div>
-                  <div className="dm-kanban__task-title">{c.jobName}</div>
-                  <div className="dm-kanban__task-scope">{c.description}</div>
-                  <div className="dm-kanban__task-foot">
-                    <span>📅 {c.dueDate}</span>
-                  </div>
-                </article>
-              ))}
+                ) : (
+                  <article
+                    key={c.id}
+                    className={`dm-kanban__task ${draggingId === c.id ? "is-dragging" : ""}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      e.dataTransfer.setData("text/x-kanban-id", c.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      setDraggingId(c.id);
+                    }}
+                    onDragEnd={() => setDraggingId(null)}
+                  >
+                    <div className="dm-kanban__task-head">
+                      <span className={`dm-pill dm-pill--${priorityTone(c.importance)} dm-pill--xs`}>
+                        {c.importance}
+                      </span>
+                      <div className="dm-kanban__task-actions">
+                        <button
+                          type="button"
+                          className="dm-kanban__task-edit"
+                          onClick={(e) => { e.stopPropagation(); startEdit(c); }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          aria-label="Edit card"
+                          title="Edit"
+                        >
+                          <PencilGlyph />
+                        </button>
+                        <button
+                          type="button"
+                          className="dm-kanban__task-x"
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteCardId(c.id); }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          aria-label="Delete card"
+                          title="Delete"
+                        >×</button>
+                      </div>
+                    </div>
+                    <div className="dm-kanban__task-title">{c.taskName}</div>
+                    <div className="dm-kanban__task-scope">{c.description}</div>
+                    <div className="dm-kanban__task-foot">
+                      <span>📅 {c.dueDate}</span>
+                    </div>
+                  </article>
+                ),
+              )}
 
-              {/* + Add card */}
-              {draftCol === colId ? (
-                <div
-                  className="dm-kanban__add-form"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Job name"
-                    value={draft.jobName}
-                    onChange={(e) => setDraft({ ...draft, jobName: e.target.value })}
-                  />
-                  <textarea
-                    placeholder="Description"
-                    rows={2}
-                    value={draft.description}
-                    onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Due date (e.g. Fri Jun 12)"
-                    value={draft.dueDate}
-                    onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })}
-                  />
-                  <div className="dm-kanban__add-importance">
-                    {(["High", "Medium", "Low"] as KanbanPriority[]).map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className={`dm-pill dm-pill--${priorityTone(p)} dm-pill--xs ${draft.importance === p ? "is-selected" : ""}`}
-                        onClick={() => setDraft({ ...draft, importance: p })}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="dm-kanban__add-actions">
-                    <button
-                      type="button"
-                      className="dm-kanban__add-cancel"
-                      onClick={() => { setDraftCol(null); setDraft({ jobName: "", description: "", dueDate: "", importance: "Medium" }); }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="dm-kanban__add-save"
-                      onClick={() => addCard(colId)}
-                    >
-                      Add card
-                    </button>
-                  </div>
-                </div>
+              {draftCol === col.id ? (
+                renderCardForm({
+                  onSave: () => addCard(col.id),
+                  onCancel: () => { setDraftCol(null); setDraft(EMPTY_DRAFT); },
+                  saveLabel: "Add card",
+                })
               ) : (
                 <button
                   type="button"
                   className="dm-kanban__add-btn"
-                  onClick={() => { setDraftCol(colId); }}
+                  onClick={() => { setDraftCol(col.id); setEditingId(null); setDraft(EMPTY_DRAFT); }}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   + Add card
@@ -627,7 +757,122 @@ export function KanbanBody() {
             </div>
           );
         })}
+
+        {/* + Add Column / Group */}
+        <div className="dm-kanban__col dm-kanban__col--add">
+          {addingColumn ? (
+            <div
+              className="dm-kanban__add-form"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                autoFocus
+                type="text"
+                placeholder="Column name"
+                value={newColName}
+                onChange={(e) => setNewColName(e.target.value)}
+              />
+              <div className="dm-kanban__col-colors">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c.name}
+                    type="button"
+                    className={`dm-kanban__col-color ${newColColor === c.value ? "is-selected" : ""}`}
+                    style={{ background: c.value }}
+                    onClick={() => setNewColColor(c.value)}
+                    title={c.name}
+                    aria-label={`Use ${c.name} color`}
+                  />
+                ))}
+                <label
+                  className={`dm-kanban__col-color dm-kanban__col-color--custom ${newColColor.startsWith("#") ? "is-selected" : ""}`}
+                  title="Custom color"
+                  style={newColColor.startsWith("#") ? { background: newColColor } : undefined}
+                >
+                  <input
+                    type="color"
+                    value={newColColor.startsWith("#") ? newColColor : "#7388FF"}
+                    onChange={(e) => setNewColColor(e.target.value)}
+                  />
+                  {!newColColor.startsWith("#") && <span>+</span>}
+                </label>
+              </div>
+              <div className="dm-kanban__add-actions">
+                <button type="button" className="dm-kanban__add-cancel" onClick={cancelAddColumn}>Cancel</button>
+                <button type="button" className="dm-kanban__add-save"   onClick={addColumn}>Add column</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="dm-kanban__col-add-btn"
+              onClick={() => setAddingColumn(true)}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              + Add Column / Group
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Delete-card confirmation */}
+      {confirmDeleteCardId && (
+        <div
+          className="dm-kanban__confirm-backdrop"
+          onClick={() => setConfirmDeleteCardId(null)}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div
+            className="dm-kanban__confirm"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h4 className="dm-kanban__confirm-title">Delete this card?</h4>
+            <p className="dm-kanban__confirm-body">
+              This card will be permanently removed from the board.
+            </p>
+            <div className="dm-kanban__confirm-actions">
+              <button type="button" className="dm-kanban__add-cancel"
+                onClick={() => setConfirmDeleteCardId(null)}>Cancel</button>
+              <button type="button" className="dm-kanban__confirm-delete"
+                onClick={() => reallyDeleteCard(confirmDeleteCardId)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete-column confirmation */}
+      {confirmDeleteColId && (
+        <div
+          className="dm-kanban__confirm-backdrop"
+          onClick={() => setConfirmDeleteColId(null)}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div
+            className="dm-kanban__confirm"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h4 className="dm-kanban__confirm-title">Delete this column?</h4>
+            <p className="dm-kanban__confirm-body">
+              The column and every card inside it will be permanently removed
+              ({cards.filter((c) => c.columnId === confirmDeleteColId).length} card
+              {cards.filter((c) => c.columnId === confirmDeleteColId).length === 1 ? "" : "s"}).
+            </p>
+            <div className="dm-kanban__confirm-actions">
+              <button type="button" className="dm-kanban__add-cancel"
+                onClick={() => setConfirmDeleteColId(null)}>Cancel</button>
+              <button type="button" className="dm-kanban__confirm-delete"
+                onClick={() => reallyDeleteColumn(confirmDeleteColId)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -176,7 +176,7 @@ function buildCatalog(_role: Role): CardDef[] {
   return [
     { id: "donut",   title: "Production Department Workloads", category: "Chart", default: { w: 6, h: 6 }, min: { w: 4, h: 4 } },
     { id: "targets", title: "Upcoming Target Dates",            category: "List",  default: { w: 6, h: 6 }, min: { w: 4, h: 4 } },
-    { id: "kanban",  title: "Production Board (Kanban)",        category: "Board", default: { w: 12, h: 8 }, min: { w: 6, h: 6 } },
+    { id: "kanban",  title: "Task Board (Kanban)",              category: "Board", default: { w: 12, h: 8 }, min: { w: 6, h: 6 } },
   ];
 }
 
@@ -226,7 +226,7 @@ function CardContent({ id }: { id: string }) {
 function cardTitleFor(id: string): string {
   if (id === "donut")   return "Production Department Workloads";
   if (id === "targets") return "Upcoming Target Dates";
-  if (id === "kanban")  return "Production Board";
+  if (id === "kanban")  return "Task Board";
   return id;
 }
 
