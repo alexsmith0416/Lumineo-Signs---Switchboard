@@ -10,13 +10,17 @@
   "scripts": {
     "extract:estimating": "python scripts/extract-workbook.py",
     "build:estimating": "npm run build --workspace apps/estimating",
-    "dev:estimating": "npm run dev --workspace apps/estimating",
+    "dev:estimating": "npm run dev --workspace apps/estimating -- --port 4802 --strictPort",
     "test:estimating": "npm test --workspace apps/estimating",
     "build:sign-builder": "npm run build --workspace apps/sign-builder",
-    "dev:sign-builder": "npm run dev --workspace apps/sign-builder",
+    "dev:sign-builder": "npm run dev --workspace apps/sign-builder -- --port 4801 --strictPort",
     "test:sign-builder": "npm test --workspace apps/sign-builder",
+    "dev": "concurrently -k -n estimating,sign-builder -c blue,magenta \"npm:dev:estimating\" \"npm:dev:sign-builder\"",
     "build": "npm run build:estimating && npm run build:sign-builder",
     "test": "npm run test:estimating && npm run test:sign-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   },
   "engines": {
     "node": ">=20"
