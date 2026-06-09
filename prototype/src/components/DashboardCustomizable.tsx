@@ -141,13 +141,13 @@ const SIDEBAR_MAIN: { key: IconName; label: string; active?: boolean }[] = [
   { key: "sched", label: "My Schedule" },
   { key: "inbox", label: "Inbox" },
 ];
-const SIDEBAR_APPS: { key: IconName; label: string }[] = [
-  { key: "ps", label: "Project Scheduler" },
-  { key: "ws", label: "Weekly Scheduler" },
-  { key: "sb", label: "Sign Builder Pro" },
-  { key: "jp", label: "Job Punches" },
-  { key: "es", label: "Estimating" },
-  { key: "sh", label: "Sales Hub" },
+const SIDEBAR_APPS: { key: IconName; label: string; url: string }[] = [
+  { key: "ps", label: "Project Scheduler", url: "https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/a/4ed31b48-ef55-4425-a993-5bbe3dc439e2?hideNavBar=true" },
+  { key: "ws", label: "Weekly Scheduler",  url: "file:///C:/Users/Alex/Downloads/lumineoschedulinghub.html" },
+  { key: "sb", label: "Sign Builder Pro",  url: "https://lumineo-signbuilderpro.vercel.app/" },
+  { key: "jp", label: "Job Punches",       url: "prototypes/time-and-photo.html" },
+  { key: "es", label: "Estimating",        url: "https://lumineo-estimating.vercel.app/" },
+  { key: "sh", label: "Sales Hub",         url: "prototypes/sales-hub-mockup.html" },
 ];
 const SIDEBAR_OTHER: { key: IconName; label: string }[] = [
   { key: "set",  label: "Settings" },
@@ -375,7 +375,12 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
         <ul className="dm-sidebar__list">
           {SIDEBAR_APPS.map((it) => (
             <li key={it.key}>
-              <button className="dm-sidebar__item">
+              <button
+                type="button"
+                className="dm-sidebar__item"
+                onClick={() => window.open(it.url, "_blank", "noopener,noreferrer")}
+                title={`Open ${it.label}`}
+              >
                 <span className="dm-sidebar__icon"><Icon name={it.key} /></span>
                 <span className="dm-sidebar__label">{it.label}</span>
               </button>
