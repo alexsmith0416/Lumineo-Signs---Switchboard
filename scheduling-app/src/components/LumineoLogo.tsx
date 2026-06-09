@@ -8,7 +8,7 @@ interface LumineoLogoProps extends Omit<SVGProps<SVGSVGElement>, "title"> {
 
 export default function LumineoLogo({
   size = 32,
-  color = "#E8151B",
+  color = "#EE0800",
   title = "Lumineo Signs",
   className,
   ...rest
@@ -16,7 +16,7 @@ export default function LumineoLogo({
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 732 732"
+      viewBox="0 0 15.27 15.27"
       width={size}
       height={size}
       role="img"
@@ -26,10 +26,11 @@ export default function LumineoLogo({
     >
       <title>{title}</title>
       <path
-        d="M0,0 L732,0 L732,732 L0,732 Z M162,561 L735.9,455.1 L735.8,378.5 Z M162,561 L735.5,285.8 L735.2,189.3 Z M162,561 L734.8,64.7 L734.6,-3.5 Z M162,561 L734.6,-3.5 L737,-5 L666.3,-3.7 Z M162,561 L541.8,-4.1 L445.2,-4.5 Z M162,561 L352.6,-4.7 L276,-4.9 Z"
+        d="M15.27 6.03l-11.94 5.91 11.94 -4.03 0 -1.87zm0 -4.59l-11.94 10.5 11.94 -7.95 0 -2.55zm-11.94 10.5l2.39 -11.94 -5.72 0 0 15.27 15.27 0 0 -5.72 -11.94 2.39zm4.03 -11.94l-4.03 11.94 5.91 -11.94 -1.87 0zm6.46 0l-10.5 11.94 7.95 -11.94 2.55 0z"
         fill={color}
-        fillRule="evenodd"
+        fillRule="nonzero"
       />
     </svg>
   );
 }
+

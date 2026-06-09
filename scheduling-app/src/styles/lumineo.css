@@ -561,11 +561,24 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   background: var(--bg-page);
+  padding: 18px 28px 28px;
+}
+
+@media (max-width: 900px) {
+  .app-content {
+    padding: 12px 16px 16px;
+  }
 }
 
 .app-content > * {
   flex: 1;
   min-height: 0;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ============ Nav drawer (hamburger menu) ============ */

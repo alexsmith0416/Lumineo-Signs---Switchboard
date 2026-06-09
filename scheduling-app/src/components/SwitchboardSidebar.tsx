@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LumineoLogo from "./LumineoLogo";
 
 // Switchboard's full app catalog. Project Scheduler is the active one
 // since this prototype IS that app; the rest are stubs in the shell.
@@ -44,7 +45,9 @@ export default function SwitchboardSidebar() {
   return (
     <aside className="switchboard-sidebar" aria-label="Switchboard navigation">
       <div className="sb-brand">
-        <div className="sb-brand__logo">L</div>
+        <div className="sb-brand__logo">
+          <LumineoLogo size={32} color="#ffffff" />
+        </div>
         <div className="sb-brand__text">
           <span className="sb-brand__name">LUMINEO SIGNS</span>
           <span className="sb-brand__sub">SWITCHBOARD</span>
