@@ -4404,59 +4404,93 @@ button {
   pointer-events: none;
 }
 
-/* Confirm modal — full-screen overlay over the dashboard */
-.dm-kanban__confirm-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 10, 25, 0.55);
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+/* Inline confirm popover — small bubble next to the × button (replaces
+   the old full-screen modal). Anchored via a .dm-kanban__x-wrap
+   wrapper that's position:relative around the button. */
+.dm-kanban__x-wrap {
+  position: relative;
+  display: inline-flex;
 }
 
-.dm-kanban__confirm {
+.dm-kanban__confirm-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 180px;
   background: var(--dm-card);
   border: 1px solid var(--dm-border);
-  border-radius: 14px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
-  padding: 20px 22px 18px;
-  max-width: 380px;
-  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
+  z-index: 30;
   color: var(--dm-text);
 }
 
-.dm-kanban__confirm-title {
-  margin: 0 0 6px;
-  font-size: 16px;
-  font-weight: 800;
+.dm-kanban__confirm-pop-arrow {
+  position: absolute;
+  top: -5px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  background: var(--dm-card);
+  border-top: 1px solid var(--dm-border);
+  border-left: 1px solid var(--dm-border);
+  transform: rotate(45deg);
+}
+
+.dm-kanban__confirm-pop-msg {
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--dm-text);
+  line-height: 1.35;
+  margin-bottom: 8px;
 }
 
-.dm-kanban__confirm-body {
-  margin: 0 0 16px;
-  font-size: 12.5px;
-  color: var(--dm-text-mid);
-  line-height: 1.5;
-}
-
-.dm-kanban__confirm-actions {
+.dm-kanban__confirm-pop-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
-.dm-kanban__confirm-delete {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 7px 14px;
-  border-radius: 8px;
+.dm-kanban__confirm-pop-no,
+.dm-kanban__confirm-pop-yes {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
   border: 0;
   cursor: pointer;
-  background: var(--dm-red);
-  color: white;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, background 0.12s ease;
 }
 
-.dm-kanban__confirm-delete:hover { opacity: 0.9; }
+.dm-kanban__confirm-pop-no {
+  background: var(--dm-card-inner);
+  color: var(--dm-text-mid);
+  border: 1px solid var(--dm-border);
+}
+
+.dm-kanban__confirm-pop-no:hover { background: var(--dm-border-soft); }
+
+.dm-kanban__confirm-pop-yes {
+  background: var(--dm-red);
+  color: white;
+}
+
+.dm-kanban__confirm-pop-yes:hover { opacity: 0.9; }
+
+/* Date input — native picker, brand-matched chrome */
+.dm-kanban__add-date {
+  font-family: inherit;
+  color: var(--dm-text);
+  background: var(--dm-card-inner);
+}
+
+.dm-kanban__add-date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  filter: var(--dm-date-icon-filter, none);
+}
+
+.dm-root[data-theme="dark"] {
+  --dm-date-icon-filter: invert(0.85);
+}

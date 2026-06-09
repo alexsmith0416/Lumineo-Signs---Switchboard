@@ -473,6 +473,33 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
 }
 
+/** Render either an ISO YYYY-MM-DD or a legacy free-text due-date string
+ *  as a short friendly form (e.g. "Fri Jun 12"). Falls back to the raw
+ *  string when it isn't an ISO date, and to "TBD" when empty. */
+function formatDueDate(s: string): string {
+  if (!s) return "TBD";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(s + "T00:00:00");
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    }
+  }
+  return s;
+}
+
+/** Coerce an existing card's saved due-date back into a value the native
+ *  <input type="date"> can use. ISO passes through; anything else becomes
+ *  an empty string so the picker shows its placeholder. */
+function dueDateForInput(s: string): string {
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return "";
+}
+
 function PencilGlyph() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -525,6 +552,18 @@ export function KanbanBody() {
   const [newColName, setNewColName]         = useState("");
   const [newColColor, setNewColColor]       = useState<string>(PRESET_COLORS[0].value);
 
+  // Outside-click dismisses any open confirm popover. The popover stops
+  // mousedown from bubbling, so clicks *inside* it never fire this.
+  useEffect(() => {
+    if (!confirmDeleteCardId && !confirmDeleteColId) return;
+    function onDown() {
+      setConfirmDeleteCardId(null);
+      setConfirmDeleteColId(null);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [confirmDeleteCardId, confirmDeleteColId]);
+
   function moveCardTo(cardId: string, columnId: string) {
     setCards((cs) => cs.map((c) => (c.id === cardId ? { ...c, columnId } : c)));
   }
@@ -552,7 +591,7 @@ export function KanbanBody() {
     setDraft({
       taskName: card.taskName,
       description: card.description === "—" ? "" : card.description,
-      dueDate: card.dueDate === "TBD" ? "" : card.dueDate,
+      dueDate: dueDateForInput(card.dueDate),
       importance: card.importance,
     });
   }
@@ -625,8 +664,9 @@ export function KanbanBody() {
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
         />
         <input
-          type="text"
-          placeholder="Due date (e.g. Fri Jun 12)"
+          type="date"
+          className="dm-kanban__add-date"
+          placeholder="Due date"
           value={draft.dueDate}
           onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })}
         />
@@ -672,14 +712,47 @@ export function KanbanBody() {
                 <span className="dm-kanban__coldot" style={{ background: col.color }} />
                 <span className="dm-kanban__colname">{col.name}</span>
                 <span className="dm-kanban__colcount">{colCards.length}</span>
-                <button
-                  type="button"
-                  className="dm-kanban__col-x"
-                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteColId(col.id); }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  aria-label="Delete column"
-                  title="Delete column"
-                >×</button>
+                <span className="dm-kanban__x-wrap">
+                  <button
+                    type="button"
+                    className="dm-kanban__col-x"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDeleteColId(
+                        confirmDeleteColId === col.id ? null : col.id,
+                      );
+                      setConfirmDeleteCardId(null);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label="Delete column"
+                    title="Delete column"
+                  >×</button>
+                  {confirmDeleteColId === col.id && (
+                    <div
+                      className="dm-kanban__confirm-pop"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      role="dialog"
+                    >
+                      <div className="dm-kanban__confirm-pop-arrow" />
+                      <div className="dm-kanban__confirm-pop-msg">
+                        Delete this column and {colCards.length} card{colCards.length === 1 ? "" : "s"}?
+                      </div>
+                      <div className="dm-kanban__confirm-pop-actions">
+                        <button
+                          type="button"
+                          className="dm-kanban__confirm-pop-no"
+                          onClick={() => setConfirmDeleteColId(null)}
+                        >Cancel</button>
+                        <button
+                          type="button"
+                          className="dm-kanban__confirm-pop-yes"
+                          onClick={() => reallyDeleteColumn(col.id)}
+                        >Delete</button>
+                      </div>
+                    </div>
+                  )}
+                </span>
               </div>
 
               {colCards.map((c) =>
@@ -719,20 +792,53 @@ export function KanbanBody() {
                         >
                           <PencilGlyph />
                         </button>
-                        <button
-                          type="button"
-                          className="dm-kanban__task-x"
-                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteCardId(c.id); }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          aria-label="Delete card"
-                          title="Delete"
-                        >×</button>
+                        <span className="dm-kanban__x-wrap">
+                          <button
+                            type="button"
+                            className="dm-kanban__task-x"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteCardId(
+                                confirmDeleteCardId === c.id ? null : c.id,
+                              );
+                              setConfirmDeleteColId(null);
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            aria-label="Delete card"
+                            title="Delete"
+                          >×</button>
+                          {confirmDeleteCardId === c.id && (
+                            <div
+                              className="dm-kanban__confirm-pop"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                              role="dialog"
+                            >
+                              <div className="dm-kanban__confirm-pop-arrow" />
+                              <div className="dm-kanban__confirm-pop-msg">
+                                Delete this card?
+                              </div>
+                              <div className="dm-kanban__confirm-pop-actions">
+                                <button
+                                  type="button"
+                                  className="dm-kanban__confirm-pop-no"
+                                  onClick={() => setConfirmDeleteCardId(null)}
+                                >Cancel</button>
+                                <button
+                                  type="button"
+                                  className="dm-kanban__confirm-pop-yes"
+                                  onClick={() => reallyDeleteCard(c.id)}
+                                >Delete</button>
+                              </div>
+                            </div>
+                          )}
+                        </span>
                       </div>
                     </div>
                     <div className="dm-kanban__task-title">{c.taskName}</div>
                     <div className="dm-kanban__task-scope">{c.description}</div>
                     <div className="dm-kanban__task-foot">
-                      <span>📅 {c.dueDate}</span>
+                      <span>📅 {formatDueDate(c.dueDate)}</span>
                     </div>
                   </article>
                 ),
@@ -815,64 +921,6 @@ export function KanbanBody() {
           )}
         </div>
       </div>
-
-      {/* Delete-card confirmation */}
-      {confirmDeleteCardId && (
-        <div
-          className="dm-kanban__confirm-backdrop"
-          onClick={() => setConfirmDeleteCardId(null)}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div
-            className="dm-kanban__confirm"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <h4 className="dm-kanban__confirm-title">Delete this card?</h4>
-            <p className="dm-kanban__confirm-body">
-              This card will be permanently removed from the board.
-            </p>
-            <div className="dm-kanban__confirm-actions">
-              <button type="button" className="dm-kanban__add-cancel"
-                onClick={() => setConfirmDeleteCardId(null)}>Cancel</button>
-              <button type="button" className="dm-kanban__confirm-delete"
-                onClick={() => reallyDeleteCard(confirmDeleteCardId)}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete-column confirmation */}
-      {confirmDeleteColId && (
-        <div
-          className="dm-kanban__confirm-backdrop"
-          onClick={() => setConfirmDeleteColId(null)}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div
-            className="dm-kanban__confirm"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <h4 className="dm-kanban__confirm-title">Delete this column?</h4>
-            <p className="dm-kanban__confirm-body">
-              The column and every card inside it will be permanently removed
-              ({cards.filter((c) => c.columnId === confirmDeleteColId).length} card
-              {cards.filter((c) => c.columnId === confirmDeleteColId).length === 1 ? "" : "s"}).
-            </p>
-            <div className="dm-kanban__confirm-actions">
-              <button type="button" className="dm-kanban__add-cancel"
-                onClick={() => setConfirmDeleteColId(null)}>Cancel</button>
-              <button type="button" className="dm-kanban__confirm-delete"
-                onClick={() => reallyDeleteColumn(confirmDeleteColId)}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
