@@ -145,9 +145,9 @@ const SIDEBAR_APPS: { key: IconName; label: string; url: string }[] = [
   { key: "ps", label: "Project Scheduler", url: "https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/a/4ed31b48-ef55-4425-a993-5bbe3dc439e2?hideNavBar=true" },
   { key: "ws", label: "Weekly Scheduler",  url: "file:///C:/Users/Alex/Downloads/lumineoschedulinghub.html" },
   { key: "sb", label: "Sign Builder Pro",  url: "https://lumineo-signbuilderpro.vercel.app/" },
-  { key: "jp", label: "Job Punches",       url: "prototypes/time-and-photo.html" },
+  { key: "jp", label: "Job Punches",       url: "file:///C:/Users/Alex/OneDrive%20-%20Luminous%20Neon,%20Inc/Documents/Alex%20Smith%20-%20Lumineo%20Files/Lumineo%20Signs%20Switchboard/Prototypes/Updated/time%20&%20photo%20prototype.html" },
   { key: "es", label: "Estimating",        url: "https://lumineo-estimating.vercel.app/" },
-  { key: "sh", label: "Sales Hub",         url: "prototypes/sales-hub-mockup.html" },
+  { key: "sh", label: "Sales Hub",         url: "file:///C:/Users/Alex/OneDrive%20-%20Luminous%20Neon,%20Inc/Documents/Alex%20Smith%20-%20Lumineo%20Files/Lumineo%20Signs%20Switchboard/Prototypes/Updated/sales-hub-mockup.html" },
 ];
 const SIDEBAR_OTHER: { key: IconName; label: string }[] = [
   { key: "set",  label: "Settings" },
