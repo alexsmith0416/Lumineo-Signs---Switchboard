@@ -2130,7 +2130,7 @@ button {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ---------- Sidebar (indigo in light, deep-navy in dark) ---------- */
+/* ---------- Sidebar (Figma 1:1 — indigo light, deep navy dark) ---------- */
 .dm-sidebar {
   background: var(--dm-bg-pane);
   padding: 18px 14px 24px;
@@ -2139,33 +2139,43 @@ button {
   gap: 4px;
   min-height: 100vh;
   color: #ffffff;
-}
-.dm-root[data-theme="dark"] .dm-sidebar {
-  border-right: 1px solid var(--dm-border-soft);
+  width: 248px;
+  flex-shrink: 0;
 }
 
+/* Brand block: 56px tall with logo on left + 2-line wordmark.
+   Bottom border uses border-soft per theme to match the Figma divider. */
 .dm-sidebar__brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 8px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 4px 8px 0;
+  height: 56px;
+  border-bottom: 1px solid var(--dm-border-soft);
   margin-bottom: 8px;
 }
 
 .dm-sidebar__logo {
   width: 36px;
   height: 36px;
-  border-radius: 6px;
-  overflow: hidden;
-  background: transparent;
+  flex-shrink: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dm-sidebar__logo svg { display: block; }
+
+.dm-sidebar__brandtext {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  gap: 2px;
 }
 
 .dm-sidebar__brandname {
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.5px;
   color: #ffffff;
 }
 
@@ -2173,17 +2183,21 @@ button {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 1.6px;
-  color: rgba(255, 255, 255, 0.55);
-  margin-top: 1px;
+  color: var(--dm-text-dim);
 }
 
+/* Section caption: brand-soft in light (reads as muted lavender on indigo),
+   text-dim in dark. */
 .dm-sidebar__section {
-  margin: 14px 10px 4px;
+  margin: 12px 10px 4px;
   font-size: 9px;
   font-weight: 800;
-  color: rgba(232, 234, 245, 0.65);
+  color: var(--dm-navy-mid);
   letter-spacing: 1.4px;
   text-transform: uppercase;
+}
+.dm-root[data-theme="dark"] .dm-sidebar__section {
+  color: var(--dm-text-dim);
 }
 
 .dm-sidebar__list {
@@ -2195,6 +2209,8 @@ button {
   gap: 2px;
 }
 
+/* Nav item: label is text-on-accent (white), icon inherits its own color
+   via the .dm-sidebar__icon rule below so the two can move independently. */
 .dm-sidebar__item {
   display: flex;
   align-items: center;
@@ -2204,7 +2220,7 @@ button {
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.86);
+  color: #ffffff;
   background: transparent;
   border: 0;
   text-align: left;
@@ -2214,32 +2230,39 @@ button {
 
 .dm-sidebar__item:hover {
   background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
 }
 
-/* Active item = white tab pulled out of indigo sidebar — left flush with edge */
+/* Active item = bg-page colored "tab" with rounded LEFT corners that
+   bleeds off the right edge of the sidebar (Figma path). */
 .dm-sidebar__item.is-active {
   background: var(--dm-bg);
   color: var(--dm-navy);
-  margin-left: -14px;
-  padding-left: 24px;
-  border-radius: 0 8px 8px 0;
+  margin-right: -14px;
+  border-radius: 8px 0 0 8px;
   font-weight: 700;
 }
-
-.dm-root[data-theme="dark"] .dm-sidebar__item.is-active {
-  background: var(--dm-card);
-  color: var(--dm-navy);
+.dm-sidebar__item.is-active:hover {
+  background: var(--dm-bg);
 }
 
+/* Icon coloring per Figma:
+   - LIGHT inactive: accent-brand-soft (#E8EAF5) — appears muted on indigo
+   - DARK  inactive: accent-brand (#7388FF)
+   - Active in both: accent-brand */
 .dm-sidebar__icon {
   width: 20px;
   height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: currentColor;
+  color: var(--dm-navy-mid);
   flex-shrink: 0;
+}
+.dm-root[data-theme="dark"] .dm-sidebar__icon {
+  color: var(--dm-navy);
+}
+.dm-sidebar__item.is-active .dm-sidebar__icon {
+  color: var(--dm-navy);
 }
 .dm-sidebar__icon svg {
   width: 20px;
@@ -2251,24 +2274,47 @@ button {
   flex: 1;
 }
 
-.dm-sidebar__badge {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 1px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.3px;
-}
-
-.dm-sidebar__item.is-active .dm-sidebar__badge {
-  background: var(--dm-navy-mid);
-  color: var(--dm-navy);
-}
-
-/* Theme pill — same nav-item chrome but with a hover glow */
+/* Theme toggle pill — small pill button (73×29) sitting in OTHER section.
+   LIGHT: surface-raised bg + border-default border, indigo content.
+   DARK : toggle-active bg + border-default border, white content. */
 .dm-sidebar__theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 73px;
+  height: 29px;
+  margin: 4px 0 6px 5px;
+  border-radius: 999px;
+  background: var(--dm-card);
+  border: 1px solid var(--dm-border);
+  color: var(--dm-navy);
+  font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
+  padding: 0 12px 0 10px;
+  transition: opacity 0.12s ease;
+}
+.dm-sidebar__theme:hover { opacity: 0.9; }
+
+.dm-root[data-theme="dark"] .dm-sidebar__theme {
+  background: var(--dm-toggle-active);
+  border-color: var(--dm-border);
+  color: var(--dm-toggle-active-text);
+}
+
+.dm-sidebar__theme-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+}
+.dm-sidebar__theme-icon svg { display: block; }
+
+.dm-sidebar__theme-label {
+  letter-spacing: 0.2px;
 }
 
 /* ---------- Main column ---------- */
