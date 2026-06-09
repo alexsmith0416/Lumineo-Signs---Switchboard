@@ -22,23 +22,171 @@ interface Props {
 
 type Theme = "light" | "dark";
 
-const SIDEBAR_MAIN = [
-  { key: "dash",  icon: "▦", label: "Dashboard", active: true },
-  { key: "sched", icon: "▤", label: "My Schedule" },
-  { key: "inbox", icon: "✉", label: "Inbox", badge: 4 },
-  { key: "cal",   icon: "▢", label: "Calendar" },
+/* ---------- Icon set (20px stroke, currentColor) — DESIGN.md §7 ---------- */
+type IconName =
+  | "dash" | "sched" | "inbox" | "cal"
+  | "ps" | "ws" | "sb" | "tp" | "es" | "sh"
+  | "set" | "help" | "moon" | "sun" | "pencil";
+
+function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
+  const p: React.SVGProps<SVGSVGElement> = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+    focusable: false,
+  };
+  switch (name) {
+    case "dash": // 2×2 grid
+      return (
+        <svg {...p}>
+          <rect x="3.5"  y="3.5"  width="7" height="7" rx="1.5" />
+          <rect x="13.5" y="3.5"  width="7" height="7" rx="1.5" />
+          <rect x="3.5"  y="13.5" width="7" height="7" rx="1.5" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+        </svg>
+      );
+    case "sched": // checklist
+      return (
+        <svg {...p}>
+          <path d="M7 6h12" /><path d="M7 12h12" /><path d="M7 18h12" />
+          <path d="M3 5.5l1.2 1.2L6 4.6" />
+          <path d="M3 11.5l1.2 1.2L6 10.6" />
+          <path d="M3 17.5l1.2 1.2L6 16.6" />
+        </svg>
+      );
+    case "inbox": // envelope
+      return (
+        <svg {...p}>
+          <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+          <path d="M3.5 7l8 5.8a1 1 0 0 0 1.2 0L20.5 7" />
+        </svg>
+      );
+    case "cal":
+      return (
+        <svg {...p}>
+          <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+          <path d="M3.5 10h17" />
+          <path d="M8 3v4" /><path d="M16 3v4" />
+        </svg>
+      );
+    case "ps": // bar chart
+      return (
+        <svg {...p}>
+          <path d="M4 20V10" />
+          <path d="M10 20V4" />
+          <path d="M16 20v-8" />
+          <path d="M22 20H2" />
+        </svg>
+      );
+    case "ws": // weekly calendar w/ dots
+      return (
+        <svg {...p}>
+          <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+          <path d="M3.5 10h17" />
+          <circle cx="8" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="16" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "sb": // pencil + ruler
+      return (
+        <svg {...p}>
+          <path d="M14.4 4.6l5 5L9.2 19.8l-5.4 1.2 1.2-5.4Z" />
+          <path d="M12.6 6.4l5 5" />
+        </svg>
+      );
+    case "tp": // clock w/ camera lens
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      );
+    case "es": // calculator
+      return (
+        <svg {...p}>
+          <rect x="5" y="3" width="14" height="18" rx="2.5" />
+          <rect x="7.5" y="5.5" width="9" height="3.5" rx="0.8" />
+          <circle cx="9"  cy="13" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="13" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="13" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="9"  cy="17" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="17" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "sh": // dollar in circle
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M14.5 9.2c-.6-.7-1.6-1.1-2.6-1.1-1.7 0-2.7.9-2.7 2 0 2.6 5.6 1.6 5.6 4.2 0 1.2-1.1 2.1-2.9 2.1-1.2 0-2.4-.4-3.1-1.2" />
+          <path d="M12 6v12" />
+        </svg>
+      );
+    case "set": // gear
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 14.5a1.5 1.5 0 0 0 .3 1.7l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4V20a2 2 0 1 1-4 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1A2 2 0 1 1 4.7 16.2l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9H3.5a2 2 0 1 1 0-4h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1A2 2 0 1 1 7.5 4.7l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4V3.5a2 2 0 1 1 4 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.2a2 2 0 1 1 0 4h-.1a1.5 1.5 0 0 0-1.4.9Z" />
+        </svg>
+      );
+    case "help":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.3c-.7.4-1.1 1-1.1 1.7v.5" />
+          <circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "moon":
+      return (
+        <svg {...p}>
+          <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+        </svg>
+      );
+    case "sun":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" /><path d="M12 20v2" />
+          <path d="M4.9 4.9l1.4 1.4" /><path d="M17.7 17.7l1.4 1.4" />
+          <path d="M2 12h2" /><path d="M20 12h2" />
+          <path d="M4.9 19.1l1.4-1.4" /><path d="M17.7 6.3l1.4-1.4" />
+        </svg>
+      );
+    case "pencil":
+      return (
+        <svg {...p}>
+          <path d="M14.4 4.6l5 5L9.2 19.8l-5.4 1.2 1.2-5.4Z" />
+          <path d="M12.6 6.4l5 5" />
+        </svg>
+      );
+  }
+}
+
+const SIDEBAR_MAIN: { key: IconName; label: string; active?: boolean; badge?: number }[] = [
+  { key: "dash",  label: "Dashboard", active: true },
+  { key: "sched", label: "My Schedule" },
+  { key: "inbox", label: "Inbox", badge: 4 },
+  { key: "cal",   label: "Calendar" },
 ];
-const SIDEBAR_APPS = [
-  { key: "ps", icon: "📊", label: "Project Scheduler", badge: 17 },
-  { key: "ws", icon: "🗓️", label: "Weekly Scheduler",  badge: 23 },
-  { key: "sb", icon: "✏️", label: "Sign Builder Pro" },
-  { key: "tp", icon: "📷", label: "Time & Photo" },
-  { key: "es", icon: "🧮", label: "Estimating",         badge: 6 },
-  { key: "sh", icon: "💰", label: "Sales Hub",          badge: 11 },
+const SIDEBAR_APPS: { key: IconName; label: string; badge?: number }[] = [
+  { key: "ps", label: "Project Scheduler", badge: 17 },
+  { key: "ws", label: "Weekly Scheduler",  badge: 23 },
+  { key: "sb", label: "Sign Builder Pro" },
+  { key: "tp", label: "Time & Photo" },
+  { key: "es", label: "Estimating",         badge: 6 },
+  { key: "sh", label: "Sales Hub",          badge: 11 },
 ];
-const SIDEBAR_OTHER = [
-  { key: "set",  icon: "⚙", label: "Settings" },
-  { key: "help", icon: "❓", label: "Help" },
+const SIDEBAR_OTHER: { key: IconName; label: string }[] = [
+  { key: "set",  label: "Settings" },
+  { key: "help", label: "Help" },
 ];
 
 /* ---------- Card catalog ---------- */
@@ -258,7 +406,7 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
           {SIDEBAR_MAIN.map((it) => (
             <li key={it.key}>
               <button className={`dm-sidebar__item ${it.active ? "is-active" : ""}`}>
-                <span className="dm-sidebar__icon">{it.icon}</span>
+                <span className="dm-sidebar__icon"><Icon name={it.key} /></span>
                 <span className="dm-sidebar__label">{it.label}</span>
                 {it.badge && <span className="dm-sidebar__badge">{it.badge}</span>}
               </button>
@@ -271,7 +419,7 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
           {SIDEBAR_APPS.map((it) => (
             <li key={it.key}>
               <button className="dm-sidebar__item">
-                <span className="dm-sidebar__icon">{it.icon}</span>
+                <span className="dm-sidebar__icon"><Icon name={it.key} /></span>
                 <span className="dm-sidebar__label">{it.label}</span>
                 {it.badge && <span className="dm-sidebar__badge">{it.badge}</span>}
               </button>
@@ -288,14 +436,16 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
             >
-              <span className="dm-sidebar__icon">{theme === "light" ? "🌙" : "☀️"}</span>
+              <span className="dm-sidebar__icon">
+                <Icon name={theme === "light" ? "moon" : "sun"} />
+              </span>
               <span className="dm-sidebar__label">{theme === "light" ? "Dark" : "Light"}</span>
             </button>
           </li>
           {SIDEBAR_OTHER.map((it) => (
             <li key={it.key}>
               <button className="dm-sidebar__item">
-                <span className="dm-sidebar__icon">{it.icon}</span>
+                <span className="dm-sidebar__icon"><Icon name={it.key} /></span>
                 <span className="dm-sidebar__label">{it.label}</span>
               </button>
             </li>
@@ -342,10 +492,11 @@ export default function DashboardCustomizable({ role, onBack }: Props) {
             ) : (
               <button
                 type="button"
-                className="dm-edit-btn"
+                className="dm-edit-btn dm-edit-btn--icon"
                 onClick={() => setEditMode(true)}
               >
-                ✎ Edit dashboard
+                <Icon name="pencil" size={14} />
+                <span>Edit dashboard</span>
               </button>
             )}
             {onBack && (

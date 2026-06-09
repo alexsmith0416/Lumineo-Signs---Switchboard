@@ -4,15 +4,17 @@ import { kpisByRole, safetyMetric } from "../data/mockData";
 
 /* ============ Shared dashboard data ============ */
 
-/** Source: Built To Shine newsletter, week of June 8, 2026. */
+/** Source: Built To Shine newsletter, week of June 8, 2026.
+ *  Series colors follow the DESIGN.md chart palette order:
+ *  green → indigo → blue → purple → pink → red → amber. */
 export const DEPT_WORKLOAD = [
   { name: "Vinyl Cut / Apply", count: 19, pct: 28.4, delta: -17, color: "green" },
-  { name: "Assembly",          count: 15, pct: 22.4, delta:  -1, color: "red" },
+  { name: "Assembly",          count: 15, pct: 22.4, delta:  -1, color: "indigo" },
   { name: "Paint",             count: 11, pct: 16.4, delta:  +6, color: "blue" },
-  { name: "Routing",           count: 10, pct: 14.9, delta:  +3, color: "amber" },
+  { name: "Routing",           count: 10, pct: 14.9, delta:  +3, color: "purple" },
   { name: "Vinyl Install",     count:  5, pct:  7.5, delta:  +1, color: "pink" },
-  { name: "Metal Fab",         count:  4, pct:  6.0, delta:  -4, color: "navy" },
-  { name: "Material Cut",      count:  3, pct:  4.5, delta:  -1, color: "violet" },
+  { name: "Metal Fab",         count:  4, pct:  6.0, delta:  -4, color: "red" },
+  { name: "Material Cut",      count:  3, pct:  4.5, delta:  -1, color: "amber" },
 ] as const;
 export const TOTAL_PROJECTS = DEPT_WORKLOAD.reduce((s, d) => s + d.count, 0);
 
@@ -318,7 +320,7 @@ export function DonutBody({ stackLegend = false }: { stackLegend?: boolean } = {
                 key={d.name}
                 cx="100" cy="100" r="70"
                 fill="none"
-                stroke={`var(--dm-swatch-${d.color})`}
+                stroke={`var(--chart-${d.color})`}
                 strokeWidth="28"
                 strokeDasharray={`${dash} ${C - dash}`}
                 strokeDashoffset={offset}
@@ -335,7 +337,7 @@ export function DonutBody({ stackLegend = false }: { stackLegend?: boolean } = {
             const deltaTxt = d.delta > 0 ? `+${d.delta}` : `${d.delta}`;
             return (
               <li key={d.name} className="dm-donut__row">
-                <span className="dm-donut__swatch" style={{ background: `var(--dm-swatch-${d.color})` }} />
+                <span className="dm-donut__swatch" style={{ background: `var(--chart-${d.color})` }} />
                 <span className="dm-donut__name">{d.name}</span>
                 <span className="dm-donut__qty">
                   {d.count} <span className="dm-donut__qtysep">·</span> {d.pct}%

@@ -2065,6 +2065,14 @@ button {
   --dm-swatch-blue:   #4ea7fc;
   --dm-swatch-violet: #7f77dd;
   --dm-swatch-pink:   #e67be0;
+  /* Chart palette named per DESIGN.md §2 */
+  --chart-green:  #2bb174;
+  --chart-indigo: #5969e1;
+  --chart-blue:   #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink:   #e67be0;
+  --chart-red:    #e8151b;
+  --chart-amber:  #f2994a;
   --dm-toggle-active:      #ffffff;
   --dm-toggle-active-text: #1f1f2e;
 }
@@ -2099,6 +2107,14 @@ button {
   --dm-swatch-blue:   #4ea7fc;
   --dm-swatch-violet: #7f77dd;
   --dm-swatch-pink:   #e67be0;
+  /* Chart palette named per DESIGN.md §2 — dark variant */
+  --chart-green:  #2dd4a4;
+  --chart-indigo: #7388ff;
+  --chart-blue:   #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink:   #e67be0;
+  --chart-red:    #ff5158;
+  --chart-amber:  #fcb85b;
   --dm-toggle-active:      #7388ff;
   --dm-toggle-active-text: #ffffff;
 }
@@ -2217,13 +2233,18 @@ button {
 }
 
 .dm-sidebar__icon {
-  width: 22px;
-  height: 22px;
-  display: flex;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  color: currentColor;
   flex-shrink: 0;
+}
+.dm-sidebar__icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .dm-sidebar__label {
@@ -2726,10 +2747,10 @@ button {
   background: var(--dm-text-dim);
 }
 
-.dm-kanban__coldot[data-col="To Do"]       { background: var(--dm-swatch-navy); }
-.dm-kanban__coldot[data-col="In Progress"] { background: var(--dm-swatch-blue); }
-.dm-kanban__coldot[data-col="Review"]      { background: var(--dm-swatch-amber); }
-.dm-kanban__coldot[data-col="Completed"]   { background: var(--dm-swatch-green); }
+.dm-kanban__coldot[data-col="To Do"]       { background: var(--chart-indigo); }
+.dm-kanban__coldot[data-col="In Progress"] { background: var(--chart-blue); }
+.dm-kanban__coldot[data-col="Review"]      { background: var(--dm-amber); }
+.dm-kanban__coldot[data-col="Completed"]   { background: var(--chart-green); }
 
 .dm-kanban__colcount {
   margin-left: auto;
@@ -2792,9 +2813,9 @@ button {
   transition: width 0.3s ease;
 }
 
-.dm-kanban__bar-fill[data-col="In Progress"] { background: var(--dm-swatch-blue); }
-.dm-kanban__bar-fill[data-col="Review"]      { background: var(--dm-swatch-amber); }
-.dm-kanban__bar-fill[data-col="Completed"]   { background: var(--dm-swatch-green); }
+.dm-kanban__bar-fill[data-col="In Progress"] { background: var(--chart-blue); }
+.dm-kanban__bar-fill[data-col="Review"]      { background: var(--dm-amber); }
+.dm-kanban__bar-fill[data-col="Completed"]   { background: var(--chart-green); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1180px) {
@@ -3001,6 +3022,20 @@ button {
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.dm-edit-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 12px;
+}
+
+.dm-edit-btn--icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  color: var(--dm-text);
 }
 
 .dm-edit-btn:hover {
