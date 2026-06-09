@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sign Builder Pro — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ===========================================================================
+   Lumineo Signs Switchboard — Design System tokens (mirrors lumineo-ui.css)
+   Single-file prototype — no build step. Vanilla JS. Open directly in a browser.
+   =========================================================================== */
+:root,[data-theme="light"]{
+  --bg-page:#f4f5f8; --surface-raised:#fff; --surface-sunken:#f4f5f8; --surface-sidebar:#141464;
+  --border-default:#e4e5ea; --border-soft:#eff0f3;
+  --text-primary:#1f1f2e; --text-mid:#4a4f5e; --text-dim:#8b91a3; --text-on-accent:#fff;
+  --accent-brand:#141464; --accent-brand-soft:#e8eaf5;
+  --status-green:#0f6e56; --status-green-soft:#d8efe7; --status-red:#e8151b; --status-red-soft:#ffe4e5;
+  --status-amber:#f2994a; --status-amber-soft:#fdf0d9;
+  --chart-indigo:#5969e1;
+  --toggle-active:#fff; --toggle-active-text:#1f1f2e; --sidebar-active-bg:var(--bg-page);
+}
+[data-theme="dark"]{
+  --bg-page:#0b0e1f; --surface-raised:#1a1f3d; --surface-sunken:#131734; --surface-sidebar:#131734;
+  --border-default:#2a3056; --border-soft:#1f2542;
+  --text-primary:#f3f4f8; --text-mid:#b3b8cc; --text-dim:#7b82a0; --text-on-accent:#fff;
+  --accent-brand:#7388ff; --accent-brand-soft:#2a3260;
+  --status-green:#2dd4a4; --status-green-soft:#1d4050; --status-red:#ff5158; --status-red-soft:#432842;
+  --status-amber:#fcb85b; --status-amber-soft:#433b42;
+  --chart-indigo:#7388ff;
+  --toggle-active:#7388ff; --toggle-active-text:#fff; --sidebar-active-bg:var(--surface-raised);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;font-family:'Open Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color:var(--text-primary);background:var(--bg-page);transition:background-color .15s ease,color .15s ease;}
+body{min-height:100vh;-webkit-font-smoothing:antialiased;font-size:12px;line-height:1.45;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;padding:0;color:inherit;}
+input,select,textarea{font-family:inherit;color:inherit;}
+
+/* shell */
+.lum-shell{display:flex;min-height:100vh;}
+.lum-shell__main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-page);}
+.lum-shell__content{flex:1;padding:0 28px 48px;display:flex;flex-direction:column;gap:18px;min-width:0;}
+
+/* sidebar */
+.lum-sidebar{width:248px;flex-shrink:0;background:var(--surface-sidebar);color:var(--text-on-accent);
+  display:flex;flex-direction:column;padding:18px 14px 24px;gap:8px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.lum-sidebar__brand{display:flex;align-items:center;gap:10px;padding:0 6px 14px;
+  border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:6px;opacity:.95;}
+[data-theme="dark"] .lum-sidebar__brand{border-bottom-color:rgba(255,255,255,.08);}
+.lum-ray{width:30px;height:30px;flex-shrink:0;}
+.lum-sidebar__brand-name{font-weight:800;font-size:13px;letter-spacing:.4px;}
+.lum-sidebar__brand-sub{font-weight:700;font-size:9px;color:rgba(255,255,255,.5);letter-spacing:1.2px;text-transform:uppercase;margin-top:2px;}
+.lum-sidebar__caption{font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.45);padding:12px 10px 6px;}
+.lum-sidebar__section{display:flex;flex-direction:column;gap:2px;}
+.lum-sidebar__section--bottom{margin-top:auto;}
+.lum-sidebar__link{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:12.5px;
+  font-weight:600;color:var(--text-on-accent);text-decoration:none;transition:background .12s ease,color .12s ease;}
+.lum-sidebar__link:hover{background:rgba(255,255,255,.08);}
+.lum-sidebar__link.is-active{background:var(--sidebar-active-bg);color:var(--accent-brand);
+  margin-right:-14px;border-top-right-radius:0;border-bottom-right-radius:0;padding-right:18px;}
+.lum-sidebar__link-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lum-theme-toggle{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:999px;
+  background:rgba(255,255,255,.1);color:var(--text-on-accent);font-size:12.5px;font-weight:700;
+  border:1px solid rgba(255,255,255,.12);width:fit-content;margin:4px 4px 10px;}
+.lum-theme-toggle:hover{background:rgba(255,255,255,.18);}
+
+/* topbar */
+.lum-topbar{padding:22px 28px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;}
+.lum-topbar__heading{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.lum-topbar__breadcrumb{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim);}
+.lum-topbar__title{font-size:22px;font-weight:800;letter-spacing:-.2px;margin:0;}
+.lum-topbar__menu{display:none;width:36px;height:36px;border-radius:999px;background:var(--surface-raised);
+  border:1px solid var(--border-default);color:var(--text-primary);align-items:center;justify-content:center;flex-shrink:0;}
+.lum-topbar__actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.lum-topbar__search{display:flex;align-items:center;gap:8px;background:var(--surface-raised);border:1px solid var(--border-default);
+  border-radius:999px;padding:7px 14px;width:320px;max-width:100%;}
+.lum-topbar__search input{flex:1;background:transparent;border:none;outline:none;font-size:12px;color:var(--text-primary);}
+.lum-topbar__user{display:flex;align-items:center;gap:10px;background:var(--surface-raised);border:1px solid var(--border-default);
+  border-radius:999px;padding:4px 12px 4px 4px;}
+.lum-topbar__avatar{width:32px;height:32px;border-radius:50%;background:var(--status-red);color:#fff;font-size:11px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;}
+.lum-topbar__userblock{display:flex;flex-direction:column;line-height:1.1;}
+.lum-topbar__username{font-size:12px;font-weight:700;}
+.lum-topbar__userrole{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;}
+
+/* primitives */
+.lum-card{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;padding:16px;}
+.lum-panel{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;overflow:hidden;}
+.lum-panel__head{padding:12px 16px;font-size:11px;font-weight:800;color:var(--text-dim);text-transform:uppercase;
+  letter-spacing:.5px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.lum-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:9.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.4px;background:var(--accent-brand-soft);color:var(--accent-brand);white-space:nowrap;}
+.lum-pill.is-red{background:var(--status-red-soft);color:var(--status-red);}
+.lum-pill.is-green{background:var(--status-green-soft);color:var(--status-green);}
+.lum-pill.is-amber{background:var(--status-amber-soft);color:var(--status-amber);}
+.lum-pill.is-muted{background:var(--surface-raised);border:1px solid var(--border-default);color:var(--text-dim);}
+.lum-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 14px;border-radius:999px;
+  font-size:12px;font-weight:700;letter-spacing:.2px;border:1px solid var(--border-default);background:var(--surface-raised);
+  color:var(--text-primary);transition:background .12s ease,border-color .12s ease;white-space:nowrap;}
+.lum-btn:hover{border-color:var(--accent-brand);}
+.lum-btn.is-primary{background:var(--accent-brand);color:var(--text-on-accent);border-color:var(--accent-brand);}
+.lum-btn.is-primary:hover{filter:brightness(1.08);}
+.lum-btn.is-danger{background:var(--status-red);color:#fff;border-color:var(--status-red);}
+.lum-btn.is-toggle{background:var(--surface-raised);border-color:var(--border-default);color:var(--text-mid);flex:1;padding:9px 12px;font-weight:700;}
+.lum-btn.is-toggle.is-active{background:var(--accent-brand);border-color:var(--accent-brand);color:var(--text-on-accent);}
+.lum-btn[disabled],.lum-btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none;}
+.lum-input,.lum-select{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border-default);
+  background:var(--surface-raised);font-size:12px;color:var(--text-primary);transition:border-color .12s ease,box-shadow .12s ease;}
+.lum-input:focus,.lum-select:focus{outline:none;border-color:var(--accent-brand);box-shadow:0 0 0 3px var(--accent-brand-soft);}
+.lum-input[disabled],.lum-select[disabled]{background:var(--surface-sunken);color:var(--text-dim);}
+.lum-field-label{display:block;font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.lum-banner{padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;border-left:3px solid;}
+.lum-banner.is-amber{background:var(--status-amber-soft);color:var(--status-amber);border-left-color:var(--status-amber);}
+.lum-banner.is-red{background:var(--status-red-soft);color:var(--status-red);border-left-color:var(--status-red);}
+.lum-banner.is-info{background:var(--accent-brand-soft);color:var(--accent-brand);border-left-color:var(--accent-brand);}
+
+/* KPI */
+.sbp-kpi-strip{display:flex;gap:16px;overflow-x:auto;padding-bottom:4px;}
+.sbp-kpi{flex:0 0 240px;min-width:240px;background:var(--surface-raised);border:1px solid var(--border-default);
+  border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;}
+.sbp-kpi__label{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.sbp-kpi__value{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+.sbp-kpi__goal{font-size:9.5px;font-weight:700;color:var(--text-dim);}
+
+/* dashboard hero + lists */
+.sbp-hero{background:linear-gradient(135deg,var(--accent-brand) 0%,var(--chart-indigo) 100%);border-radius:14px;
+  padding:24px 28px;color:#fff;display:flex;flex-direction:column;gap:8px;}
+.sbp-hero__eyebrow{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;}
+.sbp-hero__title{font-size:24px;font-weight:800;letter-spacing:-.3px;margin:0;}
+.sbp-hero__subtitle{font-size:12px;opacity:.85;max-width:64ch;}
+.sbp-hero__ctas{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+.sbp-hero__cta{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;font-weight:700;font-size:12px;border:1px solid transparent;}
+.sbp-hero__cta.is-red{background:var(--status-red);color:#fff;}
+.sbp-hero__cta.is-outline{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3);}
+.sbp-hero__cta.is-outline:hover{background:rgba(255,255,255,.2);}
+.sbp-twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.sbp-list-row{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--border-soft);cursor:pointer;transition:background .1s ease;}
+.sbp-list-row:hover{background:var(--surface-sunken);}
+.sbp-list-row:last-child{border-bottom:none;}
+.sbp-list-row__main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.sbp-list-row__title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sbp-list-row__sub{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+.sbp-list-row__code{font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:800;}
+
+/* builder */
+.sbp-builder{display:grid;grid-template-columns:280px 1fr;gap:18px;min-height:0;}
+.sbp-builder__sidebar{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;
+  padding:12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 120px);overflow-y:auto;}
+.sbp-builder__sidebar-head{padding:6px 6px 10px;font-size:11px;font-weight:800;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border-soft);}
+.sbp-builder__sidebar-item{width:100%;text-align:left;background:var(--surface-sunken);border:1px solid transparent;
+  border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;transition:all .12s ease;}
+.sbp-builder__sidebar-item:hover{background:var(--accent-brand-soft);}
+.sbp-builder__sidebar-item.is-active{border-color:var(--accent-brand);background:var(--accent-brand-soft);}
+.sbp-builder__sidebar-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.sbp-builder__sidebar-item-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:800;letter-spacing:.2px;}
+.sbp-builder__sidebar-item-meta{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sbp-list-empty{padding:28px 16px;text-align:center;color:var(--text-dim);font-size:12px;}
+
+.sbp-form{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.sbp-formbar{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;
+  padding:14px 16px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;}
+.sbp-formbar__field{display:flex;flex-direction:column;gap:4px;flex:1 1 180px;min-width:0;}
+.sbp-formbar__field-label{font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.sbp-formbar__field--qty{flex:0 1 90px;}
+.sbp-formbar__actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+
+.sbp-summary{background:linear-gradient(135deg,var(--accent-brand) 0%,var(--chart-indigo) 100%);border-radius:14px;
+  padding:22px 24px;color:#fff;display:flex;flex-direction:column;gap:10px;}
+.sbp-summary__eyebrow{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;}
+.sbp-summary__code{font-family:ui-monospace,Menlo,monospace;font-size:22px;font-weight:800;letter-spacing:.3px;word-break:break-all;}
+.sbp-summary__row{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;opacity:.85;}
+.sbp-summary__row strong{font-weight:800;opacity:1;}
+.sbp-summary__progress{height:6px;border-radius:999px;background:rgba(255,255,255,.2);overflow:hidden;margin-top:2px;}
+.sbp-summary__progress-bar{height:100%;background:#fff;border-radius:999px;transition:width .25s ease;}
+.sbp-copy-btn{align-self:flex-start;background:var(--surface-raised);color:var(--text-primary);padding:7px 14px;
+  border-radius:999px;font-weight:800;font-size:11px;letter-spacing:.5px;text-transform:uppercase;transition:filter .12s ease;}
+.sbp-copy-btn.is-copied{background:var(--status-green);color:#fff;}
+
+.sbp-step{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;overflow:hidden;}
+.sbp-step__head{background:var(--accent-brand);color:var(--text-on-accent);padding:8px 14px;font-size:11px;
+  font-weight:800;letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:12px;}
+[data-theme="dark"] .sbp-step__head{background:var(--accent-brand-soft);}
+.sbp-step__head.is-twocol,.sbp-step__head.is-threecol{display:grid;padding:0;}
+.sbp-step__head.is-twocol{grid-template-columns:1fr 1fr;}
+.sbp-step__head.is-threecol{grid-template-columns:1fr 1fr 1fr;}
+.sbp-step__head.is-twocol>span,.sbp-step__head.is-threecol>span{padding:8px 14px;}
+.sbp-step__head.is-threecol>span{text-align:center;}
+.sbp-step__head.is-twocol>span+span,.sbp-step__head.is-threecol>span+span{border-left:1px solid rgba(255,255,255,.2);}
+.sbp-step__body{padding:14px;}
+.sbp-step__twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.sbp-step__threecol{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.sbp-step__notes{font-size:11px;font-style:italic;color:var(--text-dim);padding:10px 14px;
+  border-top:1px solid var(--border-soft);background:var(--surface-sunken);}
+.sbp-toggle-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* dim input */
+.sbp-dim-input{display:flex;gap:6px;align-items:stretch;min-width:0;}
+.sbp-dim-input__pair{display:flex;align-items:stretch;flex:1 1 0;min-width:0;background:var(--surface-raised);
+  border:1px solid var(--border-default);border-radius:8px;overflow:hidden;transition:border-color .12s ease,box-shadow .12s ease;}
+.sbp-dim-input__pair:focus-within{border-color:var(--accent-brand);box-shadow:0 0 0 3px var(--accent-brand-soft);}
+.sbp-dim-input__field{flex:1;min-width:0;background:transparent;border:none;outline:none;padding:9px 4px 9px 10px;
+  font-size:12px;color:var(--text-primary);font-variant-numeric:tabular-nums;text-align:right;}
+.sbp-dim-input__unit{display:inline-flex;align-items:center;padding:0 10px 0 4px;font-size:10px;font-weight:700;
+  color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+
+/* vinyl */
+.sbp-vinyl-search{display:flex;gap:8px;align-items:center;margin-bottom:12px;}
+.sbp-vinyl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:10px;}
+.sbp-swatch{display:flex;flex-direction:column;background:var(--surface-raised);border-radius:8px;border:1px solid var(--border-default);
+  overflow:hidden;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;text-align:left;}
+.sbp-swatch:hover{transform:translateY(-2px);border-color:var(--accent-brand);}
+.sbp-swatch.is-active{border-color:var(--accent-brand);box-shadow:0 0 0 2px var(--accent-brand);}
+.sbp-swatch__color{height:64px;border-bottom:1px solid var(--border-soft);}
+.sbp-swatch__label{padding:6px 8px;display:flex;flex-direction:column;gap:1px;}
+.sbp-swatch__series{font-size:8px;font-weight:900;letter-spacing:.4px;}
+.sbp-swatch__name{font-size:9px;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+.sbp-vinyl-preview{margin-top:12px;display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;
+  background:var(--surface-sunken);border:1px solid var(--border-default);}
+.sbp-vinyl-preview__swatch{width:48px;height:36px;border-radius:6px;border:1px solid var(--border-default);}
+.sbp-vinyl-preview__name{font-size:13px;font-weight:700;}
+.sbp-vinyl-preview__hex{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--text-dim);}
+
+.sbp-empty{padding:48px 24px;text-align:center;color:var(--text-dim);background:var(--surface-raised);
+  border:1px dashed var(--border-default);border-radius:14px;}
+
+/* modal */
+.sbp-modal{position:fixed;inset:0;z-index:50;background:rgba(11,14,31,.85);display:flex;align-items:center;
+  justify-content:center;padding:32px;animation:fadein .15s ease;}
+@keyframes fadein{from{opacity:0;}to{opacity:1;}}
+.sbp-ballpark{position:relative;background:var(--surface-raised);border:1px solid var(--border-default);border-radius:14px;
+  padding:24px;width:min(820px,95vw);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:18px;}
+.sbp-ballpark__title{font-size:30px;font-weight:800;margin:4px 0 0;letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
+.sbp-ballpark__caption{margin:0;font-size:11px;color:var(--text-dim);max-width:60ch;}
+.sbp-ballpark__table{display:flex;flex-direction:column;border:1px solid var(--border-default);border-radius:10px;overflow:hidden;}
+.sbp-ballpark__row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border-soft);}
+.sbp-ballpark__row:last-child{border-bottom:none;}
+.sbp-ballpark__row--head{background:var(--surface-sunken);font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.sbp-ballpark__row--foot{background:var(--accent-brand-soft);font-weight:800;}
+.sbp-ballpark__num{text-align:right;font-variant-numeric:tabular-nums;}
+.sbp-ballpark__actions{display:flex;justify-content:flex-end;gap:8px;}
+.sbp-modal__close{position:absolute;top:16px;right:18px;width:40px;height:40px;border-radius:50%;
+  background:var(--surface-sunken);border:1px solid var(--border-default);font-size:20px;}
+
+/* toast */
+.sbp-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--accent-brand);
+  color:#fff;padding:12px 20px;border-radius:999px;font-weight:700;font-size:12px;z-index:80;opacity:0;
+  pointer-events:none;transition:opacity .2s ease,transform .2s ease;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+.sbp-toast.is-shown{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.sbp-proto-badge{position:fixed;right:12px;bottom:12px;z-index:70;background:var(--status-amber);color:#1f1f2e;
+  font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:4px 10px;border-radius:999px;opacity:.85;}
+
+@media (max-width:900px){
+  .lum-sidebar{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);
+    transition:transform .2s cubic-bezier(.2,.7,.3,1);z-index:60;box-shadow:0 0 32px rgba(0,0,0,.35);}
+  .lum-sidebar.is-open{transform:translateX(0);}
+  .lum-shell__main{width:100%;}
+  .lum-topbar{padding:14px 16px 12px;flex-wrap:wrap;}
+  .lum-topbar__menu{display:inline-flex;}
+  .lum-topbar__search{width:100%;order:3;}
+  .lum-shell__content{padding:0 16px 48px;}
+  .sbp-builder{grid-template-columns:1fr;}
+  .sbp-builder__sidebar{max-height:230px;}
+  .sbp-twocol{grid-template-columns:1fr;}
+  .sbp-ballpark__row{grid-template-columns:1.6fr 1fr 1fr;}
+  .sbp-ballpark__row .hide-sm{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="sbp-toast" id="toast"></div>
+<div class="sbp-proto-badge">Prototype · self-contained</div>
+
+<script>
+/* ===========================================================================
+   DOMAIN — ported faithfully from app/src/domain/* so the prototype's behavior
+   matches the real React app (cascade rules, product code, departments,
+   dimensions, vinyl libraries, rough ballpark).
+   =========================================================================== */
+const SIGN_TYPES=[
+  {code:"WC",name:"Wall Sign",category:"cabinet"},
+  {code:"MN",name:"Monument Sign",category:"cabinet"},
+  {code:"PS",name:"Pole Sign",category:"cabinet"},
+  {code:"PP",name:"Post & Panel",category:"cabinet"},
+  {code:"AP",name:"Pan Sign",category:"pan"},
+  {code:"EP",name:"Economy Pan Sign",category:"pan"},
+  {code:"FL",name:"Channel Letters",category:"letter"},
+  {code:"HL",name:"Halo Letters",category:"letter"},
+  {code:"CL",name:"Combo Letters",category:"letter"},
+  {code:"AL",name:"FCO Aluminum Letters",category:"letter"},
+  {code:"CA",name:"Cast Aluminum Letters",category:"letter"},
+  {code:"PL",name:"Formed Plastic Letters",category:"letter"},
+  {code:"AC",name:"FCO Acrylic Letters",category:"letter"},
+  {code:"EM",name:"Electronic Message Center",category:"emc"},
+];
+const LETTER_TYPES=["FL","HL","CL","AL","CA","PL","AC"];
+const PAN_TYPES=["AP","EP"];
+const INDOOR_ONLY=["AC","CA"];
+const POLE_FOOTING_TYPES=["MN","PS","PP"];
+const getSignType=c=>SIGN_TYPES.find(t=>t.code===c);
+const isLetter=c=>LETTER_TYPES.includes(c);
+const isPan=c=>PAN_TYPES.includes(c);
+
+const VINYL_3630=[
+  {series:"3630",code:"022",name:"Black",hex:"#1A1A1A"},
+  {series:"3630",code:"010",name:"White",hex:"#F5F5F5"},
+  {series:"3630",code:"053",name:"Cardinal Red",hex:"#9B1C2E"},
+  {series:"3630",code:"087",name:"Cobalt Blue",hex:"#1B3F8B"},
+  {series:"3630",code:"036",name:"Cyan Blue",hex:"#0074C8"},
+  {series:"3630",code:"076",name:"Emerald Green",hex:"#1A7A4A"},
+  {series:"3630",code:"025",name:"Golden Yellow",hex:"#F4B400"},
+  {series:"3630",code:"044",name:"Orange",hex:"#E8651A"},
+  {series:"3630",code:"078",name:"Burgundy",hex:"#6D1E3A"},
+  {series:"3630",code:"049",name:"Purple",hex:"#5C3478"},
+  {series:"3630",code:"106",name:"Mint Green",hex:"#4DAB82"},
+  {series:"3630",code:"015",name:"Lemon Yellow",hex:"#F7E44D"},
+];
+const VINYL_7725=[
+  {series:"7725",code:"12",name:"Black",hex:"#1A1A1A"},
+  {series:"7725",code:"10",name:"White",hex:"#F5F5F5"},
+  {series:"7725",code:"13",name:"Bright Red",hex:"#D42B2B"},
+  {series:"7725",code:"97",name:"Royal Blue",hex:"#1E3FA0"},
+  {series:"7725",code:"87",name:"Sky Blue",hex:"#3E8FCB"},
+  {series:"7725",code:"67",name:"Forest Green",hex:"#2A6B3E"},
+  {series:"7725",code:"25",name:"Sunflower",hex:"#F0C420"},
+  {series:"7725",code:"44",name:"Burnt Orange",hex:"#C95E1A"},
+  {series:"7725",code:"78",name:"Maroon",hex:"#6B1E2A"},
+  {series:"7725",code:"49",name:"Violet",hex:"#562B7A"},
+  {series:"7725",code:"337",name:"Teal",hex:"#1A8A78"},
+  {series:"7725",code:"60",name:"Cream",hex:"#F2E9CC"},
+];
+const swatchDisplayName=s=>`3M ${s.series} — ${s.code} ${s.name}`;
+const matchesVinylSearch=(s,q)=>{
+  if(!q.trim())return true;const n=q.trim().toLowerCase();
+  return s.name.toLowerCase().includes(n)||s.code.toLowerCase().includes(n)||s.series.includes(n)||swatchDisplayName(s).toLowerCase().includes(n);
+};
+
+function assembleProductCode(s){
+  if(!s.signTypeCode)return"";
+  const seg=[s.signTypeCode,s.faces,s.illumination,s.faceType,s.finish,s.vinyl,s.mounting];
+  if(s.illumination==="IL"||s.illumination==="EL")seg.push(s.ledColor);
+  return seg.filter(x=>x&&x.length>0).join("-");
+}
+function calculateDepartments(s){
+  const d=[];const t=s.signTypeCode;if(!t)return"";
+  if(t==="MN"||t==="PS"||t==="PP")d.push("Grounding");
+  if((t==="WC"||t==="MN"||t==="PS"||t==="PP"||t==="AP"||t==="EP"||t==="EM")&&!s.outsourced)d.push("Metal Fabrication");
+  if(s.finish==="P")d.push("Paint");
+  if(s.vinyl&&s.vinyl!=="NV")d.push("Vinyl");
+  d.push("Assembly");
+  return d.join(", ");
+}
+
+/* dimensions — stored as total inches strings */
+function joinFtIn(ft,inches){
+  const f=Number(ft),i=Number(inches);
+  const fS=isFinite(f)?f:0,iS=isFinite(i)?i:0;
+  if(!String(ft).trim()&&!String(inches).trim())return"";
+  const t=Math.round((fS*12+iS)*1000)/1000;return t===0?"":String(t);
+}
+function splitFtIn(total){
+  const n=Number(total);if(!isFinite(n)||n<=0)return{ft:"",in:""};
+  const ft=Math.floor(n/12);const inches=Math.round((n-ft*12)*1000)/1000;
+  return{ft:ft===0?"":String(ft),in:inches===0?"":String(inches)};
+}
+function formatDimension(total){
+  if(total===""||total==null)return"—";const n=Number(total);if(!isFinite(n)||n<=0)return"—";
+  const ft=Math.floor(n/12);let inches=Math.round((n-ft*12)*1000)/1000;
+  const inStr=Number.isInteger(inches)?String(inches):String(inches).replace(/\.?0+$/,"");
+  return`${ft}'${inStr}"`;
+}
+function formatHWD(h,w,d){
+  const parts=[h,w,d].filter(v=>v&&v!=="0");if(!parts.length)return"—";
+  return parts.map(formatDimension).join(" × ");
+}
+
+/* rough ballpark — simplified single-piece model in the spirit of
+   app/src/domain/ballpark.ts (real engine lives in the Estimating app). */
+const SHOP_LABOR_RATE=92;
+function pickPiece(s){
+  const t=s.signTypeCode;
+  if(isLetter(t))return{id:"channel-letter-fabrication",label:"Channel Letter Fabrication",mat:120,lph:3,setup:1};
+  if(t==="EM")return{id:"emc-assembly",label:"EMC Assembly",mat:250,lph:4,setup:2};
+  if(t==="AP")return{id:"alum-pan-sign",label:"Aluminum Pan Sign",mat:35,lph:14};
+  if(t==="EP")return{id:"economy-pan-sign",label:"Economy Pan Sign",mat:22,lph:18};
+  if(t==="PP")return{id:"post-and-panel",label:"Post & Panel",mat:35,lph:12};
+  // cabinets
+  if(s.faces==="DF")return{id:"df-routed-cabinet",label:"DF Routed Cabinet",mat:95,lph:6};
+  return{id:"sf-routed-cabinet",label:"SF Routed Cabinet",mat:75,lph:8};
+}
+function computeBallpark(s){
+  const h=Number(s.heightIn)||0,w=Number(s.widthIn)||0,qty=Math.max(1,s.quantity||1);
+  const sqft=h&&w?(h*w)/144:0;
+  const lines=[];
+  const main=pickPiece(s);
+  const matEach=sqft*main.mat+(main.fixed||0);
+  const labHrsEach=sqft&&main.lph?sqft/main.lph+(main.setup||0):(main.setup||0);
+  lines.push(mkLine(main.label,qty,sqft,matEach,labHrsEach));
+  if(s.finish==="P"){const lh=sqft/11;lines.push(mkLine("Paint",qty,sqft,sqft*1.5,lh));}
+  if(s.vinyl&&s.vinyl!=="NV"){const lh=sqft/20;lines.push(mkLine("Vinyl / Graphics",qty,sqft,sqft*5,lh));}
+  if(POLE_FOOTING_TYPES.includes(s.signTypeCode)&&s.poleType==="New Pole")
+    lines.push(mkLine("Pole Cover / Structure",qty,sqft,sqft*60+250,sqft/8));
+  const total=lines.reduce((a,l)=>a+l.total,0);
+  const labor=lines.reduce((a,l)=>a+l.laborCostEach*l.qty,0);
+  const material=lines.reduce((a,l)=>a+l.materialEach*l.qty,0);
+  return{lines,total,labor,material};
+}
+function mkLine(label,qty,sqft,matEach,labHrsEach){
+  const laborCostEach=labHrsEach*SHOP_LABOR_RATE;const totalEach=matEach+laborCostEach;
+  return{label,qty,sqftEach:sqft,materialEach:matEach,laborHoursEach:labHrsEach,laborCostEach,totalEach,total:totalEach*qty};
+}
+const usd=n=>n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+
+function emptySpec(){
+  return{id:null,productCode:"",status:"Draft",name:"",customerName:"",projectName:"",quantity:1,
+    signTypeCode:"",outsourced:false,faces:"",heightIn:"",widthIn:"",depthIn:"",illumination:"",ledColor:"WH",
+    faceType:"",faceTypeCustom:"",backerType:"",backerTypeCustom:"",backerColor:"",finish:"",finishCustom:"",
+    paintColor:"",vinyl:"",vinylColor:"",vinylHex:"",digitalRef:"",mounting:"",mountingCustom:"",
+    poleType:"",poleDiameter:"",poleMaterial:"",footingType:"",footingDepth:"",footingMethod:"",
+    electrical:"",conduitSize:"",panelLocation:"",notes:""};
+}
+
+/* ===========================================================================
+   STATE
+   =========================================================================== */
+const LS_RECENT="sbp_proto_recent_v1";
+const LS_THEME="lumineo_theme";
+let route="dashboard";
+let spec=emptySpec();
+let recent=loadRecent();
+let codeCopied=false;
+let vinylSearch="";
+let sidebarOpen=false;
+let ballparkOpen=false;
+let isOps=true; // prototype: act as Operations so the Approve action shows
+
+function loadRecent(){
+  try{const r=JSON.parse(localStorage.getItem(LS_RECENT));if(Array.isArray(r))return r;}catch(e){}
+  return seedRecent();
+}
+function saveRecent(){try{localStorage.setItem(LS_RECENT,JSON.stringify(recent));}catch(e){}}
+function seedRecent(){
+  const a=emptySpec();Object.assign(a,{id:"seed-wc-1",name:"Main Entry Cabinet",customerName:"Northbridge Dental",
+    projectName:"Northbridge Monument",quantity:1,signTypeCode:"WC",faces:"DF",heightIn:"36",widthIn:"120",depthIn:"10",
+    illumination:"IL",ledColor:"WH",faceType:"RFPT",finish:"P",paintColor:"PMS 286 C Navy",vinyl:"CV",
+    vinylColor:"3M 3630 — 010 White",vinylHex:"#F5F5F5",mounting:"FM",status:"Submitted"});
+  a.productCode=assembleProductCode(a);a.departments=calculateDepartments(a);
+  const b=emptySpec();Object.assign(b,{id:"seed-fl-1",name:"Storefront Channel Set",customerName:"Brew & Co",
+    quantity:14,signTypeCode:"FL",faces:"NA",illumination:"IL",ledColor:"WH",faceType:"AT",finish:"P",
+    paintColor:"Satin Black",vinyl:"NV",mounting:"RW",status:"Approved"});
+  b.productCode=assembleProductCode(b);b.departments=calculateDepartments(b);
+  const c=emptySpec();Object.assign(c,{id:"seed-mn-1",name:"Pylon — Hwy 6",customerName:"Riverside Plaza",
+    quantity:1,signTypeCode:"MN",faces:"DF",heightIn:"96",widthIn:"60",depthIn:"14",illumination:"IL",ledColor:"WH",
+    faceType:"RFPB",finish:"RWB",vinyl:"DV",digitalRef:"riverside_artwork_v3.pdf",mounting:"FM",poleType:"New Pole",
+    poleDiameter:"6in",poleMaterial:"Steel",footingType:"New Footing / Excavation",footingDepth:"48",
+    footingMethod:"Auger / Caisson",electrical:"New Conduit Required",conduitSize:"1in",status:"Draft"});
+  c.productCode=assembleProductCode(c);c.departments=calculateDepartments(c);
+  return[a,b,c];
+}
+
+/* ===========================================================================
+   CASCADE MUTATORS — mirror app/src/app/SpecContext.tsx
+   =========================================================================== */
+function recompute(){spec.productCode=assembleProductCode(spec);spec.departments=calculateDepartments(spec);}
+function update(patch){Object.assign(spec,patch);recompute();render();}
+function setSignType(code){
+  const cust=spec.customerName,proj=spec.projectName,qty=spec.quantity;
+  spec=emptySpec();spec.customerName=cust;spec.projectName=proj;spec.quantity=qty;spec.signTypeCode=code;
+  if(code){
+    if(isLetter(code))spec.faces="NA";
+    if(isPan(code)){spec.faces="SF";spec.illumination="NI";}
+    if(code==="EM")spec.illumination="IL";
+  }
+  recompute();render();
+}
+function setIllumination(v){
+  Object.assign(spec,{illumination:v,ledColor:"WH",faceType:"",backerType:"",backerColor:"",finish:"",paintColor:"",vinyl:"",vinylColor:"",vinylHex:""});
+  recompute();render();
+}
+function setFaceType(v){
+  Object.assign(spec,{faceType:v,faceTypeCustom:v==="CU"?spec.faceTypeCustom:"",backerType:"",backerTypeCustom:"",backerColor:"",vinyl:"",vinylColor:"",vinylHex:""});
+  recompute();render();
+}
+function setVinyl(v){
+  Object.assign(spec,{vinyl:v,vinylColor:"",vinylHex:"",digitalRef:""});vinylSearch="";recompute();render();
+}
+
+/* ===========================================================================
+   ACTIONS
+   =========================================================================== */
+function newSpec(){spec=emptySpec();route="builder";render();}
+function loadSpec(s){spec=JSON.parse(JSON.stringify(s));route="builder";render();}
+function clearAll(){spec=emptySpec();render();}
+function saveSpec(){
+  if(!spec.signTypeCode)return;
+  if(!spec.id)spec.id="spec-"+Date.now();
+  recompute();
+  const i=recent.findIndex(r=>r.id===spec.id);
+  const copy=JSON.parse(JSON.stringify(spec));
+  if(i>=0)recent[i]=copy;else recent.unshift(copy);
+  saveRecent();toast("Saved ✓");render();
+}
+function approveSpec(){
+  spec.status="Approved";spec.approvedBy="alex@lumineosigns.com";spec.approvedAt=new Date().toISOString();
+  saveSpec();toast("Approved ✓");
+}
+function copyCode(){
+  if(!spec.productCode)return;
+  navigator.clipboard&&navigator.clipboard.writeText(spec.productCode).catch(()=>{});
+  codeCopied=true;render();setTimeout(()=>{codeCopied=false;render();},2000);
+}
+function sendToEstimating(){toast("→ Would open Estimating with this spec pre-loaded");}
+function exportSpec(){
+  if(!spec.productCode)return;
+  const rows=[
+    ["Product Code",spec.productCode],["Sign Name",spec.name||"—"],["Customer",spec.customerName||"—"],
+    ["Project",spec.projectName||"—"],["Quantity",spec.quantity],["Sign Type",getSignType(spec.signTypeCode)?.name||"—"],
+    ["Fabrication",spec.outsourced?"Outsourced":"In-House"],["Faces",facesLabel(spec.faces)],
+    ["Dimensions (H×W×D)",formatHWD(spec.heightIn,spec.widthIn,spec.depthIn)],
+    ["Illumination",illumLabel(spec.illumination)],["LED Color",(spec.illumination==="IL"||spec.illumination==="EL")?spec.ledColor:"—"],
+    ["Face Type",spec.faceType==="CU"?spec.faceTypeCustom:spec.faceType||"—"],
+    ["Finish",spec.finish==="CU"?spec.finishCustom:(spec.finish==="P"?"Shop Painted — "+(spec.paintColor||"TBD"):spec.finish||"—")],
+    ["Vinyl",spec.vinyl?(spec.vinylColor||vinylTypeLabel(spec.vinyl)):"—"],
+    ["Mounting",spec.mounting==="CU"?spec.mountingCustom:spec.mounting||"—"],
+    ["Departments",spec.departments||"—"],["Status",spec.status],["Notes",spec.notes||"—"],
+  ];
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Sign Spec — ${spec.productCode}</title>
+  <style>body{font-family:Arial,sans-serif;padding:40px;color:#1f1f2e;}h1{font-size:20px;}
+  .code{font-family:monospace;background:#141464;color:#fff;padding:8px 14px;border-radius:8px;display:inline-block;font-size:18px;}
+  table{border-collapse:collapse;margin-top:20px;width:100%;max-width:640px;}td{padding:8px 12px;border-bottom:1px solid #e4e5ea;font-size:13px;}
+  td:first-child{font-weight:700;color:#8b91a3;text-transform:uppercase;font-size:11px;letter-spacing:.5px;width:200px;}</style></head>
+  <body><h1>Lumineo Signs — Sign Specification</h1><div class="code">${spec.productCode}</div>
+  <table>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>
+  <p style="margin-top:24px;color:#8b91a3;font-size:11px;">Generated ${new Date().toLocaleString()} · Sign Builder Pro</p></body></html>`;
+  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else toast("Pop-up blocked — allow pop-ups to export");
+}
+
+/* labels */
+const facesLabel=v=>({SF:"Single Face",DF:"Double Face",NA:"N/A"}[v]||"—");
+const illumLabel=v=>({IL:"Internally Illuminated",EL:"Externally Illuminated",NI:"Non-Illuminated"}[v]||"—");
+const vinylTypeLabel=v=>({CV:"Cut Vinyl",DV:"Digital Print",FX:"Vehicle / Wrap Film",NV:"No Vinyl"}[v]||"—");
+const statusTone=s=>({Draft:"muted",Submitted:"amber",Approved:"green",Built:"is-navy"}[s]||"muted");
+
+/* ===========================================================================
+   STEP OPTION DATA — mirror builder/steps/*
+   =========================================================================== */
+function faceOptions(t){
+  if(isLetter(t))return[{v:"NA",l:"N/A"}];
+  if(isPan(t))return[{v:"SF",l:"Single Face"}];
+  return[{v:"SF",l:"Single Face"},{v:"DF",l:"Double Face"}];
+}
+function illumOptions(t){
+  if(t==="EM")return[{v:"IL",l:"Internally Illuminated"}];
+  if(t==="AP"||t==="EP"||t==="PP")return[{v:"NI",l:"Non-Illuminated"}];
+  return[{v:"IL",l:"Internally Illuminated"},{v:"EL",l:"Externally Illuminated"},{v:"NI",l:"Non-Illuminated"}];
+}
+const LED_COLORS=[
+  {code:"WH",label:"White 7100K",dot:"#F5F5F5"},{code:"RD",label:"Red",dot:"#E8151B"},
+  {code:"BL",label:"Blue",dot:"#0074C8"},{code:"GR",label:"Green",dot:"#1A7A4A"},
+  {code:"RGB",label:"RGB",dot:"linear-gradient(90deg,#E8151B,#F4B400,#1A7A4A,#0074C8,#5C3478)"},
+];
+function faceTypeOptions(t){
+  if(isLetter(t))return[{v:"AT",l:"Aluminum Trim Cap (Letter standard)"},{v:"PT",l:"Plex Face / Trim Cap"},{v:"CU",l:"Custom…"}];
+  if(t==="EM")return[{v:"EM",l:"EMC LED Panel"}];
+  return[{v:"AT",l:"Aluminum (Routed / Cabinet)"},{v:"PT",l:"Plex Face"},{v:"RFPB",l:"Routed Face — Push-Back Backer"},
+    {v:"RFPT",l:"Routed Face — Push-Through"},{v:"DF",l:"Direct Print / Digital Face"},{v:"CU",l:"Custom…"}];
+}
+const BACKER_TYPES=[{v:"FP",l:"Flat Plex .177in White Acrylic"},{v:"PT",l:"Push-Through .5in Clear Acrylic"},{v:"CU",l:"Custom"}];
+const BACKER_COLORS=["White Acrylic","Clear Acrylic","Matte Clear","70% White Diffuser Film","Custom"];
+function finishOptions(t){
+  if(t==="EP")return[{v:"OEM",l:"Pre-Painted White"},{v:"OEM",l:"Pre-Painted Black"}];
+  return[{v:"P",l:"Shop Painted"},{v:"RWB",l:"Raw / Mill Aluminum — Brushed"},{v:"RWM",l:"Raw / Mill Aluminum — Mill"},
+    {v:"OEM",l:"OEM Pre-Finished"},{v:"CU",l:"Custom…"}];
+}
+const VINYL_TYPES=[{v:"CV",l:"Cut Vinyl"},{v:"DV",l:"Digital Print"},{v:"FX",l:"Vehicle / Wrap Film"},{v:"NV",l:"No Vinyl"}];
+function mountingOptions(t){
+  const cu={v:"CU",l:"Custom…"};
+  if(t==="WC")return[{v:"FM",l:"Flush Mount"},{v:"WB",l:"Wall / Roof Bracket"},{v:"FB",l:"Flag-Mount Bracket"},cu];
+  if(isLetter(t))return[{v:"DM",l:"Direct Mount"},{v:"RW",l:"Raceway"},{v:"RB",l:"Reverse Backer Plate"},cu];
+  if(t==="MN")return[{v:"FM",l:"Footing Mount"},{v:"RM",l:"Recessed Mount"},cu];
+  return[{v:"FM",l:"Footing Mount"},{v:"DM",l:"Direct Mount"},{v:"RM",l:"Recessed Mount"},cu];
+}
+const POLE_OPTIONS=["New Pole","Existing Pole","No Pole"];
+const DIAMETERS=["2in","3in","4in","6in","Custom"];
+const MATERIALS=["Aluminum","Steel","Galvanized Steel"];
+const FOOTING_TYPES=["New Footing / Excavation","Existing Footing"];
+const FOOTING_METHODS=["Auger / Caisson","Excavated (Backhoe)","Custom"];
+const ELEC_OPTIONS=["New Conduit Required","Existing Conduit","No Electrical"];
+const CONDUIT_SIZES=["3/4in","1in","1.5in","2in","Custom"];
+const STATUSES=["Draft","Submitted","Approved","Built"];
+
+/* progress — how many of the cascade gates are satisfied */
+function specProgress(){
+  if(!spec.signTypeCode)return 0;
+  const gates=[!!spec.signTypeCode,!!spec.faces,!!spec.illumination,!!spec.faceType,!!spec.finish||spec.outsourced,!!spec.vinyl,!!spec.mounting];
+  const done=gates.filter(Boolean).length;
+  return Math.round((done/gates.length)*100);
+}
+
+/* ===========================================================================
+   HTML HELPERS
+   =========================================================================== */
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function selectEl(value,options,onAttr,{placeholder="Select…",locked=false}={}){
+  const opts=(locked?"":`<option value="">${placeholder}</option>`)+
+    options.map((o,i)=>`<option value="${esc(o.v)}" ${o.v===value?"selected":""}>${esc(o.l)}</option>`).join("");
+  return`<select class="lum-select" ${locked?"disabled":""} ${onAttr}>${opts}</select>`;
+}
+
+/* ===========================================================================
+   RENDER
+   =========================================================================== */
+const NAV=[
+  {id:"dashboard",label:"Dashboard",icon:"M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"},
+  {id:"builder",label:"Sign Builder",icon:"M2 17l10 5 10-5M2 12l10 5 10-5M12 2L2 7l10 5 10-5-10-5z"},
+  {id:"projects",label:"Projects",icon:"M3 7h18M3 12h18M3 17h18"},
+  {id:"gallery",label:"Gallery",icon:"M4 5h16v14H4zM4 15l4-4 4 4 4-5 4 4"},
+  {id:"reports",label:"Reports",icon:"M3 3v18h18M7 14l3-3 3 3 4-5"},
+];
+
+function render(){
+  const root=document.getElementById("root");
+  root.innerHTML=`
+  <div class="lum-shell">
+    ${sidebar()}
+    <div class="lum-shell__main">
+      ${topbar()}
+      <div class="lum-shell__content">${screen()}</div>
+    </div>
+  </div>
+  ${ballparkOpen?ballparkModal():""}`;
+  bind();
+}
+
+function sidebar(){
+  return`<aside class="lum-sidebar ${sidebarOpen?"is-open":""}">
+    <div class="lum-sidebar__brand">
+      <svg class="lum-ray" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="15" fill="#fff" opacity=".08"/>
+        <path d="M16 5v6M16 21v6M5 16h6M21 16h6M8.2 8.2l4.2 4.2M19.6 19.6l4.2 4.2M23.8 8.2l-4.2 4.2M12.4 19.6l-4.2 4.2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="16" cy="16" r="3.4" fill="#fff"/>
+      </svg>
+      <div>
+        <div class="lum-sidebar__brand-name">Sign Builder Pro</div>
+        <div class="lum-sidebar__brand-sub">Lumineo Signs</div>
+      </div>
+    </div>
+    <div class="lum-sidebar__caption">Main</div>
+    <nav class="lum-sidebar__section">
+      ${NAV.map(n=>`<a href="#" class="lum-sidebar__link ${route===n.id?"is-active":""}" data-nav="${n.id}">
+        <span class="lum-sidebar__link-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${n.icon}"/></svg></span>
+        ${n.label}</a>`).join("")}
+    </nav>
+    <div class="lum-sidebar__section lum-sidebar__section--bottom">
+      <button class="lum-theme-toggle" data-action="theme">
+        <span>${document.documentElement.getAttribute("data-theme")==="dark"?"☀️":"🌙"}</span>
+        ${document.documentElement.getAttribute("data-theme")==="dark"?"Light mode":"Dark mode"}
+      </button>
+    </div>
+  </aside>`;
+}
+
+function topbar(){
+  const titles={dashboard:["Workspace","Dashboard"],builder:["Specs","Sign Builder"],projects:["Specs","Projects"],
+    gallery:["Specs","Gallery"],reports:["Insights","Reports"]};
+  const[crumb,title]=titles[route]||["",""];
+  return`<header class="lum-topbar">
+    <button class="lum-topbar__menu" data-action="menu">☰</button>
+    <div class="lum-topbar__heading">
+      <span class="lum-topbar__breadcrumb">${crumb}</span>
+      <h1 class="lum-topbar__title">${title}</h1>
+    </div>
+    <div class="lum-topbar__actions">
+      <div class="lum-topbar__search"><span>🔎</span><input placeholder="Search specs, customers…"/></div>
+      <div class="lum-topbar__user">
+        <div class="lum-topbar__avatar">AS</div>
+        <div class="lum-topbar__userblock">
+          <span class="lum-topbar__username">Alex Smith</span>
+          <span class="lum-topbar__userrole">Operations</span>
+        </div>
+      </div>
+    </div>
+  </header>`;
+}
+
+function screen(){
+  if(route==="builder")return builderScreen();
+  if(route==="projects")return placeholder("Projects","Named bundles of signs for the build sheet. Full Projects rail + detail pane lives in the React app.");
+  if(route==="gallery")return galleryScreen();
+  if(route==="reports")return placeholder("Reports","KPI charts + department load. Lives in the React app.");
+  return dashboardScreen();
+}
+
+function dashboardScreen(){
+  const approved=recent.filter(s=>s.status==="Approved").length;
+  const drafts=recent.filter(s=>s.status==="Draft").length;
+  const totalPieces=recent.reduce((a,s)=>a+(s.quantity||1),0);
+  const kpis=[
+    {label:"Active specs",value:recent.length,goal:"in workspace"},
+    {label:"Approved",value:approved,goal:"ready to build"},
+    {label:"Drafts",value:drafts,goal:"in progress"},
+    {label:"Total pieces",value:totalPieces,goal:"across all specs"},
+  ];
+  return`
+  <section class="sbp-hero">
+    <span class="sbp-hero__eyebrow">Sign Builder Pro</span>
+    <h2 class="sbp-hero__title">Spec a sign in twelve guided steps</h2>
+    <p class="sbp-hero__subtitle">Pick a sign type and the cascade reveals only the steps that apply — building a live product code and routing the build across departments as you go.</p>
+    <div class="sbp-hero__ctas">
+      <button class="sbp-hero__cta is-red" data-action="new-spec">+ New Sign Spec</button>
+      <button class="sbp-hero__cta is-outline" data-nav="builder">Open Builder</button>
+    </div>
+  </section>
+  <div class="sbp-kpi-strip">
+    ${kpis.map(k=>`<div class="sbp-kpi"><span class="sbp-kpi__label">${k.label}</span>
+      <span class="sbp-kpi__value">${k.value}</span><span class="sbp-kpi__goal">${k.goal}</span></div>`).join("")}
+  </div>
+  <div class="sbp-twocol">
+    <div class="lum-panel">
+      <div class="lum-panel__head">Recent specs <span class="lum-pill is-muted">${recent.length}</span></div>
+      ${recent.length?recent.map(s=>recentRow(s)).join(""):`<div class="sbp-list-empty">No specs yet.</div>`}
+    </div>
+    <div class="lum-panel">
+      <div class="lum-panel__head">Department load (rough)</div>
+      <div style="padding:8px 4px;">${deptLoad()}</div>
+    </div>
+  </div>`;
+}
+
+function recentRow(s){
+  return`<div class="sbp-list-row" data-load="${s.id}">
+    <div class="sbp-list-row__main">
+      <span class="sbp-list-row__title">${esc(s.name||s.customerName||getSignType(s.signTypeCode)?.name||"Untitled")}</span>
+      <span class="sbp-list-row__sub">${esc(getSignType(s.signTypeCode)?.name||"")}${s.quantity>1?` · ×${s.quantity}`:""}${s.customerName?` · ${esc(s.customerName)}`:""}</span>
+    </div>
+    <span class="sbp-list-row__code">${esc(s.productCode||"—")}</span>
+    <span class="lum-pill ${statusTone(s.status)==="is-navy"?"is-navy":"is-"+statusTone(s.status)}">${s.status}</span>
+  </div>`;
+}
+
+function deptLoad(){
+  const counts={};
+  recent.forEach(s=>(s.departments||"").split(", ").filter(Boolean).forEach(d=>{counts[d]=(counts[d]||0)+(s.quantity||1);}));
+  const max=Math.max(1,...Object.values(counts));
+  const order=["Grounding","Metal Fabrication","Paint","Vinyl","Assembly"];
+  const rows=order.filter(d=>counts[d]);
+  if(!rows.length)return`<div class="sbp-list-empty">No routing yet.</div>`;
+  return rows.map(d=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;">
+    <span style="width:120px;font-size:11px;font-weight:700;color:var(--text-mid);">${d}</span>
+    <div style="flex:1;height:10px;border-radius:999px;background:var(--surface-sunken);overflow:hidden;">
+      <div style="height:100%;width:${(counts[d]/max)*100}%;background:var(--chart-indigo);border-radius:999px;"></div></div>
+    <span style="font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;width:28px;text-align:right;">${counts[d]}</span>
+  </div>`).join("");
+}
+
+function galleryScreen(){
+  return`<div class="lum-panel">
+    <div class="lum-panel__head">All specs <span class="lum-pill is-muted">${recent.length}</span></div>
+    ${recent.map(s=>recentRow(s)).join("")||`<div class="sbp-list-empty">No specs.</div>`}
+  </div>`;
+}
+
+function placeholder(t,sub){
+  return`<div class="sbp-empty"><h3 style="margin:0 0 8px;color:var(--text-primary);">${t}</h3><p style="margin:0;">${sub}</p>
+    <button class="lum-btn is-primary" style="margin-top:16px;" data-nav="builder">Go to Sign Builder →</button></div>`;
+}
+
+/* ---------- BUILDER ---------- */
+function builderScreen(){
+  return`<div class="sbp-builder">
+    <aside class="sbp-builder__sidebar">
+      <div class="sbp-builder__sidebar-head">Recent Specs</div>
+      <button class="lum-btn is-primary" data-action="new-spec" style="width:100%;">+ New Spec</button>
+      ${recent.length?recent.map(s=>`<button class="sbp-builder__sidebar-item ${s.id===spec.id?"is-active":""}" data-load="${s.id}">
+        <div class="sbp-builder__sidebar-item-head">
+          <span class="sbp-builder__sidebar-item-code">${esc(s.productCode||"(no code)")}</span>
+          <span class="lum-pill ${statusTone(s.status)==="is-navy"?"is-navy":"is-"+statusTone(s.status)}">${s.status}</span>
+        </div>
+        <span class="sbp-builder__sidebar-item-meta">${esc(s.name||s.customerName||getSignType(s.signTypeCode)?.name||"—")}</span>
+      </button>`).join(""):`<div class="sbp-list-empty">No saved specs.</div>`}
+    </aside>
+    <section class="sbp-form">
+      ${formBar()}
+      ${spec.signTypeCode?summary():""}
+      ${steps()}
+    </section>
+  </div>`;
+}
+
+function formBar(){
+  const canBallpark=spec.signTypeCode&&spec.heightIn&&spec.widthIn;
+  const showApprove=isOps&&spec.signTypeCode&&spec.status!=="Approved"&&spec.status!=="Built";
+  return`<div class="sbp-formbar">
+    <div class="sbp-formbar__field"><span class="sbp-formbar__field-label">Sign Name</span>
+      <input class="lum-input" value="${esc(spec.name)}" placeholder="e.g. Main Entry Cabinet" data-field="name"/></div>
+    <div class="sbp-formbar__field"><span class="sbp-formbar__field-label">Customer</span>
+      <input class="lum-input" value="${esc(spec.customerName)}" placeholder="Customer name" data-field="customerName"/></div>
+    <div class="sbp-formbar__field"><span class="sbp-formbar__field-label">Project</span>
+      <input class="lum-input" value="${esc(spec.projectName)}" placeholder="Project name" data-field="projectName"/></div>
+    <div class="sbp-formbar__field sbp-formbar__field--qty"><span class="sbp-formbar__field-label">Qty</span>
+      <input class="lum-input" type="number" min="1" value="${spec.quantity}" data-field="quantity"/></div>
+    <div class="sbp-formbar__actions">
+      <button class="lum-btn" data-action="ballpark" ${canBallpark?"":"disabled"} title="Rough local $ estimate">$ Ballpark</button>
+      <button class="lum-btn" data-action="estimating" ${spec.signTypeCode?"":"disabled"}>→ Send to Estimating</button>
+      <button class="lum-btn" data-action="export" ${spec.productCode?"":"disabled"}>Export Spec</button>
+      <button class="lum-btn is-primary" data-action="save" ${spec.signTypeCode?"":"disabled"}>Save Spec</button>
+      ${showApprove?`<button class="lum-btn is-primary" style="background:var(--status-green);border-color:var(--status-green);" data-action="approve">✓ Approve</button>`:""}
+      <button class="lum-btn is-danger" data-action="clear">Clear</button>
+    </div>
+  </div>`;
+}
+
+function summary(){
+  const prog=specProgress();
+  return`<section class="sbp-summary">
+    <span class="sbp-summary__eyebrow">Live spec code</span>
+    <span class="sbp-summary__code">${esc(spec.productCode||"—")}</span>
+    <div class="sbp-summary__row">
+      ${spec.customerName?`<span><strong>Customer:</strong>&nbsp;${esc(spec.customerName)}</span>`:""}
+      <span><strong>Qty:</strong>&nbsp;${spec.quantity}</span>
+      ${spec.departments?`<span><strong>Departments:</strong>&nbsp;${esc(spec.departments)}</span>`:""}
+      <span><strong>Progress:</strong>&nbsp;${prog}%</span>
+    </div>
+    <div class="sbp-summary__progress"><div class="sbp-summary__progress-bar" style="width:${prog}%;"></div></div>
+    <button class="sbp-copy-btn ${codeCopied?"is-copied":""}" data-action="copy" ${spec.productCode?"":"disabled"}>${codeCopied?"✓ Copied":"Copy Code"}</button>
+  </section>`;
+}
+
+function stepCard(head,body,notes){
+  return`<div class="sbp-step"><div class="sbp-step__head">${head}</div><div class="sbp-step__body">${body}</div>${notes?`<div class="sbp-step__notes">${notes}</div>`:""}</div>`;
+}
+
+function dimInput(value,field,disabled){
+  const{ft,in:inch}=splitFtIn(value);
+  return`<div class="sbp-dim-input"><div class="sbp-dim-input__pair">
+    <input class="sbp-dim-input__field" type="number" inputmode="numeric" value="${ft}" placeholder="0" data-dim="${field}" data-dim-part="ft" ${disabled?"disabled":""}/>
+    <span class="sbp-dim-input__unit">ft</span></div>
+    <div class="sbp-dim-input__pair">
+    <input class="sbp-dim-input__field" type="number" inputmode="numeric" value="${inch}" placeholder="0" data-dim="${field}" data-dim-part="in" ${disabled?"disabled":""}/>
+    <span class="sbp-dim-input__unit">in</span></div></div>`;
+}
+
+function steps(){
+  if(!spec.signTypeCode){
+    return step1()+`<div class="sbp-empty">Pick a sign type in step 1 to start the cascade.</div>`;
+  }
+  const t=spec.signTypeCode;let out="";
+  out+=step1();
+  if(isLetter(t))out+=step1b();
+  // indoor-only banner
+  if(INDOOR_ONLY.includes(t))out=out; // banner placed in step1 area below
+  if(spec.signTypeCode)out+=step2();
+  if(spec.faces&&!isLetter(t)&&!isPan(t))out+=step3();
+  if(spec.faces)out+=step4();
+  if(spec.illumination==="IL"||spec.illumination==="EL")out+=step5();
+  if(spec.illumination)out+=step6();
+  if(spec.faceType==="RFPB"||spec.faceType==="RFPT")out+=step6b();
+  if(spec.faceType&&!spec.outsourced)out+=step7();
+  if(spec.faceType)out+=step8();
+  if(spec.faceType)out+=step9();
+  if(POLE_FOOTING_TYPES.includes(t)&&spec.mounting){out+=step10()+step11()+step12();}
+  if(spec.signTypeCode)out+=stepNotes();
+  return out;
+}
+
+function step1(){
+  const banner=INDOOR_ONLY.includes(spec.signTypeCode)?`<div class="lum-banner is-red" style="margin-top:12px;">⚠ ${getSignType(spec.signTypeCode)?.name} is an indoor-only product — confirm the install environment before quoting.</div>`:"";
+  return stepCard("<span>1 · Sign Type</span>",
+    selectEl(spec.signTypeCode,SIGN_TYPES.map(t=>({v:t.code,l:`${t.name} (${t.code})`})),`data-sign-type`,{placeholder:"Select a sign type…"})+banner);
+}
+function step1b(){
+  const banner=spec.outsourced?`<div class="lum-banner is-amber" style="margin-top:12px;">Outsourced letters skip Paint &amp; Vinyl departments in routing — finish is vendor-supplied.</div>`:"";
+  return stepCard("<span>1B · Fabrication</span>",
+    `<div class="sbp-toggle-row">
+      <button class="lum-btn is-toggle ${!spec.outsourced?"is-active":""}" data-action="inhouse">In-House</button>
+      <button class="lum-btn is-toggle ${spec.outsourced?"is-active":""}" data-action="outsourced">Outsourced</button>
+    </div>${banner}`);
+}
+function step2(){
+  const opts=faceOptions(spec.signTypeCode);const locked=opts.length===1;
+  return stepCard("<span>2 · Faces / Sides</span>",
+    selectEl(spec.faces,opts,`data-faces`,{locked}));
+}
+function step3(){
+  return`<div class="sbp-step">
+    <div class="sbp-step__head is-threecol"><span>3 · Height</span><span>Width</span><span>Depth</span></div>
+    <div class="sbp-step__body"><div class="sbp-step__threecol">${dimInput(spec.heightIn,"heightIn")}${dimInput(spec.widthIn,"widthIn")}${dimInput(spec.depthIn,"depthIn")}</div></div>
+  </div>`;
+}
+function step4(){
+  const opts=illumOptions(spec.signTypeCode);const locked=opts.length===1;
+  return stepCard("<span>4 · Illumination</span>",selectEl(spec.illumination,opts,`data-illum`,{locked}));
+}
+function step5(){
+  const banner=spec.ledColor==="RGB"?`<div class="lum-banner is-amber" style="margin-top:12px;">RGB requires programmable driver + controller — confirm price uplift with Sales before quoting.</div>`:"";
+  return stepCard("<span>5 · LED Color</span>",
+    `<div class="sbp-toggle-row">${LED_COLORS.map(c=>`<button class="lum-btn is-toggle ${spec.ledColor===c.code?"is-active":""}" data-led="${c.code}">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${c.dot};border:1px solid rgba(0,0,0,.15);"></span>${c.label}</button>`).join("")}</div>${banner}`);
+}
+function step6(){
+  const opts=faceTypeOptions(spec.signTypeCode);
+  const custom=spec.faceType==="CU"?`<input class="lum-input" style="margin-top:10px;" value="${esc(spec.faceTypeCustom)}" placeholder="Describe the custom face type…" data-field="faceTypeCustom"/>`:"";
+  return stepCard("<span>6 · Face Type</span>",selectEl(spec.faceType,opts,`data-facetype`)+custom);
+}
+function step6b(){
+  const custom=spec.backerType==="CU"?`<input class="lum-input" style="margin-top:8px;" value="${esc(spec.backerTypeCustom)}" placeholder="Describe the custom backer material…" data-field="backerTypeCustom"/>`:"";
+  return`<div class="sbp-step">
+    <div class="sbp-step__head is-twocol"><span>6B · Backer Material</span><span>Backer Tint / Diffuser</span></div>
+    <div class="sbp-step__body"><div class="sbp-step__twocol">
+      <div>${selectEl(spec.backerType,BACKER_TYPES,`data-field-sel="backerType"`)}${custom}</div>
+      ${selectEl(spec.backerColor,BACKER_COLORS.map(c=>({v:c,l:c})),`data-field-sel="backerColor"`)}
+    </div></div>
+    <div class="sbp-step__notes">Standard: min 2" letter height — ¼" stroke (std) / ⅜" (push-thru) — serif fonts not recommended at minimums — allow 3.25" from cabinet edge.</div>
+  </div>`;
+}
+function step7(){
+  const opts=finishOptions(spec.signTypeCode);
+  const right=spec.finish==="P"?"Paint Color / Pantone Ref":spec.finish==="CU"?"Custom Finish Description":"(Hidden)";
+  const rightInput=spec.finish==="CU"
+    ?`<input class="lum-input" placeholder="Describe the custom finish…" value="${esc(spec.finishCustom)}" data-field="finishCustom"/>`
+    :`<input class="lum-input" placeholder="e.g. PMS 286 C Navy" value="${esc(spec.paintColor)}" data-field="paintColor" ${spec.finish!=="P"?"disabled":""}/>`;
+  return`<div class="sbp-step"><div class="sbp-step__head is-twocol"><span>7 · Paint / Finish</span><span>${right}</span></div>
+    <div class="sbp-step__body"><div class="sbp-step__twocol">
+      ${selectEl(spec.finish,opts,`data-finish`)}${rightInput}
+    </div></div></div>`;
+}
+function step8(){
+  let inner=selectEl(spec.vinyl,VINYL_TYPES,`data-vinyl`);
+  if(spec.vinyl==="CV"){
+    const lighted=spec.illumination==="IL"||spec.illumination==="EL";
+    const base=lighted?VINYL_3630:VINYL_7725;
+    const swatches=base.filter(s=>matchesVinylSearch(s,vinylSearch));
+    inner+=`<div style="margin-top:14px;">
+      <div class="sbp-vinyl-search">
+        <input type="search" class="lum-input" placeholder="Search ${lighted?"3M 3630 Translucent":"3M 7725 Opaque"} colors…" value="${esc(vinylSearch)}" data-vinyl-search/>
+      </div>
+      <div class="sbp-vinyl-grid">
+        ${swatches.map(s=>{const disp=swatchDisplayName(s);const active=spec.vinylColor===disp;
+          return`<button class="sbp-swatch ${active?"is-active":""}" data-swatch="${esc(disp)}" data-hex="${s.hex}" title="${esc(disp)}">
+            <div class="sbp-swatch__color" style="background:${s.hex};"></div>
+            <div class="sbp-swatch__label"><span class="sbp-swatch__series">3M ${s.series}</span><span class="sbp-swatch__name">${s.code} ${s.name}</span></div>
+          </button>`;}).join("")}
+        ${swatches.length===0?`<div style="grid-column:1/-1;padding:14px;text-align:center;color:var(--text-dim);">No swatch matches "${esc(vinylSearch)}".</div>`:""}
+      </div>
+      ${spec.vinylColor?`<div class="sbp-vinyl-preview"><div class="sbp-vinyl-preview__swatch" style="background:${spec.vinylHex};"></div>
+        <div><div class="sbp-vinyl-preview__name">${esc(spec.vinylColor)}</div><div class="sbp-vinyl-preview__hex">${esc(spec.vinylHex)}</div></div></div>`:""}
+    </div>`;
+  }
+  if(spec.vinyl==="DV"){
+    inner+=`<div style="margin-top:14px;"><span class="lum-field-label">Digital Print Reference</span>
+      <input class="lum-input" placeholder="Art file name or SharePoint link…" value="${esc(spec.digitalRef)}" data-field="digitalRef"/></div>`;
+  }
+  return stepCard("<span>8 · Vinyl / Graphics</span>",inner);
+}
+function step9(){
+  const opts=mountingOptions(spec.signTypeCode);
+  const custom=spec.mounting==="CU"?`<input class="lum-input" style="margin-top:10px;" value="${esc(spec.mountingCustom)}" placeholder="Describe the custom mounting method…" data-field="mountingCustom"/>`:"";
+  return stepCard("<span>9 · Mounting</span>",selectEl(spec.mounting,opts,`data-mounting`)+custom);
+}
+function step10(){
+  let sub="";
+  if(spec.poleType==="New Pole"){
+    sub=`<div class="sbp-step__twocol" style="margin-top:14px;grid-template-columns:1fr 2fr;">
+      <div><span class="lum-field-label">Diameter</span>${selectEl(spec.poleDiameter,DIAMETERS.map(d=>({v:d,l:d})),`data-field-sel="poleDiameter"`)}</div>
+      <div><span class="lum-field-label">Material</span>${selectEl(spec.poleMaterial,MATERIALS.map(m=>({v:m,l:m})),`data-field-sel="poleMaterial"`)}</div>
+    </div>`;
+  }
+  return stepCard("<span>10 · Interior Support Pole</span>",
+    `<div class="sbp-toggle-row">${POLE_OPTIONS.map(o=>`<button class="lum-btn is-toggle ${spec.poleType===o?"is-active":""}" data-pole="${o}">${o}</button>`).join("")}</div>${sub}`);
+}
+function step11(){
+  let sub="";
+  if(spec.footingType==="New Footing / Excavation"){
+    sub=`<div class="sbp-step__twocol" style="margin-top:14px;grid-template-columns:1fr 2fr;">
+      <div><span class="lum-field-label">Depth</span>${dimInput(spec.footingDepth,"footingDepth")}</div>
+      <div><span class="lum-field-label">Method</span>${selectEl(spec.footingMethod,FOOTING_METHODS.map(m=>({v:m,l:m})),`data-field-sel="footingMethod"`)}</div>
+    </div>`;
+  }
+  return stepCard("<span>11 · Footing</span>",
+    selectEl(spec.footingType,FOOTING_TYPES.map(t=>({v:t,l:t})),`data-field-sel="footingType"`)+sub);
+}
+function step12(){
+  let sub="";
+  if(spec.electrical==="New Conduit Required"){
+    sub=`<div class="sbp-step__twocol" style="margin-top:14px;grid-template-columns:1fr 2fr;">
+      <div><span class="lum-field-label">Conduit Size</span>${selectEl(spec.conduitSize,CONDUIT_SIZES.map(c=>({v:c,l:c})),`data-field-sel="conduitSize"`)}</div>
+      <div><span class="lum-field-label">Panel Location</span><input class="lum-input" value="${esc(spec.panelLocation)}" placeholder="e.g. Exterior NE corner" data-field="panelLocation"/></div>
+    </div>`;
+  }
+  return stepCard("<span>12 · Electrical</span>",
+    `<div class="sbp-toggle-row">${ELEC_OPTIONS.map(o=>`<button class="lum-btn is-toggle ${spec.electrical===o?"is-active":""}" data-elec="${o}">${o}</button>`).join("")}</div>${sub}`);
+}
+function stepNotes(){
+  return`<div class="sbp-step"><div class="sbp-step__head is-twocol"><span>Notes</span><span>Status</span></div>
+    <div class="sbp-step__body"><div class="sbp-step__twocol" style="grid-template-columns:2fr 1fr;align-items:start;">
+      <textarea class="lum-input" rows="4" placeholder="Internal notes — install context, customer requests, dependencies…" style="resize:vertical;min-height:90px;" data-field="notes">${esc(spec.notes)}</textarea>
+      <select class="lum-select" data-field-sel="status">${STATUSES.map(s=>`<option value="${s}" ${s===spec.status?"selected":""}>${s}</option>`).join("")}</select>
+    </div></div></div>`;
+}
+
+/* ---------- BALLPARK MODAL ---------- */
+function ballparkModal(){
+  const q=computeBallpark(spec);
+  return`<div class="sbp-modal" data-action="close-ballpark-bg">
+    <div class="sbp-ballpark" onclick="event.stopPropagation()">
+      <button class="sbp-modal__close" data-action="close-ballpark">×</button>
+      <div>
+        <span class="lum-field-label">Ballpark estimate · rough, in-conversation only</span>
+        <div class="sbp-ballpark__title">${usd(q.total)}</div>
+        <p class="sbp-ballpark__caption">Local rough number — the real quote comes from the Estimating app's calc engine against the Business Central catalog. Material ${usd(q.material)} · Labor ${usd(q.labor)} @ $${SHOP_LABOR_RATE}/hr.</p>
+      </div>
+      <div class="sbp-ballpark__table">
+        <div class="sbp-ballpark__row sbp-ballpark__row--head"><span>Line</span><span class="sbp-ballpark__num hide-sm">Sqft</span><span class="sbp-ballpark__num">Qty</span><span class="sbp-ballpark__num">Total</span></div>
+        ${q.lines.map(l=>`<div class="sbp-ballpark__row"><span>${l.label}</span>
+          <span class="sbp-ballpark__num hide-sm">${l.sqftEach?l.sqftEach.toFixed(1):"—"}</span>
+          <span class="sbp-ballpark__num">${l.qty}</span><span class="sbp-ballpark__num">${usd(l.total)}</span></div>`).join("")}
+        <div class="sbp-ballpark__row sbp-ballpark__row--foot"><span>Estimated total</span><span class="hide-sm"></span><span></span><span class="sbp-ballpark__num">${usd(q.total)}</span></div>
+      </div>
+      <div class="sbp-ballpark__actions">
+        <button class="lum-btn" data-action="close-ballpark">Close</button>
+        <button class="lum-btn is-primary" data-action="estimating">→ Send to Estimating</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===========================================================================
+   EVENT BINDING (delegated)
+   =========================================================================== */
+function bind(){
+  const root=document.getElementById("root");
+  // nav
+  root.querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();route=el.getAttribute("data-nav");sidebarOpen=false;render();}));
+  root.querySelectorAll("[data-load]").forEach(el=>el.addEventListener("click",()=>{const s=recent.find(r=>r.id===el.getAttribute("data-load"));if(s)loadSpec(s);}));
+  // actions
+  root.querySelectorAll("[data-action]").forEach(el=>el.addEventListener("click",()=>doAction(el.getAttribute("data-action"))));
+  // text fields — update silently (no full re-render) so focus/caret stay put.
+  // None of these gate step visibility; they only feed the summary + save.
+  root.querySelectorAll("[data-field]").forEach(el=>el.addEventListener("input",()=>{
+    const f=el.getAttribute("data-field");let v=el.value;if(f==="quantity")v=Math.max(1,Number(v)||1);
+    spec[f]=v;recompute();refreshLive();
+  }));
+  // generic selects writing a plain field
+  root.querySelectorAll("[data-field-sel]").forEach(el=>el.addEventListener("change",()=>{
+    const f=el.getAttribute("data-field-sel");const patch={[f]:el.value};
+    if(f==="poleType"&&el.value!=="New Pole"){patch.poleDiameter="";patch.poleMaterial="";}
+    if(f==="footingType"&&el.value!=="New Footing / Excavation"){patch.footingDepth="";patch.footingMethod="";}
+    if(f==="backerType"&&el.value!=="CU")patch.backerTypeCustom="";
+    update(patch);
+  }));
+  // cascade selects
+  bindSel(root,"data-sign-type",v=>setSignType(v));
+  bindSel(root,"data-faces",v=>update({faces:v}));
+  bindSel(root,"data-illum",v=>setIllumination(v));
+  bindSel(root,"data-facetype",v=>setFaceType(v));
+  bindSel(root,"data-finish",v=>{const patch={finish:v,paintColor:v==="P"?spec.paintColor:"",finishCustom:v==="CU"?spec.finishCustom:""};update(patch);});
+  bindSel(root,"data-mounting",v=>update({mounting:v,mountingCustom:v==="CU"?spec.mountingCustom:""}));
+  bindSel(root,"data-vinyl",v=>setVinyl(v));
+  // toggles
+  root.querySelectorAll("[data-led]").forEach(el=>el.addEventListener("click",()=>update({ledColor:el.getAttribute("data-led")})));
+  root.querySelectorAll("[data-pole]").forEach(el=>el.addEventListener("click",()=>{const o=el.getAttribute("data-pole");update(o==="New Pole"?{poleType:o}:{poleType:o,poleDiameter:"",poleMaterial:""});}));
+  root.querySelectorAll("[data-elec]").forEach(el=>el.addEventListener("click",()=>{const o=el.getAttribute("data-elec");update(o==="New Conduit Required"?{electrical:o}:{electrical:o,conduitSize:"",panelLocation:""});}));
+  root.querySelectorAll("[data-swatch]").forEach(el=>el.addEventListener("click",()=>update({vinylColor:el.getAttribute("data-swatch"),vinylHex:el.getAttribute("data-hex")})));
+  // dimension inputs
+  root.querySelectorAll("[data-dim]").forEach(el=>el.addEventListener("input",()=>{
+    const field=el.getAttribute("data-dim");
+    const pair=el.closest(".sbp-dim-input");
+    const ftEl=pair.querySelector('[data-dim-part="ft"]');
+    const inEl=pair.querySelector('[data-dim-part="in"]');
+    spec[field]=joinFtIn(ftEl.value,inEl.value);recompute();
+    // live-update the summary code without losing focus
+    refreshLive();
+  }));
+  // vinyl search
+  const vs=root.querySelector("[data-vinyl-search]");
+  if(vs)vs.addEventListener("input",()=>{vinylSearch=vs.value;const grid=document.querySelector(".sbp-vinyl-grid");if(grid){renderVinylGrid();}});
+  // ballpark modal lives outside #root, so bind its actions + backdrop separately
+  if(ballparkOpen){
+    document.querySelectorAll(".sbp-modal [data-action]").forEach(el=>el.addEventListener("click",()=>doAction(el.getAttribute("data-action"))));
+    const bg=document.querySelector(".sbp-modal");if(bg)bg.addEventListener("click",e=>{if(e.target===bg){ballparkOpen=false;render();}});
+  }
+}
+function bindSel(root,attr,fn){const el=root.querySelector("["+attr+"]");if(el)el.addEventListener("change",()=>fn(el.value));}
+
+/* Light-touch refresh of just the summary block while typing (dimensions, name,
+   qty, …) so the product code / qty / progress update without a full re-render
+   stealing input focus. Rebuilds the summary and rebinds its copy button. */
+function refreshLive(){
+  const old=document.querySelector(".sbp-summary");
+  if(!old||!spec.signTypeCode)return;
+  const tmp=document.createElement("div");tmp.innerHTML=summary();
+  const fresh=tmp.firstElementChild;
+  old.replaceWith(fresh);
+  const copy=fresh.querySelector('[data-action="copy"]');
+  if(copy)copy.addEventListener("click",()=>doAction("copy"));
+}
+function renderVinylGrid(){
+  const lighted=spec.illumination==="IL"||spec.illumination==="EL";
+  const base=lighted?VINYL_3630:VINYL_7725;
+  const swatches=base.filter(s=>matchesVinylSearch(s,vinylSearch));
+  const grid=document.querySelector(".sbp-vinyl-grid");
+  grid.innerHTML=swatches.map(s=>{const disp=swatchDisplayName(s);const active=spec.vinylColor===disp;
+    return`<button class="sbp-swatch ${active?"is-active":""}" data-swatch="${esc(disp)}" data-hex="${s.hex}" title="${esc(disp)}">
+      <div class="sbp-swatch__color" style="background:${s.hex};"></div>
+      <div class="sbp-swatch__label"><span class="sbp-swatch__series">3M ${s.series}</span><span class="sbp-swatch__name">${s.code} ${s.name}</span></div>
+    </button>`;}).join("")||`<div style="grid-column:1/-1;padding:14px;text-align:center;color:var(--text-dim);">No swatch matches "${esc(vinylSearch)}".</div>`;
+  grid.querySelectorAll("[data-swatch]").forEach(el=>el.addEventListener("click",()=>update({vinylColor:el.getAttribute("data-swatch"),vinylHex:el.getAttribute("data-hex")})));
+}
+
+function doAction(a){
+  switch(a){
+    case"theme":toggleTheme();break;
+    case"menu":sidebarOpen=!sidebarOpen;render();break;
+    case"new-spec":newSpec();break;
+    case"save":saveSpec();break;
+    case"approve":approveSpec();break;
+    case"clear":clearAll();break;
+    case"copy":copyCode();break;
+    case"export":exportSpec();break;
+    case"estimating":sendToEstimating();break;
+    case"ballpark":ballparkOpen=true;render();break;
+    case"close-ballpark":case"close-ballpark-bg":ballparkOpen=false;render();break;
+    case"inhouse":update({outsourced:false});break;
+    case"outsourced":update({outsourced:true});break;
+  }
+}
+
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme");
+  const next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem(LS_THEME,next);}catch(e){}
+  render();
+}
+function toast(msg){
+  const t=document.getElementById("toast");t.textContent=msg;t.classList.add("is-shown");
+  clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("is-shown"),1800);
+}
+
+/* boot */
+(function(){
+  try{const th=localStorage.getItem(LS_THEME);if(th)document.documentElement.setAttribute("data-theme",th);
+    else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)document.documentElement.setAttribute("data-theme","dark");}catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>
