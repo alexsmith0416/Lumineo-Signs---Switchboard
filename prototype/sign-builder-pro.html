@@ -1148,8 +1148,9 @@ function toast(msg){
 
 /* boot */
 (function(){
-  try{const th=localStorage.getItem(LS_THEME);if(th)document.documentElement.setAttribute("data-theme",th);
-    else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)document.documentElement.setAttribute("data-theme","dark");}catch(e){}
+  // Default to light. Only switch to dark if the user has explicitly toggled
+  // it before — don't follow the OS prefers-color-scheme on first load.
+  try{const th=localStorage.getItem(LS_THEME);if(th==="dark"||th==="light")document.documentElement.setAttribute("data-theme",th);}catch(e){}
   render();
 })();
 </script>
