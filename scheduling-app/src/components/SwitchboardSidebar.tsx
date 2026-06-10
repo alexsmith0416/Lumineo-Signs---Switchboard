@@ -29,7 +29,9 @@ function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   const stored = window.localStorage.getItem("lumineo-theme");
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // Default to light on first load — ignoring prefers-color-scheme so the
+  // app always opens in the brand-default mode regardless of OS setting.
+  return "light";
 }
 
 export default function SwitchboardSidebar() {
