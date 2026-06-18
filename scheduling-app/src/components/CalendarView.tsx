@@ -502,6 +502,30 @@ function EmployeeRow({
 }: EmployeeRowProps) {
   const daysRef = useRef<HTMLDivElement>(null);
 
+  // When a card is dragged over an existing card (which sits above the
+  // day-cell grid at z-index 2), forward the drop to the same handler the
+  // empty day-cell would have fired — computing the target day from the
+  // pointer's X position over the row's day strip. Lets the supervisor
+  // stack jobs on the same day for a single resource.
+  const onCardDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("text/lineId")) {
+      e.preventDefault();
+    }
+  };
+  const onCardDrop = (e: React.DragEvent) => {
+    if (readOnly) return;
+    const lineId = e.dataTransfer.getData("text/lineId");
+    if (!lineId || !daysRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = daysRef.current.getBoundingClientRect();
+    const relX = e.clientX - rect.left;
+    const dayWidth = rect.width / days.length;
+    const idx = Math.max(0, Math.min(days.length - 1, Math.floor(relX / dayWidth)));
+    const day = days[idx];
+    if (day) onCellDrop(e, emp.id, day);
+  };
+
   return (
     <div className="employee-row" style={{ minHeight: rowMinHeight }}>
       <div className="employee-row__name">
@@ -546,6 +570,8 @@ function EmployeeRow({
             daysRef={daysRef}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
+            onDragOver={onCardDragOver}
+            onDrop={onCardDrop}
           />
         ))}
       </div>
@@ -568,6 +594,8 @@ interface GanttCardProps {
   daysRef: React.RefObject<HTMLDivElement | null>;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
 }
 
 function GanttCard({
@@ -585,6 +613,8 @@ function GanttCard({
   daysRef,
   onClick,
   onResize,
+  onDragOver,
+  onDrop,
 }: GanttCardProps) {
   const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
 
@@ -652,6 +682,8 @@ function GanttCard({
       onDragStart={(e) => {
         e.dataTransfer.setData("text/lineId", line.id);
       }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
