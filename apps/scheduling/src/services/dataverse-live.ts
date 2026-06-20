@@ -175,14 +175,26 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async loadEmployees(): Promise<Employee[]> {
-    const rows = await list(SET.employees, {
-      select:
-        "crfdf_employeeid,crfdf_employeename,crfdf_productivityrate,crfdf_standardhoursperday,crfdf_maxovertimeperday,crfdf_worksweekends,crfdf_hourlyrate,_crfdf_department_value",
-    });
+    // Also load departments to resolve the legacy department-name text field
+    // when the new crfdf_department lookup isn't populated yet.
+    const [deptRows, rows] = await Promise.all([
+      list(SET.departments, { select: "crfdf_departmentid,crfdf_departmentname" }),
+      list(SET.employees, {
+        select:
+          "crfdf_employeeid,crfdf_employeename,crfdf_productivityrate,crfdf_standardhoursperday,crfdf_maxovertimeperday,crfdf_worksweekends,crfdf_hourlyrate,crfdf_departmentname,_crfdf_department_value",
+      }),
+    ]);
+    const nameToDeptId = new Map(
+      deptRows.map((d) => [s(d.crfdf_departmentname).trim().toLowerCase(), s(d.crfdf_departmentid)]),
+    );
     return rows.map((r) => ({
       id: s(r.crfdf_employeeid),
       name: s(r.crfdf_employeename, "Employee"),
-      departmentId: s(r["_crfdf_department_value"]),
+      // Prefer the lookup; fall back to matching the legacy department-name text.
+      departmentId:
+        s(r["_crfdf_department_value"]) ||
+        nameToDeptId.get(s(r.crfdf_departmentname).trim().toLowerCase()) ||
+        "",
       productivityRate: n(r.crfdf_productivityrate, 1) || 1,
       standardHoursPerDay: n(r.crfdf_standardhoursperday, 8),
       maxOvertimePerDay: n(r.crfdf_maxovertimeperday, 0),
