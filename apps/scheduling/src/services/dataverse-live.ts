@@ -24,11 +24,13 @@ import type {
   WorkHoursOverride,
 } from "../engine/types";
 
-// Entity SET names (plural) used by the connector's ListRecords. Adjust here if
-// Dataverse pluralized any differently than logical-name + "s".
+// Entity SET names (plural). The real production roster lives in the "1"
+// family — crfdf_department1 / crfdf_employee1 — which is what the
+// schedule-line lookups (crfdf_employee → crfdf_employee1,
+// crfdf_department → crfdf_department1) actually reference.
 const SET = {
-  departments: "crfdf_departments",
-  employees: "crfdf_employees",
+  departments: "crfdf_department1s",
+  employees: "crfdf_employee1s",
   lines: "crfdf_productionschedulelines",
 } as const;
 
@@ -162,12 +164,12 @@ export const liveProductionDataSource: ScheduleDataSource = {
   kind: "production",
 
   async loadDepartments(): Promise<Department[]> {
-    const rows = await list(SET.departments, {
-      select: "crfdf_departmentid,crfdf_departmentname,crfdf_floworder,crfdf_color",
-      orderby: "crfdf_floworder asc,crfdf_departmentname asc",
-    });
+    // No $select — selecting a lookup _value alias 400s through the connector,
+    // and crfdf_department1 is small. It has no crfdf_floworder/crfdf_color yet,
+    // so flow order falls back to name order and color to gray.
+    const rows = await list(SET.departments, { orderby: "crfdf_departmentname asc" });
     return rows.map((r, i) => ({
-      id: s(r.crfdf_departmentid),
+      id: s(r.crfdf_department1id),
       name: s(r.crfdf_departmentname, "Department"),
       flowOrder: r.crfdf_floworder == null ? i + 1 : n(r.crfdf_floworder),
       color: s(r.crfdf_color, "#cccccc"),
@@ -175,22 +177,20 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async loadEmployees(): Promise<Employee[]> {
-    // Also load departments to resolve the legacy department-name text field
-    // when the new crfdf_department lookup isn't populated yet.
+    // Also load departments to resolve the department-name text when the lookup
+    // is unset. No $select (see loadDepartments). crfdf_employee1 has no
+    // rate/hours columns yet → engine defaults below.
     const [deptRows, rows] = await Promise.all([
-      list(SET.departments, { select: "crfdf_departmentid,crfdf_departmentname" }),
-      list(SET.employees, {
-        select:
-          "crfdf_employeeid,crfdf_employeename,crfdf_productivityrate,crfdf_standardhoursperday,crfdf_maxovertimeperday,crfdf_worksweekends,crfdf_hourlyrate,crfdf_departmentname,_crfdf_department_value",
-      }),
+      list(SET.departments, {}),
+      list(SET.employees, {}),
     ]);
     const nameToDeptId = new Map(
-      deptRows.map((d) => [s(d.crfdf_departmentname).trim().toLowerCase(), s(d.crfdf_departmentid)]),
+      deptRows.map((d) => [s(d.crfdf_departmentname).trim().toLowerCase(), s(d.crfdf_department1id)]),
     );
     return rows.map((r) => ({
-      id: s(r.crfdf_employeeid),
+      id: s(r.crfdf_employee1id),
       name: s(r.crfdf_employeename, "Employee"),
-      // Prefer the lookup; fall back to matching the legacy department-name text.
+      // Prefer the lookup; fall back to matching the department-name text.
       departmentId:
         s(r["_crfdf_department_value"]) ||
         nameToDeptId.get(s(r.crfdf_departmentname).trim().toLowerCase()) ||
@@ -228,8 +228,8 @@ export const liveProductionDataSource: ScheduleDataSource = {
 
   async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
     const { S, org } = await sdk();
+    // No crfdf_name — the primary-name column isn't crfdf_name on this table.
     const rec = toRecord(line);
-    rec.crfdf_name = `${line.jobNo} · ${line.planningLineDescription}`.slice(0, 200);
     const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, rec);
     if (!res.success) throw new Error(res.error?.message ?? `CreateRecord failed`);
     // CreateRecord returns void; the new id is in the response location header
