@@ -1,6 +1,6 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek } from "date-fns";
-import { diffShift, diffResize } from "../engine/cascade";
+import { settleSchedule, diffShift, diffResize } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
@@ -127,19 +127,20 @@ export function createScheduleStore(
             ? seededPreferred
             : { ...seededPreferred, endDateTime: engineEnd };
         });
-        // The confirm dialog and commit both isolate a change's true effect
-        // via `diffShift` (a move-vs-noop differential), so phantom
-        // "downstream" moves never appear even though the loaded board isn't
-        // pre-settled to the cascade fixpoint. We deliberately leave the
-        // loaded layout as authored rather than normalizing it on load.
-        const ctx: ScheduleContext = { ...ctxForNormalize, schedule: normalized };
+        // Settle the loaded board to the cascade fixpoint so it opens
+        // conflict-free (loaded data is rarely already settled: overlapping
+        // queues, legacy dept-order drift). The engine is idempotent, so a
+        // settled board is a true fixpoint; on top of that, the confirm dialog
+        // and commit isolate each change via `diffShift` (move-vs-noop), so a
+        // drag still reports only the moves it actually causes.
+        const settled = settleSchedule({ ...ctxForNormalize, schedule: normalized });
         set({
           employees: empMap,
           departments: deptMap,
-          schedule: normalized,
+          schedule: settled.schedule,
           workHours,
           overtime,
-          conflicts: detectConflicts(ctx),
+          conflicts: detectConflicts(settled),
           loading: false,
         });
       } catch (err) {

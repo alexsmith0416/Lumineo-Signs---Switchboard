@@ -7,7 +7,7 @@ import {
   MOCK_WORK_HOURS,
   MOCK_OVERTIME,
 } from "../data/mock-schedule";
-import { diffShift } from "../engine/cascade";
+import { diffShift, settleSchedule } from "../engine/cascade";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { summarizeCascadeMoves } from "./CascadeConfirmDialog";
@@ -15,8 +15,8 @@ import type { ScheduleContext } from "../engine/types";
 
 // End-to-end guard for the phantom-cascade confirm-dialog bug, exercised
 // against the real production mock board and the exact summarizer the dialog
-// renders. Mirrors store.loadWeek exactly: seed preferredStart and reconcile
-// end times (the store does NOT settle, so neither do we here).
+// renders. Mirrors store.loadWeek: seed preferredStart, reconcile end times,
+// then settle to the cascade fixpoint.
 function load(): ScheduleContext {
   const empMap = new Map(MOCK_EMPLOYEES.map((e) => [e.id, e]));
   const deptMap = new Map(MOCK_DEPARTMENTS.map((d) => [d.id, d]));
@@ -37,7 +37,7 @@ function load(): ScheduleContext {
     const end = calculateEndTime(seeded.startDateTime, effectiveHours(seeded, emp), emp, base, seeded.id);
     return end.getTime() === seeded.endDateTime.getTime() ? seeded : { ...seeded, endDateTime: end };
   });
-  return { ...base, schedule: normalized };
+  return settleSchedule({ ...base, schedule: normalized });
 }
 
 describe("cascade confirm dialog — phantom move guard (real mock board)", () => {

@@ -145,10 +145,37 @@ export function shiftTask(
     return { context: work, moved: [...moved], conflicts: detectConflicts(work) };
   }
 
-  // Bidirectional cascade. For every non-target non-locked task, place it
-  // at max(preferred, depFloor, queueFloor). Iterate per-employee queues in
-  // preferred-ascending order so earlier-preferred tasks anchor the queue.
-  // Convergence: stop when a pass makes no changes.
+  // Bidirectional cascade, holding the user-placed target fixed. Any task
+  // that shifts is recorded in `moved`.
+  cascadeFixpoint(work, target.id, moved, `shift of line ${lineId}`);
+
+  return {
+    context: work,
+    moved: [...moved],
+    conflicts: detectConflicts(work),
+  };
+}
+
+/**
+ * Run the bidirectional cascade to a fixpoint, mutating `work` in place.
+ *
+ * For every non-immutable task, place it at max(preferred, queueFloor,
+ * depFloor): iterate per-employee queues in preferred-ascending order so
+ * earlier-preferred tasks anchor the queue, and re-run passes until one makes
+ * no changes. A task is immutable if it is locked or is the explicit shift
+ * target (`immutableId`); immutable tasks never move but still contribute
+ * their end time to the queue floor.
+ *
+ * @param immutableId  the user-placed target to hold fixed, or null when
+ *                     settling the whole board with no fixed anchor.
+ * @param moved        optional sink for the ids of tasks that shifted.
+ */
+function cascadeFixpoint(
+  work: ScheduleContext,
+  immutableId: string | null,
+  moved?: Set<string>,
+  label?: string,
+): void {
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     let changedThisPass = false;
 
@@ -170,7 +197,7 @@ export function shiftTask(
 
       let lastEnd: Date | null = null;
       for (const task of queue) {
-        const isImmutable = task.id === target.id || task.isLocked;
+        const isImmutable = task.id === immutableId || task.isLocked;
         const preferred = preferredOf(task);
         const depFloor = computeDepFloor(task, work.schedule, work);
 
@@ -192,7 +219,7 @@ export function shiftTask(
               task.id,
             );
           }
-          moved.add(task.id);
+          moved?.add(task.id);
           changedThisPass = true;
         }
 
@@ -205,18 +232,25 @@ export function shiftTask(
     if (i === MAX_ITERATIONS - 1) {
       if (typeof console !== "undefined") {
         console.warn(
-          `[cascade] hit MAX_ITERATIONS (${MAX_ITERATIONS}) for shift of line ${lineId}. ` +
-            `Schedule may not have fully converged. Returning partial result with ${moved.size} moved tasks.`,
+          `[cascade] hit MAX_ITERATIONS (${MAX_ITERATIONS}) for ${label ?? "settle"}. ` +
+            `Schedule may not have fully converged.`,
         );
       }
     }
   }
+}
 
-  return {
-    context: work,
-    moved: [...moved],
-    conflicts: detectConflicts(work),
-  };
+/**
+ * Settle a freshly-loaded (or legacy) schedule to the cascade fixpoint with no
+ * fixed target — every non-locked task moves to max(preferred, queueFloor,
+ * depFloor). Used at load to present a conflict-free board (loaded data is
+ * rarely already settled: overlapping queues, legacy dept-order drift). Pure:
+ * clones first, never mutates the input.
+ */
+export function settleSchedule(ctx: ScheduleContext): ScheduleContext {
+  const work = cloneContext(ctx);
+  cascadeFixpoint(work, null);
+  return work;
 }
 
 export function updateDuration(

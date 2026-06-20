@@ -11,6 +11,7 @@ export {
   cloneContext,
   findEarliestStart,
   shiftTask,
+  settleSchedule,
   diffShift,
   diffResize,
   updateDuration,

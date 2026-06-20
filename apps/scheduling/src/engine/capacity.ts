@@ -48,8 +48,31 @@ export function getHoursUsedOnDay(
     .reduce((sum, line) => sum + effectiveHoursOnDay(line, date), 0);
 }
 
-function effectiveHoursOnDay(line: ScheduleLine, _date: Date): number {
-  return (line.overrideHours ?? line.estimatedHours);
+// Business day window — mirrors the walker in time-walker.ts, which only ever
+// schedules work between 08:00 and 16:00.
+const DAY_START_HOUR = 8;
+const DAY_END_HOUR = 16;
+
+function effectiveHoursOnDay(line: ScheduleLine, date: Date): number {
+  const total = line.overrideHours ?? line.estimatedHours;
+  // Single business-day task: all its hours land on that one day. Keeps the
+  // common case exact (the getHoursUsedOnDay contract the tests pin).
+  if (dayKey(line.startDateTime) === dayKey(line.endDateTime)) {
+    return total;
+  }
+  // Multi-day task: charge only the business-hour overlap with THIS day's
+  // 08:00–16:00 window. The old code charged every spanned day the task's
+  // FULL hours, so a task settled to a day boundary (e.g. start 16:00) was
+  // counted as consuming a whole day on a day it merely touches. That
+  // over-count made calculateEndTime non-idempotent — re-running the cascade
+  // re-pushed neighbours that never actually competed for capacity.
+  const dayStart = new Date(date);
+  dayStart.setHours(DAY_START_HOUR, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(DAY_END_HOUR, 0, 0, 0);
+  const from = Math.max(line.startDateTime.getTime(), dayStart.getTime());
+  const to = Math.min(line.endDateTime.getTime(), dayEnd.getTime());
+  return Math.max(0, (to - from) / 3_600_000);
 }
 
 export function effectiveHours(line: ScheduleLine, employee: Employee): number {
