@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
@@ -29,6 +29,16 @@ export default function AddJobPanel({
   const [mode, setMode] = useState<Mode>("single");
   const [checkedLines, setCheckedLines] = useState<Set<number>>(new Set());
   const [singleLineNo, setSingleLineNo] = useState<number | null>(null);
+
+  // BC Add Job — Canvas-mirror flow state. The supervisor explicitly
+  // picks one Resource-type planning line, then the employee (filtered to
+  // the auto-detected department), then the start date. Mirrors the
+  // Production Scheduling screen in the Power Apps Canvas app.
+  const [bcEmployeeId, setBcEmployeeId] = useState<string>(initialEmployeeId ?? "");
+  const [bcStartDate, setBcStartDate] = useState<string>(() => {
+    const d = initialStart ?? new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
 
   // Custom card state
   const [cardKind, setCardKind] = useState<CardKind>("bc");
@@ -192,6 +202,61 @@ export default function AddJobPanel({
     }
   };
 
+  /**
+   * Canvas-mirror commit for the BC flow. Mirrors the Production
+   * Scheduling screen's Patch() call: one Resource-type planning line,
+   * one employee, one start date. The end time is the engine's
+   * 8-hour-day capacity walker output — which also skips weekends and
+   * honors the resource's calendar, an improvement over the Canvas
+   * app's naïve `RoundUp(hrs/8) - 1 days` formula.
+   */
+  const commitBcCanvas = async () => {
+    if (!selected || singleLineNo === null || !bcEmployeeId) return;
+    const line = selected.mappedLines.find((l) => l.lineNo === singleLineNo);
+    if (!line) return;
+    const emp = employees.get(bcEmployeeId);
+    if (!emp) return;
+
+    const [y, m, d] = bcStartDate.split("-").map((v) => parseInt(v, 10));
+    const start = new Date(y, (m || 1) - 1, d || 1, 8, 0, 0, 0);
+
+    const ctxForEngine = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+    const tempLine: ScheduleLine = {
+      id: "tmp",
+      jobNo: selected.job.jobNo,
+      customerName: selected.job.customerName,
+      planningLineDescription: line.description,
+      startDateTime: start,
+      endDateTime: start,
+      estimatedHours: line.estimatedHours,
+      overrideHours: null,
+      employeeId: bcEmployeeId,
+      departmentId: emp.departmentId,
+      customerDueDate: new Date(selected.job.promisedDate),
+      isLocked: false,
+      jobSequence: line.lineNo,
+    };
+    const end = calculateEndTime(
+      start,
+      effectiveHours(tempLine, emp),
+      emp,
+      ctxForEngine,
+    );
+
+    await addScheduleLine({
+      ...tempLine,
+      id: `line-${selected.job.jobNo}-${line.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      endDateTime: end,
+    });
+    onClose();
+  };
+
   const commitCustom = async () => {
     if (!customTitle) return;
     if (customScope === "resource" && !customEmployeeId) return;
@@ -287,110 +352,25 @@ export default function AddJobPanel({
         </div>
 
         {cardKind === "bc" && (
-        <>
-        <div style={{ padding: 12 }}>
-          <input
-            className="form-field__input"
-            style={{ width: "100%", borderRadius: 4 }}
-            placeholder="Search BC job number (e.g. J103101 or 103101)…"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelected(null);
-            }}
-            autoFocus
-          />
-          {loading && <div className="loading">Searching…</div>}
-          {!selected && results.length > 0 && (
-            <ul style={{ listStyle: "none", padding: 0, margin: "8px 0" }}>
-              {results.map((r) => (
-                <li key={r.job.jobNo} style={{ marginBottom: 4 }}>
-                  <button
-                    className="btn-secondary"
-                    style={{ width: "100%", textAlign: "left" }}
-                    onClick={() => setSelected(r)}
-                  >
-                    <strong>{r.job.jobNo}</strong> — {r.job.customerName} · due {format(new Date(r.job.promisedDate), "MMM d")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {selected && (
-          <>
-            <div className="section-title">{selected.job.jobNo} · {selected.job.customerName}</div>
-            <div style={{ padding: 12 }}>
-              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                <button
-                  className={mode === "single" ? "btn-primary" : "btn-secondary"}
-                  style={{ flex: 1 }}
-                  onClick={() => setMode("single")}
-                >
-                  Single
-                </button>
-                <button
-                  className={mode === "multi" ? "btn-primary" : "btn-secondary"}
-                  style={{ flex: 1 }}
-                  onClick={() => setMode("multi")}
-                >
-                  Multi
-                </button>
-                <button
-                  className={mode === "auto" ? "btn-primary" : "btn-secondary"}
-                  style={{ flex: 1 }}
-                  onClick={() => setMode("auto")}
-                >
-                  Auto-schedule
-                </button>
-              </div>
-
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {selected.mappedLines.map((line) => {
-                  const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
-                  const proposedSlot = predictedSlots?.find((p) => p.lineNo === line.lineNo);
-                  const isCurrent = targetLineNos.has(line.lineNo);
-                  return (
-                    <li
-                      key={line.lineNo}
-                      style={{
-                        padding: 8,
-                        borderRadius: 4,
-                        marginBottom: 6,
-                        background: isCurrent ? "var(--bg-tertiary)" : "var(--bg-secondary)",
-                        cursor: mode === "auto" ? "default" : "pointer",
-                      }}
-                      onClick={() => {
-                        if (mode === "single") setSingleLineNo(line.lineNo);
-                        else if (mode === "multi") {
-                          const next = new Set(checkedLines);
-                          if (next.has(line.lineNo)) next.delete(line.lineNo);
-                          else next.add(line.lineNo);
-                          setCheckedLines(next);
-                        }
-                      }}
-                    >
-                      <div style={{ fontSize: 12, fontWeight: 500 }}>
-                        {line.description}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                        {line.estimatedHours}h · {dept?.name ?? "unmapped"}
-                      </div>
-                      {proposedSlot && proposedSlot.employeeId && (
-                        <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
-                          → {employees.get(proposedSlot.employeeId)?.name ?? proposedSlot.employeeId} on{" "}
-                          {format(proposedSlot.start, "EEE MMM d")} {format(proposedSlot.start, "HH:mm")}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </>
-        )}
-        </>
+        <BcCanvasFlow
+          query={query}
+          setQuery={setQuery}
+          results={results}
+          loading={loading}
+          selected={selected}
+          setSelected={setSelected}
+          singleLineNo={singleLineNo}
+          setSingleLineNo={setSingleLineNo}
+          bcEmployeeId={bcEmployeeId}
+          setBcEmployeeId={setBcEmployeeId}
+          bcStartDate={bcStartDate}
+          setBcStartDate={setBcStartDate}
+          employees={employees}
+          departments={departments}
+          scheduleState={scheduleState}
+          workHoursState={workHoursState}
+          overtimeState={overtimeState}
+        />
         )}
 
         {cardKind === "custom" && (
@@ -685,20 +665,313 @@ export default function AddJobPanel({
             style={{ flex: 1 }}
             disabled={
               cardKind === "bc"
-                ? !selected ||
-                  (mode === "single" && singleLineNo === null) ||
-                  (mode === "multi" && checkedLines.size === 0)
+                ? !selected || singleLineNo === null || !bcEmployeeId
                 : !customTitle ||
                   (customScope === "resource" && !customEmployeeId) ||
                   (customScope === "department" && !customDeptId) ||
                   customHours <= 0
             }
-            onClick={cardKind === "bc" ? commit : commitCustom}
+            onClick={cardKind === "bc" ? commitBcCanvas : commitCustom}
           >
             Schedule
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// BcCanvasFlow — recreates the Canvas app's three-stage Add Job
+// flow inside the AddJobPanel slide-over. Mirrors the screens in
+// `Production Scheduling.pa.yaml`:
+//   1. txtJobSearch + SearchIcon3 — lookup by BC job no.
+//   2. galPlanningLines — filtered to `Type = "Resource"`
+//   3. Dropdown_Employee + DP_StartDate + Schedule button
+// Department auto-resolves from the planning-line description via
+// the `Planning Line Department Maps` table (here served by the
+// keyword rules in services/planning-line-mapping.ts).
+// ============================================================
+
+interface BcCanvasFlowProps {
+  query: string;
+  setQuery: (q: string) => void;
+  results: JobSearchResult[];
+  loading: boolean;
+  selected: JobSearchResult | null;
+  setSelected: (r: JobSearchResult | null) => void;
+  singleLineNo: number | null;
+  setSingleLineNo: (n: number | null) => void;
+  bcEmployeeId: string;
+  setBcEmployeeId: (id: string) => void;
+  bcStartDate: string;
+  setBcStartDate: (d: string) => void;
+  employees: Map<string, import("../engine/types").Employee>;
+  departments: Map<string, import("../engine/types").Department>;
+  scheduleState: import("../engine/types").ScheduleLine[];
+  workHoursState: import("../engine/types").WorkHoursOverride[];
+  overtimeState: import("../engine/types").OvertimeOverride[];
+}
+
+function BcCanvasFlow({
+  query,
+  setQuery,
+  results,
+  loading,
+  selected,
+  setSelected,
+  singleLineNo,
+  setSingleLineNo,
+  bcEmployeeId,
+  setBcEmployeeId,
+  bcStartDate,
+  setBcStartDate,
+  employees,
+  departments,
+  scheduleState,
+  workHoursState,
+  overtimeState,
+}: BcCanvasFlowProps) {
+  // Stage 2 filter — only `Type = "Resource"` planning lines, matching
+  // galPlanningLines.Items in the Canvas app.
+  const resourceLines = useMemo(() => {
+    if (!selected) return [];
+    return selected.mappedLines.filter((l) => {
+      const raw = selected.job.planningLines.find((p) => p.lineNo === l.lineNo);
+      return raw?.type === "Resource";
+    });
+  }, [selected]);
+
+  const pickedLine = singleLineNo !== null
+    ? resourceLines.find((l) => l.lineNo === singleLineNo) ?? null
+    : null;
+
+  // Stage 3 — when a line is picked, auto-resolve its department then
+  // surface only the employees in that department in the dropdown.
+  const pickedDept = pickedLine?.departmentId
+    ? departments.get(pickedLine.departmentId)
+    : undefined;
+  const eligibleEmployees = useMemo(() => {
+    if (!pickedLine?.departmentId) return [] as import("../engine/types").Employee[];
+    return [...employees.values()].filter((e) => e.departmentId === pickedLine.departmentId);
+  }, [employees, pickedLine]);
+
+  // If the supervisor switches lines and the previously picked
+  // employee no longer matches the new department, clear the pick.
+  useEffect(() => {
+    if (bcEmployeeId && pickedLine?.departmentId) {
+      const emp = employees.get(bcEmployeeId);
+      if (!emp || emp.departmentId !== pickedLine.departmentId) {
+        setBcEmployeeId("");
+      }
+    }
+  }, [pickedLine, bcEmployeeId, employees, setBcEmployeeId]);
+
+  // Live preview of how the engine will split the estimated hours
+  // across 8-hour workdays — skipping weekends and honoring the
+  // resource's calendar.
+  const splitPreview = useMemo(() => {
+    if (!pickedLine || !bcEmployeeId) return null;
+    const emp = employees.get(bcEmployeeId);
+    if (!emp) return null;
+    const [y, m, d] = bcStartDate.split("-").map((v) => parseInt(v, 10));
+    if (!y || !m || !d) return null;
+    const start = new Date(y, m - 1, d, 8, 0, 0, 0);
+    const ctx = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+    const tempLine = {
+      id: "preview",
+      jobNo: "preview",
+      customerName: "",
+      planningLineDescription: pickedLine.description,
+      startDateTime: start,
+      endDateTime: start,
+      estimatedHours: pickedLine.estimatedHours,
+      overrideHours: null,
+      employeeId: bcEmployeeId,
+      departmentId: emp.departmentId,
+      customerDueDate: null,
+      isLocked: false,
+      jobSequence: pickedLine.lineNo,
+    } as import("../engine/types").ScheduleLine;
+    const end = calculateEndTime(start, effectiveHours(tempLine, emp), emp, ctx);
+    return { start, end };
+  }, [pickedLine, bcEmployeeId, bcStartDate, employees, departments, scheduleState, workHoursState, overtimeState]);
+
+  return (
+    <>
+      {/* ============ Stage 1 — Job number search ============ */}
+      <div style={{ padding: 12 }}>
+        <input
+          className="form-field__input"
+          style={{ width: "100%", borderRadius: 4 }}
+          placeholder="Search BC job number (e.g. J103101 or 103101)…"
+          value={query}
+          onChange={(e) => {
+            // Canvas normalizes to ensure "J" prefix on Enter; here we
+            // accept either form and let the search service handle both.
+            setQuery(e.target.value);
+            setSelected(null);
+            setSingleLineNo(null);
+          }}
+          autoFocus
+        />
+        {loading && <div className="loading">Searching…</div>}
+        {!selected && results.length > 0 && (
+          <ul style={{ listStyle: "none", padding: 0, margin: "8px 0" }}>
+            {results.map((r) => (
+              <li key={r.job.jobNo} style={{ marginBottom: 4 }}>
+                <button
+                  className="btn-secondary"
+                  style={{ width: "100%", textAlign: "left" }}
+                  onClick={() => {
+                    setSelected(r);
+                    setSingleLineNo(null);
+                  }}
+                >
+                  <strong>{r.job.jobNo}</strong> — {r.job.customerName} · due {format(new Date(r.job.promisedDate), "MMM d")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* ============ Stage 2 — Planning lines (Resource only) ============ */}
+      {selected && (
+        <>
+          <div className="section-title" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span>{selected.job.jobNo} · {selected.job.customerName}</span>
+            {selected.job.description && (
+              <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.78 }}>{selected.job.description}</span>
+            )}
+          </div>
+          <div style={{ padding: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+              Planning lines · Resources only
+            </div>
+            {resourceLines.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", padding: 12, background: "var(--bg-secondary)", borderRadius: 4 }}>
+                No Resource-type planning lines on this job.
+              </div>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {resourceLines.map((line) => {
+                  const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
+                  const isPicked = singleLineNo === line.lineNo;
+                  return (
+                    <li key={line.lineNo} style={{ marginBottom: 6 }}>
+                      <button
+                        type="button"
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 10px",
+                          borderRadius: 4,
+                          border: isPicked
+                            ? "2px solid var(--lumineo-navy)"
+                            : "1px solid var(--border)",
+                          background: isPicked ? "var(--label-bg)" : "var(--bg-secondary)",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setSingleLineNo(line.lineNo)}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>{line.description}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>
+                          {line.estimatedHours}h · {dept?.name ?? <em>no dept match</em>}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ============ Stage 3 — Employee + start date + preview ============ */}
+      {pickedLine && (
+        <div style={{ padding: 12, borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Department
+            </span>
+            <span
+              style={{
+                padding: "2px 8px",
+                background: pickedDept?.color ?? "var(--bg-tertiary)",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              {pickedDept?.name ?? "Unmapped"}
+            </span>
+          </div>
+
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Employee
+            </span>
+            <select
+              className="form-field__input"
+              style={{ width: "100%", borderRadius: 4, marginTop: 4 }}
+              value={bcEmployeeId}
+              onChange={(e) => setBcEmployeeId(e.target.value)}
+              disabled={eligibleEmployees.length === 0}
+            >
+              <option value="">{eligibleEmployees.length === 0 ? "No employees in this department" : "Select…"}</option>
+              {eligibleEmployees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name} — {Math.round(e.productivityRate * 100)}% · {e.standardHoursPerDay}h/day
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Start date
+            </span>
+            <input
+              type="date"
+              className="form-field__input"
+              style={{ width: "100%", borderRadius: 4, marginTop: 4 }}
+              value={bcStartDate}
+              onChange={(e) => setBcStartDate(e.target.value)}
+            />
+          </label>
+
+          {splitPreview && (
+            <div
+              style={{
+                padding: "8px 10px",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+                fontSize: 11,
+                color: "var(--text-secondary)",
+              }}
+            >
+              <strong style={{ color: "var(--text-primary)" }}>
+                {pickedLine.estimatedHours}h split across {Math.ceil(pickedLine.estimatedHours / 8)} day{Math.ceil(pickedLine.estimatedHours / 8) === 1 ? "" : "s"}
+              </strong>
+              <div style={{ marginTop: 2 }}>
+                {format(splitPreview.start, "EEE MMM d, h:mm a")} → {format(splitPreview.end, "EEE MMM d, h:mm a")}
+              </div>
+              <div style={{ marginTop: 2, fontSize: 10, color: "var(--text-tertiary)" }}>
+                Engine skips weekends and honors the resource's calendar.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
