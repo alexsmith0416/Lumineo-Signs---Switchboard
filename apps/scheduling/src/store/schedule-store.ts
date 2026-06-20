@@ -5,6 +5,7 @@ import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { productionDataSource } from "../services/dataverse";
+import { liveProductionDataSource } from "../services/dataverse-live";
 import {
   installationDataSource,
   nekInstallDataSource,
@@ -233,7 +234,14 @@ export function createScheduleStore(
   }));
 }
 
-export const useScheduleStore = createScheduleStore(productionDataSource);
+// Production store: live Dataverse when VITE_DATA_SOURCE=live (run under
+// `pac code run`), otherwise the in-memory mock for normal dev/build/tests.
+// Importing liveProductionDataSource is side-effect-free — its SDK loads lazily
+// on first call — so this selection never touches the Power runtime during dev.
+const productionSource =
+  import.meta.env.VITE_DATA_SOURCE === "live" ? liveProductionDataSource : productionDataSource;
+
+export const useScheduleStore = createScheduleStore(productionSource);
 export const useInstallationStore = createScheduleStore(installationDataSource);
 export const useInstallationStoreWK = createScheduleStore(wkInstallDataSource);
 export const useInstallationStoreNEK = createScheduleStore(nekInstallDataSource);

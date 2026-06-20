@@ -26,8 +26,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
 // Phase-2 live-read probe. Lazily imported so the Power SDK (which calls
 // getClient() at module load and needs the Power Apps runtime) is only pulled
-// in when explicitly invoked under `pac code run`. Run `__probeLiveDepartments()`
-// in the console to verify the live Dataverse read end-to-end.
-(window as unknown as { __probeLiveDepartments?: () => void }).__probeLiveDepartments = () => {
-  void import("./services/dataverse-live").then((m) => m.probeLiveDepartments());
+// in when explicitly invoked under `pac code run`. Run `__probeLive()` in the
+// console to verify the live Dataverse reads (departments, employees, lines).
+(window as unknown as { __probeLive?: () => void }).__probeLive = () => {
+  void import("./services/dataverse-live").then((m) => m.probeLive());
 };
