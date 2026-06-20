@@ -36,6 +36,8 @@
 
   --toggle-active: #ffffff;
   --toggle-active-text: #1f1f2e;
+
+  --bg-tertiary: #eef0f4;
 }
 
 [data-theme="dark"] {
@@ -70,6 +72,8 @@
 
   --toggle-active: #7388ff;
   --toggle-active-text: #ffffff;
+
+  --bg-tertiary: #1a1f3d;
 }
 
 /* ---- Prototype token aliases → DESIGN.md tokens ----
@@ -83,7 +87,6 @@
   --input-bg: var(--surface-sunken);
   --bg-primary: var(--surface-raised);
   --bg-secondary: var(--surface-sunken);
-  --bg-tertiary: var(--border-soft);
   --border: var(--border-default);
   --text-secondary: var(--text-mid);
   --text-tertiary: var(--text-dim);
@@ -113,10 +116,11 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
+  font-variation-settings: "wdth" 100;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  background: var(--bg-page);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
 }
@@ -132,24 +136,323 @@ input, select, textarea {
   font-size: inherit;
 }
 
-/* ============ App shell ============ */
+/* ============ Switchboard shell (DESIGN.md §5) ============
+   Desktop: 248px sidebar + main. Under 900px the sidebar is hidden and the
+   topbar exposes a hamburger that opens the nav drawer. */
 
 .app-shell {
   display: grid;
-  grid-template-rows: 48px 1fr;
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    "header"
-    "main";
+  grid-template-columns: 248px 1fr;
+  grid-template-rows: minmax(0, 1fr);
   height: 100vh;
+  background: var(--bg-page);
 }
 
-.app-header {
-  grid-area: header;
-  /* Brand bar — stays dark in both themes (like the DESIGN.md sidebar),
-     so it does not flip to the periwinkle dark-accent. */
+/* ---- Sidebar ---- */
+.switchboard-sidebar {
   background: var(--surface-sidebar);
   color: var(--text-on-accent);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 24px;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sb-brand__logo {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sb-brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.sb-brand__name {
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: var(--text-on-accent);
+}
+.sb-brand__sub {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+}
+
+.sb-caption {
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  padding: 8px 10px 6px;
+}
+
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.sb-nav__item:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.sb-nav__item--active,
+.sb-nav__item--active:hover {
+  background: var(--bg-page);
+  color: var(--accent-brand);
+}
+
+.sb-nav__icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.sb-spacer { flex: 1; }
+
+.sb-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.sb-theme-toggle:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* ---- Main column ---- */
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+/* ---- Topbar (eyebrow + title · search + user) ---- */
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 28px 14px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-soft);
+}
+.app-topbar__menu {
+  display: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.app-topbar__lead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.app-topbar__eyebrow {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.app-topbar__title {
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+.app-topbar__cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.app-topbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 280px;
+}
+.app-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+}
+.app-topbar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--status-red);
+  color: var(--text-on-accent);
+  font-weight: 800;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-topbar__user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.app-topbar__user-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.app-topbar__user-role {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ---- Sub-nav view pills ---- */
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 8px 28px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-soft);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.sub-nav__tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-mid);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.sub-nav__tab:hover {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.sub-nav__tab--active,
+.sub-nav__tab--active:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-default);
+  color: var(--accent-brand);
+}
+
+/* ---- Content area: each view becomes a bordered surface card ---- */
+.app-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-page);
+  padding: 18px 28px 28px;
+}
+.app-content > * {
+  flex: 1;
+  min-height: 0;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  overflow: auto;
+}
+
+/* ---- Mobile: collapse to a single column + topbar hamburger + drawer ---- */
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .switchboard-sidebar {
+    display: none;
+  }
+  .app-topbar {
+    padding: 14px 16px 12px;
+  }
+  .app-topbar__menu {
+    display: inline-flex;
+  }
+  .app-topbar__search {
+    display: none;
+  }
+  .sub-nav {
+    padding: 8px 16px;
+  }
+  .app-content {
+    padding: 12px 16px 16px;
+  }
+}
+
+/* Legacy top-bar shell — only `.app-header__logo*` is still used (mobile nav
+   drawer header). The bar itself is no longer rendered. */
+.app-header {
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -329,13 +632,6 @@ input, select, textarea {
 @keyframes nav-drawer-slide {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
-}
-
-.app-main {
-  grid-area: main;
-  overflow: auto;
-  background: var(--bg-primary);
-  padding: 16px;
 }
 
 /* ============ Calendar ============ */
@@ -904,50 +1200,8 @@ input, select, textarea {
 @media (max-width: 720px) {
   body { font-size: 12px; }
 
-  .app-shell {
-    grid-template-rows: 44px 1fr;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "main";
-    height: 100vh;
-  }
-
-  .app-header {
-    height: 44px;
-    padding: 0 6px;
-    gap: 8px;
-  }
-  .app-header__menu {
-    padding: 4px;
-  }
-  .app-header__logo { padding: 3px 7px; }
-  .app-header__logo-text .lumineo { font-size: 12px; }
-  .app-header__logo-text .signs { font-size: 7px; }
-  .app-header__title {
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .app-header__actions { gap: 4px; }
-  .app-header__action {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
-
-  .app-main {
-    overflow: auto;
-    padding: 10px;
-    min-width: 0;
-  }
-
-  /* Week summary stats — wrap tightly and shrink. */
-  .app-main > div > div:first-child[style*="bg-secondary"],
-  .app-main > div > div:first-child {
-    font-size: 11px;
-  }
+  /* The shell's 900px breakpoint already collapses the sidebar to the topbar
+     + drawer; these phone tweaks only refine the content density. */
 
   /* Calendar toolbar wraps; the week label gets its own line. */
   .calendar-toolbar {
