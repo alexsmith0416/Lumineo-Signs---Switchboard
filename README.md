@@ -6,7 +6,7 @@
 
 | App | Group(s) that see it | Status |
 |---|---|---|
-| Project Scheduler → **Scheduling Hub** | Operations | **React Code App prototype in [`scheduling-app/`](scheduling-app/)** — Production / Installation (WK + NEK) / Shipping calendars + Scenario Sandbox + Monthly Install Plan. See [docs/15](docs/15-scheduling-app-spec.md) for the build spec and [docs/16](docs/16-scheduling-app-starter-prompt.md) for the production starter prompt. |
+| Project Scheduler → **Weekly Calendar** | Operations | **React Code App prototype in [`scheduling-app/`](scheduling-app/)** — Production / Installation (WK + NEK) / Shipping calendars + Scenario Sandbox + Monthly Install Plan. See [docs/15](docs/15-scheduling-app-spec.md) for the build spec, [docs/16](docs/16-scheduling-app-starter-prompt.md) for the production starter prompt, and [docs/17](docs/17-weekly-calendar-power-apps-code-app-prompt.md) for the VSCode build prompt that ships it as a Power Apps Code App. |
 | Weekly Scheduler | Operations, Sales, Employees (scoped to dept) | React base exists → wrap as PCF |
 | Sign Builder Pro | Operations, Sales | React base exists → wrap as PCF |
 | Time & Photo Capture | Operations, Employees | New (canvas, mobile-first) |
