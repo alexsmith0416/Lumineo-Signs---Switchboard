@@ -43,18 +43,36 @@ type Row = Record<string, unknown>;
 // ListRecords/CreateRecord/... operations require the organization explicitly
 // (otherwise: "Invalid organization URL 'null' provided"), so we use the
 // *WithOrganization variants with the org URL from IContext.app.dataverseOrgUrl.
+// The env's Dataverse org URL — final fallback if neither the connector's
+// GetOrganizations nor the app context surfaces it.
+const ORG_FALLBACK = "https://org8fa22efd.crm.dynamics.com";
+
 let _svc: typeof import("../generated").MicrosoftDataverseService | null = null;
 let _org = "";
+async function resolveOrg(S: NonNullable<typeof _svc>): Promise<string> {
+  // 1. The connector's own organization list (portable; one entry per env).
+  try {
+    const r = await S.GetOrganizations();
+    const url = r.success ? r.data?.value?.[0]?.Url : undefined;
+    if (url) return url;
+  } catch {
+    /* fall through */
+  }
+  // 2. App context (not populated by every host).
+  try {
+    const { getContext } = await import("@microsoft/power-apps/app");
+    const ctx = await getContext();
+    if (ctx.app.dataverseOrgUrl) return ctx.app.dataverseOrgUrl;
+  } catch {
+    /* fall through */
+  }
+  // 3. Known env org URL.
+  return ORG_FALLBACK;
+}
 async function sdk() {
   if (!_svc) {
     _svc = (await import("../generated")).MicrosoftDataverseService;
-    try {
-      const { getContext } = await import("@microsoft/power-apps/app");
-      const ctx = await getContext();
-      _org = ctx.app.dataverseOrgUrl ?? "";
-    } catch {
-      _org = "";
-    }
+    _org = await resolveOrg(_svc);
   }
   return { S: _svc, org: _org };
 }
