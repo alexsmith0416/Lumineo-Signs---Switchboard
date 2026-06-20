@@ -431,6 +431,14 @@ input, select, textarea {
   cursor: pointer;
 }
 
+/* Drop-target highlight: the day under the cursor while a card is dragged,
+   including drags hovering on top of existing cards (forwarded from the card
+   to the row strip). */
+.day-cell--drop-target {
+  background: color-mix(in srgb, var(--lumineo-navy) 12%, transparent);
+  box-shadow: inset 0 0 0 2px var(--lumineo-navy);
+}
+
 .gantt-card {
   position: absolute;
   top: 4px;
@@ -487,6 +495,12 @@ input, select, textarea {
   0% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0.55); }
   70% { box-shadow: 0 0 0 8px rgba(232, 21, 27, 0); }
   100% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0); }
+}
+
+/* Source card while it is being dragged — dim it so the drop target reads
+   clearly. The card stays in place (HTML5 drag shows a ghost image). */
+.gantt-card--dragging {
+  opacity: 0.4;
 }
 
 .gantt-card--highlighted {

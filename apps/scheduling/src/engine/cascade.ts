@@ -2,6 +2,7 @@ import { calculateEndTime } from "./time-walker";
 import { effectiveHours } from "./capacity";
 import { detectConflicts } from "./conflicts";
 import type {
+  Conflict,
   ScheduleContext,
   ScheduleLine,
   ScheduleLineId,
@@ -247,6 +248,124 @@ export function updateDuration(
   return shiftTask(work, lineId, target.startDateTime, undefined, {
     cascade: true,
   });
+}
+
+// A start-time delta under a minute is engine book-keeping (date-object
+// churn, capacity round-trips), not a perceivable move.
+const MEANINGFUL_DELTA_MS = 60_000;
+
+export interface DiffShiftResult {
+  /** The board after the change, with ONLY genuinely-affected tasks applied
+   *  on top of the pre-change positions. Every unaffected task keeps exactly
+   *  where it was — no churn snap. */
+  committed: ScheduleContext;
+  /** Tasks (excluding the target) whose start changes *because* of this
+   *  change rather than as ambient engine churn. This is what the confirm
+   *  dialog should show and the store should persist. */
+  changed: ScheduleLine[];
+  /** The target line in its committed position (null if it no longer exists). */
+  target: ScheduleLine | null;
+  conflicts: Conflict[];
+}
+
+/**
+ * Compute the *isolated* effect of a change by differencing two cascades that
+ * start from the SAME board: `move` (the real change) and `noop` (the same
+ * board cascaded with the target held at its current position). `shiftTask`
+ * always returns a fully-cascaded board and is not perfectly idempotent on
+ * loaded data, so comparing a single cascade against the raw board blames the
+ * change for ambient normalization — cross-job / cross-resource phantom
+ * "downstream" moves. Differencing move-vs-noop cancels any churn that would
+ * happen regardless of the target's destination, leaving only the moves the
+ * change actually causes. The committed board then applies just those genuine
+ * moves on top of the pre-change positions, so unaffected tasks never snap.
+ */
+function buildDiff(
+  ctx: ScheduleContext,
+  lineId: ScheduleLineId,
+  move: ShiftResult,
+  noop: ShiftResult,
+): DiffShiftResult {
+  const noopById = new Map(noop.context.schedule.map((l) => [l.id, l]));
+  const movedById = new Map(move.context.schedule.map((l) => [l.id, l]));
+
+  const changed: ScheduleLine[] = [];
+  for (const m of move.context.schedule) {
+    if (m.id === lineId) continue;
+    const n = noopById.get(m.id);
+    if (!n) continue;
+    if (Math.abs(m.startDateTime.getTime() - n.startDateTime.getTime()) >= MEANINGFUL_DELTA_MS) {
+      changed.push(m);
+    }
+  }
+
+  const changedIds = new Set(changed.map((c) => c.id));
+  const committedSchedule = ctx.schedule.map((orig) => {
+    if (orig.id === lineId || changedIds.has(orig.id)) {
+      return { ...(movedById.get(orig.id) ?? orig) };
+    }
+    return { ...orig };
+  });
+  const committed: ScheduleContext = { ...cloneContext(ctx), schedule: committedSchedule };
+  return {
+    committed,
+    changed,
+    target: committed.schedule.find((l) => l.id === lineId) ?? null,
+    conflicts: detectConflicts(committed),
+  };
+}
+
+/** Differential move — see {@link buildDiff}. */
+export function diffShift(
+  ctx: ScheduleContext,
+  lineId: ScheduleLineId,
+  newStart: Date,
+  newEmployeeId: string | undefined,
+  options: ShiftOptions = {},
+): DiffShiftResult {
+  const { cascade = true } = options;
+  const target = ctx.schedule.find((l) => l.id === lineId);
+  if (!target) {
+    const work = cloneContext(ctx);
+    return { committed: work, changed: [], target: null, conflicts: detectConflicts(work) };
+  }
+  const move = shiftTask(ctx, lineId, newStart, newEmployeeId, { cascade, previewOnly: true });
+  if (!cascade) {
+    return {
+      committed: move.context,
+      changed: [],
+      target: move.context.schedule.find((l) => l.id === lineId) ?? null,
+      conflicts: move.conflicts,
+    };
+  }
+  const noop = shiftTask(ctx, lineId, target.startDateTime, undefined, { cascade, previewOnly: true });
+  return buildDiff(ctx, lineId, move, noop);
+}
+
+/** Differential duration change — same isolation as {@link diffShift}. */
+export function diffResize(
+  ctx: ScheduleContext,
+  lineId: ScheduleLineId,
+  overrideHours: number,
+  cascade: boolean = true,
+): DiffShiftResult {
+  const target = ctx.schedule.find((l) => l.id === lineId);
+  if (!target) {
+    const work = cloneContext(ctx);
+    return { committed: work, changed: [], target: null, conflicts: detectConflicts(work) };
+  }
+  const move = updateDuration(ctx, lineId, overrideHours, cascade);
+  if (!cascade) {
+    return {
+      committed: move.context,
+      changed: [],
+      target: move.context.schedule.find((l) => l.id === lineId) ?? null,
+      conflicts: move.conflicts,
+    };
+  }
+  // Baseline: cascade the unchanged board with the target held in place.
+  const noop = shiftTask(ctx, lineId, target.startDateTime, undefined, { cascade, previewOnly: true });
+  return buildDiff(ctx, lineId, move, noop);
 }
 
 export const _internal = { findEarliestEmployeeSlot };

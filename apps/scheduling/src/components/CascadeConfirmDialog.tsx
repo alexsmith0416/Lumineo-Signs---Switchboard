@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { format } from "date-fns";
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
-import type { ShiftResult } from "../engine/types";
+import type { DiffShiftResult } from "../engine/cascade";
 
 export interface CascadeMove {
   line: ScheduleLine;
@@ -17,9 +17,15 @@ export interface CascadePreview {
   cascadedMoves: CascadeMove[];
 }
 
+/**
+ * Turn a {@link DiffShiftResult} into the dialog's per-move rows. The diff has
+ * already isolated the genuinely-affected tasks (see engine `buildDiff`), so
+ * this just pairs each changed task's pre-change position (from `before`) with
+ * its committed position and classifies why it moved.
+ */
 export function summarizeCascadeMoves(
   before: ScheduleContext,
-  after: ShiftResult,
+  diff: DiffShiftResult,
   targetLineId: string,
 ): CascadeMove[] {
   const beforeById = new Map(before.schedule.map((l) => [l.id, l]));
@@ -27,25 +33,9 @@ export function summarizeCascadeMoves(
   if (!targetLine) return [];
 
   const moves: CascadeMove[] = [];
-  // Defensive threshold — a start-time delta under a minute is engine
-  // book-keeping (date-object identity churn, capacity recomputation
-  // round-trips), not a perceivable cascade. The user shouldn't get a
-  // confirm dialog for sub-minute drift.
-  const MEANINGFUL_DELTA_MS = 60_000;
-  for (const movedId of after.moved) {
-    if (movedId === targetLineId) continue;
-    const afterLine = after.context.schedule.find((l) => l.id === movedId);
-    const beforeLine = beforeById.get(movedId);
-    if (!afterLine || !beforeLine) continue;
-    const startDelta = Math.abs(
-      afterLine.startDateTime.getTime() - beforeLine.startDateTime.getTime(),
-    );
-    // The dialog cares about start-time shifts only — end-time drift
-    // alone (capacity recomputation due to a same-day move) isn't a
-    // scheduling cascade in the user-facing sense.
-    if (startDelta < MEANINGFUL_DELTA_MS) {
-      continue;
-    }
+  for (const afterLine of diff.changed) {
+    const beforeLine = beforeById.get(afterLine.id);
+    if (!beforeLine) continue;
     const reason: CascadeMove["reason"] =
       beforeLine.jobNo === targetLine.jobNo &&
       beforeLine.departmentId !== targetLine.departmentId

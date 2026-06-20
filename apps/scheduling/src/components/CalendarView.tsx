@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, differenceInCalendarDays, format, startOfWeek } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
 import { isWeekend } from "../engine/capacity";
-import { shiftTask, updateDuration } from "../engine/cascade";
+import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKindMeta } from "../services/data-source";
 import type { UseScheduleStore } from "../store/schedule-store";
@@ -184,10 +184,6 @@ export default function CalendarView({
     return ordered;
   }, [employees, departments, hiddenDeptIds, hiddenEmployeeIds]);
 
-  const onCellDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
   const onCellDrop = async (e: React.DragEvent, employeeId: string, day: Date) => {
     if (readOnly) return;
     e.preventDefault();
@@ -204,11 +200,19 @@ export default function CalendarView({
     newEmployeeId?: string,
   ) => {
     const ctx = getContext();
-    const preview = shiftTask(ctx, lineId, newStart, newEmployeeId, {
-      cascade: true,
-      previewOnly: true,
-    });
-    const moves = summarizeCascadeMoves(ctx, preview, lineId);
+    const current = ctx.schedule.find((l) => l.id === lineId);
+    // No-op guard: dropping a card back on its own day + resource changes
+    // nothing — don't open a confirm dialog or write to the data source.
+    if (
+      current &&
+      isSameDay(current.startDateTime, newStart) &&
+      (!newEmployeeId || newEmployeeId === current.employeeId)
+    ) {
+      return;
+    }
+
+    const diff = diffShift(ctx, lineId, newStart, newEmployeeId, { cascade: true });
+    const moves = summarizeCascadeMoves(ctx, diff, lineId);
 
     if (moves.length === 0) {
       await shiftTaskAndCommit(lineId, newStart, newEmployeeId, true);
@@ -225,8 +229,8 @@ export default function CalendarView({
 
   const tryResizeWithConfirm = async (line: ScheduleLine, newHours: number) => {
     const ctx = getContext();
-    const preview = updateDuration(ctx, line.id, newHours, true);
-    const moves = summarizeCascadeMoves(ctx, preview, line.id);
+    const diff = diffResize(ctx, line.id, newHours, true);
+    const moves = summarizeCascadeMoves(ctx, diff, line.id);
 
     if (moves.length === 0) {
       await updateTaskHours(line.id, newHours);
@@ -267,8 +271,8 @@ export default function CalendarView({
     const line = ctx.schedule.find((l) => l.id === lineId);
     if (!line) return;
     // Recompute only this line's end using the engine, no cascade.
-    const r = updateDuration(ctx, lineId, hours, false);
-    const updated = r.context.schedule.find((l) => l.id === lineId);
+    const r = diffResize(ctx, lineId, hours, false);
+    const updated = r.target;
     if (!updated) return;
     await dataSource.updateScheduleLine(lineId, {
       startDateTime: updated.startDateTime,
@@ -400,7 +404,6 @@ export default function CalendarView({
                       ? new Set([pendingShift.lineId, ...pendingShift.moves.map((m) => m.line.id)])
                       : null
                   }
-                  onCellDragOver={onCellDragOver}
                   onCellDrop={onCellDrop}
                   onCellClick={(day) => {
                     if (!onEmptyCellClick) return;
@@ -473,7 +476,6 @@ interface EmployeeRowProps {
   showCrewBadge: boolean;
   showWeather: boolean;
   highlightedLineIds: Set<string> | null;
-  onCellDragOver: (e: React.DragEvent) => void;
   onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
   onCellClick: (day: Date) => void;
   onJobClick: (line: ScheduleLine) => void;
@@ -494,13 +496,40 @@ function EmployeeRow({
   showCrewBadge,
   showWeather,
   highlightedLineIds,
-  onCellDragOver,
   onCellDrop,
   onCellClick,
   onJobClick,
   onResize,
 }: EmployeeRowProps) {
   const daysRef = useRef<HTMLDivElement>(null);
+  // Day index currently under a drag, for the drop-target highlight. Null when
+  // nothing is being dragged over this row.
+  const [dropHoverIdx, setDropHoverIdx] = useState<number | null>(null);
+
+  // Map a pointer x-coordinate to a 0–6 day index within the row's day strip.
+  // This is what lets a drop ONTO an existing card resolve to the right day
+  // (the card sits on top of the day cells, so its own position can't tell us
+  // which day the cursor is over).
+  const dayIndexFromClientX = (clientX: number): number => {
+    const strip = daysRef.current;
+    if (!strip) return 0;
+    const rect = strip.getBoundingClientRect();
+    return Math.max(0, Math.min(6, Math.floor(((clientX - rect.left) / rect.width) * 7)));
+  };
+
+  const handleStripDragOver = (e: React.DragEvent) => {
+    if (readOnly) return;
+    e.preventDefault();
+    const idx = dayIndexFromClientX(e.clientX);
+    setDropHoverIdx((prev) => (prev === idx ? prev : idx));
+  };
+
+  const handleStripDrop = (e: React.DragEvent) => {
+    setDropHoverIdx(null);
+    if (readOnly) return;
+    e.preventDefault();
+    onCellDrop(e, emp.id, days[dayIndexFromClientX(e.clientX)]!);
+  };
 
   return (
     <div className="employee-row" style={{ minHeight: rowMinHeight }}>
@@ -510,7 +539,16 @@ function EmployeeRow({
           {Math.round(emp.productivityRate * 100)}% · {emp.standardHoursPerDay}h/day
         </span>
       </div>
-      <div className="employee-row__days" ref={daysRef} style={{ minHeight: rowMinHeight }}>
+      <div
+        className="employee-row__days"
+        ref={daysRef}
+        style={{ minHeight: rowMinHeight }}
+        onDragLeave={(e) => {
+          // Only clear when the drag actually leaves the strip, not when it
+          // crosses between child cells/cards inside it.
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropHoverIdx(null);
+        }}
+      >
         {days.map((day, i) => {
           const occupiedHere = cards.some(
             (c) => i >= c.startIdx && i < c.startIdx + c.spanDays,
@@ -519,9 +557,9 @@ function EmployeeRow({
           return (
             <div
               key={i}
-              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere ? " day-cell--empty" : ""}`}
-              onDragOver={onCellDragOver}
-              onDrop={(e) => onCellDrop(e, emp.id, day)}
+              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere ? " day-cell--empty" : ""}${dropHoverIdx === i ? " day-cell--drop-target" : ""}`}
+              onDragOver={handleStripDragOver}
+              onDrop={handleStripDrop}
               onClick={() => {
                 if (!occupiedHere) onCellClick(day);
               }}
@@ -544,6 +582,11 @@ function EmployeeRow({
             showWeather={showWeather}
             highlighted={highlightedLineIds?.has(card.line.id) ?? false}
             daysRef={daysRef}
+            // Drops landing on a card forward to the row strip so the task
+            // stacks onto whatever day is under the cursor (lane allocator
+            // handles the visual stacking).
+            onCardDragOver={handleStripDragOver}
+            onCardDrop={handleStripDrop}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
           />
@@ -566,6 +609,8 @@ interface GanttCardProps {
   showWeather: boolean;
   highlighted: boolean;
   daysRef: React.RefObject<HTMLDivElement | null>;
+  onCardDragOver: (e: React.DragEvent) => void;
+  onCardDrop: (e: React.DragEvent) => void;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
 }
@@ -583,6 +628,8 @@ function GanttCard({
   showWeather,
   highlighted,
   daysRef,
+  onCardDragOver,
+  onCardDrop,
   onClick,
   onResize,
 }: GanttCardProps) {
@@ -638,9 +685,11 @@ function GanttCard({
     window.addEventListener("mouseup", onUp);
   };
 
+  const [dragging, setDragging] = useState(false);
+
   return (
     <div
-      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}`}
+      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}`}
       style={{
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,
@@ -651,7 +700,14 @@ function GanttCard({
       draggable={!readOnly && !line.isLocked && !resizePreview}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/lineId", line.id);
+        e.dataTransfer.effectAllowed = "move";
+        setDragging(true);
       }}
+      onDragEnd={() => setDragging(false)}
+      // Forward drops landing on this card to the row strip so the dragged
+      // task stacks onto the day under the cursor instead of being lost.
+      onDragOver={onCardDragOver}
+      onDrop={onCardDrop}
       onClick={(e) => {
         e.stopPropagation();
         onClick();

@@ -1,6 +1,6 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek } from "date-fns";
-import { shiftTask, updateDuration } from "../engine/cascade";
+import { diffShift, diffResize } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
@@ -127,6 +127,11 @@ export function createScheduleStore(
             ? seededPreferred
             : { ...seededPreferred, endDateTime: engineEnd };
         });
+        // The confirm dialog and commit both isolate a change's true effect
+        // via `diffShift` (a move-vs-noop differential), so phantom
+        // "downstream" moves never appear even though the loaded board isn't
+        // pre-settled to the cascade fixpoint. We deliberately leave the
+        // loaded layout as authored rather than normalizing it on load.
         const ctx: ScheduleContext = { ...ctxForNormalize, schedule: normalized };
         set({
           employees: empMap,
@@ -147,54 +152,53 @@ export function createScheduleStore(
     shiftTaskAndCommit: async (lineId, newStart, newEmployeeId, cascade = true) => {
       const state = get();
       const ctx = buildContext(state);
-      const result = shiftTask(ctx, lineId, newStart, newEmployeeId, {
-        cascade,
-        previewOnly: false,
-      });
-
-      const movedSet = new Set(result.moved);
+      // Differential commit: persist + apply only the genuinely-affected
+      // tasks, leaving unrelated tasks exactly where they were. This is the
+      // same isolation the confirm dialog shows, so what the user approves is
+      // precisely what gets written (no ambient cascade churn).
+      const diff = diffShift(ctx, lineId, newStart, newEmployeeId, { cascade });
       const ds = state.dataSource;
+      const toPersist = [diff.target, ...diff.changed].filter(
+        (l): l is NonNullable<typeof l> => l != null,
+      );
       await Promise.all(
-        result.context.schedule
-          .filter((line) => movedSet.has(line.id))
-          .map((line) =>
-            ds.updateScheduleLine(line.id, {
-              startDateTime: line.startDateTime,
-              endDateTime: line.endDateTime,
-              employeeId: line.employeeId,
-              departmentId: line.departmentId,
-            }),
-          ),
+        toPersist.map((line) =>
+          ds.updateScheduleLine(line.id, {
+            startDateTime: line.startDateTime,
+            endDateTime: line.endDateTime,
+            employeeId: line.employeeId,
+            departmentId: line.departmentId,
+          }),
+        ),
       );
 
       set({
-        schedule: result.context.schedule,
-        conflicts: result.conflicts,
+        schedule: diff.committed.schedule,
+        conflicts: diff.conflicts,
       });
     },
 
     updateTaskHours: async (lineId, overrideHours) => {
       const state = get();
       const ctx = buildContext(state);
-      const result = updateDuration(ctx, lineId, overrideHours, true);
-      const movedSet = new Set(result.moved);
-
+      const diff = diffResize(ctx, lineId, overrideHours, true);
       const ds = state.dataSource;
+      const toPersist = [diff.target, ...diff.changed].filter(
+        (l): l is NonNullable<typeof l> => l != null,
+      );
       await Promise.all(
-        result.context.schedule
-          .filter((line) => movedSet.has(line.id) || line.id === lineId)
-          .map((line) =>
-            ds.updateScheduleLine(line.id, {
-              startDateTime: line.startDateTime,
-              endDateTime: line.endDateTime,
-              overrideHours: line.overrideHours,
-            }),
-          ),
+        toPersist.map((line) =>
+          ds.updateScheduleLine(line.id, {
+            startDateTime: line.startDateTime,
+            endDateTime: line.endDateTime,
+            overrideHours: line.overrideHours,
+          }),
+        ),
       );
 
       set({
-        schedule: result.context.schedule,
-        conflicts: result.conflicts,
+        schedule: diff.committed.schedule,
+        conflicts: diff.conflicts,
       });
     },
 

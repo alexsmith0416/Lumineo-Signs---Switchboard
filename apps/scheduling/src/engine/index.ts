@@ -11,8 +11,11 @@ export {
   cloneContext,
   findEarliestStart,
   shiftTask,
+  diffShift,
+  diffResize,
   updateDuration,
 } from "./cascade";
+export type { DiffShiftResult } from "./cascade";
 export { detectConflicts } from "./conflicts";
 export { runScenario, commitScenario, computeImpact } from "./scenarios";
 export type { ImpactMetrics } from "./scenarios";
