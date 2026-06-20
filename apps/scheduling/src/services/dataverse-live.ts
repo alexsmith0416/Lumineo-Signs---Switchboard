@@ -38,21 +38,38 @@ const PREFER_WRITE = "return=representation";
 
 type Row = Record<string, unknown>;
 
-// Lazy SDK handle — defers getClient() (needs the runtime) to first use.
+// Lazy SDK handle — defers getClient() (needs the runtime) to first use, and
+// resolves the Dataverse org URL from the app context. The connector's
+// ListRecords/CreateRecord/... operations require the organization explicitly
+// (otherwise: "Invalid organization URL 'null' provided"), so we use the
+// *WithOrganization variants with the org URL from IContext.app.dataverseOrgUrl.
 let _svc: typeof import("../generated").MicrosoftDataverseService | null = null;
-async function svc() {
-  if (!_svc) _svc = (await import("../generated")).MicrosoftDataverseService;
-  return _svc;
+let _org = "";
+async function sdk() {
+  if (!_svc) {
+    _svc = (await import("../generated")).MicrosoftDataverseService;
+    try {
+      const { getContext } = await import("@microsoft/power-apps/app");
+      const ctx = await getContext();
+      _org = ctx.app.dataverseOrgUrl ?? "";
+    } catch {
+      _org = "";
+    }
+  }
+  return { S: _svc, org: _org };
 }
 
 async function list(
   entitySet: string,
   opts: { select?: string; filter?: string; orderby?: string } = {},
 ): Promise<Row[]> {
-  const S = await svc();
-  const res = await S.ListRecords(entitySet, PREFER_READ, ACCEPT, false, opts.select, opts.filter, opts.orderby);
+  const { S, org } = await sdk();
+  const res = await S.ListRecordsWithOrganization(
+    org, entitySet, PREFER_READ, ACCEPT, false, false, opts.select, opts.filter, opts.orderby,
+  );
   if (!res.success) throw new Error(res.error?.message ?? `ListRecords(${entitySet}) failed`);
-  return (res.data?.value ?? []).map((it) => (it.dynamicProperties ?? (it as unknown)) as Row);
+  const data = res.data as { value?: Row[] } | undefined;
+  return (data?.value ?? []).map((it) => ((it as { dynamicProperties?: Row }).dynamicProperties ?? it) as Row);
 }
 
 const s = (v: unknown, fb = ""): string => (v == null ? fb : String(v));
@@ -172,18 +189,18 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
-    const S = await svc();
-    const res = await S.UpdateRecord(PREFER_WRITE, ACCEPT, SET.lines, id, toRecord(changes));
+    const { S, org } = await sdk();
+    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, id, toRecord(changes));
     if (!res.success) throw new Error(res.error?.message ?? `UpdateRecord(${id}) failed`);
     const body = res.data as Row | undefined;
     return body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
   },
 
   async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
-    const S = await svc();
+    const { S, org } = await sdk();
     const rec = toRecord(line);
     rec.crfdf_name = `${line.jobNo} · ${line.planningLineDescription}`.slice(0, 200);
-    const res = await S.CreateRecord(PREFER_WRITE, ACCEPT, SET.lines, rec);
+    const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, rec);
     if (!res.success) throw new Error(res.error?.message ?? `CreateRecord failed`);
     // CreateRecord returns void; the new id is in the response location header
     // which the generated wrapper doesn't surface — return the input line. A
@@ -192,8 +209,8 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async deleteScheduleLine(id: string): Promise<void> {
-    const S = await svc();
-    const res = await S.DeleteRecord(SET.lines, id);
+    const { S, org } = await sdk();
+    const res = await S.DeleteRecordWithOrganization(org, SET.lines, id);
     if (!res.success) throw new Error(res.error?.message ?? `DeleteRecord(${id}) failed`);
   },
 };
