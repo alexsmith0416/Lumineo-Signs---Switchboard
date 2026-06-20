@@ -1,0 +1,995 @@
+:root {
+  --lumineo-navy: #141464;
+  --lumineo-red: #e8151b;
+  --label-bg: #e8ebf5;
+  --input-bg: #f2f4f8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f8fa;
+  --bg-tertiary: #eef0f4;
+  --border: #e1e4ea;
+  --text-primary: #1a1d23;
+  --text-secondary: #5a6172;
+  --text-tertiary: #8b91a0;
+  --dept-metal-bg: #bed7ff;
+  --dept-metal-text: #042c53;
+  --dept-paint-bg: #fac775;
+  --dept-paint-text: #633806;
+  --dept-assembly-bg: #cecbf6;
+  --dept-assembly-text: #26215c;
+  --dept-vinyl-bg: #c8e6d4;
+  --dept-vinyl-text: #04342c;
+  --scenario-amber-1: #fcd34d;
+  --scenario-amber-2: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ============ App shell ============ */
+
+.app-shell {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "header"
+    "main";
+  height: 100vh;
+}
+
+.app-header {
+  grid-area: header;
+  background: var(--lumineo-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+}
+
+.app-header__menu {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.app-header__menu:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--lumineo-red);
+  color: #fff;
+  padding: 4px 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.app-header__logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.app-header__logo-text .lumineo { font-size: 14px; }
+.app-header__logo-text .signs { font-size: 9px; letter-spacing: 1.5px; opacity: 0.9; }
+
+.app-header__title {
+  font-size: 16px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.app-header__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.app-header__action {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lumineo-red);
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.app-header__action:hover { filter: brightness(1.1); }
+
+/* ============ Nav drawer (hamburger menu) ============ */
+
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 100, 0.32);
+  z-index: 200;
+  animation: nav-drawer-fade 0.18s ease-out;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 86vw;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  animation: nav-drawer-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 201;
+}
+
+.nav-drawer__header {
+  background: var(--lumineo-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  min-height: 48px;
+}
+
+.nav-drawer__close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.nav-drawer__close:hover { background: rgba(255, 255, 255, 0.12); }
+
+.nav-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.nav-drawer__group { padding: 6px 0; }
+
+.nav-drawer__group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding: 6px 18px 4px;
+  font-weight: 600;
+}
+
+.nav-drawer__item {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+.nav-drawer__item:hover {
+  background: var(--bg-tertiary);
+}
+.nav-drawer__item--active {
+  background: var(--bg-tertiary);
+  border-left-color: var(--lumineo-navy);
+  color: var(--lumineo-navy);
+  font-weight: 700;
+}
+
+@keyframes nav-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nav-drawer-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.app-main {
+  grid-area: main;
+  overflow: auto;
+  background: var(--bg-primary);
+  padding: 16px;
+}
+
+/* ============ Calendar ============ */
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-toolbar button {
+  background: var(--lumineo-navy);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.calendar-toolbar__label {
+  font-weight: 500;
+}
+
+.calendar-toolbar__spacer { flex: 1; }
+
+.calendar-toolbar__today {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+}
+.calendar-toolbar__today:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.calendar-toolbar__print {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.calendar-toolbar__print:hover {
+  background: var(--bg-tertiary) !important;
+}
+
+.visibility-menu__trigger {
+  background: #fff !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.visibility-menu__trigger:hover {
+  background: var(--bg-tertiary) !important;
+}
+
+/* Add Job button — brand red, always pinned right of the toolbar even
+   when the toolbar wraps onto multiple lines on smaller screens. */
+.btn-add-job {
+  background: var(--lumineo-red) !important;
+  color: #fff !important;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(232, 21, 27, 0.18);
+}
+.btn-add-job:hover {
+  filter: brightness(1.08);
+}
+
+.calendar-grid {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: auto;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.calendar-header-row {
+  display: grid;
+  grid-template-columns: 140px repeat(7, minmax(110px, 1fr));
+  min-width: 920px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.calendar-header-cell {
+  padding: 8px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+
+.calendar-header-cell--resource {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+}
+
+.calendar-header-cell--weekend {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.dept-section {
+  border-bottom: 1px solid var(--border);
+  min-width: 920px;
+}
+
+.dept-header {
+  font-weight: 600;
+  /* Background color is set via inline style per-department. The label
+     inside repeats the color via its own inline style so the sticky
+     left chip carries a solid color, not transparent. */
+}
+
+.dept-header__label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  /* background-color comes from inline style; never inherit */
+  min-width: 140px;
+  box-sizing: border-box;
+}
+
+.employee-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  border-bottom: 1px solid var(--bg-tertiary);
+  min-height: 56px;
+  min-width: 920px;
+}
+
+.employee-row:last-child { border-bottom: none; }
+
+.employee-row__name {
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.employee-row__name .productivity {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.employee-row__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  position: relative;
+  min-height: 56px;
+}
+
+.day-cell {
+  border-right: 1px solid var(--bg-tertiary);
+  min-height: 56px;
+}
+
+.day-cell:last-child { border-right: none; }
+
+.day-cell--weekend {
+  background: var(--bg-secondary);
+}
+
+.day-cell--empty:hover {
+  background: var(--bg-tertiary);
+  cursor: pointer;
+}
+
+.gantt-card {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.gantt-card .job-card {
+  height: 100%;
+  position: relative;
+}
+
+.gantt-card .resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background: transparent;
+  z-index: 3;
+}
+
+.gantt-card .resize-handle:hover,
+.gantt-card .resize-handle--active {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.gantt-card .resize-handle--right {
+  right: 1px;
+  cursor: col-resize;
+  border-radius: 0 4px 4px 0;
+}
+
+.gantt-card .resize-handle--left {
+  left: 1px;
+  cursor: col-resize;
+  border-radius: 4px 0 0 4px;
+}
+
+.gantt-card--overflow-left .job-card {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 3px solid rgba(0, 0, 0, 0.25);
+}
+
+.gantt-card--overflow-right .job-card {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: 3px solid rgba(0, 0, 0, 0.25);
+}
+
+@keyframes cascade-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(232, 21, 27, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(232, 21, 27, 0); }
+}
+
+.gantt-card--highlighted {
+  z-index: 4;
+}
+
+.gantt-card--highlighted .job-card {
+  outline: 2px solid var(--lumineo-red);
+  outline-offset: 0;
+  animation: cascade-pulse 1.6s ease-out infinite;
+}
+
+/* Job card: column layout — job# + customer on top line, description below,
+   optional addons (crew/weather/$) on a third line. All text left-justified. */
+.job-card {
+  border-radius: 6px;
+  padding: 4px 24px 4px 8px;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+  gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 11px;
+  height: 100%;
+}
+
+.job-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.job-card__job-no {
+  font-weight: 700;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.job-card__customer {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  text-align: left;
+}
+
+.job-card__desc {
+  opacity: 0.78;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  text-align: left;
+}
+
+.job-card__addons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.job-card__invoice {
+  color: #1b6e3e;
+  font-weight: 700;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.job-card__icons {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  display: flex;
+  gap: 3px;
+  font-size: 11px;
+}
+
+/* Stacked layout (installation) — same column structure, just taller +
+   the addons row is meaningful here. The base .job-card already pins
+   text-align: left, so no further override is required. */
+.job-card--stacked .job-card__desc {
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+/* Custom cards (PTO / Holiday / Maintenance / etc.) — a single bold
+   title block on the colored background. */
+.job-card--custom .job-card__custom-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============ Forms / Add Job panel ============ */
+
+.slide-over {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0,0,0,0.25);
+  z-index: 50;
+}
+
+.slide-over__panel {
+  width: 480px;
+  background: var(--bg-primary);
+  height: 100%;
+  box-shadow: -4px 0 18px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  background: var(--lumineo-navy);
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-field {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-field__label {
+  background: var(--label-bg);
+  padding: 8px 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+}
+
+.form-field__input,
+.form-field__select {
+  background: var(--input-bg);
+  border: none;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.form-field__input:focus,
+.form-field__select:focus {
+  border: 1px solid var(--lumineo-navy);
+  margin: -1px;
+}
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+
+.btn-primary {
+  background: var(--lumineo-navy);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--lumineo-navy);
+  border: 1px solid var(--lumineo-navy);
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-danger {
+  background: var(--lumineo-red);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* ============ Scenario ============ */
+
+.scenario-banner {
+  background: linear-gradient(135deg, var(--scenario-amber-1), var(--scenario-amber-2));
+  color: #4b2c00;
+  padding: 8px 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scenario-banner button {
+  background: rgba(0,0,0,0.15);
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.scenario-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-tertiary);
+}
+
+.scenario-empty h2 { color: var(--text-primary); margin-bottom: 8px; }
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+.scenario-changes {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.scenario-change-row {
+  background: var(--bg-primary);
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.impact-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.impact-card h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+
+.impact-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.impact-stat .value { font-weight: 600; }
+.impact-stat .value.good { color: #2e7d32; }
+.impact-stat .value.bad { color: var(--lumineo-red); }
+
+/* ============ Misc ============ */
+
+.empty-state {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.loading {
+  padding: 16px;
+  color: var(--text-secondary);
+}
+
+.error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: var(--lumineo-red);
+  border-radius: 4px;
+}
+
+/* =================================================================
+   MOBILE — portrait phones only. Landscape phones (typically 800+
+   CSS px wide) keep the desktop layout per the user's intent.
+   ================================================================= */
+
+@media (max-width: 720px) {
+  body { font-size: 12px; }
+
+  .app-shell {
+    grid-template-rows: 44px 1fr;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main";
+    height: 100vh;
+  }
+
+  .app-header {
+    height: 44px;
+    padding: 0 6px;
+    gap: 8px;
+  }
+  .app-header__menu {
+    padding: 4px;
+  }
+  .app-header__logo { padding: 3px 7px; }
+  .app-header__logo-text .lumineo { font-size: 12px; }
+  .app-header__logo-text .signs { font-size: 7px; }
+  .app-header__title {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-header__actions { gap: 4px; }
+  .app-header__action {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .app-main {
+    overflow: auto;
+    padding: 10px;
+    min-width: 0;
+  }
+
+  /* Week summary stats — wrap tightly and shrink. */
+  .app-main > div > div:first-child[style*="bg-secondary"],
+  .app-main > div > div:first-child {
+    font-size: 11px;
+  }
+
+  /* Calendar toolbar wraps; the week label gets its own line. */
+  .calendar-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: stretch;
+  }
+  .calendar-toolbar > .calendar-toolbar__label {
+    order: -1;
+    flex: 1 0 100%;
+    font-size: 13px;
+    text-align: left;
+  }
+  .calendar-toolbar > .calendar-toolbar__spacer { display: none; }
+
+  /* Calendar grid scrolls horizontally on small screens. Resource
+     column compacts but stays sticky-left so it remains visible while
+     the user swipes through the days. Day columns hold a min-width so
+     cards stay legible. */
+  .calendar-header-row,
+  .employee-row,
+  .dept-section {
+    grid-template-columns: 110px repeat(7, minmax(90px, 1fr));
+    min-width: 740px;
+  }
+  .employee-row {
+    grid-template-columns: 110px 1fr;
+  }
+  .employee-row__days {
+    grid-template-columns: repeat(7, minmax(90px, 1fr));
+  }
+  .calendar-header-cell {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+  .employee-row__name {
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+  .employee-row__name .productivity { font-size: 9px; }
+
+  .dept-header__label { padding: 5px 10px; font-size: 12px; }
+
+  .job-card { font-size: 10px; padding: 3px 22px 3px 6px; }
+  .job-card__job-no { font-size: 10px; }
+  .job-card__customer { font-size: 10px; }
+  .job-card__desc { font-size: 9px; }
+  .job-card__invoice { font-size: 10px; }
+
+  /* Slide-overs (Add Job, Edit Job, Cascade dialog) take the full screen. */
+  .slide-over__panel {
+    width: 100% !important;
+    max-width: 100vw;
+  }
+  .slide-over > div[onclick] { width: 100% !important; }
+
+  /* The cascade-confirm modal sizes to viewport on mobile. */
+  .slide-over > div[style*="width: 560px"] {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    margin: 0 8px;
+  }
+}
+
+/* =================================================================
+   PRINT — clean week schedule with chrome stripped, for foreman paper.
+   ================================================================= */
+
+@media print {
+  body {
+    background: #fff;
+    font-size: 10px;
+  }
+  .app-shell {
+    display: block;
+    height: auto;
+  }
+  .app-header,
+  .app-sidebar,
+  .nav-drawer,
+  .nav-drawer-backdrop,
+  .calendar-toolbar button,
+  .calendar-toolbar > div[style*="display: flex"],
+  .calendar-toolbar > div[style*="display:flex"],
+  .app-header__menu,
+  .app-header__actions,
+  .btn-add-job,
+  .gantt-card .resize-handle,
+  .slide-over,
+  .app-main {
+    background: #fff !important;
+  }
+  .app-header,
+  .nav-drawer,
+  .nav-drawer-backdrop,
+  .calendar-toolbar button,
+  .btn-add-job,
+  .gantt-card .resize-handle,
+  .slide-over {
+    display: none !important;
+  }
+  .app-main {
+    padding: 0;
+    overflow: visible;
+  }
+  /* Print page title — derive from page <h1>/<h2> if present, else from
+     the calendar's week label. */
+  .calendar-toolbar__label {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 0 6px;
+  }
+  .calendar-grid {
+    border: 1px solid #999;
+    overflow: visible;
+    page-break-inside: auto;
+  }
+  .calendar-header-row,
+  .employee-row,
+  .dept-section {
+    min-width: 0 !important;
+    page-break-inside: avoid;
+  }
+  .calendar-header-row {
+    grid-template-columns: 110px repeat(7, 1fr) !important;
+    background: #f0f0f0;
+  }
+  .employee-row {
+    grid-template-columns: 110px 1fr !important;
+  }
+  .employee-row__days {
+    grid-template-columns: repeat(7, 1fr) !important;
+  }
+  .gantt-card {
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  .job-card {
+    border: 1px solid rgba(0, 0, 0, 0.3) !important;
+  }
+  /* Hide the live week-summary stats strip — replace with date + branding */
+  .app-main > div > div:first-child {
+    display: none !important;
+  }
+}
+@media (max-width: 380px) {
+  .calendar-header-row,
+  .dept-section {
+    grid-template-columns: 96px repeat(7, minmax(82px, 1fr));
+    min-width: 680px;
+  }
+  .employee-row {
+    grid-template-columns: 96px 1fr;
+    min-width: 680px;
+  }
+  .employee-row__days {
+    grid-template-columns: repeat(7, minmax(82px, 1fr));
+  }
+  .employee-row__name { padding: 4px 4px; font-size: 10px; }
+}

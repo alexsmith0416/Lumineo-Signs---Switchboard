@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": "",
+  "appDisplayName": "Lumineo Project Scheduler",
+  "region": "prod",
+  "environmentId": "",
+  "description": "Project Scheduler sub-app for the Lumineo Switchboard — Production / Installation / Shipping calendars on one scheduling engine, plus Scenario Sandbox and Monthly Plan.",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5174",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}

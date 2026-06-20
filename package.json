@@ -11,7 +11,11 @@
     "extract:estimating": "python scripts/extract-workbook.py",
     "build:estimating": "npm run build --workspace apps/estimating",
     "dev:estimating": "npm run dev --workspace apps/estimating",
-    "test:estimating": "npm test --workspace apps/estimating"
+    "test:estimating": "npm test --workspace apps/estimating",
+    "build:scheduling": "npm run build --workspace apps/scheduling",
+    "dev:scheduling": "npm run dev --workspace apps/scheduling",
+    "test:scheduling": "npm test --workspace apps/scheduling",
+    "typecheck:scheduling": "npm run typecheck --workspace apps/scheduling"
   },
   "engines": {
     "node": ">=20"
