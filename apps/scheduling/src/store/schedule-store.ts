@@ -234,12 +234,15 @@ export function createScheduleStore(
   }));
 }
 
-// Production store: live Dataverse when VITE_DATA_SOURCE=live (run under
-// `pac code run`), otherwise the in-memory mock for normal dev/build/tests.
+// Production store data source:
+//  - deployed (production build, runs in the Power Apps host) → live Dataverse
+//  - VITE_DATA_SOURCE=live (forced, e.g. local `pac code run`) → live Dataverse
+//  - otherwise (plain `npm run dev` / tests) → in-memory mock
 // Importing liveProductionDataSource is side-effect-free — its SDK loads lazily
-// on first call — so this selection never touches the Power runtime during dev.
-const productionSource =
-  import.meta.env.VITE_DATA_SOURCE === "live" ? liveProductionDataSource : productionDataSource;
+// on first call — so this selection never touches the Power runtime in dev.
+const useLiveData =
+  import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
+const productionSource = useLiveData ? liveProductionDataSource : productionDataSource;
 
 export const useScheduleStore = createScheduleStore(productionSource);
 export const useInstallationStore = createScheduleStore(installationDataSource);
