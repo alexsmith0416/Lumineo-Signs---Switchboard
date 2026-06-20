@@ -52,7 +52,7 @@ export default function AddCustomLocationDialog({
         aria-modal="true"
         aria-label="Add custom shipping location"
         style={{
-          background: "#fff",
+          background: "var(--surface-raised)",
           borderRadius: 8,
           width: 420,
           maxWidth: "94vw",

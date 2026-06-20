@@ -81,7 +81,7 @@ export default function VisibilityMenu({
                 right: Math.max(8, window.innerWidth - anchorRect.right),
                 width: 320,
                 maxHeight: "70vh",
-                background: "#fff",
+                background: "var(--surface-raised)",
                 borderRadius: 6,
                 boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
                 border: "1px solid var(--border)",

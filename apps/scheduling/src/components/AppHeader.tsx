@@ -1,9 +1,13 @@
+import { useTheme } from "../theme";
+
 interface AppHeaderProps {
   title: string;
   onMenu?: () => void;
 }
 
 export default function AppHeader({ title, onMenu }: AppHeaderProps) {
+  const { theme, toggle } = useTheme();
+  const nextIsDark = theme === "light";
   return (
     <header className="app-header">
       {onMenu && (
@@ -28,6 +32,16 @@ export default function AppHeader({ title, onMenu }: AppHeaderProps) {
       </div>
       <div className="app-header__title">{title}</div>
       <div className="app-header__actions">
+        <button
+          className="app-header__theme-toggle"
+          onClick={toggle}
+          type="button"
+          aria-label={nextIsDark ? "Switch to dark mode" : "Switch to light mode"}
+          title={nextIsDark ? "Switch to dark mode" : "Switch to light mode"}
+        >
+          <span aria-hidden="true">{nextIsDark ? "🌙" : "☀"}</span>
+          <span className="app-header__theme-label">{nextIsDark ? "Dark" : "Light"}</span>
+        </button>
         <button className="app-header__action" aria-label="Home" type="button">⌂</button>
         <button className="app-header__action" aria-label="Calendar" type="button">▦</button>
         <button className="app-header__action" aria-label="Settings" type="button">⚙</button>

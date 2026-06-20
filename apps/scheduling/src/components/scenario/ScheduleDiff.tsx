@@ -42,7 +42,7 @@ export default function ScheduleDiff({ useStore = useScenarioStore }: ScheduleDi
       })}
       {inserted.map((line) => (
         <div key={line.id} style={{ marginBottom: 8, fontSize: 11 }}>
-          <div style={{ fontWeight: 600, color: "#0a7e2d" }}>
+          <div style={{ fontWeight: 600, color: "var(--status-green)" }}>
             + {line.jobNo} · {line.planningLineDescription}
           </div>
           <div style={{ color: "var(--text-secondary)" }}>

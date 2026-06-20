@@ -176,7 +176,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         top,
         left,
         width: TOOLTIP_W,
-        background: "#fff",
+        background: "var(--surface-raised)",
         border: "1px solid var(--border)",
         borderRadius: 6,
         boxShadow: "0 8px 24px rgba(0,0,0,0.15)",

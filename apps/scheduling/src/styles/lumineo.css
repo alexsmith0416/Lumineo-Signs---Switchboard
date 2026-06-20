@@ -1,15 +1,95 @@
+/* ============================================================
+   Switchboard design tokens — DESIGN.md is the single source of truth.
+   Theme-scoped: light is the default; [data-theme="dark"] overrides.
+   Components must reference tokens, never raw hex.
+   ============================================================ */
+:root,
+[data-theme="light"] {
+  --bg-page: #f4f5f8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f4f5f8;
+  --surface-sidebar: #141464;
+
+  --border-default: #e4e5ea;
+  --border-soft: #eff0f3;
+
+  --text-primary: #1f1f2e;
+  --text-mid: #4a4f5e;
+  --text-dim: #8b91a3;
+  --text-on-accent: #ffffff;
+
+  --accent-brand: #141464;
+  --accent-brand-soft: #e8eaf5;
+
+  --status-green: #0f6e56;
+  --status-green-soft: #d8efe7;
+  --status-red: #e8151b;
+  --status-red-soft: #ffe4e5;
+  --status-amber: #f2994a;
+  --status-amber-soft: #fdf0d9;
+
+  --chart-green: #2bb174;
+  --chart-indigo: #5969e1;
+  --chart-blue: #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink: #e67be0;
+
+  --toggle-active: #ffffff;
+  --toggle-active-text: #1f1f2e;
+}
+
+[data-theme="dark"] {
+  --bg-page: #0b0e1f;
+  --surface-raised: #1a1f3d;
+  --surface-sunken: #131734;
+  --surface-sidebar: #131734;
+
+  --border-default: #2a3056;
+  --border-soft: #1f2542;
+
+  --text-primary: #f3f4f8;
+  --text-mid: #b3b8cc;
+  --text-dim: #7b82a0;
+  --text-on-accent: #ffffff;
+
+  --accent-brand: #7388ff;
+  --accent-brand-soft: #2a3260;
+
+  --status-green: #2dd4a4;
+  --status-green-soft: #1d4050;
+  --status-red: #ff5158;
+  --status-red-soft: #432842;
+  --status-amber: #fcb85b;
+  --status-amber-soft: #433b42;
+
+  --chart-green: #2dd4a4;
+  --chart-indigo: #7388ff;
+  --chart-blue: #4ea7fc;
+  --chart-purple: #7f77dd;
+  --chart-pink: #e67be0;
+
+  --toggle-active: #7388ff;
+  --toggle-active-text: #ffffff;
+}
+
+/* ---- Prototype token aliases → DESIGN.md tokens ----
+   The component rules below still reference these legacy names; re-pointing
+   them at semantic tokens makes the whole app theme-aware in one place.
+   Alias values reference other tokens, so they resolve per active theme. */
 :root {
-  --lumineo-navy: #141464;
-  --lumineo-red: #e8151b;
-  --label-bg: #e8ebf5;
-  --input-bg: #f2f4f8;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f8fa;
-  --bg-tertiary: #eef0f4;
-  --border: #e1e4ea;
-  --text-primary: #1a1d23;
-  --text-secondary: #5a6172;
-  --text-tertiary: #8b91a0;
+  --lumineo-navy: var(--accent-brand);
+  --lumineo-red: var(--status-red);
+  --label-bg: var(--accent-brand-soft);
+  --input-bg: var(--surface-sunken);
+  --bg-primary: var(--surface-raised);
+  --bg-secondary: var(--surface-sunken);
+  --bg-tertiary: var(--border-soft);
+  --border: var(--border-default);
+  --text-secondary: var(--text-mid);
+  --text-tertiary: var(--text-dim);
+
+  /* Department palette — self-contained colored chips (pastel fill + dark
+     text). Readable on either canvas, so identical in both themes. */
   --dept-metal-bg: #bed7ff;
   --dept-metal-text: #042c53;
   --dept-paint-bg: #fac775;
@@ -66,8 +146,10 @@ input, select, textarea {
 
 .app-header {
   grid-area: header;
-  background: var(--lumineo-navy);
-  color: #fff;
+  /* Brand bar — stays dark in both themes (like the DESIGN.md sidebar),
+     so it does not flip to the periwinkle dark-accent. */
+  background: var(--surface-sidebar);
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -134,6 +216,25 @@ input, select, textarea {
 
 .app-header__action:hover { filter: brightness(1.1); }
 
+/* Theme toggle — pill in the topbar's OTHER cluster. Moon+"Dark" in light
+   mode, sun+"Light" in dark mode (DESIGN.md §1). */
+.app-header__theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: var(--text-on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.app-header__theme-toggle:hover { background: rgba(255, 255, 255, 0.2); }
+.app-header__theme-label { letter-spacing: 0.2px; }
+
 /* ============ Nav drawer (hamburger menu) ============ */
 
 .nav-drawer-backdrop {
@@ -151,7 +252,7 @@ input, select, textarea {
   bottom: 0;
   width: 280px;
   max-width: 86vw;
-  background: #fff;
+  background: var(--surface-raised);
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
@@ -160,8 +261,8 @@ input, select, textarea {
 }
 
 .nav-drawer__header {
-  background: var(--lumineo-navy);
-  color: #fff;
+  background: var(--surface-sidebar);
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -261,7 +362,7 @@ input, select, textarea {
 .calendar-toolbar__spacer { flex: 1; }
 
 .calendar-toolbar__today {
-  background: #fff !important;
+  background: var(--surface-raised) !important;
   color: var(--lumineo-navy) !important;
   border: 1px solid var(--lumineo-navy) !important;
 }
@@ -271,7 +372,7 @@ input, select, textarea {
 }
 
 .calendar-toolbar__print {
-  background: #fff !important;
+  background: var(--surface-raised) !important;
   color: var(--lumineo-navy) !important;
   border: 1px solid var(--lumineo-navy) !important;
   padding: 6px 10px;
@@ -284,7 +385,7 @@ input, select, textarea {
 }
 
 .visibility-menu__trigger {
-  background: #fff !important;
+  background: var(--surface-raised) !important;
   color: var(--lumineo-navy) !important;
   border: 1px solid var(--lumineo-navy) !important;
   padding: 5px 10px;
@@ -572,7 +673,7 @@ input, select, textarea {
 }
 
 .job-card__invoice {
-  color: #1b6e3e;
+  color: var(--status-green);
   font-weight: 700;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -772,7 +873,7 @@ input, select, textarea {
 }
 
 .impact-stat .value { font-weight: 600; }
-.impact-stat .value.good { color: #2e7d32; }
+.impact-stat .value.good { color: var(--status-green); }
 .impact-stat .value.bad { color: var(--lumineo-red); }
 
 /* ============ Misc ============ */
@@ -790,7 +891,7 @@ input, select, textarea {
 
 .error {
   padding: 12px 16px;
-  background: #fef2f2;
+  background: var(--status-red-soft);
   color: var(--lumineo-red);
   border-radius: 4px;
 }

@@ -115,7 +115,7 @@ export default function CascadeConfirmDialog({
         aria-modal="true"
         aria-label={`Cascade preview — ${moves.length} downstream tasks would shift`}
         style={{
-          background: "#fff",
+          background: "var(--surface-raised)",
           borderRadius: 8,
           width: 560,
           maxHeight: "85vh",
@@ -289,7 +289,7 @@ function Section({
             style={{
               padding: "6px 8px",
               marginBottom: 4,
-              background: "#fff",
+              background: "var(--surface-raised)",
               borderRadius: 4,
               border: "1px solid var(--border)",
               fontSize: 11,
@@ -307,7 +307,7 @@ function Section({
               <strong>{format(m.afterStart, "EEE MMM d HH:mm")}</strong>{" "}
               <span
                 style={{
-                  color: startDelta >= 0 ? "var(--lumineo-red)" : "#1b6e3e",
+                  color: startDelta >= 0 ? "var(--lumineo-red)" : "var(--status-green)",
                   fontSize: 10,
                 }}
               >

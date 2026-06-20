@@ -2,6 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/lumineo.css";
+import { applyTheme, getStoredTheme } from "./theme";
+
+// Apply the persisted theme before first paint so there's no light→dark flash.
+applyTheme(getStoredTheme());
 
 // HTML5 drag-and-drop has no native support on iOS Safari and is flaky
 // on Android Chrome. The polyfill wires touch events to the native drag

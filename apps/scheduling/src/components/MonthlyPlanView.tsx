@@ -152,7 +152,7 @@ export default function MonthlyPlanView() {
                 padding: 12,
                 border: `1px solid ${onTrack ? "rgba(48,108,180,0.4)" : "rgba(232,21,27,0.35)"}`,
                 borderRadius: 6,
-                background: "#fff",
+                background: "var(--surface-raised)",
               }}
             >
               <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
@@ -162,7 +162,7 @@ export default function MonthlyPlanView() {
                 style={{
                   fontSize: 18,
                   fontWeight: 700,
-                  color: slot.total > 0 ? "#1b6e3e" : "var(--text-tertiary)",
+                  color: slot.total > 0 ? "var(--status-green)" : "var(--text-tertiary)",
                   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                 }}
               >
@@ -184,7 +184,7 @@ export default function MonthlyPlanView() {
                   style={{
                     height: "100%",
                     width: `${Math.min(100, (slot.total / weeklyTarget) * 100)}%`,
-                    background: onTrack ? "#1b6e3e" : "var(--lumineo-red)",
+                    background: onTrack ? "var(--status-green)" : "var(--lumineo-red)",
                   }}
                 />
               </div>
@@ -231,7 +231,7 @@ export default function MonthlyPlanView() {
                       padding: "2px 6px",
                       borderRadius: 3,
                       background: c.productionStatus === "ready" ? "rgba(74,160,93,0.18)" : "rgba(218,118,18,0.18)",
-                      color: c.productionStatus === "ready" ? "#1b5b2b" : "#6f3a05",
+                      color: c.productionStatus === "ready" ? "var(--status-green)" : "var(--status-amber)",
                     }}
                   >
                     {c.productionStatus}
@@ -241,7 +241,7 @@ export default function MonthlyPlanView() {
                 <Td>
                   {c.crewPersons}M {c.crewTrucks}T{c.crewLifts ? ` ${c.crewLifts}L` : ""}
                 </Td>
-                <Td align="right" style={{ color: "#1b6e3e", fontWeight: 600, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                <Td align="right" style={{ color: "var(--status-green)", fontWeight: 600, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
                   {formatMoney(c.invoiceAmount)}
                 </Td>
               </tr>
@@ -292,8 +292,8 @@ function Stat({
 }) {
   let color: string = "var(--text-primary)";
   if (highlight) color = "var(--lumineo-navy)";
-  if (money) color = "#1b6e3e";
-  if (warning) color = "#a0420f";
+  if (money) color = "var(--status-green)";
+  if (warning) color = "var(--status-amber)";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
       <span style={{ fontSize: 10, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
@@ -401,12 +401,12 @@ function AutofillProposal({
         <div style={{ padding: 12 }}>
           <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
             Selected {proposal.selected.length} candidate{proposal.selected.length === 1 ? "" : "s"},
-            adding <strong style={{ color: "#1b6e3e" }}>{formatMoney(proposal.totalAdded)}</strong> toward
+            adding <strong style={{ color: "var(--status-green)" }}>{formatMoney(proposal.totalAdded)}</strong> toward
             the monthly goal.
             {proposal.remainingGap > 0 ? (
               <> Remaining gap: <strong style={{ color: "var(--lumineo-red)" }}>{formatMoney(proposal.remainingGap)}</strong>.</>
             ) : (
-              <> <strong style={{ color: "#1b6e3e" }}>Goal reached.</strong></>
+              <> <strong style={{ color: "var(--status-green)" }}>Goal reached.</strong></>
             )}
           </div>
 
@@ -427,7 +427,7 @@ function AutofillProposal({
             >
               <div style={{ fontWeight: 600 }}>
                 {c.jobNo} · {c.customerName}{" "}
-                <span style={{ color: "#1b6e3e", marginLeft: 4 }}>
+                <span style={{ color: "var(--status-green)", marginLeft: 4 }}>
                   {formatMoney(c.invoiceAmount)}
                 </span>
               </div>

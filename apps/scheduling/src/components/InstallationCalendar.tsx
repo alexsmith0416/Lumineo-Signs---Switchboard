@@ -94,7 +94,7 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
           </button>
         ))}
       </div>
-      <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="#1b6e3e" />
+      <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="var(--status-green)" />
       <ToggleChip label="🌤" active={showWeather} onClick={() => setShowWeather((v) => !v)} />
       <ToggleChip label="Crew/Truck" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
       <VisibilityMenu

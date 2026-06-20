@@ -10,9 +10,9 @@ function totalCrew(line: ScheduleLine): number {
 }
 
 function badgeColor(total: number): { bg: string; text: string } {
-  if (total <= 2) return { bg: "rgba(74,160,93,0.18)", text: "#1b5b2b" };
+  if (total <= 2) return { bg: "rgba(74,160,93,0.18)", text: "var(--status-green)" };
   if (total <= 4) return { bg: "rgba(48,108,180,0.18)", text: "#193b6d" };
-  return { bg: "rgba(218,118,18,0.18)", text: "#6f3a05" };
+  return { bg: "rgba(218,118,18,0.18)", text: "var(--status-amber)" };
 }
 
 export default function CrewBadge({ line, size = "compact" }: CrewBadgeProps) {

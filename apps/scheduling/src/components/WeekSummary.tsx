@@ -157,8 +157,8 @@ function Stat({
 }) {
   let color: string = "var(--text-primary)";
   if (highlight) color = "var(--lumineo-navy)";
-  if (money) color = "#1b6e3e";
-  if (warning) color = "#a0420f";
+  if (money) color = "var(--status-green)";
+  if (warning) color = "var(--status-amber)";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
       <span
