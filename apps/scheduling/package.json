@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@microsoft/power-apps": "^1.2.2",
     "date-fns": "^3.6.0",
     "mobile-drag-drop": "^3.0.0-rc.0",
     "react": "^18.3.1",
