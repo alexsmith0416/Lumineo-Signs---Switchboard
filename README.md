@@ -63,18 +63,19 @@ The standalone single-file HTML build is the easiest demo artifact — `npm run 
 6. [docs/04-dataverse-schema.md](docs/04-dataverse-schema.md) — shared tables + Business Central integration
 7. [docs/13-airtable-bridge-mapping.md](docs/13-airtable-bridge-mapping.md) — **interim** Airtable → Dataverse mirror until BC API access lands
 8. [docs/14-bc-write-operations.md](docs/14-bc-write-operations.md) — payload schemas for the 7 queued BC write operations
+9. [docs/18-sign365-api-reference.md](docs/18-sign365-api-reference.md) — Sign365 (Infotech BC) API reference + Power Automate → Dataverse sync plan for Weekly Calendar
 
 ### Switchboard (master shell)
 
-9. [docs/05-home-screens.md](docs/05-home-screens.md) — per-group home screen specs (KPIs, widgets, recommendations)
-10. [docs/08-splash-screen-spec.md](docs/08-splash-screen-spec.md) — splash visual + KPI strip + Days Since Lost Time counter
-11. [docs/09-weather-card-spec.md](docs/09-weather-card-spec.md) — weather chip for Installation
-12. [docs/10-crew-truck-indicator-spec.md](docs/10-crew-truck-indicator-spec.md) — 2M 1T crew/truck badge
-13. [docs/11-widget-recommendations.md](docs/11-widget-recommendations.md) — full widget catalog (MVP + Phase 6)
+10. [docs/05-home-screens.md](docs/05-home-screens.md) — per-group home screen specs (KPIs, widgets, recommendations)
+11. [docs/08-splash-screen-spec.md](docs/08-splash-screen-spec.md) — splash visual + KPI strip + Days Since Lost Time counter
+12. [docs/09-weather-card-spec.md](docs/09-weather-card-spec.md) — weather chip for Installation
+13. [docs/10-crew-truck-indicator-spec.md](docs/10-crew-truck-indicator-spec.md) — 2M 1T crew/truck badge
+14. [docs/11-widget-recommendations.md](docs/11-widget-recommendations.md) — full widget catalog (MVP + Phase 6)
 
 ### Sub-apps
 
-14. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
+15. [docs/07-sub-apps.md](docs/07-sub-apps.md) — per-app screens, data, integrations
 
 ## Linear hub
 
