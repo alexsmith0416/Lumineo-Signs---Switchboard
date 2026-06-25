@@ -1,4 +1,5 @@
 import type { LniRecord } from '../types/schema';
+import { buildODataQuery, type QueryParams } from './odata';
 
 // Power Apps Code App client — injected at runtime by the Power Apps host.
 // When running locally (Vite dev server) this module is mocked via src/mocks/powerAppsClient.ts.
@@ -8,7 +9,7 @@ declare const PowerAppsClientContext: {
       retrieveMultipleRecords(
         entityName: string,
         options: string
-      ): Promise<{ entities: Record<string, unknown>[] }>;
+      ): Promise<{ entities: Record<string, unknown>[]; '@odata.nextLink'?: string }>;
       updateRecord(
         entityName: string,
         id: string,
@@ -104,7 +105,7 @@ function mapFromDV(entity: Record<string, unknown>): LniRecord {
     notes:           s('lni_job_notes'),
     adminNotes:      s('lni_admin_notes'),
     mfgNotes:        s('lni_mfg_notes'),
-  };
+  } as LniRecord;
 }
 
 // Maps an app field key + value to the Dataverse column name for writes.
@@ -156,25 +157,44 @@ const DV_COLUMN: Record<string, string> = {
   mfgNotes:        'lni_mfg_notes',
 };
 
-export async function fetchRecords(filter?: string): Promise<LniRecord[]> {
-  const client = await getContext();
-  const filterClause = filter ? `&$filter=${encodeURIComponent(filter)}` : '';
-  const result = await client.webAPI.retrieveMultipleRecords(
-    TABLE,
-    `?$orderby=lni_order_date desc&$top=500${filterClause}`
-  );
-  return result.entities.map(mapFromDV);
+export interface PageResult {
+  records: LniRecord[];
+  nextSkipToken: string | null;
 }
 
-export async function patchRecord(
-  id: string,
-  field: string,
-  value: unknown
-): Promise<void> {
-  const dvColumn = DV_COLUMN[field];
-  if (!dvColumn) return; // readonly / calculated field — skip
+// Extract the $skiptoken value out of an @odata.nextLink, if present.
+function skipTokenFromLink(link: string | undefined): string | null {
+  if (!link) return null;
+  const m = link.match(/[?&]\$skiptoken=([^&]+)/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Server-side fetch: all sort / filter / search / group / view-column selection
+// is expressed as OData params. Returns one page plus a cursor for the next.
+export async function fetchRecordsPage(query: QueryParams): Promise<PageResult> {
   const client = await getContext();
-  await client.webAPI.updateRecord(TABLE, id, { [dvColumn]: value });
+  const options = buildODataQuery(query);
+  const result = await client.webAPI.retrieveMultipleRecords(TABLE, options);
+  return {
+    records: result.entities.map(mapFromDV),
+    nextSkipToken: skipTokenFromLink(result['@odata.nextLink']),
+  };
+}
+
+// Translate a map of app field keys -> values into a single Dataverse write,
+// dropping any readonly / calculated / unknown keys.
+export async function updateRecordFields(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<void> {
+  const dvData: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(fields)) {
+    const col = DV_COLUMN[key];
+    if (col) dvData[col] = val;
+  }
+  if (Object.keys(dvData).length === 0) return; // nothing writable
+  const client = await getContext();
+  await client.webAPI.updateRecord(TABLE, id, dvData);
 }
 
 export async function createRecord(

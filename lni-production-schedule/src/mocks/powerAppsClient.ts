@@ -1,9 +1,14 @@
 // Local development mock for PowerAppsClientContext.
 // This file is only used by Vite dev server via the global shim in main.tsx.
 // It is NOT bundled into the Power Apps deployment build.
+//
+// The mock now emulates Dataverse's OData query handling — $select, $orderby,
+// $filter, $top and $skiptoken cursor pagination — so the app exercises the same
+// server-side query path in local dev that it uses against real Dataverse.
 
 import type { LniRecord } from '../types/schema';
 import { computeCalcFields } from '../hooks/calcFields';
+import { runODataQuery, type Entity } from './odataEngine';
 import seedJobs from '../data/seed-production-jobs.json';
 
 // Local-dev seed: 728 real jobs from the 6/8/2026 Airtable side-load
@@ -15,14 +20,24 @@ const SAMPLE: LniRecord[] = (seedJobs as LniRecord[]).map(computeCalcFields);
 let records = [...SAMPLE];
 let nextId = 100;
 
-// Injected into window so PowerAppsClientContext declarations resolve at runtime
+const PRIMARY_KEY = 'lni_productionscheduleid';
+
+// Run an OData query against the current in-memory record set.
+function runQuery(query: string) {
+  const entities: Entity[] = records.map(r => ({ [PRIMARY_KEY]: r.id, ...toEntity(r) }));
+  return runODataQuery(entities, query, PRIMARY_KEY);
+}
+
+// Injected into window so PowerAppsClientContext declarations resolve at runtime.
+// Guarded so the module can also be imported in a non-browser (test) context.
+if (typeof window !== 'undefined')
 (window as unknown as Record<string, unknown>)['PowerAppsClientContext'] = {
   get() {
     return {
       userSettings: { userId: 'dev-user-001' },
       webAPI: {
-        async retrieveMultipleRecords(_table: string, _query: string) {
-          return { entities: records.map(r => ({ lni_productionscheduleid: r.id, ...toEntity(r) })) };
+        async retrieveMultipleRecords(_table: string, query: string) {
+          return runQuery(query ?? '');
         },
         async updateRecord(_table: string, id: string, data: Record<string, unknown>) {
           records = records.map(r => {
@@ -63,7 +78,7 @@ function blankRecord(id: string): LniRecord {
     paintPrepHrs:null, paintHrs:null, steelHrs:null, installHrs:null, travelHrs:null, routingHrs:null,
     ulSign:false, qt:false, deposit:'NO', storageLocation:'',
     notes:'', adminNotes:'', mfgNotes:'',
-  };
+  } as LniRecord;
 }
 
 function toEntity(r: LniRecord): Record<string, unknown> {

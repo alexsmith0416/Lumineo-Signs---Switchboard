@@ -1,10 +1,13 @@
-import { useState, useRef } from 'react';
-import { useDataverse } from './hooks/useDataverse';
+import { useState, useRef, useMemo } from 'react';
+import { useDataverse, type FetchQuery } from './hooks/useDataverse';
 import { useAirtable } from './hooks/useAirtable';
 
-const useData = import.meta.env.VITE_DATA_SOURCE === 'airtable' ? useAirtable : useDataverse;
+const CLIENT_SIDE_QUERY = import.meta.env.VITE_DATA_SOURCE === 'airtable';
+const useData = CLIENT_SIDE_QUERY ? useAirtable : useDataverse;
 import { useViewPrefs } from './hooks/useViewPrefs';
 import { useGrid } from './hooks/useGrid';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
+import { applyClientSideQuery, applyServerPagePostProcess } from './hooks/applyQuery';
 import { useCustomFields } from './hooks/useCustomFields';
 import { useViewNames } from './hooks/useViewNames';
 import { useSidebarLayout } from './hooks/useSidebarLayout';
@@ -13,6 +16,7 @@ import Header from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
 import Toolbar from './components/Toolbar/Toolbar';
 import Grid from './components/Grid/Grid';
+import { ErrorBoundary } from './components/Grid/ErrorBoundary';
 import ColumnPanel from './components/ColumnPanel/ColumnPanel';
 import FieldManager from './components/FieldManager/FieldManager';
 import HomeScreen from './components/HomeScreen/HomeScreen';
@@ -49,30 +53,56 @@ function ScheduleApp({ scheduleId, scheduleName, onHome }: { scheduleId: string;
   const [colPanelOpen, setColPanelOpen] = useState(false);
   const [fieldMgrOpen, setFieldMgrOpen] = useState(false);
 
-  const dataHook = useData();
-  const { state: dvState, patch, create } = dataHook;
-  const reload = (dataHook as { reload?: () => void }).reload;
-  const lastFetched = (dataHook as { lastFetched?: Date | null }).lastFetched;
   const { getVisibleCols, savePref, prefs } = useViewPrefs();
   const { getDisplayName, setDisplayName } = useViewNames(scheduleId);
   const { groups, moveView, moveGroup, renameGroup, addGroup, deleteGroup, addView } = useSidebarLayout(scheduleId);
   const recordsRef = useRef<LniRecord[]>([]);
-  const { defs: customFieldDefs, getValue: getCustomValue, setValue: setCustomValue, addFields, updateField, deleteField } = useCustomFields(scheduleId, recordsRef);
-  const allRecords = dvState.status === 'ready' ? dvState.records : [];
-  recordsRef.current = allRecords;
 
   const {
     state: gridState,
-    filtered,
     setSearch,
     setSorts,
     setFilters,
     setGroupField,
     setManualOrder,
     toggleSort,
-  } = useGrid(allRecords, scheduleId, activeView, getCustomValue);
+  } = useGrid(scheduleId, activeView);
 
   const visibleCols = getVisibleCols(activeView);
+
+  // Search is debounced (300ms) before it becomes part of the Dataverse query —
+  // the input itself stays responsive via gridState.searchQuery.
+  const debouncedSearch = useDebouncedValue(gridState.searchQuery, 300);
+
+  // The full server-side query: sort / filter / search / group / view columns.
+  const query = useMemo<FetchQuery>(() => ({
+    viewCols: visibleCols,
+    sorts: gridState.sorts,
+    filters: gridState.filters,
+    groupField: gridState.groupField,
+    searchQuery: debouncedSearch,
+  }), [visibleCols, gridState.sorts, gridState.filters, gridState.groupField, debouncedSearch]);
+
+  const dataHook = useData(query);
+  const { state: dvState, patch, create, loadMore, hasMore, loadingMore, cellErrors } = dataHook;
+  const reload = dataHook.reload;
+  const lastFetched = dataHook.lastFetched;
+
+  const allRecords = dvState.status === 'ready' ? dvState.records : [];
+  recordsRef.current = allRecords;
+
+  const { defs: customFieldDefs, getValue: getCustomValue, setValue: setCustomValue, addFields, updateField, deleteField } = useCustomFields(scheduleId, recordsRef);
+
+  // Records ready for display. The Dataverse path only needs the small client-side
+  // residue (custom-field filters, manual order, calc-column sort); the Airtable
+  // bridge runs the full query client-side. Memoised so it never reprocesses
+  // unless an input actually changed.
+  const displayRecords = useMemo(() =>
+    CLIENT_SIDE_QUERY
+      ? applyClientSideQuery(allRecords, gridState.searchQuery, gridState.filters, gridState.sorts, gridState.groupField, gridState.manualOrder, getCustomValue)
+      : applyServerPagePostProcess(allRecords, gridState.sorts, gridState.filters, gridState.manualOrder, getCustomValue),
+    [allRecords, gridState.searchQuery, gridState.filters, gridState.sorts, gridState.groupField, gridState.manualOrder, getCustomValue]
+  );
 
   const handleAddFields = (fields: Parameters<typeof addFields>[0]) => {
     const keys = addFields(fields);
@@ -106,7 +136,7 @@ function ScheduleApp({ scheduleId, scheduleName, onHome }: { scheduleId: string;
       <Header
         viewName={getDisplayName(activeView)}
         scheduleName={scheduleName}
-        onExport={() => exportCsv(activeView, visibleCols, filtered)}
+        onExport={() => exportCsv(activeView, visibleCols, displayRecords)}
         onHome={onHome}
         onNewRecord={() => create({
           status: 'New Order this week', process: 'Added',
@@ -142,33 +172,42 @@ function ScheduleApp({ scheduleId, scheduleName, onHome }: { scheduleId: string;
             onOpenColumns={() => setColPanelOpen(true)}
             onOpenFields={() => setFieldMgrOpen(true)}
             customFieldDefs={customFieldDefs}
-            recordCount={filtered.length}
+            recordCount={displayRecords.length}
             onRefresh={reload}
             lastFetched={lastFetched}
           />
-          {dvState.status === 'loading' && (
-            <div className="state-center">Loading records…</div>
-          )}
-          {dvState.status === 'error' && (
+          {dvState.status === 'error' ? (
             <div className="state-center" style={{ color: '#E8151B' }}>
               Error: {dvState.message}
             </div>
-          )}
-          {dvState.status === 'ready' && (
-            <Grid
-              records={filtered}
-              visibleCols={visibleCols}
-              groupField={gridState.groupField}
-              sorts={gridState.sorts}
-              onToggleSort={toggleSort}
-              manualOrder={gridState.manualOrder}
-              onReorder={handleReorder}
-              onPatch={patch}
-              onCreate={create}
-              customFieldDefs={customFieldDefs}
-              getCustomValue={getCustomValue}
-              onCustomPatch={setCustomValue}
-            />
+          ) : (
+            <ErrorBoundary
+              fallback={
+                <div className="state-center" style={{ color: '#E8151B' }}>
+                  The grid hit an unexpected error. Try refreshing.
+                </div>
+              }
+            >
+              <Grid
+                records={displayRecords}
+                visibleCols={visibleCols}
+                groupField={gridState.groupField}
+                sorts={gridState.sorts}
+                onToggleSort={toggleSort}
+                manualOrder={gridState.manualOrder}
+                onReorder={handleReorder}
+                onPatch={patch}
+                onCreate={create}
+                customFieldDefs={customFieldDefs}
+                getCustomValue={getCustomValue}
+                onCustomPatch={setCustomValue}
+                loading={dvState.status === 'loading'}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
+                cellErrors={cellErrors}
+              />
+            </ErrorBoundary>
           )}
         </div>
       </div>

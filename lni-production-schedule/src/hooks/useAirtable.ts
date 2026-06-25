@@ -2,11 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { LniRecord } from '../types/schema';
 import { fetchFromAirtable } from '../data/airtable';
 import { computeCalcFields } from './calcFields';
-import type { DataverseState } from './useDataverse';
+import type { DataverseState, FetchQuery } from './useDataverse';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-export function useAirtable() {
+// Read-only Airtable bridge. It has no server query API, so it loads the full
+// dataset once; the query is applied client-side in App via applyClientSideQuery.
+// The `_query` arg keeps the hook signature compatible with useDataverse; the
+// bridge ignores it (the query is applied client-side in App).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function useAirtable(_query?: FetchQuery) {
   const [state, setState] = useState<DataverseState>({ status: 'loading' });
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const recordsRef = useRef<LniRecord[]>([]);
@@ -42,7 +47,7 @@ export function useAirtable() {
   // Create is not supported in bridge mode
   const create = useCallback(async (_defaults: Partial<Record<string, unknown>>): Promise<string> => {
     const id = `at-local-${Date.now()}`;
-    const blank: LniRecord = {
+    const blank = {
       id, job: '', status: 'New Order this week', process: 'Added', priority: '', region: 'WK',
       sales: '', signType: '', location: '', orderDate: new Date().toISOString().slice(0, 10),
       expeditor: '', scheduledInstall: '', mfgTargetMod: '', redDate: '', vendorShipDate: '',
@@ -60,5 +65,13 @@ export function useAirtable() {
     return id;
   }, []);
 
-  return { state, patch, create, reload: load, lastFetched };
+  // Pagination / cell-error tracking are no-ops for the bridge (whole dataset
+  // is already in memory). Provided so the contract matches useDataverse.
+  const loadMore = useCallback(async () => {}, []);
+  const EMPTY_ERRORS = useRef(new Set<string>()).current;
+
+  return {
+    state, patch, create, reload: load, lastFetched,
+    loadMore, hasMore: false, loadingMore: false, cellErrors: EMPTY_ERRORS,
+  };
 }

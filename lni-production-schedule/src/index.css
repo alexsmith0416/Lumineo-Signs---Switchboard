@@ -320,3 +320,65 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--navy); cur
 .grid-row:hover .drag-handle-td { opacity: 1; }
 .drag-handle-td:active { cursor: grabbing; }
 .grid-row.drag-over { box-shadow: 0 -2px 0 0 var(--navy) inset; }
+
+/* ── PERFORMANCE STATES: skeleton / empty / loading-more / cell errors ──────── */
+/* Additive states only — they do not alter existing grid visuals. */
+.skeleton-row { pointer-events: none; }
+.skeleton-row .grid-cell { cursor: default; }
+.skel-bar {
+  display: block;
+  height: 12px;
+  width: 70%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg2) 25%, #ECECEC 37%, var(--bg2) 63%);
+  background-size: 400% 100%;
+  animation: skel-shimmer 1.4s ease infinite;
+}
+@keyframes skel-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.grid-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 12px;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.grid-loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.row-error {
+  padding: 0 8px;
+  height: var(--row-h);
+  vertical-align: middle;
+  color: #E8151B;
+  font-size: 12px;
+}
+
+/* Cell whose last write failed and was reverted */
+.grid-cell.cell-error { box-shadow: inset 0 0 0 1.5px #E8151B; }
+.cell-error-dot {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #E8151B;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  pointer-events: none;
+}

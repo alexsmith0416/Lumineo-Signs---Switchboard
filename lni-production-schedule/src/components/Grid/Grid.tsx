@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect, useRef, Fragment } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, memo, forwardRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { LniRecord, CustomFieldDef } from '../../types/schema';
 import { FIELD_DEFS, BADGE_FIELDS } from '../../data/fieldDefs';
 import { getBadgeColor, COLOR_MAP } from '../../data/statusColors';
 import Badge from '../Badge/Badge';
+import { ErrorBoundary } from './ErrorBoundary';
 import type { SortCriterion } from '../../hooks/useGrid';
 
 interface ActiveCell { rowId: string; field: string }
@@ -21,20 +23,45 @@ interface Props {
   customFieldDefs: CustomFieldDef[];
   getCustomValue: (recordId: string, fieldKey: string) => unknown;
   onCustomPatch: (recordId: string, fieldKey: string, value: unknown) => void;
+  loading: boolean;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  cellErrors: Set<string>;
 }
 
-const isCustom = (field: string) => field.startsWith('cf_');
+// ── Module-level constants (never recreated per render) ───────────────────────
+const ROW_H = 40;            // matches --row-h
+const GROUP_H = 33;          // group-header row
+const OVERSCAN = 5;          // rows rendered beyond the viewport
+const SKELETON_ROWS = 14;    // skeleton placeholders during initial load
+const LOAD_MORE_THRESHOLD = 12; // fetch next page this many rows from the end
 
-export default function Grid({ records, visibleCols, groupField, sorts, onToggleSort, onReorder, onPatch, onCreate, customFieldDefs, getCustomValue, onCustomPatch }: Props) {
+const isCustom = (field: string) => field.startsWith('cf_');
+const stop = (e: React.MouseEvent) => e.stopPropagation();
+
+function colWidth(field: string, customFieldDefs: CustomFieldDef[]): number {
+  return FIELD_DEFS[field]?.width ?? customFieldDefs.find(d => d.key === field)?.width ?? 120;
+}
+
+// Flattened virtual-list item: either a group header or a data row.
+type GridItem =
+  | { kind: 'group'; key: string; count: number }
+  | { kind: 'row'; record: LniRecord };
+
+export default function Grid({
+  records, visibleCols, groupField, sorts, onToggleSort, onReorder,
+  onPatch, onCreate, customFieldDefs, getCustomValue, onCustomPatch,
+  loading, hasMore, loadingMore, onLoadMore, cellErrors,
+}: Props) {
   const [active, setActive] = useState<ActiveCell | null>(null);
   const [dd, setDd] = useState<DDState | null>(null);
   const [ddSearch, setDdSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   const ddRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef(active);
   const dragId = useRef<string | null>(null);
-  activeRef.current = active;
 
   // Close dropdown + deactivate cell on outside click
   useEffect(() => {
@@ -81,6 +108,7 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
 
     if (def.type === 'select') {
       activateCell(rowId, field);
+      // Reading layout here is fine — this is an event handler, not render.
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setDdSearch('');
       setTimeout(() => setDd({ rowId, field, rect }), 0);
@@ -104,40 +132,29 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
     if (e.key === 'Escape') { setActive(null); setDd(null); }
   }, [commit, visibleCols, activateCell]);
 
-  const addRow = async () => {
+  const addRow = useCallback(async () => {
     await onCreate({
       status: 'New Order this week', process: 'Added', region: 'WK',
       metal: 'X', assembly: 'X', paintPrep: 'X', materialCut: 'X', plex: 'X',
       orderDate: new Date().toISOString().slice(0, 10),
     });
-  };
+  }, [onCreate]);
 
-  const toggleGroup = (key: string) => {
+  const toggleGroup = useCallback((key: string) => {
     setCollapsed(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
-  };
+  }, []);
 
-  const colCount = visibleCols.length + 2; // +1 checkbox, +1 drag handle
-
-  const groups: { key: string; rows: LniRecord[] }[] = groupField
-    ? Object.entries(
-        records.reduce<Record<string, LniRecord[]>>((acc, r) => {
-          const k = String(r[groupField as keyof LniRecord] ?? '') || '—';
-          (acc[k] ??= []).push(r);
-          return acc;
-        }, {})
-      ).map(([key, rows]) => ({ key, rows }))
-    : [{ key: '', rows: records }];
-
-  const handleDragStart = (id: string) => { dragId.current = id; };
-  const handleDragOver = (e: React.DragEvent, id: string) => {
+  const handleDragStart = useCallback((id: string) => { dragId.current = id; }, []);
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
     e.preventDefault();
     setDragOverId(id);
-  };
-  const handleDrop = (targetId: string) => {
+  }, []);
+  const handleDragLeave = useCallback(() => setDragOverId(null), []);
+  const handleDrop = useCallback((targetId: string) => {
     const from = dragId.current;
     dragId.current = null;
     setDragOverId(null);
@@ -150,18 +167,88 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
     next.splice(fromIdx, 1);
     next.splice(toIdx, 0, from);
     onReorder(next);
-  };
+  }, [records, onReorder]);
+
+  const colCount = visibleCols.length + 2; // +1 checkbox, +1 drag handle
+
+  // Group the (server-ordered) records, then flatten into a single virtual list.
+  // Collapsing a group only drops its rows from `items` — it never re-renders the
+  // rows of other groups (they keep the same memoized identity).
+  const groups = useMemo(() => {
+    if (!groupField) return [{ key: '', rows: records }];
+    const m = new Map<string, LniRecord[]>();
+    for (const r of records) {
+      const k = String(r[groupField as keyof LniRecord] ?? '') || '—';
+      const bucket = m.get(k);
+      if (bucket) bucket.push(r); else m.set(k, [r]);
+    }
+    return Array.from(m, ([key, rows]) => ({ key, rows }));
+  }, [records, groupField]);
+
+  const items = useMemo<GridItem[]>(() => {
+    const out: GridItem[] = [];
+    for (const g of groups) {
+      if (groupField) out.push({ kind: 'group', key: g.key, count: g.rows.length });
+      if (!collapsed.has(g.key)) {
+        for (const record of g.rows) out.push({ kind: 'row', record });
+      }
+    }
+    return out;
+  }, [groups, collapsed, groupField]);
+
+  const getItemKey = useCallback(
+    (index: number) => {
+      const it = items[index];
+      return it.kind === 'group' ? `g:${it.key}` : `r:${it.record.id}`;
+    },
+    [items],
+  );
+
+  const rowVirtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (i) => (items[i]?.kind === 'group' ? GROUP_H : ROW_H),
+    overscan: OVERSCAN,
+    getItemKey,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  // Infinite scroll: fetch the next page when nearing the end of what's loaded.
+  useEffect(() => {
+    const last = virtualItems[virtualItems.length - 1];
+    if (!last) return;
+    if (last.index >= items.length - LOAD_MORE_THRESHOLD && hasMore && !loadingMore) {
+      onLoadMore();
+    }
+  }, [virtualItems, items.length, hasMore, loadingMore, onLoadMore]);
+
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom = virtualItems.length > 0
+    ? totalSize - virtualItems[virtualItems.length - 1].end
+    : 0;
+
+  // Per-row error fields, as a stable primitive so only affected rows re-render.
+  const errorFieldsFor = useCallback((id: string): string | undefined => {
+    if (cellErrors.size === 0) return undefined;
+    const fields: string[] = [];
+    for (const key of cellErrors) {
+      if (key.startsWith(id + ':')) fields.push(key.slice(id.length + 1));
+    }
+    return fields.length ? fields.join(',') : undefined;
+  }, [cellErrors]);
+
+  const measureRef = rowVirtualizer.measureElement;
+  const showEmpty = !loading && items.length === 0;
 
   return (
-    <div className="grid-wrap" onClick={() => { setDd(null); setActive(null); }}>
+    <div className="grid-wrap" ref={parentRef} onClick={() => { setDd(null); setActive(null); }}>
       <table className="grid-table">
         <colgroup>
           <col style={{ width: 24 }} />
           <col style={{ width: 40 }} />
-          {visibleCols.map(f => {
-            const w = FIELD_DEFS[f]?.width ?? customFieldDefs.find(d => d.key === f)?.width ?? 120;
-            return <col key={f} style={{ width: w }} />;
-          })}
+          {visibleCols.map(f => <col key={f} style={{ width: colWidth(f, customFieldDefs) }} />)}
         </colgroup>
         <thead>
           <tr>
@@ -208,89 +295,86 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
           </tr>
         </thead>
         <tbody>
-          {groups.map(({ key, rows }) => (
-            <Fragment key={key}>
-              {groupField && (
-                <tr key={`grp-${key}`} className="grp-header" onClick={() => toggleGroup(key)}>
-                  <td colSpan={colCount}>
-                    <div className={`grp-header-inner${collapsed.has(key) ? ' collapsed' : ''}`}>
-                      <svg viewBox="0 0 10 10" fill="currentColor" width="12" height="12">
-                        <path d="M2 3l3 4 3-4z"/>
-                      </svg>
-                      {key}
-                      <span className="grp-count">{rows.length}</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {!collapsed.has(key) && rows.map(record => (
-                <tr
-                  key={record.id}
-                  className={`grid-row${dragOverId === record.id ? ' drag-over' : ''}`}
-                  onDragOver={e => handleDragOver(e, record.id)}
-                  onDragLeave={() => setDragOverId(null)}
-                  onDrop={() => handleDrop(record.id)}
-                >
-                  <td
-                    className="drag-handle-td"
-                    draggable
-                    onDragStart={() => handleDragStart(record.id)}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    ⠿
-                  </td>
-                  <td className="grid-cb-td" onClick={e => e.stopPropagation()}>
-                    <input type="checkbox" />
-                  </td>
-                  {visibleCols.map((field, ci) => {
-                    const custom = isCustom(field);
-                    const cdef = custom ? customFieldDefs.find(d => d.key === field) : undefined;
-                    const def = custom ? undefined : FIELD_DEFS[field];
-                    const isActive = active?.rowId === record.id && active?.field === field;
-                    const isPrimary = ci === 0;
-                    const isReadonly = def?.type === 'readonly';
-                    const classes = [
-                      'grid-cell',
-                      isPrimary ? 'primary' : '',
-                      isActive ? 'editing' : '',
-                      isReadonly ? 'readonly' : '',
-                    ].filter(Boolean).join(' ');
-
-                    return (
-                      <td
-                        key={field}
-                        className={classes}
-                        onClick={e => handleCellClick(e, record.id, field)}
-                      >
-                        {custom
-                          ? isActive
-                            ? <CustomCellEditor
-                                recordId={record.id} def={cdef}
-                                value={getCustomValue(record.id, field)}
-                                onCommit={commit} onKey={handleKey}
-                              />
-                            : <CustomCellDisplay def={cdef} value={getCustomValue(record.id, field)} />
-                          : isActive
-                            ? <CellEditor record={record} field={field} onCommit={commit} onKey={handleKey} />
-                            : <CellDisplay record={record} field={field} />
-                        }
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </Fragment>
+          {loading && Array.from({ length: SKELETON_ROWS }, (_, i) => (
+            <SkeletonRow key={`sk-${i}`} visibleCols={visibleCols} />
           ))}
-          <tr className="add-row" onClick={addRow}>
-            <td colSpan={colCount}>
-              <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
-                  <path d="M6.5 1v11M1 6.5h11"/>
-                </svg>
-                Add record…
-              </span>
-            </td>
-          </tr>
+
+          {showEmpty && (
+            <tr>
+              <td colSpan={colCount}>
+                <div className="grid-empty">No records in this view</div>
+              </td>
+            </tr>
+          )}
+
+          {!loading && !showEmpty && (
+            <>
+              {paddingTop > 0 && (
+                <tr aria-hidden style={{ height: paddingTop }}><td colSpan={colCount} style={{ padding: 0, border: 0 }} /></tr>
+              )}
+
+              {virtualItems.map(vi => {
+                const it = items[vi.index];
+                if (it.kind === 'group') {
+                  return (
+                    <GroupHeaderRow
+                      key={vi.key}
+                      groupKey={it.key}
+                      count={it.count}
+                      collapsed={collapsed.has(it.key)}
+                      onToggle={toggleGroup}
+                      colCount={colCount}
+                      dataIndex={vi.index}
+                      measureRef={measureRef}
+                    />
+                  );
+                }
+                const record = it.record;
+                const activeField = active?.rowId === record.id ? active.field : null;
+                return (
+                  <Row
+                    key={vi.key}
+                    record={record}
+                    visibleCols={visibleCols}
+                    customFieldDefs={customFieldDefs}
+                    activeField={activeField}
+                    isDragOver={dragOverId === record.id}
+                    errorFields={errorFieldsFor(record.id)}
+                    getCustomValue={getCustomValue}
+                    onCellClick={handleCellClick}
+                    onCommit={commit}
+                    onKey={handleKey}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    colCount={colCount}
+                    dataIndex={vi.index}
+                    measureRef={measureRef}
+                  />
+                );
+              })}
+
+              {paddingBottom > 0 && (
+                <tr aria-hidden style={{ height: paddingBottom }}><td colSpan={colCount} style={{ padding: 0, border: 0 }} /></tr>
+              )}
+
+              {loadingMore && (
+                <tr><td colSpan={colCount}><div className="grid-loading-more">Loading more…</div></td></tr>
+              )}
+
+              <tr className="add-row" onClick={addRow}>
+                <td colSpan={colCount}>
+                  <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+                      <path d="M6.5 1v11M1 6.5h11"/>
+                    </svg>
+                    Add record…
+                  </span>
+                </td>
+              </tr>
+            </>
+          )}
         </tbody>
       </table>
 
@@ -312,80 +396,233 @@ export default function Grid({ records, visibleCols, groupField, sorts, onToggle
   );
 }
 
+// ── ROW ───────────────────────────────────────────────────────────────────────
+
+interface RowProps {
+  record: LniRecord;
+  visibleCols: string[];
+  customFieldDefs: CustomFieldDef[];
+  activeField: string | null;
+  isDragOver: boolean;
+  errorFields: string | undefined;
+  getCustomValue: (recordId: string, fieldKey: string) => unknown;
+  onCellClick: (e: React.MouseEvent, rowId: string, field: string) => void;
+  onCommit: (id: string, field: string, value: unknown) => void;
+  onKey: (e: React.KeyboardEvent, id: string, field: string, value: () => string) => void;
+  onDragStart: (id: string) => void;
+  onDragOver: (e: React.DragEvent, id: string) => void;
+  onDragLeave: () => void;
+  onDrop: (id: string) => void;
+  colCount: number;
+  dataIndex: number;
+  measureRef: (el: HTMLElement | null) => void;
+}
+
+const Row = memo(function Row({
+  record, visibleCols, customFieldDefs, activeField, isDragOver, errorFields,
+  getCustomValue, onCellClick, onCommit, onKey,
+  onDragStart, onDragOver, onDragLeave, onDrop, colCount, dataIndex, measureRef,
+}: RowProps) {
+  const errSet = errorFields ? errorFields.split(',') : null;
+  return (
+    <tr
+      ref={measureRef}
+      data-index={dataIndex}
+      className={`grid-row${isDragOver ? ' drag-over' : ''}`}
+      onDragOver={e => onDragOver(e, record.id)}
+      onDragLeave={onDragLeave}
+      onDrop={() => onDrop(record.id)}
+    >
+      <ErrorBoundary fallback={<td colSpan={colCount} className="row-error">⚠ This row failed to render</td>}>
+        <td className="drag-handle-td" draggable onDragStart={() => onDragStart(record.id)} onClick={stop}>⠿</td>
+        <td className="grid-cb-td" onClick={stop}><input type="checkbox" /></td>
+        {visibleCols.map((field, ci) => {
+          const custom = isCustom(field);
+          const cdef = custom ? customFieldDefs.find(d => d.key === field) : undefined;
+          const value = custom ? getCustomValue(record.id, field) : record[field as keyof LniRecord];
+          return (
+            <Cell
+              key={field}
+              recordId={record.id}
+              field={field}
+              value={value}
+              custom={custom}
+              cdef={cdef}
+              isActive={activeField === field}
+              isPrimary={ci === 0}
+              hasError={errSet?.includes(field) ?? false}
+              onCellClick={onCellClick}
+              onCommit={onCommit}
+              onKey={onKey}
+            />
+          );
+        })}
+      </ErrorBoundary>
+    </tr>
+  );
+});
+
+// ── GROUP HEADER ROW ────────────────────────────────────────────────────────
+
+interface GroupHeaderProps {
+  groupKey: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  colCount: number;
+  dataIndex: number;
+  measureRef: (el: HTMLElement | null) => void;
+}
+
+const GroupHeaderRow = memo(function GroupHeaderRow({
+  groupKey, count, collapsed, onToggle, colCount, dataIndex, measureRef,
+}: GroupHeaderProps) {
+  return (
+    <tr ref={measureRef} data-index={dataIndex} className="grp-header" onClick={() => onToggle(groupKey)}>
+      <td colSpan={colCount}>
+        <div className={`grp-header-inner${collapsed ? ' collapsed' : ''}`}>
+          <svg viewBox="0 0 10 10" fill="currentColor" width="12" height="12">
+            <path d="M2 3l3 4 3-4z"/>
+          </svg>
+          {groupKey}
+          <span className="grp-count">{count}</span>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+// ── SKELETON ROW ──────────────────────────────────────────────────────────────
+
+const SkeletonRow = memo(function SkeletonRow({ visibleCols }: { visibleCols: string[] }) {
+  return (
+    <tr className="grid-row skeleton-row">
+      <td className="drag-handle-td" />
+      <td className="grid-cb-td" />
+      {visibleCols.map(f => (
+        <td key={f} className="grid-cell"><span className="skel-bar" /></td>
+      ))}
+    </tr>
+  );
+});
+
+// ── CELL ────────────────────────────────────────────────────────────────────
+
+interface CellProps {
+  recordId: string;
+  field: string;
+  value: unknown;
+  custom: boolean;
+  cdef: CustomFieldDef | undefined;
+  isActive: boolean;
+  isPrimary: boolean;
+  hasError: boolean;
+  onCellClick: (e: React.MouseEvent, rowId: string, field: string) => void;
+  onCommit: (id: string, field: string, value: unknown) => void;
+  onKey: (e: React.KeyboardEvent, id: string, field: string, value: () => string) => void;
+}
+
+const Cell = memo(function Cell({
+  recordId, field, value, custom, cdef, isActive, isPrimary, hasError, onCellClick, onCommit, onKey,
+}: CellProps) {
+  const def = custom ? undefined : FIELD_DEFS[field];
+  const isReadonly = def?.type === 'readonly';
+  const classes = [
+    'grid-cell',
+    isPrimary ? 'primary' : '',
+    isActive ? 'editing' : '',
+    isReadonly ? 'readonly' : '',
+    hasError ? 'cell-error' : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <td className={classes} onClick={e => onCellClick(e, recordId, field)}>
+      {custom
+        ? isActive
+          ? <CustomCellEditor recordId={recordId} def={cdef} value={value} onCommit={onCommit} onKey={onKey} />
+          : <CustomCellDisplay def={cdef} value={value} />
+        : isActive
+          ? <CellEditor recordId={recordId} field={field} value={value} onCommit={onCommit} onKey={onKey} />
+          : <CellDisplay field={field} value={value} />
+      }
+      {hasError && <span className="cell-error-dot" title="Save failed — value reverted">!</span>}
+    </td>
+  );
+});
+
 // ── CELL DISPLAY ──────────────────────────────────────────────────────────────
 
-function CellDisplay({ record, field }: { record: LniRecord; field: string }) {
+function CellDisplay({ field, value }: { field: string; value: unknown }) {
   const def = FIELD_DEFS[field];
-  const val = record[field as keyof LniRecord];
 
   if (def?.type === 'readonly') {
     if (field === 'dip') {
-      const n = val as number | null;
+      const n = value as number | null;
       if (n == null) return <span style={{ color: 'var(--text3)' }}>—</span>;
       const c = n > 60 ? 'red' : n > 40 ? 'orange' : 'blue';
       const { bg, text } = COLOR_MAP[c];
       return <span className="badge" style={{ background: bg, color: text }}>{n}d</span>;
     }
     if (field === 'totalMfg') {
-      const t = (record.paintPrepHrs ?? 0) + (record.paintHrs ?? 0) + (record.steelHrs ?? 0) + (record.routingHrs ?? 0);
+      const t = (value as number | null) ?? 0;
       return <span className="badge" style={{ background: 'var(--bg2)', color: 'var(--text2)' }}>{t}h</span>;
     }
     if (field === 'totalInstall') {
-      const t = (record.steelHrs ?? 0) + (record.installHrs ?? 0) + (record.travelHrs ?? 0);
+      const t = (value as number | null) ?? 0;
       return <span className="badge" style={{ background: 'var(--bg2)', color: 'var(--text2)' }}>{t}h</span>;
     }
-    return <span style={{ color: 'var(--text3)' }}>{String(val ?? '—')}</span>;
+    return <span style={{ color: 'var(--text3)' }}>{String(value ?? '—')}</span>;
   }
 
-  if (val == null || val === '') return <span style={{ color: 'var(--text3)' }}>—</span>;
+  if (value == null || value === '') return <span style={{ color: 'var(--text3)' }}>—</span>;
 
   if (def?.type === 'bool') {
-    return val ? <span style={{ color: 'var(--navy)', fontWeight: 700 }}>✓</span> : null;
+    return value ? <span style={{ color: 'var(--navy)', fontWeight: 700 }}>✓</span> : null;
   }
 
   if (def?.type === 'currency') {
-    return <span style={{ fontWeight: 600, color: 'var(--navy)' }}>${Number(val).toLocaleString()}</span>;
+    return <span style={{ fontWeight: 600, color: 'var(--navy)' }}>${Number(value).toLocaleString()}</span>;
   }
 
   if (def?.type === 'number') {
-    return <span style={{ fontWeight: 600 }}>{String(val)}</span>;
+    return <span style={{ fontWeight: 600 }}>{String(value)}</span>;
   }
 
   if (def?.type === 'date') {
-    const s = String(val);
+    const s = String(value);
     if (!s) return <span style={{ color: 'var(--text3)' }}>—</span>;
     const dt = new Date(s + 'T00:00:00');
     return <span>{dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</span>;
   }
 
   if (BADGE_FIELDS.has(field)) {
-    return <Badge field={field} value={String(val)} />;
+    return <Badge field={field} value={String(value)} />;
   }
 
-  const s = String(val);
+  const s = String(value);
   return <span title={s}>{s.length > 32 ? s.slice(0, 30) + '…' : s}</span>;
 }
 
 // ── CELL EDITOR ───────────────────────────────────────────────────────────────
 
 function CellEditor({
-  record, field, onCommit, onKey,
+  recordId, field, value, onCommit, onKey,
 }: {
-  record: LniRecord;
+  recordId: string;
   field: string;
+  value: unknown;
   onCommit: (id: string, field: string, val: unknown) => void;
   onKey: (e: React.KeyboardEvent, id: string, field: string, val: () => string) => void;
 }) {
   const def = FIELD_DEFS[field];
-  const val = record[field as keyof LniRecord];
 
   if (def?.type === 'bool') {
     return (
       <div className="bool-wrap">
         <input
           type="checkbox"
-          checked={Boolean(val)}
-          onChange={e => onCommit(record.id, field, e.target.checked)}
+          checked={Boolean(value)}
+          onChange={e => onCommit(recordId, field, e.target.checked)}
           onClick={e => e.stopPropagation()}
         />
       </div>
@@ -394,20 +631,20 @@ function CellEditor({
 
   if (def?.type === 'select') {
     // Select shows current badge while dropdown is open (dropdown is rendered at portal level)
-    return <Badge field={field} value={String(val ?? '')} />;
+    return <Badge field={field} value={String(value ?? '')} />;
   }
 
   if (def?.type === 'multiline') {
     return (
       <textarea
         className="cell-textarea"
-        defaultValue={String(val ?? '')}
+        defaultValue={String(value ?? '')}
         autoFocus
-        onBlur={e => onCommit(record.id, field, e.target.value)}
+        onBlur={e => onCommit(recordId, field, e.target.value)}
         onKeyDown={e => {
           if (e.key === 'Escape' || e.key === 'Tab') {
             e.preventDefault();
-            onCommit(record.id, field, (e.target as HTMLTextAreaElement).value);
+            onCommit(recordId, field, (e.target as HTMLTextAreaElement).value);
           }
         }}
         onClick={e => e.stopPropagation()}
@@ -420,11 +657,11 @@ function CellEditor({
       <input
         className="cell-input"
         type="date"
-        defaultValue={String(val ?? '')}
+        defaultValue={String(value ?? '')}
         autoFocus
-        onChange={e => onCommit(record.id, field, e.target.value)}
-        onBlur={e => onCommit(record.id, field, e.target.value)}
-        onKeyDown={e => onKey(e, record.id, field, () => (e.target as HTMLInputElement).value)}
+        onChange={e => onCommit(recordId, field, e.target.value)}
+        onBlur={e => onCommit(recordId, field, e.target.value)}
+        onKeyDown={e => onKey(e, recordId, field, () => (e.target as HTMLInputElement).value)}
         onClick={e => e.stopPropagation()}
       />
     );
@@ -436,10 +673,10 @@ function CellEditor({
         className="cell-input num"
         type="number"
         step={def.type === 'currency' ? '0.01' : '1'}
-        defaultValue={Number(val ?? 0)}
+        defaultValue={Number(value ?? 0)}
         autoFocus
-        onBlur={e => onCommit(record.id, field, parseFloat(e.target.value) || 0)}
-        onKeyDown={e => onKey(e, record.id, field, () => String((e.target as HTMLInputElement).value))}
+        onBlur={e => onCommit(recordId, field, parseFloat(e.target.value) || 0)}
+        onKeyDown={e => onKey(e, recordId, field, () => String((e.target as HTMLInputElement).value))}
         onClick={e => e.stopPropagation()}
       />
     );
@@ -450,10 +687,10 @@ function CellEditor({
     <input
       className="cell-input"
       type="text"
-      defaultValue={String(val ?? '')}
+      defaultValue={String(value ?? '')}
       autoFocus
-      onBlur={e => onCommit(record.id, field, e.target.value)}
-      onKeyDown={e => onKey(e, record.id, field, () => (e.target as HTMLInputElement).value)}
+      onBlur={e => onCommit(recordId, field, e.target.value)}
+      onKeyDown={e => onKey(e, recordId, field, () => (e.target as HTMLInputElement).value)}
       onClick={e => e.stopPropagation()}
     />
   );
@@ -574,8 +811,6 @@ function CustomCellEditor({
 }
 
 // ── SELECT DROPDOWN ───────────────────────────────────────────────────────────
-
-import { forwardRef } from 'react';
 
 const SelectDropdown = forwardRef<HTMLDivElement, {
   rowId: string; field: string; rect: DOMRect;
