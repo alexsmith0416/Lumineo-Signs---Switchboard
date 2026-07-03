@@ -1,43 +1,24 @@
+import { useEffect, useReducer } from "react";
+import { getWeatherForJob, primeWeather } from "../services/weather";
+
+// Weather chip — keyed to the job's SHIP-TO ZIP (ScheduleLine.installZip,
+// which the AddJobPanel populates from BcJob.shipToZip). Data comes from
+// the crfdf_weathercache Dataverse table maintained by the `Lumineo
+// Weather` Power Automate flow — see src/services/weather.ts.
+
 interface WeatherChipProps {
   zip: string | null | undefined;
   forDate: Date;
   size?: "compact" | "expanded";
 }
 
-interface WeatherData {
-  icon: string;
-  label: string;
-  tempHigh: number;
-  tempLow: number;
-  precipPct: number;
-  windMph: number;
-  alert: string | null;
-  tint: string;
-}
-
-// M1 scaffold: NOT WIRED. M10 replaces this with a call through the
-// `Lumineo Weather` Power Automate connector + `WeatherCache` Dataverse
-// table (docs/09-weather-card-spec.md). The signature is the contract — a
-// real impl returns the same `WeatherData` shape (or null while loading).
-const WARN_KEY = "__lumineo_stub_warned_weather__";
-
-function warnOnce(): void {
-  const g = globalThis as Record<string, unknown>;
-  if (g[WARN_KEY]) return;
-  g[WARN_KEY] = true;
-  console.warn(
-    "[stub] WeatherChip data source is not wired yet (M10). " +
-      "Replace getWeatherForJob in src/components/WeatherChip.tsx with a " +
-      "call to the `Lumineo Weather` Power Automate flow.",
-  );
-}
-
-function getWeatherForJob(_zip: string, _forDate: Date): WeatherData | null {
-  warnOnce();
-  return null;
-}
-
 export default function WeatherChip({ zip, forDate, size = "compact" }: WeatherChipProps) {
+  const [, bump] = useReducer((n: number) => n + 1, 0);
+
+  useEffect(() => {
+    if (zip) primeWeather(zip, forDate, bump);
+  }, [zip, forDate]);
+
   if (!zip) return null;
   const w = getWeatherForJob(zip, forDate);
   if (!w) return null;

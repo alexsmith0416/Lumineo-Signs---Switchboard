@@ -134,6 +134,14 @@ export default function AddJobPanel({
           customerDueDate: new Date(selected.job.promisedDate),
           isLocked: false,
           jobSequence: line.lineNo,
+          // Ship-to ZIP drives the weather chip; remaining-to-invoice is
+          // the $ the card displays (what's still billable on the job).
+          installZip: selected.job.shipToZip || null,
+          invoiceAmount: selected.job.remainingToInvoice || null,
+          // Seed the crew badge from the job's first estimated trip; the
+          // supervisor can adjust per-line in the Edit panel.
+          crewPersons: selected.job.trips[0]?.men || null,
+          crewTrucks: selected.job.trips[0]?.trucks || null,
         };
         const end = calculateEndTime(
           cursor,
@@ -172,6 +180,10 @@ export default function AddJobPanel({
         customerDueDate: new Date(selected.job.promisedDate),
         isLocked: false,
         jobSequence: slot.lineNo,
+        installZip: selected.job.shipToZip || null,
+        invoiceAmount: selected.job.remainingToInvoice || null,
+        crewPersons: selected.job.trips[0]?.men || null,
+        crewTrucks: selected.job.trips[0]?.trucks || null,
       };
       await addScheduleLine(newLine);
     }
@@ -283,7 +295,7 @@ export default function AddJobPanel({
           <input
             className="form-field__input"
             style={{ width: "100%", borderRadius: 4 }}
-            placeholder="Search BC job number (e.g. J103101 or 103101)…"
+            placeholder="Search job no. (J103101) or ship-to customer name…"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -301,7 +313,30 @@ export default function AddJobPanel({
                     style={{ width: "100%", textAlign: "left" }}
                     onClick={() => setSelected(r)}
                   >
-                    <strong>{r.job.jobNo}</strong> — {r.job.customerName} · due {format(new Date(r.job.promisedDate), "MMM d")}
+                    <div>
+                      <strong>{r.job.jobNo}</strong> — {r.job.customerName} · due{" "}
+                      {format(new Date(r.job.promisedDate), "MMM d")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>
+                      {r.job.remainingToInvoice > 0 && (
+                        <span>
+                          ${r.job.remainingToInvoice.toLocaleString(undefined, { maximumFractionDigits: 0 })} to invoice
+                        </span>
+                      )}
+                      {r.job.trips.length > 0 && (
+                        <span>
+                          {r.job.remainingToInvoice > 0 ? " · " : ""}
+                          {r.job.trips.length} trip{r.job.trips.length === 1 ? "" : "s"} est.
+                        </span>
+                      )}
+                      {r.job.shipToCity && (
+                        <span>
+                          {" · "}
+                          {r.job.shipToCity}
+                          {r.job.shipToState ? `, ${r.job.shipToState}` : ""}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 </li>
               ))}
@@ -311,7 +346,32 @@ export default function AddJobPanel({
 
         {selected && (
           <>
-            <div className="section-title">{selected.job.jobNo} · {selected.job.customerName}</div>
+            <div className="section-title" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span>{selected.job.jobNo} · {selected.job.customerName}</span>
+              <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.82 }}>
+                {selected.job.remainingToInvoice > 0 && (
+                  <>
+                    ${selected.job.remainingToInvoice.toLocaleString(undefined, { maximumFractionDigits: 0 })} remaining to invoice
+                  </>
+                )}
+                {selected.job.shipToCity && (
+                  <>
+                    {selected.job.remainingToInvoice > 0 ? " · " : ""}
+                    ships to {selected.job.shipToCity}
+                    {selected.job.shipToState ? `, ${selected.job.shipToState}` : ""}
+                    {selected.job.shipToZip ? ` ${selected.job.shipToZip}` : ""}
+                  </>
+                )}
+              </span>
+              {selected.job.trips.length > 0 && (
+                <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.82 }}>
+                  {selected.job.trips.length} estimated trip{selected.job.trips.length === 1 ? "" : "s"}:{" "}
+                  {selected.job.trips
+                    .map((t) => `#${t.tripNo} ${t.men}M·${t.trucks}T`)
+                    .join(" · ")}
+                </span>
+              )}
+            </div>
             <div style={{ padding: 12 }}>
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                 <button
