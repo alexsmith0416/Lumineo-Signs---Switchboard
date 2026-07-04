@@ -38,6 +38,31 @@ already joins by `crfdf_jobno` strings.
 
 ---
 
+## 0.5 · Production vs UAT — which connector for which data
+
+Your flow-run outputs confirm the **standard Business Central connector**
+(action: *List rows — analytics dataset*, environment `PRODUCTION`)
+already works against live Production data with your own signed-in
+connection — **no client secret, no custom API needed** for:
+
+| Data | Source | Works today |
+|---|---|---|
+| Jobs | BC connector → `jobs` (analytics v1.0) | ✅ Production |
+| Customers | BC connector → `customers (v2.0)` | ✅ Production |
+| Planning Lines | BC connector → `jobPlanningLines` (analytics v1.0) | ✅ Production |
+| Trips/Resources | **Sign365 custom API only** | UAT creds only — ask Infotech for Production app registration |
+| Cost & Sales | **Sign365 custom API only** | UAT creds only (interim: derive contract value from Billable planning lines — the app does this automatically) |
+| Planning Steps | **Sign365 custom API only** | UAT creds only |
+
+**Recommendation:** build flows 4.1 + 4.2 on the standard BC connector
+against Production now (skip the HTTP-token actions entirely — use the
+built-in *List rows present in a table* action). Add the Sign365 HTTP
+flows for trips + cost&sales when Infotech issues Production credentials.
+The app degrades gracefully: no trips row → no trip badge; no
+cost&sales row → contract value from Billable lines, remaining = contract.
+
+---
+
 ## 1 · Shared skeleton (every sync flow)
 
 Name flows `SYNC — BC <endpoint>`. All follow the same 7 actions:
@@ -133,42 +158,93 @@ Do until: empty(variables('varNextLink')) is equal to true
 
 ## 4 · Column-by-column mapping per flow
 
-Field names below are the standard BC API camelCase names — **verify each
-one against your discovery output** and adjust. `item()` = the current
-record inside Apply-to-each.
+> **Verified against real Production payloads (July 2026)** — the Jobs,
+> Customers, and Planning Lines mappings below use the exact field names
+> from the standard BC connector's analytics dataset
+> (`jobs` / `jobPlanningLines` tables) and the `customers (v2.0)` API.
+> `item()` = the current record inside Apply-to-each.
 
-### 4.1 SYNC — BC Jobs → `crfdf_bcjob` (every 10 min)
+### Reality checks from the Production data
+
+1. **The jobs table has NO ship-to or customer-name fields** — only
+   `billToCustomerNo` (mixed formats: `C07570`, `1988`, `3896`). Display
+   name + address come from a **join to Customers**
+   (`billToCustomerNo` → `customers.number`). See §4.1.
+2. **Planning-line type field is `jobType`** (values `"Resource"`,
+   `"G/L Account"`, `"Item"`) — not `type`. Lines also carry `lineType`
+   (`"Billable"` / `"Budget"`) and `totalPriceLCY`, which give contract
+   value before jobCostAndSales is wired.
+3. **Job numbers are inconsistent** — jobs list shows `J23221`, planning
+   lines show `23743` (no J). Store both raw; the app already matches
+   either form on every lookup.
+4. **`0001-01-01` means "no date"** on open jobs (`startingDate` /
+   `endingDate`). The app treats pre-1970 dates as unset; flows can pass
+   them through as-is.
+
+### 4.1 SYNC — BC Jobs + Customers → `crfdf_bcjob` (every 10 min)
+
+This is a **combine flow** — two GETs, joined in-flow:
+
+```
+1–3. Recurrence + token (skeleton §1)
+4.  HTTP — GET customers (v2.0)  ?$top=999   → Parse JSON — Customers
+5.  HTTP — GET jobs (analytics)  ?$top=999   → Parse JSON — Jobs
+    (paginate both per §3 if they exceed one page)
+6.  Apply to each  body('Parse_JSON_—_Jobs')?['value']
+    ├─ Filter array  From: body('Parse_JSON_—_Customers')?['value']
+    │                Where: @equals(item()?['number'],
+    │                        items('Apply_to_each')?['billToCustomerNo'])
+    ├─ Compose — Customer:  @{first(body('Filter_array'))}
+    └─ Upsert crfdf_bcjob  (Row ID: crfdf_jobno='@{items('Apply_to_each')?['no']}')
+```
 
 | Dataverse column (Text unless noted) | Expression |
 |---|---|
-| `crfdf_jobno` | `@{item()?['no']}` |
-| `crfdf_shiptoname` | `@{coalesce(item()?['shipToName'], item()?['billToName'])}` |
-| `crfdf_billtoname` | `@{item()?['billToName']}` |
-| `crfdf_shiptoaddress` | `@{item()?['shipToAddress']}` |
-| `crfdf_shiptocity` | `@{item()?['shipToCity']}` |
-| `crfdf_shiptostate` | `@{item()?['shipToState']}` |
-| `crfdf_shiptozip` | `@{item()?['shipToZip']}` — **weather chip key; must be the ship-to ZIP** |
-| `crfdf_promiseddate` (Date) | `@{if(empty(item()?['promisedDate']), null, formatDateTime(item()?['promisedDate'], 'yyyy-MM-dd'))}` |
+| `crfdf_jobno` | `@{items('Apply_to_each')?['no']}` |
+| `crfdf_description` | `@{items('Apply_to_each')?['description']}` |
+| `crfdf_billtocustomerno` | `@{items('Apply_to_each')?['billToCustomerNo']}` |
+| `crfdf_shiptoname` (**display name**) | `@{coalesce(outputs('Compose_—_Customer')?['displayName'], items('Apply_to_each')?['description'])}` |
+| `crfdf_billtoname` | `@{outputs('Compose_—_Customer')?['displayName']}` |
+| `crfdf_shiptoaddress` | `@{outputs('Compose_—_Customer')?['addressLine1']}` |
+| `crfdf_shiptocity` | `@{outputs('Compose_—_Customer')?['city']}` |
+| `crfdf_shiptostate` | `@{outputs('Compose_—_Customer')?['state']}` |
+| `crfdf_shiptozip` | `@{outputs('Compose_—_Customer')?['postalCode']}` — **weather chip key** |
+| `crfdf_status` | `@{items('Apply_to_each')?['status']}` |
+| `crfdf_promiseddate` (Date) | `@{if(startsWith(coalesce(items('Apply_to_each')?['endingDate'], '0001'), '0001'), null, items('Apply_to_each')?['endingDate'])}` |
 
-> If discovery shows the ship-to fields live on `/projectDetails` instead
-> of `/jobs`, sync both endpoints into `crfdf_bcjob`: jobs first, then a
-> second flow that updates the ship-to columns by `crfdf_jobno`.
+> Until BC carries a true ship-to per job, the **bill-to customer's
+> address is the location source** — that's what drives the weather chip
+> and the "City, ST" display. When Infotech exposes ship-to on the
+> Sign365 `/projectDetails`, add a second flow that overwrites the
+> ship-to columns from there; nothing else changes.
+>
+> Recommended filter on the jobs GET to keep the mirror lean:
+> `?$filter=status eq 'Open' and complete eq false`.
 
 ### 4.2 SYNC — BC Planning Lines → `crfdf_bcplanningline` (every 10 min)
 
+Real fields: `jobNo` · `jobTaskNo` · `lineNo` · `jobType` · `lineType` ·
+`no` (resource/account code) · `description` · `quantity` ·
+`unitPriceLCY` · `lineAmountLCY` · `totalPriceLCY` · `planningDate`.
+
 | Column | Expression |
 |---|---|
-| `crfdf_naturalkey` | `@{item()?['jobNo']}-@{item()?['lineNo']}` |
-| `crfdf_jobno` | `@{item()?['jobNo']}` |
+| `crfdf_naturalkey` | `@{item()?['jobNo']}-@{item()?['jobTaskNo']}-@{item()?['lineNo']}` |
+| `crfdf_jobno` | `@{item()?['jobNo']}` (unprefixed is fine — the app matches both forms) |
+| `crfdf_jobtaskno` | `@{item()?['jobTaskNo']}` |
 | `crfdf_lineno` (Whole number) | `@{item()?['lineNo']}` |
-| `crfdf_type` (Text!) | `@{item()?['type']}` |
+| `crfdf_type` (Text) | `@{item()?['jobType']}` ← **`jobType`, not `type`** |
+| `crfdf_linetype` (Text) | `@{item()?['lineType']}` (`Billable` / `Budget`) |
+| `crfdf_no` | `@{item()?['no']}` (resource code on Resource lines) |
 | `crfdf_description` | `@{item()?['description']}` |
-| `crfdf_quantity` (Decimal) | `@{float(coalesce(item()?['quantity'], 0))}` |
+| `crfdf_quantity` (Decimal) | `@{float(coalesce(item()?['quantity'], 0))}` — hours on Resource lines |
+| `crfdf_totalprice` (Decimal) | `@{float(coalesce(item()?['totalPriceLCY'], 0))}` |
+| `crfdf_planningdate` (Date) | `@{item()?['planningDate']}` |
 
-The app filters `crfdf_type eq 'Resource'` — keep the type column **Text**
-so the string compare works, and confirm in discovery whether BC returns
-`"Resource"` (string) or an enum number. If it's a number, translate:
-`@{if(equals(item()?['type'], 0), 'Resource', if(equals(item()?['type'], 1), 'Item', 'Other'))}` — adjust to the enum order discovery shows.
+The app filters `crfdf_type eq 'Resource'` for the scheduling picker
+(BC returns the string `"Resource"` — confirmed in Production data), and
+sums `crfdf_totalprice` where `crfdf_linetype eq 'Billable'` as the
+contract-value fallback until jobCostAndSales is synced.
 
 ### 4.3 SYNC — BC Cost & Sales → `crfdf_bccostandsales` (every 30 min)
 

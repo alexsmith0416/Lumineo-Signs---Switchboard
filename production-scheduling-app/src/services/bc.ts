@@ -72,6 +72,27 @@ function escapeOData(value: string): string {
   return value.replace(/'/g, "''");
 }
 
+/**
+ * BC Production data mixes J-prefixed and unprefixed job numbers — the
+ * jobs table shows "J23221" while jobPlanningLines rows carry "23743".
+ * Every jobNo filter therefore matches BOTH forms.
+ */
+function jobNoVariants(jobNo: string): string[] {
+  const upper = jobNo.trim().toUpperCase();
+  const bare = upper.startsWith("J") ? upper.slice(1) : upper;
+  return [...new Set([upper.startsWith("J") ? upper : `J${bare}`, bare])];
+}
+
+function jobNoFilter(field: string, jobNo: string): string {
+  return (
+    "(" +
+    jobNoVariants(jobNo)
+      .map((v) => `${field} eq '${escapeOData(v)}'`)
+      .join(" or ") +
+    ")"
+  );
+}
+
 type BcJobHeader = Omit<
   BcJob,
   "planningLines" | "trips" | "contractValue" | "invoicedAmount" | "remainingToInvoice"
@@ -86,9 +107,12 @@ function rowToJobHeader(row: DataverseRow): BcJobHeader {
     // job ships to the billing customer (BC leaves ship-to blank then).
     customerName: shipToName || billToName,
     billToCustomerName: billToName,
-    promisedDate:
-      dateOrNull(row, "crfdf_promiseddate", "crfdf_endingdate", "promisedDate")?.toISOString() ??
-      new Date().toISOString(),
+    promisedDate: (() => {
+      const d = dateOrNull(row, "crfdf_promiseddate", "crfdf_endingdate", "promisedDate");
+      // BC uses 0001-01-01 as "no date" on open jobs — treat as unset.
+      if (!d || d.getFullYear() < 1970) return new Date().toISOString();
+      return d.toISOString();
+    })(),
     shipToAddress: str(row, "crfdf_shiptoaddress", "shipToAddress"),
     shipToCity: str(row, "crfdf_shiptocity", "shipToCity"),
     shipToState: str(row, "crfdf_shiptostate", "crfdf_shiptocounty", "shipToState"),
@@ -107,13 +131,25 @@ function rowToPlanningLine(row: DataverseRow): BcPlanningLine {
 async function loadPlanningLines(jobNo: string): Promise<BcPlanningLine[]> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_PLANNING_LINE, {
-    // Resource lines only — Item / Cost / Text lines are not schedulable
-    // labor. Matches the Canvas app's galPlanningLines filter and the
-    // option-set value the sync flow writes.
-    filter: `crfdf_jobno eq '${escapeOData(jobNo)}' and crfdf_type eq 'Resource'`,
+    // Resource lines only — G/L Account / Item / Text lines are not
+    // schedulable labor. BC's field is `jobType` ("Resource" |
+    // "G/L Account" | "Item"); the sync flow writes it into crfdf_type.
+    filter: `${jobNoFilter("crfdf_jobno", jobNo)} and crfdf_type eq 'Resource'`,
     orderBy: "crfdf_lineno asc",
   });
   return rows.map(rowToPlanningLine);
+}
+
+/** Contract value fallback when crfdf_bccostandsales has no row yet:
+ *  sum the job's Billable planning lines (crfdf_linetype = 'Billable',
+ *  crfdf_totalprice = BC totalPriceLCY). Matches how BC expresses the
+ *  invoice schedule (e.g. "DOWN PAYMENTS" + "FINAL PAYMENT" G/L lines). */
+async function contractFromBillableLines(jobNo: string): Promise<number> {
+  const reader = getDataverseReader();
+  const rows = await reader.retrieveMultiple(T_PLANNING_LINE, {
+    filter: `${jobNoFilter("crfdf_jobno", jobNo)} and crfdf_linetype eq 'Billable'`,
+  });
+  return rows.reduce((sum, row) => sum + num(row, "crfdf_totalprice", "totalPriceLCY"), 0);
 }
 
 async function loadCostAndSales(
@@ -121,11 +157,17 @@ async function loadCostAndSales(
 ): Promise<{ contractValue: number; invoicedAmount: number; remainingToInvoice: number }> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_COST_SALES, {
-    filter: `crfdf_jobno eq '${escapeOData(jobNo)}'`,
+    filter: jobNoFilter("crfdf_jobno", jobNo),
     top: 1,
   });
   const row = rows[0];
-  if (!row) return { contractValue: 0, invoicedAmount: 0, remainingToInvoice: 0 };
+  if (!row) {
+    // No jobCostAndSales mirror row yet (Sign365 sync pending) — derive
+    // contract value from Billable planning lines; invoiced is unknown,
+    // so remaining = contract. Good enough for scheduling decisions.
+    const contractValue = await contractFromBillableLines(jobNo);
+    return { contractValue, invoicedAmount: 0, remainingToInvoice: contractValue };
+  }
 
   const contractValue = num(
     row,
@@ -152,7 +194,7 @@ async function loadCostAndSales(
 async function loadTrips(jobNo: string): Promise<BcTrip[]> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_TRIP_RESOURCE, {
-    filter: `crfdf_jobno eq '${escapeOData(jobNo)}'`,
+    filter: jobNoFilter("crfdf_jobno", jobNo),
     orderBy: "crfdf_tripno asc",
   });
 
@@ -209,14 +251,17 @@ export const bcService = {
     let headers: DataverseRow[] = [];
 
     if (looksLikeJobNo) {
-      const jobNo = normalizeJobNo(trimmed);
+      // Exact match against BOTH forms (J23743 + 23743), then prefix match.
       headers = await reader.retrieveMultiple(T_JOB, {
-        filter: `crfdf_jobno eq '${escapeOData(jobNo)}'`,
+        filter: jobNoFilter("crfdf_jobno", trimmed),
         top: 5,
       });
       if (headers.length === 0) {
+        const variants = jobNoVariants(trimmed);
         headers = await reader.retrieveMultiple(T_JOB, {
-          filter: `startswith(crfdf_jobno, '${escapeOData(jobNo)}')`,
+          filter: variants
+            .map((v) => `startswith(crfdf_jobno, '${escapeOData(v)}')`)
+            .join(" or "),
           top: 8,
         });
       }
@@ -234,7 +279,7 @@ export const bcService = {
   async getJob(jobNo: string): Promise<BcJob | null> {
     const reader = getDataverseReader();
     const rows = await reader.retrieveMultiple(T_JOB, {
-      filter: `crfdf_jobno eq '${escapeOData(normalizeJobNo(jobNo))}'`,
+      filter: jobNoFilter("crfdf_jobno", normalizeJobNo(jobNo)),
       top: 1,
     });
     if (rows.length === 0) return null;
