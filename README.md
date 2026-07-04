@@ -64,6 +64,7 @@ The standalone single-file HTML build is the easiest demo artifact — `npm run 
 7. [docs/13-airtable-bridge-mapping.md](docs/13-airtable-bridge-mapping.md) — **interim** Airtable → Dataverse mirror until BC API access lands
 8. [docs/14-bc-write-operations.md](docs/14-bc-write-operations.md) — payload schemas for the 7 queued BC write operations
 9. [docs/18-sign365-api-reference.md](docs/18-sign365-api-reference.md) — Sign365 (Infotech BC) API reference + Power Automate → Dataverse sync plan for Weekly Calendar
+10. [docs/19-power-automate-flow-cookbook.md](docs/19-power-automate-flow-cookbook.md) — action-by-action flow builds with per-column expressions + `scripts/discover-sign365.mjs` schema discovery
 
 ### Switchboard (master shell)
 
