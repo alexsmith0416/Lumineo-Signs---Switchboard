@@ -301,6 +301,50 @@ GET jobTasks → filter in-flow:
 > Truck Maintenance / certs) when write-back lands (docs/14) — the
 > mapping is essentially 1:1 with the custom-card presets.
 
+### 4.2c SYNC — BC Resources → `crfdf_bcresource` (daily)
+
+**Verified against Production `resources` output (July 2026).** Fields:
+`resourceNo` · `resourceName` · `baseUnitofMeasure` · `unitCost` ·
+`unitPrice`. The resource-number bands carry the org structure:
+
+| Band | Contents | App use |
+|---|---|---|
+| 1000s | **Individual employees** (Chris Owen 1030, Terry Heath 1040, Miguel Enriquez 1059, Lee McQueen 1062, Bill Day 1065, Adam Upshaw 1099, Tanner Rue 1138, Len Cook Jr 1143, Nick Alkire 1147, Malaki Miller 1148, Chance Carey 1155, install crews 1200s…) | Join key for `crfdf_employee1.crfdf_bcresourceno`; `unitCost` = wage, `unitPrice` = bill rate |
+| 2000s | **Department labor categories** — THE department mapping (table below) | Exact dept resolution for planning lines |
+| 4000s | Sales staff | ignore for scheduling |
+| 5000s | Admin/office (Alex Smith = 5037) | ignore for scheduling |
+| text | Legacy user IDs + estimate placeholders (`WK 2 MAN - TBD`, `NEK 1 MAN - TBD`, `SHIP IN WK 2 MAN`, `PAINT - TBD`, `FAB - TBD`) | Crew placeholders encode **men-per-trip + region** in the code |
+
+Columns: `crfdf_resourceno` (alt key) · `crfdf_resourcename` ·
+`crfdf_unitcost` (Decimal) · `crfdf_unitprice` (Decimal).
+
+**The department map (2000-band → app department).** A planning line
+whose `no` posts to one of these codes belongs to that department —
+exact, no keyword matching. Implemented in the app at
+`services/resource-department-map.ts`; keyword rules remain only as
+fallback for lines posting to individual employees:
+
+| Codes | Resource names | Department |
+|---|---|---|
+| 2010 · 2313 | Routing Labor · Routed Face Labor | Routing |
+| 2011 · 2014 · 2099 | Cabinet / Letter / Rework Metal Labor | Metal Fab |
+| 2016 | Structural Steel Metal Labor | Steel MFG |
+| 2110 · 2112 · 2114 · 2116 · 2199 | Paint Prep / Cabinet & Letters / Vinyl Faces / Hand / Rework | Paint |
+| 2212 · 2215 · 2216 · 2217 · 2299 · 2312 · 2314 · 2315 · 2316 · 2399 | LED Wiring / Assembly / Electronics / Crating / Faces / Trim Cap | Assembly |
+| 2412 · 2415 · 2416 · 2499 | Digital Printing / Graphics Cut-Weed-Mask / Application / Rework | Vinyl / Graphics |
+
+**Crew placeholders** double as trip-crew estimates: `WK 2 MAN - TBD`
+= 2 men (unitCost 49.40 = 2 × 24.70 confirms it), `NEK 1 MAN - TBD`
+= 1 man, `SHIP IN WK 2 MAN` = 2-man ship-in crew. The app parses the
+man-count and region from the code (`menFromResourceNo` /
+`regionFromResourceNo`) — so install planning lines that post to these
+placeholders yield estimated men-per-trip before real crew assignment.
+
+> This table also seeds `crfdf_planninglinedepartmentmap` if you'd
+> rather maintain the mapping in Dataverse — one row per 2000-band code
+> with a Department lookup. The app checks the resource code first
+> either way.
+
 ### 4.3 SYNC — BC Cost & Sales → `crfdf_bccostandsales` (every 30 min)
 
 | Column | Expression |

@@ -18,6 +18,7 @@ import {
   dateOrNull,
   type DataverseRow,
 } from "./dataverse-reader";
+import { menFromResourceNo } from "./resource-department-map";
 
 /** Lumineo's BC job-task bands — every job shares the same tree:
  *  1000s Admin · 2000s Design & Survey · 3000s Production ·
@@ -51,6 +52,9 @@ export interface BcPlanningLine {
    *  4010 Install Labor). Drives production-vs-install routing. */
   jobTaskNo: string;
   phase: JobTaskPhase;
+  /** BC resource code the line posts to (planning line `no`). 2000-band
+   *  codes are department labor categories — the EXACT dept mapping. */
+  resourceNo: string;
 }
 
 export interface BcTrip {
@@ -156,6 +160,7 @@ function rowToPlanningLine(row: DataverseRow): BcPlanningLine {
     estimatedHours: num(row, "crfdf_quantity", "crfdf_estimatedhours", "quantity"),
     jobTaskNo,
     phase: phaseOfTaskNo(jobTaskNo),
+    resourceNo: str(row, "crfdf_no", "no", "crfdf_resourceno", "resourceNo"),
   };
 }
 
@@ -230,21 +235,29 @@ async function loadTrips(jobNo: string): Promise<BcTrip[]> {
   });
 
   // One mirror row per (trip, resource). Group by trip; classify each
-  // resource as man vs truck. The sync flow stores the BC resource type in
-  // crfdf_resourcetype ("Person" | "Machine"); the resource-no prefix is
-  // the fallback (Lumineo fleet codes: F##, D##, Chevy, crane, bucket).
+  // resource. Three cases (verified against Production resources):
+  //   - crew placeholders "WK 2 MAN - TBD" / "NEK 1 MAN" → men += N
+  //     (the man-count is encoded in the resource code)
+  //   - trucks/machines: crfdf_resourcetype "Machine", or fleet codes
+  //     (F##, D##, Chevy, crane, bucket)
+  //   - everything else: one person (1000-band employee resources)
   const byTrip = new Map<string, { men: number; trucks: number; date: Date | null }>();
   for (const row of rows) {
     const tripNo = str(row, "crfdf_tripno", "tripNo") || "1";
     const bucket = byTrip.get(tripNo) ?? { men: 0, trucks: 0, date: null };
     const resType = str(row, "crfdf_resourcetype", "resourceType").toLowerCase();
     const resNo = str(row, "crfdf_resourceno", "resourceNo");
-    const isTruck =
-      resType === "machine" ||
-      resType === "truck" ||
-      /^(f|d)\d+$|chevy|crane|bucket/i.test(resNo);
-    if (isTruck) bucket.trucks += 1;
-    else bucket.men += 1;
+    const placeholderMen = menFromResourceNo(resNo);
+    if (placeholderMen !== null) {
+      bucket.men += placeholderMen;
+    } else {
+      const isTruck =
+        resType === "machine" ||
+        resType === "truck" ||
+        /^(f|d)\d+$|chevy|crane|bucket/i.test(resNo);
+      if (isTruck) bucket.trucks += 1;
+      else bucket.men += 1;
+    }
     bucket.date = bucket.date ?? dateOrNull(row, "crfdf_tripdate", "tripDate");
     byTrip.set(tripNo, bucket);
   }
