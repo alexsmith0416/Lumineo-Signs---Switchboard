@@ -19,10 +19,38 @@ import {
   type DataverseRow,
 } from "./dataverse-reader";
 
+/** Lumineo's BC job-task bands — every job shares the same tree:
+ *  1000s Admin · 2000s Design & Survey · 3000s Production ·
+ *  4000s Installation · 5000s Shop Supplies · 9000s Opening/WIP. */
+export type JobTaskPhase =
+  | "admin"
+  | "design"
+  | "production"
+  | "installation"
+  | "supplies"
+  | "wip"
+  | "other";
+
+export function phaseOfTaskNo(jobTaskNo: string): JobTaskPhase {
+  const band = parseInt(jobTaskNo, 10);
+  if (Number.isNaN(band)) return "other";
+  if (band >= 1000 && band < 2000) return "admin";
+  if (band >= 2000 && band < 3000) return "design";
+  if (band >= 3000 && band < 4000) return "production";
+  if (band >= 4000 && band < 5000) return "installation";
+  if (band >= 5000 && band < 6000) return "supplies";
+  if (band >= 9000) return "wip";
+  return "other";
+}
+
 export interface BcPlanningLine {
   lineNo: number;
   description: string;
   estimatedHours: number;
+  /** BC job task the line posts to (e.g. 3020 Production Labor,
+   *  4010 Install Labor). Drives production-vs-install routing. */
+  jobTaskNo: string;
+  phase: JobTaskPhase;
 }
 
 export interface BcTrip {
@@ -121,10 +149,13 @@ function rowToJobHeader(row: DataverseRow): BcJobHeader {
 }
 
 function rowToPlanningLine(row: DataverseRow): BcPlanningLine {
+  const jobTaskNo = str(row, "crfdf_jobtaskno", "jobTaskNo");
   return {
     lineNo: num(row, "crfdf_lineno", "lineNo"),
     description: str(row, "crfdf_description", "description"),
     estimatedHours: num(row, "crfdf_quantity", "crfdf_estimatedhours", "quantity"),
+    jobTaskNo,
+    phase: phaseOfTaskNo(jobTaskNo),
   };
 }
 

@@ -246,6 +246,61 @@ The app filters `crfdf_type eq 'Resource'` for the scheduling picker
 sums `crfdf_totalprice` where `crfdf_linetype eq 'Billable'` as the
 contract-value fallback until jobCostAndSales is synced.
 
+### 4.2b SYNC — BC Job Tasks → `crfdf_bcjobtask` (every 30 min)
+
+**Verified against Production `jobTasks` output (July 2026).** Real
+fields: `jobNo` · `jobTaskNo` · `description` · `totaling` ·
+`jobTaskType` (`Begin-Total` / `Posting` / `End-Total`) · `indentation`
+(0–2) · `startingDate` · `endingDate`.
+
+Every Lumineo job shares one task tree, and the **task-number bands are
+the phase structure**:
+
+| Band | Phase | Key Posting tasks |
+|---|---|---|
+| 1000s | Admin | 1110 Invoicing · 1120 Change Order · 1130 Credit Memo |
+| 2000s | Design & Survey | 2010 Sketch · 2020 Survey · 2030 Design Production Files |
+| 3000s | **Production** | 3020 Production Labor · 3030 Case-Inv Materials · 3060 Receive & Load |
+| 4000s | **Installation** | 4010 Install Labor · 4020 Install Travel · 4030 Install Materials |
+| 5000s | Shop Supplies | 5010 Shop Supplies |
+| 9000s | Opening/WIP | 9020–9060 Opening WIP buckets |
+
+This makes `jobTaskNo` the **reliable production-vs-install router**: a
+Resource planning line on task 3020 belongs on the Production calendar;
+4010/4020 lines belong on Installation. The app derives this
+automatically (`phaseOfTaskNo` in `services/bc.ts`) — no keyword
+guessing needed for the phase split. Department *within* production
+still resolves from the line description / dept map.
+
+Sync only the Posting rows for real jobs:
+
+```
+GET jobTasks → filter in-flow:
+  @and(equals(item()?['jobTaskType'], 'Posting'),
+       not(empty(item()?['jobNo'])))
+```
+
+| Column | Expression |
+|---|---|
+| `crfdf_naturalkey` | `@{item()?['jobNo']}-@{item()?['jobTaskNo']}` |
+| `crfdf_jobno` | `@{item()?['jobNo']}` |
+| `crfdf_jobtaskno` | `@{item()?['jobTaskNo']}` |
+| `crfdf_description` | `@{item()?['description']}` |
+| `crfdf_jobtasktype` | `@{item()?['jobTaskType']}` |
+
+> **Third job-number format alert:** job tasks show decimal-suffixed
+> numbers (`37730.2`, `38080.1` — job + phase/release). Store raw;
+> when joining planning lines to tasks, match on the composite
+> `(jobNo, jobTaskNo)` from the planning line itself, which always
+> agrees with the task table's format.
+>
+> **Custom-card write-back note:** BC's `1NON-JOBLABOR` pseudo-job
+> (8000s band) holds the non-job buckets — Truck Maintenance Labor,
+> Inventory Labor, Training Labor, Safety & Compliance Labor. These are
+> the BC-side landing spots for the app's custom cards (PTO / Inventory /
+> Truck Maintenance / certs) when write-back lands (docs/14) — the
+> mapping is essentially 1:1 with the custom-card presets.
+
 ### 4.3 SYNC — BC Cost & Sales → `crfdf_bccostandsales` (every 30 min)
 
 | Column | Expression |
