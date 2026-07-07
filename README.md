@@ -4,14 +4,15 @@
 
 ## Web apps in this monorepo
 
-Two of the sub-apps are built as React + Vite + TS web apps in `apps/*` and
-deploy independently. They share the Switchboard design system (`DESIGN.md`)
-and are wired together by a URL handoff:
+Three apps are built as React + Vite + TS web apps in `apps/*` and
+deploy independently. They share the Switchboard design system (`DESIGN.md`);
+Sign Builder Pro and Estimating are wired together by a URL handoff:
 
 | App | Path | Run | Connection |
 |---|---|---|---|
 | **Sign Builder Pro** | `apps/sign-builder` | `npm run dev:sign-builder` | *Send to Estimating* → opens Estimating with the spec pre-loaded |
 | **Estimating** | `apps/estimating` | `npm run dev:estimating` | imports the SBP payload, links back to the originating spec |
+| **Wind Load Calculator** | `apps/wind-load` | `npm run dev:wind-load` | standalone for now (no sidebar) — sizes poles, footings and base plates from sign dimensions; engine ported from the STSIGN5 UBC-94 workbook (`reference/wind-load/`) |
 
 Shared design tokens live in `packages/ui`. **To deploy both and let others
 test the connection, see [docs/deploy.md](docs/deploy.md).** The payload

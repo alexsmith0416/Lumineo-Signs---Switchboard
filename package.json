@@ -15,9 +15,12 @@
     "build:sign-builder": "npm run build --workspace apps/sign-builder",
     "dev:sign-builder": "npm run dev --workspace apps/sign-builder -- --port 4801 --strictPort",
     "test:sign-builder": "npm test --workspace apps/sign-builder",
-    "dev": "concurrently -k -n estimating,sign-builder -c blue,magenta \"npm:dev:estimating\" \"npm:dev:sign-builder\"",
-    "build": "npm run build:estimating && npm run build:sign-builder",
-    "test": "npm run test:estimating && npm run test:sign-builder"
+    "build:wind-load": "npm run build --workspace apps/wind-load",
+    "dev:wind-load": "npm run dev --workspace apps/wind-load -- --port 4803 --strictPort",
+    "test:wind-load": "npm test --workspace apps/wind-load",
+    "dev": "concurrently -k -n estimating,sign-builder,wind-load -c blue,magenta,green \"npm:dev:estimating\" \"npm:dev:sign-builder\" \"npm:dev:wind-load\"",
+    "build": "npm run build:estimating && npm run build:sign-builder && npm run build:wind-load",
+    "test": "npm run test:estimating && npm run test:sign-builder && npm run test:wind-load"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
