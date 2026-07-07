@@ -94,6 +94,11 @@ const T_PLANNING_LINE = "crfdf_bcplanningline";
 const T_COST_SALES = "crfdf_bccostandsales";
 const T_TRIP_RESOURCE = "crfdf_bctripresource";
 
+// The job-number column on crfdf_bcjob is crfdf_jobnumber (the alternate
+// key the BCSync_Jobs flow upserts on). Planning lines use crfdf_jobno.
+const JOB_NO_COL = "crfdf_jobnumber";
+const PL_JOB_NO_COL = "crfdf_jobno";
+
 function normalizeJobNo(query: string): string {
   const trimmed = query.trim().replace(/\s+/g, "").toUpperCase();
   if (trimmed.startsWith("J")) return trimmed;
@@ -131,14 +136,24 @@ type BcJobHeader = Omit<
 >;
 
 function rowToJobHeader(row: DataverseRow): BcJobHeader {
+  // The BCSync_Jobs flow writes the customer NAME (once the Customers join
+  // is live) or the customer CODE (interim) into crfdf_customername.
+  // crfdf_billtocustomerno always holds the code. Ship-to columns are
+  // populated by the Customers join; empty until then.
   const shipToName = str(row, "crfdf_shiptoname", "crfdf_shiptocustomername", "shipToName");
-  const billToName = str(row, "crfdf_billtoname", "crfdf_customername", "billToName", "customerName");
+  const customerName = str(row, "crfdf_customername", "customerName");
+  const billToNo = str(row, "crfdf_billtocustomerno", "billToCustomerNo");
   return {
-    jobNo: str(row, "crfdf_jobno", "crfdf_no", "no", "jobNo"),
-    // Ship-to customer is THE display name; fall back to bill-to when the
-    // job ships to the billing customer (BC leaves ship-to blank then).
-    customerName: shipToName || billToName,
-    billToCustomerName: billToName,
+    // Real table column is crfdf_jobnumber (the alternate-key column).
+    jobNo: str(row, "crfdf_jobnumber", "crfdf_jobno", "crfdf_no", "no", "jobNo"),
+    // Prefer ship-to name, then whatever's in customername (name or code),
+    // then the bare bill-to code, then description as last resort.
+    customerName:
+      shipToName ||
+      customerName ||
+      billToNo ||
+      str(row, "crfdf_description", "description"),
+    billToCustomerName: customerName || billToNo,
     promisedDate: (() => {
       const d = dateOrNull(row, "crfdf_promiseddate", "crfdf_endingdate", "promisedDate");
       // BC uses 0001-01-01 as "no date" on open jobs — treat as unset.
@@ -170,7 +185,7 @@ async function loadPlanningLines(jobNo: string): Promise<BcPlanningLine[]> {
     // Resource lines only — G/L Account / Item / Text lines are not
     // schedulable labor. BC's field is `jobType` ("Resource" |
     // "G/L Account" | "Item"); the sync flow writes it into crfdf_type.
-    filter: `${jobNoFilter("crfdf_jobno", jobNo)} and crfdf_type eq 'Resource'`,
+    filter: `${jobNoFilter(PL_JOB_NO_COL, jobNo)} and crfdf_type eq 'Resource'`,
     orderBy: "crfdf_lineno asc",
   });
   return rows.map(rowToPlanningLine);
@@ -183,7 +198,7 @@ async function loadPlanningLines(jobNo: string): Promise<BcPlanningLine[]> {
 async function contractFromBillableLines(jobNo: string): Promise<number> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_PLANNING_LINE, {
-    filter: `${jobNoFilter("crfdf_jobno", jobNo)} and crfdf_linetype eq 'Billable'`,
+    filter: `${jobNoFilter(PL_JOB_NO_COL, jobNo)} and crfdf_linetype eq 'Billable'`,
   });
   return rows.reduce((sum, row) => sum + num(row, "crfdf_totalprice", "totalPriceLCY"), 0);
 }
@@ -193,7 +208,7 @@ async function loadCostAndSales(
 ): Promise<{ contractValue: number; invoicedAmount: number; remainingToInvoice: number }> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_COST_SALES, {
-    filter: jobNoFilter("crfdf_jobno", jobNo),
+    filter: jobNoFilter(PL_JOB_NO_COL, jobNo),
     top: 1,
   });
   const row = rows[0];
@@ -230,7 +245,7 @@ async function loadCostAndSales(
 async function loadTrips(jobNo: string): Promise<BcTrip[]> {
   const reader = getDataverseReader();
   const rows = await reader.retrieveMultiple(T_TRIP_RESOURCE, {
-    filter: jobNoFilter("crfdf_jobno", jobNo),
+    filter: jobNoFilter(PL_JOB_NO_COL, jobNo),
     orderBy: "crfdf_tripno asc",
   });
 
@@ -297,22 +312,24 @@ export const bcService = {
     if (looksLikeJobNo) {
       // Exact match against BOTH forms (J23743 + 23743), then prefix match.
       headers = await reader.retrieveMultiple(T_JOB, {
-        filter: jobNoFilter("crfdf_jobno", trimmed),
+        filter: jobNoFilter(JOB_NO_COL, trimmed),
         top: 5,
       });
       if (headers.length === 0) {
         const variants = jobNoVariants(trimmed);
         headers = await reader.retrieveMultiple(T_JOB, {
           filter: variants
-            .map((v) => `startswith(crfdf_jobno, '${escapeOData(v)}')`)
+            .map((v) => `startswith(${JOB_NO_COL}, '${escapeOData(v)}')`)
             .join(" or "),
           top: 8,
         });
       }
     } else {
+      // Name search — against crfdf_customername (the name or code the
+      // Jobs flow wrote) and the description.
       const nameQuery = escapeOData(trimmed);
       headers = await reader.retrieveMultiple(T_JOB, {
-        filter: `contains(crfdf_shiptoname, '${nameQuery}') or contains(crfdf_billtoname, '${nameQuery}')`,
+        filter: `contains(crfdf_customername, '${nameQuery}') or contains(crfdf_description, '${nameQuery}')`,
         top: 8,
       });
     }
@@ -323,7 +340,7 @@ export const bcService = {
   async getJob(jobNo: string): Promise<BcJob | null> {
     const reader = getDataverseReader();
     const rows = await reader.retrieveMultiple(T_JOB, {
-      filter: jobNoFilter("crfdf_jobno", normalizeJobNo(jobNo)),
+      filter: jobNoFilter(JOB_NO_COL, normalizeJobNo(jobNo)),
       top: 1,
     });
     if (rows.length === 0) return null;
