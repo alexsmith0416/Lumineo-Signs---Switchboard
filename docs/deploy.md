@@ -60,6 +60,13 @@ configure in the dashboard.
 Repeat the import with **Root Directory:** `apps/sign-builder` (same
 "include files outside root" toggle, same production branch).
 
+### Project 3 — Wind Load Calculator
+
+Repeat the import with **Root Directory:** `apps/wind-load` (same
+"include files outside root" toggle; production branch
+`claude/wind-load-calculator-app-y8basr` until it's merged). This app is
+standalone — no connection env vars needed, so one deploy and it's done.
+
 ### Wire them together
 
 1. In the **Sign Builder Pro** project → Settings → Environment Variables, add

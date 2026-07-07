@@ -1,0 +1,117 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { computeDesign, type DesignInput } from '../lib/engine';
+import { InputsPanel, newElement } from './InputsPanel';
+import { ResultsPanel } from './ResultsPanel';
+import { SpecsView } from './SpecsView';
+import { Topbar, type View } from './Topbar';
+import { useTheme } from './useTheme';
+
+const STORAGE_KEY = 'lumineo-windload-design-v1';
+
+function defaultInput(): DesignInput {
+  return {
+    projectName: '',
+    description: '',
+    windSpeedMph: 115,
+    exposure: 'C',
+    cq: 1.4,
+    seismicZone: 3,
+    elements: [{ ...newElement(), label: 'Sign cabinet', widthFt: 10, heightFt: 5, topFt: 20 }],
+    numColumns: 1,
+    columnType: 'P',
+    stressIncrease: 1.33,
+    footingType: 'round',
+    numFootings: 1,
+    lateralSoilPsf: 200,
+    bearingPsf: 1330,
+    caissonDiaFt: 2.5,
+    pierWidthFt: 3,
+    pierLengthFt: 3,
+    signWeightLb: null,
+    basePlate: {
+      enabled: false,
+      boltsPerLine: 2,
+      fcPsi: 2500,
+      boltDiaIn: null,
+      boltSpacingIn: null,
+      weldLegIn: 0.3125,
+    },
+  };
+}
+
+function loadSaved(): DesignInput {
+  try {
+    const raw = window.localStorage?.getItem(STORAGE_KEY);
+    if (!raw) return defaultInput();
+    const parsed = JSON.parse(raw) as Partial<DesignInput>;
+    // Merge over defaults so newly added fields pick up sane values.
+    const base = defaultInput();
+    return {
+      ...base,
+      ...parsed,
+      elements: Array.isArray(parsed.elements) && parsed.elements.length > 0
+        ? parsed.elements
+        : base.elements,
+      basePlate: { ...base.basePlate, ...(parsed.basePlate ?? {}) },
+    };
+  } catch {
+    return defaultInput();
+  }
+}
+
+export function App() {
+  const { theme, toggleTheme } = useTheme();
+  const [input, setInput] = useState<DesignInput>(loadSaved);
+  const [view, setView] = useState<View>('calc');
+
+  // Autosave inputs so a refresh doesn't lose the design in progress.
+  useEffect(() => {
+    try {
+      window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(input));
+    } catch {
+      /* ignore storage failures */
+    }
+  }, [input]);
+
+  const result = useMemo(() => computeDesign(input), [input]);
+
+  function reset() {
+    if (window.confirm('Reset all inputs to defaults?')) setInput(defaultInput());
+  }
+
+  return (
+    <div className="app-body">
+      <Topbar
+        projectName={input.projectName}
+        view={view}
+        theme={theme}
+        onChangeView={setView}
+        onToggleTheme={toggleTheme}
+        onPrint={() => window.print()}
+        onReset={reset}
+      />
+
+      <main className="app-main">
+        {/* Print-only header so a printed summary identifies the job. */}
+        <div className="print-header">
+          <p className="tb-eyebrow">LUMINEO SIGNS · WIND LOAD CALCULATION</p>
+          <h1>{input.projectName.trim() || 'Untitled project'}</h1>
+          {input.description.trim() && <p className="muted">{input.description}</p>}
+          <p className="muted">
+            Wind {input.windSpeedMph} mph · Exposure {input.exposure} · Cq {input.cq} · UBC 1994
+          </p>
+        </div>
+
+        {view === 'calc' ? (
+          <div className="calc-grid">
+            <InputsPanel input={input} onChange={setInput} />
+            <ResultsPanel input={input} result={result} />
+          </div>
+        ) : (
+          <SpecsView />
+        )}
+      </main>
+    </div>
+  );
+}
