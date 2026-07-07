@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { computeDesign, type DesignInput } from '../lib/engine';
 import { InputsPanel, newElement } from './InputsPanel';
 import { ResultsPanel } from './ResultsPanel';
+import { SketchPanel } from './SketchPanel';
 import { SpecsView } from './SpecsView';
 import { Topbar, type View } from './Topbar';
 import { useTheme } from './useTheme';
@@ -103,13 +104,17 @@ export function App() {
           </p>
         </div>
 
-        {view === 'calc' ? (
+        {view === 'specs' ? (
+          <SpecsView />
+        ) : (
           <div className="calc-grid">
             <InputsPanel input={input} onChange={setInput} />
-            <ResultsPanel input={input} result={result} />
+            {view === 'calc' ? (
+              <ResultsPanel input={input} result={result} />
+            ) : (
+              <SketchPanel input={input} result={result} />
+            )}
           </div>
-        ) : (
-          <SpecsView />
         )}
       </main>
     </div>

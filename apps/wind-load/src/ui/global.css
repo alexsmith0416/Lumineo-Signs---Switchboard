@@ -465,6 +465,41 @@ label .unit { color: var(--text-dim); font-weight: 600; }
 }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* Elevation sketch */
+.sketch-body { padding-top: 8px; }
+.sketch-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+}
+.sketch-svg text { font-family: inherit; }
+.sketch-note { margin-top: 8px; }
+.sketch-kpi { font-size: 16px; }
+
+.sk-earth { fill: var(--surface-sunken); }
+.sk-earth-hatch { stroke: var(--border-default); stroke-width: 1; }
+.sk-grade { stroke: var(--text-primary); stroke-width: 2; }
+.sk-grade-label {
+  fill: var(--text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.sk-footing { fill: var(--surface-raised); stroke: var(--text-mid); stroke-width: 1.5; }
+.sk-conc-hatch { stroke: var(--border-default); stroke-width: 1; }
+.sk-pole { fill: var(--text-mid); }
+.sk-plate { fill: var(--text-primary); }
+.sk-bolt { stroke: var(--text-primary); stroke-width: 2; stroke-dasharray: 3 2; }
+.sk-face { fill: var(--accent-brand-soft); stroke: var(--accent-brand); stroke-width: 1.5; }
+.sk-face-name { fill: var(--accent-brand); font-size: 13px; font-weight: 800; }
+.sk-face-dims { fill: var(--text-mid); font-size: 12px; font-weight: 700; }
+.sk-dim line { stroke: var(--text-dim); stroke-width: 1; }
+.sk-dim-label { fill: var(--text-primary); font-size: 12px; font-weight: 800; }
+.sk-ext { stroke: var(--border-default); stroke-width: 1; stroke-dasharray: 4 3; }
+.sk-leader { stroke: var(--text-dim); stroke-width: 1; }
+.sk-callout { fill: var(--text-primary); font-size: 12px; font-weight: 700; }
+
 /* Specs view */
 .specs-grid {
   display: grid;

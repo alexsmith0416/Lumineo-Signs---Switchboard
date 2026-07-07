@@ -1,7 +1,8 @@
-import { IconMoon, IconPrint, IconReset, IconSun, IconWind } from './icons';
+import { IconMoon, IconPrint, IconReset, IconSun } from './icons';
+import { RayMark } from './RayMark';
 import type { Theme } from './useTheme';
 
-export type View = 'calc' | 'specs';
+export type View = 'calc' | 'sketch' | 'specs';
 
 interface Props {
   projectName: string;
@@ -15,6 +16,7 @@ interface Props {
 
 const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'calc', label: 'Calculator' },
+  { id: 'sketch', label: 'Sketch' },
   { id: 'specs', label: 'Specifications' },
 ];
 
@@ -24,7 +26,7 @@ export function Topbar({ projectName, view, theme, onChangeView, onToggleTheme, 
   return (
     <header className="tb">
       <div className="tb-brand" aria-hidden="true">
-        <span className="tb-brand-mark"><IconWind size={20} /></span>
+        <RayMark size={36} />
         <span className="tb-brand-text">
           <span className="tb-brand-name">LUMINEO SIGNS</span>
           <span className="tb-brand-sub">SWITCHBOARD</span>
