@@ -93,6 +93,7 @@ const T_JOB = "crfdf_bcjob";
 const T_PLANNING_LINE = "crfdf_bcplanningline";
 const T_COST_SALES = "crfdf_bccostandsales";
 const T_TRIP_RESOURCE = "crfdf_bctripresource";
+const T_CUSTOMER = "crfdf_bccustomer";
 
 // The job-number column on crfdf_bcjob is crfdf_jobnumber (the alternate
 // key the BCSync_Jobs flow upserts on). Planning lines use crfdf_jobno.
@@ -136,24 +137,19 @@ type BcJobHeader = Omit<
 >;
 
 function rowToJobHeader(row: DataverseRow): BcJobHeader {
-  // The BCSync_Jobs flow writes the customer NAME (once the Customers join
-  // is live) or the customer CODE (interim) into crfdf_customername.
-  // crfdf_billtocustomerno always holds the code. Ship-to columns are
-  // populated by the Customers join; empty until then.
-  const shipToName = str(row, "crfdf_shiptoname", "crfdf_shiptocustomername", "shipToName");
-  const customerName = str(row, "crfdf_customername", "customerName");
+  // The job row carries crfdf_billtocustomerno (the code, e.g. "10244").
+  // The real customer name + ship-to address are joined from the
+  // crfdf_bccustomer table at read time (see loadCustomer / hydrateJob).
+  // crfdf_customername on the job is currently the job description — not
+  // a real name — so we do NOT trust it; the customer join overwrites it.
   const billToNo = str(row, "crfdf_billtocustomerno", "billToCustomerNo");
   return {
     // Real table column is crfdf_jobnumber (the alternate-key column).
     jobNo: str(row, "crfdf_jobnumber", "crfdf_jobno", "crfdf_no", "no", "jobNo"),
-    // Prefer ship-to name, then whatever's in customername (name or code),
-    // then the bare bill-to code, then description as last resort.
-    customerName:
-      shipToName ||
-      customerName ||
-      billToNo ||
-      str(row, "crfdf_description", "description"),
-    billToCustomerName: customerName || billToNo,
+    // Interim label until the customer join runs (hydrateJob replaces it):
+    // the bill-to code, or the description.
+    customerName: billToNo || str(row, "crfdf_description", "description"),
+    billToCustomerName: billToNo,
     promisedDate: (() => {
       const d = dateOrNull(row, "crfdf_promiseddate", "crfdf_endingdate", "promisedDate");
       // BC uses 0001-01-01 as "no date" on open jobs — treat as unset.
@@ -165,6 +161,44 @@ function rowToJobHeader(row: DataverseRow): BcJobHeader {
     shipToState: str(row, "crfdf_shiptostate", "crfdf_shiptocounty", "shipToState"),
     shipToZip: str(row, "crfdf_shiptozip", "crfdf_shiptopostcode", "shipToPostCode", "shipToZip"),
   };
+}
+
+interface BcCustomer {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+// Session cache — customer records rarely change and many jobs share a
+// customer, so we memoize per bill-to code.
+const customerCache = new Map<string, BcCustomer | null>();
+
+/** Join a job's bill-to code to the crfdf_bccustomer mirror to get the
+ *  real customer name + ship-to address (which drives the weather ZIP).
+ *  Returns null when the customer table has no matching / no number row. */
+async function loadCustomer(billToNo: string): Promise<BcCustomer | null> {
+  if (!billToNo) return null;
+  if (customerCache.has(billToNo)) return customerCache.get(billToNo) ?? null;
+
+  const reader = getDataverseReader();
+  const rows = await reader.retrieveMultiple(T_CUSTOMER, {
+    filter: `crfdf_customerno eq '${escapeOData(billToNo)}'`,
+    top: 1,
+  });
+  const row = rows[0];
+  const cust: BcCustomer | null = row
+    ? {
+        name: str(row, "crfdf_name", "crfdf_customername", "displayName"),
+        address: str(row, "crfdf_addressline1", "addressLine1"),
+        city: str(row, "crfdf_city", "city"),
+        state: str(row, "crfdf_state", "state"),
+        zip: str(row, "crfdf_postalcode", "crfdf_zip", "postalCode"),
+      }
+    : null;
+  customerCache.set(billToNo, cust);
+  return cust;
 }
 
 function rowToPlanningLine(row: DataverseRow): BcPlanningLine {
@@ -287,12 +321,24 @@ async function loadTrips(jobNo: string): Promise<BcTrip[]> {
 
 async function hydrateJob(headerRow: DataverseRow): Promise<BcJob> {
   const header = rowToJobHeader(headerRow);
-  const [planningLines, costSales, trips] = await Promise.all([
+  const [planningLines, costSales, trips, customer] = await Promise.all([
     loadPlanningLines(header.jobNo),
     loadCostAndSales(header.jobNo),
     loadTrips(header.jobNo),
+    loadCustomer(header.billToCustomerName), // billToCustomerName holds the code
   ]);
-  return { ...header, planningLines, trips, ...costSales };
+
+  // Customer join wins for the display name + ship-to address when the
+  // customer table has a matching row; otherwise keep the header interim.
+  const merged: BcJob = { ...header, planningLines, trips, ...costSales };
+  if (customer) {
+    if (customer.name) merged.customerName = customer.name;
+    if (customer.address) merged.shipToAddress = customer.address;
+    if (customer.city) merged.shipToCity = customer.city;
+    if (customer.state) merged.shipToState = customer.state;
+    if (customer.zip) merged.shipToZip = customer.zip;
+  }
+  return merged;
 }
 
 export const bcService = {
