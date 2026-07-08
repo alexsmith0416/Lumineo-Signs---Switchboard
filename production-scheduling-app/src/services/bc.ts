@@ -92,7 +92,6 @@ export interface BcJob {
 const T_JOB = "crfdf_bcjob";
 const T_PLANNING_LINE = "crfdf_bcplanningline";
 const T_COST_SALES = "crfdf_bccostandsales";
-const T_TRIP_RESOURCE = "crfdf_bctripresource";
 const T_CUSTOMER = "crfdf_bccustomer";
 
 // The job-number column on crfdf_bcjob is crfdf_jobnumber (the alternate
@@ -276,47 +275,44 @@ async function loadCostAndSales(
   return { contractValue, invoicedAmount, remainingToInvoice };
 }
 
+/**
+ * Estimated trips per job, derived from the planning lines. Each Install
+ * Travel resource line (job task 4020) is one trip; men + region come
+ * from its crew-placeholder resource code (e.g. "WK 2 MAN - TBD" → 2 men,
+ * WK). Trucks default to 1 per crew (BC has no explicit truck line — a
+ * crew placeholder implies one vehicle).
+ *
+ * Verified against J17762: one 4020 "Travel / WK 2 MAN - TBD" line →
+ * 1 trip, 2 men, WK, 1 truck.
+ */
 async function loadTrips(jobNo: string): Promise<BcTrip[]> {
   const reader = getDataverseReader();
-  const rows = await reader.retrieveMultiple(T_TRIP_RESOURCE, {
-    filter: jobNoFilter(PL_JOB_NO_COL, jobNo),
-    orderBy: "crfdf_tripno asc",
+  const rows = await reader.retrieveMultiple(T_PLANNING_LINE, {
+    filter: `${jobNoFilter(PL_JOB_NO_COL, jobNo)} and crfdf_type eq 'Resource'`,
+    orderBy: "crfdf_lineno asc",
   });
 
-  // One mirror row per (trip, resource). Group by trip; classify each
-  // resource. Three cases (verified against Production resources):
-  //   - crew placeholders "WK 2 MAN - TBD" / "NEK 1 MAN" → men += N
-  //     (the man-count is encoded in the resource code)
-  //   - trucks/machines: crfdf_resourcetype "Machine", or fleet codes
-  //     (F##, D##, Chevy, crane, bucket)
-  //   - everything else: one person (1000-band employee resources)
-  const byTrip = new Map<string, { men: number; trucks: number; date: Date | null }>();
+  const trips: BcTrip[] = [];
+  let tripNo = 1;
   for (const row of rows) {
-    const tripNo = str(row, "crfdf_tripno", "tripNo") || "1";
-    const bucket = byTrip.get(tripNo) ?? { men: 0, trucks: 0, date: null };
-    const resType = str(row, "crfdf_resourcetype", "resourceType").toLowerCase();
-    const resNo = str(row, "crfdf_resourceno", "resourceNo");
-    const placeholderMen = menFromResourceNo(resNo);
-    if (placeholderMen !== null) {
-      bucket.men += placeholderMen;
-    } else {
-      const isTruck =
-        resType === "machine" ||
-        resType === "truck" ||
-        /^(f|d)\d+$|chevy|crane|bucket/i.test(resNo);
-      if (isTruck) bucket.trucks += 1;
-      else bucket.men += 1;
-    }
-    bucket.date = bucket.date ?? dateOrNull(row, "crfdf_tripdate", "tripDate");
-    byTrip.set(tripNo, bucket);
+    const taskNo = str(row, "crfdf_jobtaskno", "jobTaskNo");
+    // Install Travel band = 4020. Each travel line = one trip.
+    if (!taskNo.startsWith("402")) continue;
+    const resNo = str(row, "crfdf_no", "no", "crfdf_resourceno", "resourceNo");
+    // Men from the "N MAN" crew code; fall back to the line quantity, then 1.
+    const men =
+      menFromResourceNo(resNo) ??
+      (num(row, "crfdf_quantity", "quantity") >= 1
+        ? Math.round(num(row, "crfdf_quantity", "quantity"))
+        : 1);
+    trips.push({
+      tripNo: String(tripNo++),
+      men,
+      trucks: 1, // one crew ≈ one truck; BC has no explicit truck line
+      date: dateOrNull(row, "crfdf_planningdate", "planningDate"),
+    });
   }
-
-  return [...byTrip.entries()].map(([tripNo, b]) => ({
-    tripNo,
-    men: b.men,
-    trucks: b.trucks,
-    date: b.date,
-  }));
+  return trips;
 }
 
 async function hydrateJob(headerRow: DataverseRow): Promise<BcJob> {
