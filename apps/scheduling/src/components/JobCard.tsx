@@ -4,6 +4,8 @@ import { differenceInMinutes, format } from "date-fns";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import { effectiveHours } from "../engine/capacity";
 import { lookupZip } from "../services/zip-geo";
+import { useLoadsStore } from "../shipping/loads-store";
+import { shipmentCardDesc, shipmentSummary } from "../shipping/types";
 import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 
@@ -60,6 +62,24 @@ export default function JobCard({
   layout = "compact",
 }: JobCardProps) {
   const style = cardStyle(line, department);
+  // Shipment cards are a LIVE reference to the load — title + summary derive
+  // from the current load so edits in the Shipping schedule update the install
+  // card automatically. Falls back to the stored snapshot if the load is gone.
+  const shipmentLoad = useLoadsStore((s) =>
+    line.shipmentLoadId ? s.loads.find((l) => l.id === line.shipmentLoadId) : undefined,
+  );
+  const cardTitle = shipmentLoad ? shipmentLoad.name : line.customerName || line.jobNo;
+  const cardDesc = shipmentLoad ? shipmentCardDesc(shipmentLoad) : line.planningLineDescription;
+  // Display-overridden line for the hover tooltip so it shows the live load
+  // (name + full stop/item summary), not the creation-time snapshot.
+  const displayLine: ScheduleLine = shipmentLoad
+    ? {
+        ...line,
+        jobNo: shipmentLoad.name,
+        customerName: shipmentLoad.name,
+        planningLineDescription: shipmentSummary(shipmentLoad),
+      }
+    : line;
   const lineConflicts = conflicts.filter(
     (c) => c.lineId === line.id || c.relatedLineId === line.id,
   );
@@ -93,16 +113,17 @@ export default function JobCard({
         onMouseLeave={close}
       >
         {line.isCustom ? (
-          <div className="job-card__custom-title">{line.customerName || line.jobNo}</div>
+          <div className="job-card__custom-title">
+            {line.shipmentLoadId ? "🚚 " : ""}
+            {cardTitle}
+          </div>
         ) : (
           <div className="job-card__header">
             <span className="job-card__job-no">{line.jobNo}</span>
             <span className="job-card__customer">{line.customerName}</span>
           </div>
         )}
-        {line.planningLineDescription && (
-          <div className="job-card__desc">{line.planningLineDescription}</div>
-        )}
+        {cardDesc && <div className="job-card__desc">{cardDesc}</div>}
         {(showCrewBadge || showWeather || showInvoice) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
@@ -121,7 +142,7 @@ export default function JobCard({
       {tooltipRect &&
         createPortal(
           <JobTooltip
-            line={line}
+            line={displayLine}
             department={department}
             employee={employee}
             conflicts={lineConflicts}
@@ -202,7 +223,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
       </div>
       <div style={{ padding: "8px 10px" }}>
         <div style={{ fontWeight: 600, fontSize: 13 }}>{line.customerName}</div>
-        <div style={{ color: "var(--text-secondary)", marginTop: 2 }}>
+        <div style={{ color: "var(--text-secondary)", marginTop: 2, whiteSpace: "pre-line" }}>
           {line.planningLineDescription}
         </div>
 

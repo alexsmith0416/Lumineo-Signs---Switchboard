@@ -5,14 +5,21 @@ import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { productionDataSource } from "../services/dataverse";
-import { liveProductionDataSource } from "../services/dataverse-live";
 import {
-  installationDataSource,
+  liveProductionDataSource,
+  liveNekInstallDataSource,
+  liveWkInstallDataSource,
+} from "../services/dataverse-live";
+import {
   nekInstallDataSource,
   wkInstallDataSource,
 } from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
-import type { ScheduleDataSource } from "../services/data-source";
+import type {
+  ResourceAdminInput,
+  ScheduleDataSource,
+  ScheduleKind,
+} from "../services/data-source";
 import type {
   Conflict,
   Department,
@@ -51,6 +58,36 @@ export interface ScheduleStoreState {
   /** Add a department in memory. Production wires this up to a Dataverse
    *  write through the data source. */
   addDepartment: (dept: Department) => void;
+  /** Roster admin (right-click add/edit/delete). Persists to Dataverse when the
+   *  source supports it then refreshes; mock sources mutate in-memory so dev
+   *  still reflects the change. */
+  createResource: (input: ResourceAdminInput) => Promise<void>;
+  updateResource: (id: string, input: ResourceAdminInput) => Promise<void>;
+  deleteResource: (id: string) => Promise<void>;
+  /** Batch roster edit (drag-reorder): persist all changes, then refresh once. */
+  updateResources: (edits: Array<{ id: string; input: ResourceAdminInput }>) => Promise<void>;
+}
+
+/** Apply an admin input to an in-memory Employee (mock/dev fallback only). For
+ *  installation the location/position/truck/CCO fields map onto the Employee;
+ *  for production only name + department apply. */
+function applyResourceInput(
+  emp: Employee,
+  input: ResourceAdminInput,
+  kind: ScheduleKind,
+): Employee {
+  const out = { ...emp };
+  if (input.name !== undefined) out.name = input.name;
+  if (kind === "installation") {
+    if (input.location !== undefined) out.departmentId = String(input.location);
+    if (input.position !== undefined) out.position = Number(input.position);
+    if (input.truckNumber !== undefined) out.truckNumber = input.truckNumber;
+    if (input.isCertifiedCraneOperator !== undefined)
+      out.isCertifiedCraneOperator = input.isCertifiedCraneOperator;
+  } else if (input.departmentId !== undefined) {
+    out.departmentId = input.departmentId;
+  }
+  return out;
 }
 
 function buildContext(state: ScheduleStoreState): ScheduleContext {
@@ -231,6 +268,73 @@ export function createScheduleStore(
       next.set(dept.id, dept);
       set({ departments: next });
     },
+
+    createResource: async (input) => {
+      const ds = get().dataSource;
+      if (ds.createResource) {
+        await ds.createResource(input);
+        await get().loadWeek();
+        return;
+      }
+      // Mock/dev: synthesize a local roster row so the board updates.
+      const id = `local-${Math.random().toString(36).slice(2)}`;
+      const base: Employee = {
+        id,
+        name: input.name ?? "New",
+        departmentId: "",
+        productivityRate: 1,
+        standardHoursPerDay: 8,
+        maxOvertimePerDay: 0,
+        worksWeekends: false,
+      };
+      const next = new Map(get().employees);
+      next.set(id, applyResourceInput(base, input, ds.kind));
+      set({ employees: next });
+    },
+
+    updateResource: async (id, input) => {
+      const ds = get().dataSource;
+      if (ds.updateResource) {
+        // Live: persist then reload. A region change correctly drops the row
+        // from this store (loadEmployees re-filters by region on reload).
+        await ds.updateResource(id, input);
+        await get().loadWeek();
+        return;
+      }
+      const next = new Map(get().employees);
+      const cur = next.get(id);
+      if (!cur) return;
+      next.set(id, applyResourceInput(cur, input, ds.kind));
+      set({ employees: next });
+    },
+
+    deleteResource: async (id) => {
+      const ds = get().dataSource;
+      if (ds.deleteResource) {
+        await ds.deleteResource(id);
+        await get().loadWeek();
+        return;
+      }
+      const next = new Map(get().employees);
+      next.delete(id);
+      set({ employees: next });
+    },
+
+    updateResources: async (edits) => {
+      if (edits.length === 0) return;
+      const ds = get().dataSource;
+      if (ds.updateResource) {
+        await Promise.all(edits.map((e) => ds.updateResource!(e.id, e.input)));
+        await get().loadWeek();
+        return;
+      }
+      const next = new Map(get().employees);
+      for (const e of edits) {
+        const cur = next.get(e.id);
+        if (cur) next.set(e.id, applyResourceInput(cur, e.input, ds.kind));
+      }
+      set({ employees: next });
+    },
   }));
 }
 
@@ -243,9 +347,13 @@ export function createScheduleStore(
 const useLiveData =
   import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const productionSource = useLiveData ? liveProductionDataSource : productionDataSource;
+// Installation roster reads live from crfdf_InstallationEmployees (WK = region
+// false, NEK = region true) when deployed / forced; mock crews otherwise.
+const wkInstallSource = useLiveData ? liveWkInstallDataSource : wkInstallDataSource;
+const nekInstallSource = useLiveData ? liveNekInstallDataSource : nekInstallDataSource;
 
 export const useScheduleStore = createScheduleStore(productionSource);
-export const useInstallationStore = createScheduleStore(installationDataSource);
-export const useInstallationStoreWK = createScheduleStore(wkInstallDataSource);
-export const useInstallationStoreNEK = createScheduleStore(nekInstallDataSource);
+export const useInstallationStore = createScheduleStore(wkInstallSource);
+export const useInstallationStoreWK = createScheduleStore(wkInstallSource);
+export const useInstallationStoreNEK = createScheduleStore(nekInstallSource);
 export const useShippingStore = createScheduleStore(shippingDataSource);

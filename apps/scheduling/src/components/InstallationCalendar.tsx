@@ -122,7 +122,7 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
           setHiddenDeptIds(new Set());
           setHiddenEmployeeIds(new Set());
         }}
-        resourceLabel="Crew"
+        resourceLabel="Employee"
         departmentLabel="Location"
       />
     </div>
@@ -134,7 +134,7 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
         useStore={useStore}
         kindMeta={{
           ...KIND_META.installation,
-          title: `Installation Scheduling · ${region}`,
+          title: `Installation & Service Schedule · ${region}`,
         }}
         cardLayout="stacked"
         showInvoice={showInvoice}
@@ -149,6 +149,9 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
         scenarioStore={scenarioStore}
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
+        enableResourceAdmin
+        installRegionIsNek={region === "NEK"}
+        rosterUnlockable
         addAction={
           <button
             className="btn-add-job"

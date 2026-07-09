@@ -3,9 +3,14 @@ import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } fro
 import { isWeekend } from "../engine/capacity";
 import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
-import type { ScheduleKindMeta } from "../services/data-source";
+import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
+import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
+import { CcoBadge } from "./CcoBadge";
+import { LockIcon } from "./LockIcon";
+import { PrintIcon } from "./PrintIcon";
+import EmployeeAdminPanel from "./EmployeeAdminPanel";
 import JobCard from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
@@ -49,6 +54,16 @@ interface CalendarViewProps {
   hiddenDeptIds?: Set<string>;
   /** Employee/resource IDs to hide from the rendered grid. */
   hiddenEmployeeIds?: Set<string>;
+  /** Enables the right-click roster admin (add via group header, edit/delete
+   *  via name). Set by the Production and Installation calendars. */
+  enableResourceAdmin?: boolean;
+  /** Installation only: the current region (crfdf_region) — false = WK,
+   *  true = NEK. Required by the admin editor for install rosters. */
+  installRegionIsNek?: boolean;
+  /** Installation only: allow the roster to be "unlocked" for drag-reorder.
+   *  The unlock state itself is toggled by right-clicking the resource column
+   *  header (no visible button). */
+  rosterUnlockable?: boolean;
 }
 
 interface PendingShift {
@@ -131,6 +146,9 @@ export default function CalendarView({
   scenarioStore = useScenarioStore,
   hiddenDeptIds,
   hiddenEmployeeIds,
+  enableResourceAdmin = false,
+  installRegionIsNek,
+  rosterUnlockable = false,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -146,10 +164,56 @@ export default function CalendarView({
     setWeekStart,
     shiftTaskAndCommit,
     updateTaskHours,
+    updateResources,
   } = useStore();
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
+  const [editEmployeeId, setEditEmployeeId] = useState<string | null>(null);
+  // Group id (department / location) right-clicked to add a new member.
+  const [addGroupId, setAddGroupId] = useState<string | null>(null);
   const [pendingShift, setPendingShift] = useState<PendingShift | null>(null);
+  // Right-click roster admin (add via header, edit/delete via name).
+  const adminEditEnabled = enableResourceAdmin;
+
+  // Roster reorder ("unlock" mode, install only): drag a name to a new
+  // position / location group. Unlock is toggled by right-clicking the resource
+  // column header (no visible button). `reorderDragId` marks an active drag (so
+  // headers accept the drop); `reorderHoverId` drives the insertion indicator.
+  const [rosterUnlocked, setRosterUnlocked] = useState(false);
+  const rosterDragEnabled = rosterUnlockable && rosterUnlocked;
+  const [reorderDragId, setReorderDragId] = useState<string | null>(null);
+  const [reorderHoverId, setReorderHoverId] = useState<string | null>(null);
+  const [headerDropLoc, setHeaderDropLoc] = useState<string | null>(null);
+
+  const applyRosterDrop = (draggedId: string, drop: RosterDropTarget) => {
+    const moves = computeRosterReorder([...employees.values()], draggedId, drop);
+    if (moves.length === 0) return;
+    void updateResources(
+      moves.map((m) => ({ id: m.id, input: { location: m.location, position: m.position } })),
+    );
+  };
+
+  const onRosterDragStart = (e: React.DragEvent, empId: string) => {
+    e.dataTransfer.setData("text/crewId", empId);
+    e.dataTransfer.effectAllowed = "move";
+    setReorderDragId(empId);
+  };
+  const onRosterDragEnd = () => {
+    setReorderDragId(null);
+    setReorderHoverId(null);
+    setHeaderDropLoc(null);
+  };
+  const onRosterRowDragOver = (e: React.DragEvent, empId: string) => {
+    if (!reorderDragId) return;
+    e.preventDefault();
+    if (reorderHoverId !== empId) setReorderHoverId(empId);
+  };
+  const onRosterRowDrop = (e: React.DragEvent, beforeEmpId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/crewId");
+    onRosterDragEnd();
+    if (draggedId) applyRosterDrop(draggedId, { beforeId: beforeEmpId });
+  };
   const enterScenario = scenarioStore((s) => s.enter);
   const addScenarioChange = scenarioStore((s) => s.addChange);
   const getContext = useStore((s) => s.getContext);
@@ -176,7 +240,12 @@ export default function CalendarView({
       .sort((a, b) => a.flowOrder - b.flowOrder)
       .forEach((dept) => {
         if (hiddenDeptIds?.has(dept.id)) return;
-        const emps = (out.get(dept.id) ?? []).sort((a, b) => a.name.localeCompare(b.name));
+        // Installation rosters carry an explicit `position` (order on the
+        // printed schedule); fall back to alphabetical when absent (production).
+        const emps = (out.get(dept.id) ?? []).sort((a, b) => {
+          if (a.position != null && b.position != null) return a.position - b.position;
+          return a.name.localeCompare(b.name);
+        });
         // Include the dept even if empty — newly-added custom locations
         // and pinned-empty groups should still appear so the user sees them.
         ordered.push({ dept, emps });
@@ -346,15 +415,41 @@ export default function CalendarView({
           title="Print this week"
           aria-label="Print this week"
         >
-          🖨
+          <PrintIcon />
         </button>
         {addAction}
       </div>
 
       <div className="calendar-grid">
         <div className="calendar-header-row">
-          <div className="calendar-header-cell calendar-header-cell--resource">
+          <div
+            className={
+              "calendar-header-cell calendar-header-cell--resource" +
+              (rosterUnlockable ? " calendar-header-cell--lockable" : "") +
+              (rosterDragEnabled ? " calendar-header-cell--unlocked" : "")
+            }
+            onContextMenu={
+              rosterUnlockable
+                ? (e) => {
+                    e.preventDefault();
+                    setRosterUnlocked((v) => !v);
+                  }
+                : undefined
+            }
+            title={
+              rosterUnlockable
+                ? rosterDragEnabled
+                  ? "Reorder unlocked — drag names to move. Right-click to lock."
+                  : "Right-click to unlock drag-reordering"
+                : undefined
+            }
+          >
             {kindMeta.resourceLabel}
+            {rosterUnlockable && (
+              <span className="resource-lock">
+                <LockIcon locked={!rosterDragEnabled} />
+              </span>
+            )}
           </div>
           {days.map((d) => (
             <div
@@ -369,11 +464,46 @@ export default function CalendarView({
 
         {grouped.map(({ dept, emps }) => (
           <div key={dept.id} className="dept-section">
-            <div className="dept-header" style={{ background: dept.color }}>
+            <div
+              className={`dept-header${adminEditEnabled ? " dept-header--editable" : ""}${headerDropLoc === dept.id ? " dept-header--drop" : ""}`}
+              style={{ background: dept.color }}
+              onContextMenu={
+                adminEditEnabled
+                  ? (e) => {
+                      e.preventDefault();
+                      setAddGroupId(dept.id);
+                    }
+                  : undefined
+              }
+              onDragOver={
+                rosterDragEnabled && reorderDragId
+                  ? (e) => {
+                      e.preventDefault();
+                      if (headerDropLoc !== dept.id) setHeaderDropLoc(dept.id);
+                      setReorderHoverId(null);
+                    }
+                  : undefined
+              }
+              onDrop={
+                rosterDragEnabled
+                  ? (e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData("text/crewId");
+                      onRosterDragEnd();
+                      if (draggedId) applyRosterDrop(draggedId, { groupLocation: Number(dept.id) });
+                    }
+                  : undefined
+              }
+              title={
+                adminEditEnabled
+                  ? `Right-click to add a ${kindMeta.resourceLabel.toLowerCase()}`
+                  : undefined
+              }
+            >
               <div className="dept-header__label" style={{ background: dept.color }}>
                 <span>{dept.name}</span>
                 <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
-                  flow {dept.flowOrder} · {peopleNoun(emps.length)}
+                  {peopleNoun(emps.length)}
                 </span>
               </div>
             </div>
@@ -388,6 +518,22 @@ export default function CalendarView({
                 <EmployeeRow
                   key={emp.id}
                   emp={emp}
+                  kind={kindMeta.kind}
+                  onNameContextMenu={
+                    adminEditEnabled ? () => setEditEmployeeId(emp.id) : undefined
+                  }
+                  rosterDraggable={rosterDragEnabled}
+                  rosterDropHover={reorderHoverId === emp.id}
+                  onRosterDragStart={
+                    rosterDragEnabled ? (e) => onRosterDragStart(e, emp.id) : undefined
+                  }
+                  onRosterDragEnd={rosterDragEnabled ? onRosterDragEnd : undefined}
+                  onRosterDragOver={
+                    rosterDragEnabled ? (e) => onRosterRowDragOver(e, emp.id) : undefined
+                  }
+                  onRosterDrop={
+                    rosterDragEnabled ? (e) => onRosterRowDrop(e, emp.id) : undefined
+                  }
                   days={days}
                   cards={cards}
                   departments={departments}
@@ -437,6 +583,34 @@ export default function CalendarView({
         );
       })()}
 
+      {adminEditEnabled && editEmployeeId && (() => {
+        const editing = employees.get(editEmployeeId);
+        if (!editing) return null;
+        return (
+          <EmployeeAdminPanel
+            kind={kindMeta.kind}
+            mode="edit"
+            emp={editing}
+            departments={departments}
+            regionIsNek={installRegionIsNek}
+            useStore={useStore}
+            onClose={() => setEditEmployeeId(null)}
+          />
+        );
+      })()}
+
+      {adminEditEnabled && addGroupId !== null && (
+        <EmployeeAdminPanel
+          kind={kindMeta.kind}
+          mode="create"
+          departments={departments}
+          regionIsNek={installRegionIsNek}
+          initialGroupId={addGroupId}
+          useStore={useStore}
+          onClose={() => setAddGroupId(null)}
+        />
+      )}
+
       {pendingShift && (() => {
         const targetLine = schedule.find((l) => l.id === pendingShift.lineId);
         if (!targetLine) return null;
@@ -464,6 +638,16 @@ export default function CalendarView({
 
 interface EmployeeRowProps {
   emp: Employee;
+  kind: ScheduleKind;
+  /** When set, right-clicking the name fires this (install admin edit). */
+  onNameContextMenu?: () => void;
+  /** Roster reorder ("unlock" mode) — drag the name to a new spot. */
+  rosterDraggable?: boolean;
+  rosterDropHover?: boolean;
+  onRosterDragStart?: (e: React.DragEvent) => void;
+  onRosterDragEnd?: () => void;
+  onRosterDragOver?: (e: React.DragEvent) => void;
+  onRosterDrop?: (e: React.DragEvent) => void;
   days: Date[];
   cards: CardLayout[];
   departments: Map<string, Department>;
@@ -484,6 +668,14 @@ interface EmployeeRowProps {
 
 function EmployeeRow({
   emp,
+  kind,
+  onNameContextMenu,
+  rosterDraggable,
+  rosterDropHover,
+  onRosterDragStart,
+  onRosterDragEnd,
+  onRosterDragOver,
+  onRosterDrop,
   days,
   cards,
   departments,
@@ -533,11 +725,44 @@ function EmployeeRow({
 
   return (
     <div className="employee-row" style={{ minHeight: rowMinHeight }}>
-      <div className="employee-row__name">
-        <strong>{emp.name}</strong>
-        <span className="productivity">
-          {Math.round(emp.productivityRate * 100)}% · {emp.standardHoursPerDay}h/day
-        </span>
+      <div
+        className={
+          "employee-row__name" +
+          (onNameContextMenu ? " employee-row__name--editable" : "") +
+          (rosterDraggable ? " employee-row__name--draggable" : "") +
+          (rosterDropHover ? " employee-row__name--drop-before" : "")
+        }
+        draggable={rosterDraggable || undefined}
+        onDragStart={onRosterDragStart}
+        onDragEnd={onRosterDragEnd}
+        onDragOver={onRosterDragOver}
+        onDrop={onRosterDrop}
+        onContextMenu={
+          onNameContextMenu
+            ? (e) => {
+                e.preventDefault();
+                onNameContextMenu();
+              }
+            : undefined
+        }
+        title={
+          rosterDraggable
+            ? "Drag to reorder · right-click to edit"
+            : onNameContextMenu
+              ? "Right-click to edit crew"
+              : undefined
+        }
+      >
+        <strong>
+          {emp.name}
+          {emp.isCertifiedCraneOperator ? <CcoBadge /> : null}
+        </strong>
+        {/* Installation rows show the assigned truck (when any) in place of the
+            production %/hours subtext; production rows show no subtext at all
+            (rate/hours are admin data, kept off the board). */}
+        {kind === "installation" && emp.truckNumber ? (
+          <span className="productivity">{emp.truckNumber}</span>
+        ) : null}
       </div>
       <div
         className="employee-row__days"

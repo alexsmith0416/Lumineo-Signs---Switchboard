@@ -6,6 +6,28 @@ import type {
   WorkHoursOverride,
 } from "../engine/types";
 
+/**
+ * Admin edit to a roster row (employee / crew). Production sources read
+ * `name` + `departmentId`; installation sources read the install-specific
+ * fields. Undefined fields are left unchanged on update; `truckNumber: null`
+ * clears the truck.
+ */
+export interface ResourceAdminInput {
+  name?: string;
+  /** Production: department lookup id (crfdf_department1). */
+  departmentId?: string;
+  /** Installation: crfdf_location option value (group). */
+  location?: number;
+  /** Installation: crfdf_region — false = WK, true = NEK. */
+  region?: boolean;
+  /** Installation: crfdf_positiononschedule — zero-padded order string. */
+  position?: string;
+  /** Installation: crfdf_truck (null/"" clears it). */
+  truckNumber?: string | null;
+  /** Installation: crfdf_certifiedcraneoperator. */
+  isCertifiedCraneOperator?: boolean;
+}
+
 export interface ScheduleDataSource {
   kind: ScheduleKind;
   loadDepartments(): Promise<Department[]>;
@@ -16,6 +38,11 @@ export interface ScheduleDataSource {
   updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine>;
   createScheduleLine(line: ScheduleLine): Promise<ScheduleLine>;
   deleteScheduleLine(id: string): Promise<void>;
+  // Roster admin (right-click). Implemented per-kind against the live roster
+  // table; absent on mock sources (the store falls back to in-memory edits).
+  createResource?(input: ResourceAdminInput): Promise<void>;
+  updateResource?(id: string, input: ResourceAdminInput): Promise<void>;
+  deleteResource?(id: string): Promise<void>;
 }
 
 export type ScheduleKind = "production" | "installation" | "shipping";
@@ -31,21 +58,21 @@ export interface ScheduleKindMeta {
 export const KIND_META: Record<ScheduleKind, ScheduleKindMeta> = {
   production: {
     kind: "production",
-    title: "Production Scheduling",
+    title: "Production Schedule",
     resourceLabel: "Employee",
     resourceLabelPlural: "Employees",
     resourceGroupLabel: "Department",
   },
   installation: {
     kind: "installation",
-    title: "Installation Scheduling",
-    resourceLabel: "Crew",
-    resourceLabelPlural: "Crews",
-    resourceGroupLabel: "Crew type",
+    title: "Installation & Service Schedule",
+    resourceLabel: "Employee",
+    resourceLabelPlural: "Employees",
+    resourceGroupLabel: "Location",
   },
   shipping: {
     kind: "shipping",
-    title: "Shipping Scheduling",
+    title: "Shipping Schedule",
     resourceLabel: "Truck",
     resourceLabelPlural: "Trucks",
     resourceGroupLabel: "Vehicle type",

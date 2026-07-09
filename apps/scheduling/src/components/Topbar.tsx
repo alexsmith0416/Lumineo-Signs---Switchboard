@@ -22,7 +22,7 @@ export default function Topbar({ title, onMenu }: TopbarProps) {
         </button>
       )}
       <div className="app-topbar__lead">
-        <span className="app-topbar__eyebrow">SWITCHBOARD · PROJECT SCHEDULER</span>
+        <span className="app-topbar__eyebrow">SWITCHBOARD · WEEKLY SCHEDULER</span>
         <span className="app-topbar__title">{title}</span>
       </div>
       <div className="app-topbar__cluster">

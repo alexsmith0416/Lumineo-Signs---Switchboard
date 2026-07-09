@@ -1,20 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import SubNav from "./components/SubNav";
 import NavDrawer from "./components/NavDrawer";
 import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
-import ShippingCalendar from "./components/ShippingCalendar";
+import ShippingBoard from "./components/ShippingBoard";
 import ScenarioSandbox from "./components/ScenarioSandbox";
 import MonthlyPlanView from "./components/MonthlyPlanView";
+import { useLoadsStore } from "./shipping/loads-store";
+import { hydrateInstallCardCache } from "./services/dataverse-live";
+
+const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
 type View = "production" | "installation" | "shipping" | "scenario" | "monthly";
 
 const VIEW_TITLES: Record<View, string> = {
-  production: "Production Scheduling",
-  installation: "Installation Scheduling",
-  shipping: "Shipping Scheduling",
+  production: "Production Schedule",
+  installation: "Installation & Service Schedule",
+  shipping: "Shipping Schedule",
   scenario: "Scenario Sandbox",
   monthly: "Monthly Install Plan",
 };
@@ -32,6 +36,14 @@ const VIEW_NAV = [
 export default function App() {
   const [view, setView] = useState<View>("production");
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Live: load shipping loads + the install-card cache (for the Scheduled badge)
+  // from Dataverse once at startup.
+  useEffect(() => {
+    if (!LIVE) return;
+    void useLoadsStore.getState().hydrate();
+    void hydrateInstallCardCache().catch(() => {});
+  }, []);
 
   return (
     <div className="app-shell">
@@ -51,9 +63,7 @@ export default function App() {
           {view === "installation" && (
             <InstallationCalendar onNavigate={(v) => setView(v as View)} />
           )}
-          {view === "shipping" && (
-            <ShippingCalendar onNavigate={(v) => setView(v as View)} />
-          )}
+          {view === "shipping" && <ShippingBoard />}
           {view === "scenario" && <ScenarioSandbox />}
           {view === "monthly" && <MonthlyPlanView />}
         </div>

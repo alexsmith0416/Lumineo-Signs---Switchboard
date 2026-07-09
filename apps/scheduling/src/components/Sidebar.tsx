@@ -1,35 +1,34 @@
 import LumineoLogo from "./LumineoLogo";
+import { SidebarIcon, type SidebarIconName } from "./SidebarIcon";
 import { useTheme } from "../theme";
 
 interface SbItem {
   id: string;
   label: string;
-  icon: string;
-  disabled?: boolean;
+  icon: SidebarIconName;
   active?: boolean;
 }
 
-// The Switchboard app nav. Project Scheduler is the active app; the other
-// entries are separate Switchboard apps (out of scope here) and render
-// disabled, matching the prototype.
+// The Switchboard app nav. Weekly Scheduler is the active app (this app); the
+// other entries are separate Switchboard apps (out of scope here) and render
+// inert, matching the prototype.
 const MAIN: SbItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: "▦", disabled: true },
-  { id: "my-schedule", label: "My Schedule", icon: "🗓️", disabled: true },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "my-schedule", label: "My Schedule", icon: "my-schedule" },
 ];
 
 const APPS: SbItem[] = [
-  { id: "project-scheduler", label: "Project Scheduler", icon: "📅", active: true },
-  { id: "weekly-scheduler", label: "Weekly Scheduler", icon: "🗒️", disabled: true },
-  { id: "sign-builder", label: "Sign Builder Pro", icon: "🪧", disabled: true },
-  { id: "job-punches", label: "Job Punches", icon: "⏱️", disabled: true },
-  { id: "estimating", label: "Estimating", icon: "💲", disabled: true },
-  { id: "sales-hub", label: "Sales Hub", icon: "📈", disabled: true },
-  { id: "calendar", label: "Calendar", icon: "📆", disabled: true },
+  { id: "production-scheduler", label: "Production Scheduler", icon: "production" },
+  { id: "weekly-scheduler", label: "Weekly Scheduler", icon: "weekly", active: true },
+  { id: "sign-builder", label: "Sign Builder Pro", icon: "sign-builder" },
+  { id: "joblog", label: "JobLog", icon: "joblog" },
+  { id: "estimating", label: "Estimating", icon: "estimating" },
+  { id: "sales-hub", label: "Sales Hub", icon: "sales" },
 ];
 
 const OTHER: SbItem[] = [
-  { id: "settings", label: "Settings", icon: "⚙️", disabled: true },
-  { id: "help", label: "Help", icon: "❔", disabled: true },
+  { id: "settings", label: "Settings", icon: "settings" },
+  { id: "help", label: "Help", icon: "help" },
 ];
 
 function NavItem({ item }: { item: SbItem }) {
@@ -37,11 +36,11 @@ function NavItem({ item }: { item: SbItem }) {
     <button
       type="button"
       className={`sb-nav__item${item.active ? " sb-nav__item--active" : ""}`}
-      disabled={item.disabled}
       aria-current={item.active ? "page" : undefined}
-      style={item.disabled ? { opacity: 0.55, cursor: "default" } : undefined}
     >
-      <span className="sb-nav__icon" aria-hidden="true">{item.icon}</span>
+      <span className="sb-nav__icon">
+        <SidebarIcon name={item.icon} />
+      </span>
       <span>{item.label}</span>
     </button>
   );
@@ -81,7 +80,9 @@ export default function Sidebar() {
         onClick={toggle}
         aria-label={`Switch to ${nextIsDark ? "dark" : "light"} mode`}
       >
-        <span className="sb-nav__icon" aria-hidden="true">{nextIsDark ? "🌙" : "☀️"}</span>
+        <span className="sb-toggle__icon">
+          <SidebarIcon name={nextIsDark ? "moon" : "sun"} size={16} />
+        </span>
         <span>{nextIsDark ? "Dark" : "Light"}</span>
       </button>
       <nav className="sb-nav">

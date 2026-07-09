@@ -18,6 +18,14 @@ export interface Employee {
   maxOvertimePerDay: number;
   worksWeekends: boolean;
   hourlyRate?: number;
+
+  // Installation-roster fields (from crfdf_InstallationEmployees). Production
+  // employees leave these undefined. `position` is the explicit ordering within
+  // a location group; `truckNumber` shows beneath the name (replacing the
+  // production %/hours subtext); `isCertifiedCraneOperator` renders the CCO badge.
+  truckNumber?: string | null;
+  isCertifiedCraneOperator?: boolean;
+  position?: number;
 }
 
 export interface ScheduleLine {
@@ -54,6 +62,10 @@ export interface ScheduleLine {
   isCustom?: boolean;
   customColor?: string | null;
   customTextColor?: string | null;
+
+  // When set, this custom card represents a Shipping load placed on the install
+  // schedule (links back to the load in the shipping store).
+  shipmentLoadId?: string | null;
 
   // The user's last-explicit position for this line. Cascade uses this as
   // the floor: a pushed task pulls back to its preferred position when

@@ -38,6 +38,10 @@
   --toggle-active-text: #1f1f2e;
 
   --bg-tertiary: #eef0f4;
+
+  /* Calendar grid lines — higher contrast than --border-default so the row /
+     day separators stay visible against the white grid (darker in light). */
+  --grid-line: #cdd0da;
 }
 
 [data-theme="dark"] {
@@ -74,6 +78,10 @@
   --toggle-active-text: #ffffff;
 
   --bg-tertiary: #1a1f3d;
+
+  /* Lighter than --border-default so the grid lines read against the dark
+     surface (the dark canvas swallows the default border). */
+  --grid-line: #3c4575;
 }
 
 /* ---- Prototype token aliases → DESIGN.md tokens ----
@@ -226,13 +234,21 @@ input, select, textarea {
   cursor: pointer;
   width: 100%;
 }
-.sb-nav__item:not(:disabled):hover {
+.sb-nav__item:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+/* Active app: white pill + navy text in light; darker inset + accent text in
+   dark. Placed after :hover so it wins on hover too. */
 .sb-nav__item--active,
 .sb-nav__item--active:hover {
-  background: var(--bg-page);
+  background: #ffffff;
   color: var(--accent-brand);
+}
+[data-theme="dark"] .sb-nav__item--active,
+[data-theme="dark"] .sb-nav__item--active:hover {
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--accent-brand);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 .sb-nav__icon {
@@ -242,28 +258,48 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 14px;
+  /* Icons are white in light, accent blue in dark; active items inherit the
+     item's (accent) color so the glyph matches the text. */
+  color: var(--text-on-accent);
+}
+[data-theme="dark"] .sb-nav__icon {
+  color: var(--accent-brand);
+}
+.sb-nav__item--active .sb-nav__icon,
+[data-theme="dark"] .sb-nav__item--active .sb-nav__icon {
+  color: inherit;
 }
 
 .sb-spacer { flex: 1; }
 
 .sb-theme-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 10px;
+  gap: 8px;
+  padding: 7px 16px 7px 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: transparent;
-  color: var(--text-on-accent);
-  font-weight: 600;
+  border: none;
+  /* Filled pill: white in light, accent in dark — text/icon contrast flips. */
+  background: #ffffff;
+  color: var(--accent-brand);
+  font-weight: 700;
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  width: 100%;
-  text-align: left;
+  width: fit-content;
+  align-self: flex-start;
+  margin: 2px 0 4px;
 }
-.sb-theme-toggle:hover { background: rgba(255, 255, 255, 0.1); }
+[data-theme="dark"] .sb-theme-toggle {
+  background: var(--accent-brand);
+  color: #ffffff;
+}
+.sb-theme-toggle:hover { filter: brightness(0.96); }
+.sb-toggle__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ---- Main column ---- */
 .app-main {
@@ -641,6 +677,10 @@ input, select, textarea {
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+  /* Inset the row so the outer buttons (Prev … Add Job) line up with the stat
+     text in the WeekSummary container above — which sits 12px padding + 1px
+     border = 13px in from its outer edge. */
+  padding: 0 13px;
 }
 
 .calendar-toolbar button {
@@ -669,12 +709,17 @@ input, select, textarea {
 
 .calendar-toolbar__print {
   background: var(--surface-raised) !important;
+  /* Icon fills via currentColor — matches the "Show all" trigger in both
+     themes (navy #141464 in light, accent blue in dark). */
   color: var(--lumineo-navy) !important;
   border: 1px solid var(--lumineo-navy) !important;
   padding: 6px 10px;
   font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .calendar-toolbar__print:hover {
   background: var(--bg-tertiary) !important;
@@ -745,11 +790,29 @@ input, select, textarea {
   z-index: 5;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .calendar-header-cell--weekend {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
+}
+
+/* Resource header doubles as the reorder lock toggle (right-click). */
+.calendar-header-cell--lockable {
+  cursor: context-menu;
+}
+.calendar-header-cell--lockable .resource-lock {
+  display: inline-flex;
+  align-items: center;
+}
+/* Unlocked: amber wash so reorder mode is obvious at a glance. */
+.calendar-header-cell--unlocked {
+  background: var(--status-amber-soft);
+  box-shadow: inset 0 0 0 1px var(--status-amber);
 }
 
 .dept-section {
@@ -762,6 +825,15 @@ input, select, textarea {
   /* Background color is set via inline style per-department. The label
      inside repeats the color via its own inline style so the sticky
      left chip carries a solid color, not transparent. */
+  /* Band backgrounds are fixed light pastels in both themes, so the text must
+     stay dark regardless of theme — never inherit the theme text color (which
+     flips to white in dark mode and becomes unreadable on the pastels). */
+  color: #141464;
+}
+
+.dept-header__label,
+.dept-header__label span {
+  color: #141464;
 }
 
 .dept-header__label {
@@ -780,7 +852,7 @@ input, select, textarea {
 .employee-row {
   display: grid;
   grid-template-columns: 140px 1fr;
-  border-bottom: 1px solid var(--bg-tertiary);
+  border-bottom: 1px solid var(--grid-line);
   min-height: 56px;
   min-width: 920px;
 }
@@ -805,6 +877,85 @@ input, select, textarea {
   color: var(--text-tertiary);
 }
 
+.employee-row__name strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Right-click opens the admin editor (edit member / add to group). */
+.employee-row__name--editable,
+.dept-header--editable {
+  cursor: context-menu;
+}
+
+/* Roster "unlock" mode — names are draggable to reorder / change group. */
+.employee-row__name--draggable {
+  cursor: grab;
+}
+.employee-row__name--draggable:active {
+  cursor: grabbing;
+}
+/* Insertion indicator: a strong top rule on the row the drop lands before. */
+.employee-row__name--drop-before {
+  box-shadow: inset 0 3px 0 0 var(--lumineo-navy);
+}
+/* Group header accepting a dropped crew (append to this location). */
+.dept-header--drop {
+  box-shadow: inset 0 0 0 2px var(--lumineo-navy);
+}
+
+/* Centered confirmation modal (e.g. delete a roster member). */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(10, 12, 24, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-card {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  width: min(420px, 100%);
+  overflow: hidden;
+}
+
+.modal-card__title {
+  padding: 14px 16px 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.modal-card__body {
+  padding: 0 16px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modal-card__actions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--bg-secondary);
+}
+
+/* Certified Crane Operator badge — sits just right of the name. */
+.cco-badge {
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .employee-row__days {
   display: grid;
   grid-template-columns: repeat(7, minmax(110px, 1fr));
@@ -813,7 +964,7 @@ input, select, textarea {
 }
 
 .day-cell {
-  border-right: 1px solid var(--bg-tertiary);
+  border-right: 1px solid var(--grid-line);
   min-height: 56px;
 }
 
@@ -1052,6 +1203,9 @@ input, select, textarea {
 .form-field__input,
 .form-field__select {
   background: var(--input-bg);
+  /* Follow the theme so text stays legible on the sunken input bg (white in
+     dark mode, dark in light) — without this the browser default is black. */
+  color: var(--text-primary);
   border: none;
   padding: 8px 10px;
   outline: none;
@@ -1267,6 +1421,258 @@ input, select, textarea {
 }
 
 /* =================================================================
+   SHIPPING SCHEDULE — weekly board of LOAD cards (no truck/employee).
+   ================================================================= */
+
+.ship-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(160px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.ship-col {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+.ship-col--weekend { background: var(--bg-tertiary); }
+.ship-col__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ship-col__dow { font-weight: 700; font-size: 12px; color: var(--text-primary); }
+.ship-col__date { font-size: 11px; color: var(--text-secondary); }
+.ship-col__body { display: flex; flex-direction: column; gap: 6px; padding: 8px; flex: 1; }
+.ship-col__add {
+  margin-top: auto;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ship-col__add:hover {
+  background: var(--surface-raised);
+  color: var(--accent-brand);
+  border-color: var(--accent-brand);
+}
+
+.load-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-brand);
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.load-card:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14); }
+.load-card__head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.load-card__name { font-weight: 700; font-size: 12.5px; flex: 1 1 60%; color: var(--text-primary); }
+.load-card__scheduled {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--status-green-soft);
+  color: var(--status-green);
+  white-space: nowrap;
+}
+.load-card__locs { font-size: 11px; color: var(--text-secondary); }
+.load-card__meta { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-tertiary); }
+.load-card__pickup { color: var(--status-amber); font-weight: 700; }
+.load-card__print {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 4px;
+}
+.load-card__print:hover { color: var(--accent-brand); background: var(--bg-tertiary); }
+
+.status-chip {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.status-chip--planned { background: var(--bg-tertiary); color: var(--text-secondary); }
+.status-chip--ready { background: var(--status-amber-soft); color: var(--status-amber); }
+.status-chip--loaded { background: var(--accent-brand-soft); color: var(--accent-brand); }
+.status-chip--delivered { background: var(--status-green-soft); color: var(--status-green); }
+
+/* ---- Load editor slide-over ---- */
+.slide-over__panel--wide { width: 600px; overflow-y: auto; }
+
+.load-day-picker { display: flex; gap: 4px; }
+.load-day-picker__day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.load-day-picker__day strong { font-size: 11px; color: var(--text-primary); }
+.load-day-picker__day--on { background: var(--accent-brand); border-color: var(--accent-brand); color: #fff; }
+.load-day-picker__day--on strong { color: #fff; }
+
+.load-items { margin: 4px 12px 0; }
+.load-items__head { font-weight: 700; font-size: 12px; margin-bottom: 6px; color: var(--text-primary); }
+.load-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  margin-bottom: 6px;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.load-item--pickup { border-left: 3px solid var(--status-amber); }
+.load-item__top { display: flex; align-items: center; gap: 6px; }
+.load-item__loaded { display: inline-flex; }
+.load-item__jobno { font-size: 10px; font-weight: 700; color: var(--text-secondary); min-width: 46px; }
+.load-item__field {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  width: 100%;
+  resize: vertical;
+}
+.load-item__cust { flex: 1; }
+.load-item__kind { display: inline-flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.load-item__kind-btn {
+  background: var(--surface-raised);
+  border: none;
+  padding: 3px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.load-item__kind-btn--on { background: var(--accent-brand); color: #fff; }
+.load-item__remove {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.load-item__remove:hover { color: var(--status-red); }
+.load-item__bottom { display: flex; gap: 4px; flex-wrap: wrap; align-items: flex-start; }
+.loc-select { display: flex; gap: 4px; }
+.loc-select > select { width: 130px; }
+.loc-select > input { width: 120px; }
+.load-item__notes { flex: 1; min-width: 150px; }
+.load-items__add { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+
+/* ---- BC job search ---- */
+.job-search { position: relative; flex: 1; }
+.job-search__input { width: 100%; }
+.job-search__menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.job-search__option {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 1px 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.job-search__option:hover { background: var(--bg-tertiary); }
+.job-search__jobno { font-weight: 700; font-size: 11px; color: var(--accent-brand); }
+.job-search__cust { font-weight: 600; font-size: 12px; }
+.job-search__desc { grid-column: 2; font-size: 11px; color: var(--text-secondary); }
+
+/* ---- Load print sheet (paper document — fixed colors) ---- */
+.load-print {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 12, 24, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+.load-print__sheet {
+  background: #fff;
+  color: #111;
+  width: min(800px, 100%);
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.load-print__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 2px solid #111;
+  padding-bottom: 6px;
+}
+.load-print__title { font-size: 18px; font-weight: 800; }
+.load-print__date { font-size: 13px; font-weight: 700; }
+.load-print__stops { font-size: 12px; color: #444; margin: 6px 0; }
+.load-print__table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+.load-print__table th,
+.load-print__table td {
+  border: 1px solid #bbb;
+  padding: 5px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+.load-print__table th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.load-print__chk { width: 24px; text-align: center; }
+.load-print__general { margin-top: 12px; font-size: 12px; }
+.load-print__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+/* =================================================================
    PRINT — clean week schedule with chrome stripped, for foreman paper.
    ================================================================= */
 
@@ -1346,6 +1752,32 @@ input, select, textarea {
   .app-main > div > div:first-child {
     display: none !important;
   }
+
+  /* Load print sheet: when open, strip everything else and print just the
+     paper document. */
+  .switchboard-sidebar,
+  .app-topbar,
+  .sub-nav,
+  .ship-board {
+    display: none !important;
+  }
+  .load-print {
+    position: static;
+    inset: auto;
+    background: none;
+    padding: 0;
+    display: block;
+    overflow: visible;
+    z-index: auto;
+  }
+  .load-print__sheet {
+    box-shadow: none;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    border-radius: 0;
+  }
+  .load-print__actions { display: none !important; }
 }
 @media (max-width: 380px) {
   .calendar-header-row,

@@ -1,0 +1,76 @@
+import { format } from "date-fns";
+import { loadLocations, type ShipmentLoad } from "../shipping/types";
+
+/**
+ * Printable loading list for a single load — mirrors the Excel sheet
+ * (route header, ship date, Job/Customer/Description/Location/Notes, pickups
+ * flagged, with a check-off box for the loader). Shown as an overlay preview;
+ * Print triggers window.print(), and @media print shows only the sheet.
+ */
+export default function LoadPrintSheet({
+  load,
+  onClose,
+}: {
+  load: ShipmentLoad;
+  onClose: () => void;
+}) {
+  const locations = loadLocations(load);
+  const showLocation = locations.length > 1;
+  return (
+    <div className="load-print" onClick={onClose}>
+      <div className="load-print__sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="load-print__head">
+          <div className="load-print__title">{load.name.toUpperCase()} — SHIPPING LIST</div>
+          <div className="load-print__date">Shipping Date: {format(load.shipDate, "M/d/yy")}</div>
+        </div>
+        {locations.length > 0 && (
+          <div className="load-print__stops">Stops: {locations.join(" · ")}</div>
+        )}
+        <table className="load-print__table">
+          <thead>
+            <tr>
+              <th className="load-print__chk">✓</th>
+              <th>Job No.</th>
+              <th>Customer</th>
+              <th>Description</th>
+              {showLocation && <th>Location</th>}
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {load.items.map((it) => (
+              <tr key={it.id}>
+                <td className="load-print__chk">☐</td>
+                <td>{it.jobNo ?? "—"}</td>
+                <td>{it.customerName}</td>
+                <td>
+                  {it.kind === "pickup" && <strong>* PICK-UP * </strong>}
+                  {it.description}
+                </td>
+                {showLocation && <td>{it.location}</td>}
+                <td>{it.notes}</td>
+              </tr>
+            ))}
+            {load.items.length === 0 && (
+              <tr>
+                <td colSpan={showLocation ? 6 : 5} style={{ textAlign: "center", color: "#888" }}>
+                  No items on this load.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        {load.generalNotes.trim() && (
+          <div className="load-print__general">
+            <strong>Load notes:</strong> {load.generalNotes}
+          </div>
+        )}
+
+        <div className="load-print__actions">
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+          <button className="btn-primary" onClick={() => window.print()}>Print</button>
+        </div>
+      </div>
+    </div>
+  );
+}
