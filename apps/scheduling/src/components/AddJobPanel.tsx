@@ -6,7 +6,22 @@ import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { CUSTOM_CARD_PRESETS, type CustomCardPreset } from "../data/custom-card-presets";
+import { useLoadsStore } from "../shipping/loads-store";
+import { shipmentSummary } from "../shipping/types";
 import type { ScheduleLine } from "../engine/types";
+
+const SHIPMENT_CARD_BG = "#2D6CDF";
+const SHIPMENT_CARD_FG = "#ffffff";
+
+/** BC promised dates arrive as a string that may be empty ("") or unparseable
+ *  for a job with no promised date. Convert to a Date only when valid — an
+ *  Invalid Date crashes date-fns format() (blanking the whole panel) and
+ *  poisons the scheduling engine. Callers treat null as "no due date". */
+function safeDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 interface AddJobPanelProps {
   onClose: () => void;
@@ -42,7 +57,10 @@ export default function AddJobPanel({
   const [customApplyAll, setCustomApplyAll] = useState(false);
   const [customScope, setCustomScope] = useState<"resource" | "department" | "all">("resource");
   const [customDeptId, setCustomDeptId] = useState<string>("");
+  const [customShipmentLoadId, setCustomShipmentLoadId] = useState<string>("");
 
+  const kind = useStore((s) => s.dataSource.kind);
+  const loads = useLoadsStore((s) => s.loads);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
   const scheduleState = useStore((s) => s.schedule);
@@ -81,7 +99,7 @@ export default function AddJobPanel({
       {
         jobNo: selected.job.jobNo,
         customerName: selected.job.customerName,
-        promisedDate: new Date(selected.job.promisedDate),
+        promisedDate: safeDate(selected.job.promisedDate),
       },
       targets,
       ctx,
@@ -133,7 +151,7 @@ export default function AddJobPanel({
           overrideHours: null,
           employeeId: initialEmployeeId,
           departmentId: emp.departmentId,
-          customerDueDate: new Date(selected.job.promisedDate),
+          customerDueDate: safeDate(selected.job.promisedDate),
           isLocked: false,
           jobSequence: line.lineNo,
         };
@@ -171,7 +189,7 @@ export default function AddJobPanel({
         overrideHours: null,
         employeeId: slot.employeeId,
         departmentId: slot.departmentId,
-        customerDueDate: new Date(selected.job.promisedDate),
+        customerDueDate: safeDate(selected.job.promisedDate),
         isLocked: false,
         jobSequence: slot.lineNo,
       };
@@ -236,6 +254,7 @@ export default function AddJobPanel({
         isCustom: true,
         customColor: customBg,
         customTextColor: customFg,
+        shipmentLoadId: customShipmentLoadId || null,
       };
       const end = calculateEndTime(
         start,
@@ -303,17 +322,21 @@ export default function AddJobPanel({
           {loading && <div className="loading">Searching…</div>}
           {!selected && results.length > 0 && (
             <ul style={{ listStyle: "none", padding: 0, margin: "8px 0" }}>
-              {results.map((r) => (
-                <li key={r.job.jobNo} style={{ marginBottom: 4 }}>
-                  <button
-                    className="btn-secondary"
-                    style={{ width: "100%", textAlign: "left" }}
-                    onClick={() => setSelected(r)}
-                  >
-                    <strong>{r.job.jobNo}</strong> — {r.job.customerName} · due {format(new Date(r.job.promisedDate), "MMM d")}
-                  </button>
-                </li>
-              ))}
+              {results.map((r) => {
+                const due = safeDate(r.job.promisedDate);
+                return (
+                  <li key={r.job.jobNo} style={{ marginBottom: 4 }}>
+                    <button
+                      className="btn-secondary"
+                      style={{ width: "100%", textAlign: "left" }}
+                      onClick={() => setSelected(r)}
+                    >
+                      <strong>{r.job.jobNo}</strong> — {r.job.customerName}
+                      {due ? ` · due ${format(due, "MMM d")}` : ""}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -452,6 +475,37 @@ export default function AddJobPanel({
             >
               Build your own
             </div>
+
+            {kind === "installation" && (
+              <div className="form-field">
+                <div className="form-field__label">Shipment load (optional)</div>
+                <select
+                  className="form-field__select"
+                  value={customShipmentLoadId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setCustomShipmentLoadId(id);
+                    const load = loads.find((l) => l.id === id);
+                    if (load) {
+                      setCustomTitle(load.name);
+                      setCustomNotes(shipmentSummary(load));
+                      setCustomBg(SHIPMENT_CARD_BG);
+                      setCustomFg(SHIPMENT_CARD_FG);
+                    }
+                  }}
+                >
+                  <option value="">— None (manual card) —</option>
+                  {[...loads]
+                    .filter((l) => l.status === "loaded" || l.status === "delivered")
+                    .sort((a, b) => a.shipDate.getTime() - b.shipDate.getTime())
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name} · {l.items.length} item{l.items.length === 1 ? "" : "s"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
             <div className="form-field">
               <div className="form-field__label">Title</div>
