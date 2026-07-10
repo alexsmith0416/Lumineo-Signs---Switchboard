@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
-import SubNav from "./components/SubNav";
 import NavDrawer from "./components/NavDrawer";
 import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
@@ -47,15 +46,10 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar current={view} onSelect={(id) => setView(id as View)} />
 
       <main className="app-main">
         <Topbar title={VIEW_TITLES[view]} onMenu={() => setDrawerOpen(true)} />
-        <SubNav
-          items={VIEW_NAV}
-          current={view}
-          onSelect={(id) => setView(id as View)}
-        />
         <div className="app-content">
           {view === "production" && (
             <ProductionCalendar onNavigate={(v) => setView(v as View)} />

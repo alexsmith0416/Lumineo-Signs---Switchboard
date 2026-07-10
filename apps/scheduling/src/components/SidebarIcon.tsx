@@ -5,6 +5,10 @@ export type SidebarIconName =
   | "my-schedule"
   | "inbox"
   | "production"
+  | "installation"
+  | "shipping"
+  | "monthly"
+  | "scenario"
   | "weekly"
   | "sign-builder"
   | "joblog"
@@ -48,6 +52,45 @@ const PATHS: Record<SidebarIconName, ReactNode> = {
       <path d="M9 16.5v-2.5" />
       <path d="M12 16.5v-5.5" />
       <path d="M15 16.5v-1.5" />
+    </>
+  ),
+  // Placeholder line-glyphs (same 24px / currentColor style) for the scheduler
+  // views now living in the sidebar — swap for final art later.
+  installation: (
+    <>
+      <path d="M3 18h18" />
+      <path d="M4 18a8 8 0 0 1 16 0" />
+      <path d="M10 6.5V5a2 2 0 0 1 4 0v1.5" />
+      <path d="M12 6.5a8 8 0 0 1 5 5" />
+    </>
+  ),
+  shipping: (
+    <>
+      <path d="M2 7.5A1.5 1.5 0 0 1 3.5 6H13v9H3.5A1.5 1.5 0 0 1 2 13.5z" />
+      <path d="M13 9h4.2a1.5 1.5 0 0 1 1.2.6l2.3 3a1.5 1.5 0 0 1 .3.9V15H13z" />
+      <circle cx="6" cy="17.5" r="1.7" />
+      <circle cx="17" cy="17.5" r="1.7" />
+    </>
+  ),
+  monthly: (
+    <>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18" />
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <path d="M7 12.5h2" />
+      <path d="M11 12.5h2" />
+      <path d="M15 12.5h2" />
+      <path d="M7 16.5h2" />
+      <path d="M11 16.5h2" />
+      <path d="M15 16.5h2" />
+    </>
+  ),
+  scenario: (
+    <>
+      <path d="M9 3h6" />
+      <path d="M10 3v5.5L5.6 16.6A1.5 1.5 0 0 0 7 19h10a1.5 1.5 0 0 0 1.3-2.4L14 8.5V3" />
+      <path d="M8.2 14h7.6" />
     </>
   ),
   weekly: (

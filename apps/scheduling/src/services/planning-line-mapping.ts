@@ -17,6 +17,7 @@ export interface MappedPlanningLine {
   description: string;
   estimatedHours: number;
   departmentId: DepartmentId | null;
+  resourceNo?: string;
 }
 
 export function mapPlanningLine(description: string): DepartmentId | null {
@@ -27,10 +28,19 @@ export function mapPlanningLine(description: string): DepartmentId | null {
 }
 
 export function mapPlanningLines(
-  lines: Array<{ lineNo: number; description: string; estimatedHours: number }>,
+  lines: Array<{ lineNo: number; description: string; estimatedHours: number; resourceNo?: string }>,
 ): MappedPlanningLine[] {
   return lines.map((l) => ({
     ...l,
     departmentId: mapPlanningLine(l.description),
   }));
+}
+
+/** Production job-task resources are BC resource codes in the 2000–2999 band
+ *  (fabrication labor categories). Everything else — crew placeholders, install
+ *  travel, etc. — is installation. Used to split the Add Job line list by the
+ *  calendar's kind. A line with no/blank resource code counts as installation. */
+export function isProductionResource(resourceNo: string | null | undefined): boolean {
+  const num = parseInt((resourceNo ?? "").trim(), 10);
+  return Number.isFinite(num) && num >= 2000 && num < 3000;
 }

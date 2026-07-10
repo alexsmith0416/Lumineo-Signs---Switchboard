@@ -382,7 +382,7 @@ export default function CalendarView({
   const context = { employees, departments, schedule, workHours, overtime };
 
   return (
-    <div>
+    <div className="calendar-view">
       {bannerSlot}
       <WeekSummary
         context={context}

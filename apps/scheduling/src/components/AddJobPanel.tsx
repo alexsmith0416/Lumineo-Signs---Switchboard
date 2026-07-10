@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
+import { isProductionResource } from "../services/planning-line-mapping";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
@@ -60,6 +61,20 @@ export default function AddJobPanel({
   const [customShipmentLoadId, setCustomShipmentLoadId] = useState<string>("");
 
   const kind = useStore((s) => s.dataSource.kind);
+  // Split the job's resource lines by this calendar's kind: Production shows the
+  // 2000-band fabrication resources; Installation (and other kinds) show the
+  // rest. All downstream selection/commit works off this filtered list.
+  const visibleLines = useMemo(
+    () =>
+      !selected
+        ? []
+        : selected.mappedLines.filter((l) =>
+            kind === "production"
+              ? isProductionResource(l.resourceNo)
+              : !isProductionResource(l.resourceNo),
+          ),
+    [selected, kind],
+  );
   const loads = useLoadsStore((s) => s.loads);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
@@ -74,8 +89,8 @@ export default function AddJobPanel({
       return new Set<number>(singleLineNo !== null ? [singleLineNo] : []);
     }
     if (mode === "multi") return new Set<number>(checkedLines);
-    return new Set<number>(selected.mappedLines.map((l) => l.lineNo));
-  }, [selected, mode, singleLineNo, checkedLines]);
+    return new Set<number>(visibleLines.map((l) => l.lineNo));
+  }, [selected, visibleLines, mode, singleLineNo, checkedLines]);
 
   const predictedSlots = useMemo(() => {
     if (!selected || targetLineNos.size === 0) return null;
@@ -86,7 +101,7 @@ export default function AddJobPanel({
       workHours: workHoursState,
       overtime: overtimeState,
     };
-    const targets = selected.mappedLines.filter((l) => targetLineNos.has(l.lineNo));
+    const targets = visibleLines.filter((l) => targetLineNos.has(l.lineNo));
     const preferred =
       initialEmployeeId && mode !== "auto"
         ? Object.fromEntries(
@@ -112,10 +127,10 @@ export default function AddJobPanel({
 
     const targets =
       mode === "single" && singleLineNo !== null
-        ? selected.mappedLines.filter((l) => l.lineNo === singleLineNo)
+        ? visibleLines.filter((l) => l.lineNo === singleLineNo)
         : mode === "multi"
-          ? selected.mappedLines.filter((l) => checkedLines.has(l.lineNo))
-          : selected.mappedLines;
+          ? visibleLines.filter((l) => checkedLines.has(l.lineNo))
+          : visibleLines;
 
     if (targets.length === 0) return;
 
@@ -370,7 +385,7 @@ export default function AddJobPanel({
               </div>
 
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {selected.mappedLines.map((line) => {
+                {visibleLines.map((line) => {
                   const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
                   const proposedSlot = predictedSlots?.find((p) => p.lineNo === line.lineNo);
                   const isCurrent = targetLineNos.has(line.lineNo);

@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import type { ScheduleLine } from "../engine/types";
 import { useLivePreview } from "../hooks/useLivePreview";
+import ConfirmDialog from "./ConfirmDialog";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
@@ -27,6 +28,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   );
   const [isLocked, setIsLocked] = useState(line.isLocked);
   const [busy, setBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const employee = employees.get(line.employeeId);
 
@@ -65,6 +67,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   };
 
   return (
+    <>
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
@@ -158,7 +161,11 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             gap: 8,
           }}
         >
-          <button className="btn-danger" disabled={busy} onClick={onDelete}>
+          <button
+            className="btn-danger"
+            disabled={busy}
+            onClick={() => setConfirmingDelete(true)}
+          >
             Delete
           </button>
           <div style={{ flex: 1 }} />
@@ -171,6 +178,19 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
         </div>
       </div>
     </div>
+    {confirmingDelete && (
+      <ConfirmDialog
+        title="Delete this card?"
+        message="Are you sure you want to delete this scheduled job card? This can't be undone."
+        confirmLabel="Yes"
+        cancelLabel="Cancel"
+        danger
+        busy={busy}
+        onConfirm={onDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
+    )}
+    </>
   );
 }
 

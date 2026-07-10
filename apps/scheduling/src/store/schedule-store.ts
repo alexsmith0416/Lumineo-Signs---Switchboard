@@ -200,7 +200,10 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,
       );
-      await Promise.all(
+      // Optimistic: move the card on the board immediately, then persist the
+      // affected lines to Dataverse in the background (resync on failure).
+      set({ schedule: diff.committed.schedule, conflicts: diff.conflicts });
+      void Promise.all(
         toPersist.map((line) =>
           ds.updateScheduleLine(line.id, {
             startDateTime: line.startDateTime,
@@ -209,11 +212,9 @@ export function createScheduleStore(
             departmentId: line.departmentId,
           }),
         ),
-      );
-
-      set({
-        schedule: diff.committed.schedule,
-        conflicts: diff.conflicts,
+      ).catch((e) => {
+        console.error("[schedule] shift persist failed — resyncing", e);
+        void get().loadWeek();
       });
     },
 
@@ -225,7 +226,9 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,
       );
-      await Promise.all(
+      // Optimistic: resize on the board immediately, persist in the background.
+      set({ schedule: diff.committed.schedule, conflicts: diff.conflicts });
+      void Promise.all(
         toPersist.map((line) =>
           ds.updateScheduleLine(line.id, {
             startDateTime: line.startDateTime,
@@ -233,33 +236,35 @@ export function createScheduleStore(
             overrideHours: line.overrideHours,
           }),
         ),
-      );
-
-      set({
-        schedule: diff.committed.schedule,
-        conflicts: diff.conflicts,
+      ).catch((e) => {
+        console.error("[schedule] resize persist failed — resyncing", e);
+        void get().loadWeek();
       });
     },
 
     addScheduleLine: async (line) => {
       const ds = get().dataSource;
-      const created = await ds.createScheduleLine(line);
-      const next = [...get().schedule, created];
+      // Optimistic: show the new card immediately, persist in the background.
+      // Live createScheduleLine returns the same line (id preserved).
+      const next = [...get().schedule, line];
       const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
-      set({
-        schedule: next,
-        conflicts: detectConflicts(ctx),
+      set({ schedule: next, conflicts: detectConflicts(ctx) });
+      void ds.createScheduleLine(line).catch((e) => {
+        console.error("[schedule] create persist failed — resyncing", e);
+        void get().loadWeek();
       });
     },
 
     deleteScheduleLine: async (lineId) => {
       const ds = get().dataSource;
-      await ds.deleteScheduleLine(lineId);
+      // Optimistic: remove the card immediately, persist the delete in the
+      // background (resync on failure so a failed delete reappears).
       const next = get().schedule.filter((l) => l.id !== lineId);
       const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
-      set({
-        schedule: next,
-        conflicts: detectConflicts(ctx),
+      set({ schedule: next, conflicts: detectConflicts(ctx) });
+      void ds.deleteScheduleLine(lineId).catch((e) => {
+        console.error("[schedule] delete persist failed — resyncing", e);
+        void get().loadWeek();
       });
     },
 

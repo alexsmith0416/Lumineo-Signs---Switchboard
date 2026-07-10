@@ -616,37 +616,63 @@ const BC = {
   jobs: "crfdf_bcjobs",
   planning: "crfdf_bcplanninglines",
   billing: "crfdf_bcbillinglines",
+  customers: "crfdf_bccustomers",
 } as const;
 
 export interface BcJobLive {
   jobNo: string;
   customerName: string;
   description: string;
+  /** Bill-to code (crfdf_billtocustomerno) — join key to crfdf_bccustomers. */
+  billToNo: string;
   promisedDate: string;
   remainingBalance: number;
-  planningLines: Array<{ lineNo: number; description: string; estimatedHours: number }>;
+  planningLines: Array<{ lineNo: number; description: string; estimatedHours: number; resourceNo: string }>;
 }
 
 const odataLit = (v: string) => v.replace(/'/g, "''");
 
 async function planningLinesFor(jobNo: string) {
+  // Planning lines match the BC job on crfdf_jobno (NOT crfdf_jobnumber, which
+  // is empty on this table). Resource-type lines only — G/L / Item lines aren't
+  // schedulable labor. crfdf_no is the BC resource code, which drives the
+  // production/installation split by range (see AddJobPanel).
   const rows = await list(BC.planning, {
-    filter: `crfdf_jobnumber eq '${odataLit(jobNo)}'`,
+    filter: `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_type eq 'Resource'`,
     orderby: "crfdf_lineno asc",
   });
   return rows.map((r) => ({
     lineNo: n(r.crfdf_lineno),
     description: s(r.crfdf_description),
     estimatedHours: n(r.crfdf_estimatedhours),
+    resourceNo: s(r.crfdf_no),
   }));
+}
+
+// Real customer name lives on crfdf_bccustomers.crfdf_customername, joined via
+// the job's bill-to code. The job row's own crfdf_customername is actually the
+// job description, so we don't trust it. Cached per bill-to (jobs share).
+const customerNameCache = new Map<string, string>();
+async function resolveCustomerName(billToNo: string): Promise<string> {
+  if (!billToNo) return "";
+  const hit = customerNameCache.get(billToNo);
+  if (hit !== undefined) return hit;
+  const rows = await list(BC.customers, {
+    filter: `crfdf_customerno eq '${odataLit(billToNo)}'`,
+  });
+  const name = rows[0] ? s(rows[0].crfdf_customername) : "";
+  customerNameCache.set(billToNo, name);
+  return name;
 }
 
 function mapBcJobHead(r: Row): Omit<BcJobLive, "planningLines"> {
   const due = r.crfdf_promiseddate;
   return {
     jobNo: s(r.crfdf_jobnumber),
+    // Fallback only — replaced by the crfdf_bccustomers join below.
     customerName: s(r.crfdf_customername),
     description: s(r.crfdf_description),
+    billToNo: s(r.crfdf_billtocustomerno),
     promisedDate: due == null || due === "" ? "" : String(due).slice(0, 10),
     remainingBalance: n(r.crfdf_remainingbalance),
   };
@@ -663,7 +689,11 @@ export async function searchBcJobsLive(query: string, limit = 8): Promise<BcJobL
   });
   const heads = rows.slice(0, limit).map(mapBcJobHead);
   return Promise.all(
-    heads.map(async (h) => ({ ...h, planningLines: await planningLinesFor(h.jobNo) })),
+    heads.map(async (h) => ({
+      ...h,
+      customerName: (await resolveCustomerName(h.billToNo)) || h.customerName,
+      planningLines: await planningLinesFor(h.jobNo),
+    })),
   );
 }
 
@@ -671,7 +701,11 @@ export async function getBcJobLive(jobNo: string): Promise<BcJobLive | null> {
   const rows = await list(BC.jobs, { filter: `crfdf_jobnumber eq '${odataLit(jobNo)}'` });
   if (rows.length === 0) return null;
   const head = mapBcJobHead(rows[0]!);
-  return { ...head, planningLines: await planningLinesFor(head.jobNo) };
+  return {
+    ...head,
+    customerName: (await resolveCustomerName(head.billToNo)) || head.customerName,
+    planningLines: await planningLinesFor(head.jobNo),
+  };
 }
 
 /** All BC billing lines — powers the schedule value / estimated-invoicing

@@ -6,24 +6,19 @@ interface SbItem {
   id: string;
   label: string;
   icon: SidebarIconName;
-  active?: boolean;
 }
 
-// The Switchboard app nav. Weekly Scheduler is the active app (this app); the
-// other entries are separate Switchboard apps (out of scope here) and render
-// inert, matching the prototype.
-const MAIN: SbItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-  { id: "my-schedule", label: "My Schedule", icon: "my-schedule" },
-];
+// "My Schedule" sits at the top (above the divider); it's inert for now.
+const TOP: SbItem[] = [{ id: "my-schedule", label: "My Schedule", icon: "my-schedule" }];
 
-const APPS: SbItem[] = [
-  { id: "production-scheduler", label: "Production Scheduler", icon: "production" },
-  { id: "weekly-scheduler", label: "Weekly Scheduler", icon: "weekly", active: true },
-  { id: "sign-builder", label: "Sign Builder Pro", icon: "sign-builder" },
-  { id: "joblog", label: "JobLog", icon: "joblog" },
-  { id: "estimating", label: "Estimating", icon: "estimating" },
-  { id: "sales-hub", label: "Sales Hub", icon: "sales" },
+// The scheduler views — the sidebar is now the primary view switcher (the old
+// top sub-nav pill row was removed). Ids match App's View union.
+const VIEWS: SbItem[] = [
+  { id: "production", label: "Production", icon: "production" },
+  { id: "installation", label: "Installation", icon: "installation" },
+  { id: "shipping", label: "Shipping", icon: "shipping" },
+  { id: "monthly", label: "Monthly Gameplanning", icon: "monthly" },
+  { id: "scenario", label: "Scenarios", icon: "scenario" },
 ];
 
 const OTHER: SbItem[] = [
@@ -31,12 +26,28 @@ const OTHER: SbItem[] = [
   { id: "help", label: "Help", icon: "help" },
 ];
 
-function NavItem({ item }: { item: SbItem }) {
+interface SidebarProps {
+  /** Active view id — highlights the matching nav item. */
+  current?: string;
+  /** Switch views (the sidebar drives navigation now). */
+  onSelect?: (id: string) => void;
+}
+
+function NavItem({
+  item,
+  active,
+  onClick,
+}: {
+  item: SbItem;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
-      className={`sb-nav__item${item.active ? " sb-nav__item--active" : ""}`}
-      aria-current={item.active ? "page" : undefined}
+      className={`sb-nav__item${active ? " sb-nav__item--active" : ""}`}
+      aria-current={active ? "page" : undefined}
+      onClick={onClick}
     >
       <span className="sb-nav__icon">
         <SidebarIcon name={item.icon} />
@@ -46,11 +57,11 @@ function NavItem({ item }: { item: SbItem }) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ current, onSelect }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
   return (
-    <aside className="switchboard-sidebar" aria-label="Switchboard navigation">
+    <aside className="switchboard-sidebar" aria-label="Scheduler navigation">
       <div className="sb-brand">
         <div className="sb-brand__logo">
           <LumineoLogo size={44} color="#EE0800" />
@@ -61,14 +72,23 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="sb-caption">MAIN</div>
       <nav className="sb-nav">
-        {MAIN.map((i) => <NavItem key={i.id} item={i} />)}
+        {TOP.map((i) => (
+          <NavItem key={i.id} item={i} />
+        ))}
       </nav>
 
-      <div className="sb-caption">APPS</div>
+      <div className="sb-divider" />
+
       <nav className="sb-nav">
-        {APPS.map((i) => <NavItem key={i.id} item={i} />)}
+        {VIEWS.map((i) => (
+          <NavItem
+            key={i.id}
+            item={i}
+            active={current === i.id}
+            onClick={() => onSelect?.(i.id)}
+          />
+        ))}
       </nav>
 
       <div className="sb-spacer" />
@@ -86,7 +106,9 @@ export default function Sidebar() {
         <span>{nextIsDark ? "Dark" : "Light"}</span>
       </button>
       <nav className="sb-nav">
-        {OTHER.map((i) => <NavItem key={i.id} item={i} />)}
+        {OTHER.map((i) => (
+          <NavItem key={i.id} item={i} />
+        ))}
       </nav>
     </aside>
   );

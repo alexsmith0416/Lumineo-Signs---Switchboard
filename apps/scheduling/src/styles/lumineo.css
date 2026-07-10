@@ -42,6 +42,11 @@
   /* Calendar grid lines — higher contrast than --border-default so the row /
      day separators stay visible against the white grid (darker in light). */
   --grid-line: #cdd0da;
+
+  /* Weekend day cells (Sat/Sun) where employee jobs would be scheduled —
+     grayed to 15% black in light mode since we don't typically schedule
+     weekends. Department headers and the date header row are unaffected. */
+  --weekend-cell: rgba(0, 0, 0, 0.15);
 }
 
 [data-theme="dark"] {
@@ -82,6 +87,7 @@
   /* Lighter than --border-default so the grid lines read against the dark
      surface (the dark canvas swallows the default border). */
   --grid-line: #3c4575;
+  --weekend-cell: var(--surface-sunken);
 }
 
 /* ---- Prototype token aliases → DESIGN.md tokens ----
@@ -272,6 +278,16 @@ input, select, textarea {
 
 .sb-spacer { flex: 1; }
 
+/* Divider under "My Schedule", above the relocated scheduler views. */
+.sb-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  margin: 8px 8px 10px;
+}
+[data-theme="light"] .sb-divider {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .sb-theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -459,6 +475,23 @@ input, select, textarea {
   border: 1px solid var(--border-default);
   border-radius: 14px;
   overflow: auto;
+}
+
+/* Production + Installation calendars: freeze the header area (week-summary,
+   toolbar, and the Employee/Dates header row) and scroll ONLY the grid body.
+   The wrapper is a non-scrolling flex column; the grid takes the remaining
+   height and becomes the sole scroll region (its own overflow:auto). */
+.app-content > .calendar-view {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.calendar-view > * {
+  flex: 0 0 auto;
+}
+.calendar-view > .calendar-grid {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* ---- Mobile: collapse to a single column + topbar hamburger + drawer ---- */
@@ -773,14 +806,19 @@ input, select, textarea {
   grid-template-columns: 140px repeat(7, minmax(110px, 1fr));
   min-width: 920px;
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--grid-line);
   font-weight: 500;
   font-size: 12px;
+  /* Freeze the Employee/Dates row at the top while the grid body scrolls.
+     z-index sits above the gantt cards (z-index 60). */
+  position: sticky;
+  top: 0;
+  z-index: 80;
 }
 
 .calendar-header-cell {
   padding: 8px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--grid-line);
   text-align: center;
 }
 
@@ -789,7 +827,7 @@ input, select, textarea {
   left: 0;
   z-index: 5;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--grid-line);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -862,7 +900,7 @@ input, select, textarea {
 .employee-row__name {
   padding: 6px 8px;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--grid-line);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -909,7 +947,9 @@ input, select, textarea {
 .modal-scrim {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  /* Above the slide-over panels (z-index 100) so confirm dialogs opened from
+     within a slide-over (e.g. delete a card) sit on top of it. */
+  z-index: 120;
   background: rgba(10, 12, 24, 0.45);
   display: flex;
   align-items: center;
@@ -971,7 +1011,7 @@ input, select, textarea {
 .day-cell:last-child { border-right: none; }
 
 .day-cell--weekend {
-  background: var(--bg-secondary);
+  background: var(--weekend-cell);
 }
 
 .day-cell--empty:hover {
@@ -1163,7 +1203,9 @@ input, select, textarea {
   display: flex;
   justify-content: flex-end;
   background: rgba(0,0,0,0.25);
-  z-index: 50;
+  /* Above the sticky calendar header row (z-index 80) so the modal + its
+     backdrop dim the whole schedule, header row included. */
+  z-index: 100;
 }
 
 .slide-over__panel {
