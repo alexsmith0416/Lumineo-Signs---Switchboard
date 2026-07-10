@@ -16,6 +16,7 @@ function normalizeJobNo(query: string): string {
 const toBcJob = (j: BcJobLive): BcJob => ({
   jobNo: j.jobNo,
   customerName: j.customerName,
+  description: j.description,
   promisedDate: j.promisedDate,
   planningLines: j.planningLines,
 });

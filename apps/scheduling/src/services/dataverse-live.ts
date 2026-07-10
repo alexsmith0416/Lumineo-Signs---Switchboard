@@ -123,12 +123,31 @@ const dt = (v: unknown): Date => new Date(String(v));
 const dtOrNull = (v: unknown): Date | null => (v == null || v === "" ? null : new Date(String(v)));
 const iso = (d: Date | null | undefined): string | null => (d ? new Date(d).toISOString() : null);
 
+// The schedule-line / install-card tables have no dedicated job-description
+// column, so the BC job description is co-stored with the task text in the
+// existing description column, separated by a sentinel (U+241E, a symbol char
+// that never occurs in BC text). Cards saved before this ran have no sentinel,
+// so they decode as { jobDescription: "", planningLineDescription: <whole> }.
+const DESC_SEP = "␞";
+const encodeDesc = (line: Partial<ScheduleLine>): string => {
+  const task = line.planningLineDescription ?? "";
+  return line.jobDescription ? `${line.jobDescription}${DESC_SEP}${task}` : task;
+};
+const decodeDesc = (raw: string): { jobDescription: string; planningLineDescription: string } => {
+  const i = raw.indexOf(DESC_SEP);
+  return i >= 0
+    ? { jobDescription: raw.slice(0, i), planningLineDescription: raw.slice(i + 1) }
+    : { jobDescription: "", planningLineDescription: raw };
+};
+
 function mapLine(r: Row): ScheduleLine {
+  const desc = decodeDesc(s(r.crfdf_planninglinedescription));
   return {
     id: s(r.crfdf_productionschedulelineid),
     jobNo: s(r.crfdf_jobno),
     customerName: s(r.crfdf_customername),
-    planningLineDescription: s(r.crfdf_planninglinedescription),
+    jobDescription: desc.jobDescription,
+    planningLineDescription: desc.planningLineDescription,
     startDateTime: dt(r.crfdf_startdatetime),
     endDateTime: dt(r.crfdf_enddatetime),
     estimatedHours: n(r.crfdf_estimatedhours),
@@ -158,7 +177,8 @@ function toRecord(line: Partial<ScheduleLine>): Row {
   const rec: Row = {};
   if (line.jobNo !== undefined) rec.crfdf_jobno = line.jobNo;
   if (line.customerName !== undefined) rec.crfdf_customername = line.customerName;
-  if (line.planningLineDescription !== undefined) rec.crfdf_planninglinedescription = line.planningLineDescription;
+  if (line.planningLineDescription !== undefined || line.jobDescription !== undefined)
+    rec.crfdf_planninglinedescription = encodeDesc(line);
   if (line.startDateTime !== undefined) rec.crfdf_startdatetime = iso(line.startDateTime);
   if (line.endDateTime !== undefined) rec.crfdf_enddatetime = iso(line.endDateTime);
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;
@@ -456,11 +476,13 @@ export const liveNekInstallDataSource = createLiveInstallDataSource(
 // ---------------------------------------------------------------------------
 function mapCardRecord(r: Row): ScheduleLine {
   const title = s(r.crfdf_name);
+  const desc = decodeDesc(s(r.crfdf_notes));
   return {
     id: s(r.crfdf_installcardid),
     jobNo: title,
     customerName: title,
-    planningLineDescription: s(r.crfdf_notes),
+    jobDescription: desc.jobDescription,
+    planningLineDescription: desc.planningLineDescription,
     startDateTime: dt(r.crfdf_startdatetime),
     endDateTime: dt(r.crfdf_enddatetime),
     estimatedHours: n(r.crfdf_estimatedhours, 8),
@@ -481,7 +503,8 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   const rec: Row = {};
   const title = line.customerName || line.jobNo;
   if (title !== undefined) rec.crfdf_name = title || "Card";
-  if (line.planningLineDescription !== undefined) rec.crfdf_notes = line.planningLineDescription;
+  if (line.planningLineDescription !== undefined || line.jobDescription !== undefined)
+    rec.crfdf_notes = encodeDesc(line);
   if (line.startDateTime !== undefined) rec.crfdf_startdatetime = iso(line.startDateTime);
   if (line.endDateTime !== undefined) rec.crfdf_enddatetime = iso(line.endDateTime);
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;

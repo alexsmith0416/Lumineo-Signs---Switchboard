@@ -33,6 +33,9 @@ export interface ScheduleLine {
   jobNo: string;
   customerName: string;
   planningLineDescription: string;
+  /** BC job header description (crfdf_description) — rendered under the job name
+   *  on the card, above the task text. Custom / shipment cards leave it unset. */
+  jobDescription?: string;
   startDateTime: Date;
   endDateTime: Date;
   estimatedHours: number;

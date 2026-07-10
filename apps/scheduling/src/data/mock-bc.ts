@@ -12,6 +12,8 @@ export interface BcPlanningLine {
 export interface BcJob {
   jobNo: string;
   customerName: string;
+  /** BC job header description (crfdf_description) — the overall job summary. */
+  description?: string;
   promisedDate: string;
   planningLines: BcPlanningLine[];
 }
@@ -20,6 +22,7 @@ export const MOCK_BC_JOBS: BcJob[] = [
   {
     jobNo: "J103101",
     customerName: "Sunset Bowling",
+    description: "Illuminated monument sign + channel letters",
     promisedDate: "2026-06-12",
     planningLines: [
       { lineNo: 10, description: "Metal cabinet fabrication", estimatedHours: 12, resourceNo: "2011", jobTaskNo: "3020" },
@@ -31,6 +34,7 @@ export const MOCK_BC_JOBS: BcJob[] = [
   {
     jobNo: "J103205",
     customerName: "Oak & Vine Restaurant",
+    description: "Storefront channel letters — reface",
     promisedDate: "2026-06-05",
     planningLines: [
       { lineNo: 10, description: "Channel letter fabrication", estimatedHours: 16, resourceNo: "2014", jobTaskNo: "3020" },
@@ -42,6 +46,7 @@ export const MOCK_BC_JOBS: BcJob[] = [
   {
     jobNo: "J103418",
     customerName: "Northgate Hospital",
+    description: "Interior wayfinding + ADA signage package",
     promisedDate: "2026-07-01",
     planningLines: [
       { lineNo: 10, description: "Wayfinding metal blanks", estimatedHours: 10, resourceNo: "2011", jobTaskNo: "3020" },

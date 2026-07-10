@@ -123,6 +123,9 @@ export default function JobCard({
             <span className="job-card__customer">{line.customerName}</span>
           </div>
         )}
+        {line.jobDescription && (
+          <div className="job-card__job-desc">{line.jobDescription}</div>
+        )}
         {cardDesc && <div className="job-card__desc">{cardDesc}</div>}
         {(showCrewBadge || showWeather || showInvoice) && (
           <div className="job-card__addons">
@@ -223,6 +226,9 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
       </div>
       <div style={{ padding: "8px 10px" }}>
         <div style={{ fontWeight: 600, fontSize: 13 }}>{line.customerName}</div>
+        {line.jobDescription && (
+          <div style={{ fontWeight: 500, marginTop: 2 }}>{line.jobDescription}</div>
+        )}
         <div style={{ color: "var(--text-secondary)", marginTop: 2, whiteSpace: "pre-line" }}>
           {line.planningLineDescription}
         </div>
