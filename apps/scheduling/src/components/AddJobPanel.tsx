@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
-import { isProductionResource } from "../services/planning-line-mapping";
+import {
+  departmentNameForLine,
+  isProductionTask,
+  resolveDepartmentId,
+} from "../services/planning-line-mapping";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
@@ -61,23 +65,38 @@ export default function AddJobPanel({
   const [customShipmentLoadId, setCustomShipmentLoadId] = useState<string>("");
 
   const kind = useStore((s) => s.dataSource.kind);
-  // Split the job's resource lines by this calendar's kind: Production shows the
-  // 2000-band fabrication resources; Installation (and other kinds) show the
-  // rest. All downstream selection/commit works off this filtered list.
-  const visibleLines = useMemo(
-    () =>
-      !selected
-        ? []
-        : selected.mappedLines.filter((l) =>
-            kind === "production"
-              ? isProductionResource(l.resourceNo)
-              : !isProductionResource(l.resourceNo),
-          ),
-    [selected, kind],
-  );
   const loads = useLoadsStore((s) => s.loads);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
+
+  // Resolve each line's department to an ACTUAL loaded department id: the BC
+  // resource code (or description) gives a canonical dept name, which we match
+  // against the loaded departments by name. Live departments are keyed by GUID,
+  // so the mapping's slug can't be looked up directly — this bridges that.
+  const resolvedLines = useMemo(
+    () =>
+      !selected
+        ? []
+        : selected.mappedLines.map((l) => ({
+            ...l,
+            departmentId: resolveDepartmentId(
+              departmentNameForLine(l.resourceNo, l.description),
+              departments,
+            ),
+          })),
+    [selected, departments],
+  );
+
+  // Split by this calendar's kind using the BC job-task band: Production shows
+  // the 3000-band tasks; Installation (and other kinds) show everything else.
+  // All downstream selection/commit works off this filtered list.
+  const visibleLines = useMemo(
+    () =>
+      resolvedLines.filter((l) =>
+        kind === "production" ? isProductionTask(l.jobTaskNo) : !isProductionTask(l.jobTaskNo),
+      ),
+    [resolvedLines, kind],
+  );
   const scheduleState = useStore((s) => s.schedule);
   const workHoursState = useStore((s) => s.workHours);
   const overtimeState = useStore((s) => s.overtime);

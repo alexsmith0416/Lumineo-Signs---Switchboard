@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { mapPlanningLine, mapPlanningLines } from "./planning-line-mapping";
+import type { Department } from "../engine/types";
+import {
+  departmentNameForLine,
+  isProductionTask,
+  mapPlanningLine,
+  mapPlanningLines,
+  resolveDepartmentId,
+} from "./planning-line-mapping";
 
 describe("mapPlanningLine", () => {
   it("maps metal fab keywords", () => {
@@ -38,5 +45,49 @@ describe("mapPlanningLines", () => {
     expect(result[0]!.departmentId).toBe("dept-metal");
     expect(result[1]!.departmentId).toBe("dept-paint");
     expect(result[2]!.departmentId).toBeNull();
+  });
+});
+
+describe("isProductionTask", () => {
+  it("treats 3000-band job tasks as production", () => {
+    expect(isProductionTask("3020")).toBe(true);
+    expect(isProductionTask("3999")).toBe(true);
+  });
+  it("treats 4000-band (install) and everything else as non-production", () => {
+    expect(isProductionTask("4010")).toBe(false);
+    expect(isProductionTask("2000")).toBe(false);
+    expect(isProductionTask("")).toBe(false);
+    expect(isProductionTask(undefined)).toBe(false);
+  });
+});
+
+describe("departmentNameForLine", () => {
+  it("prefers the exact resource-code map over the description keyword", () => {
+    // 2011 = Cabinet Metal Labor → Metal Fab, even if the description is vague.
+    expect(departmentNameForLine("2011", "misc labor")).toBe("Metal Fab");
+    expect(departmentNameForLine("2416", "misc")).toBe("Vinyl / Graphics");
+  });
+  it("falls back to the description keyword when there is no resource code", () => {
+    expect(departmentNameForLine("", "Prime and topcoat")).toBe("Paint");
+    expect(departmentNameForLine(undefined, "nothing relevant")).toBeNull();
+  });
+});
+
+describe("resolveDepartmentId", () => {
+  const mk = (id: string, name: string): Department => ({ id, name, flowOrder: 0, color: "#000" });
+  const live = new Map([
+    ["guid-1", mk("guid-1", "Metal Fab")],
+    ["guid-2", mk("guid-2", "Vinyl / Graphics")],
+  ]);
+  it("resolves a canonical name to the live (GUID-keyed) department id", () => {
+    expect(resolveDepartmentId("Metal Fab", live)).toBe("guid-1");
+  });
+  it("tolerates minor naming differences via contains match", () => {
+    const alt = new Map([["g", mk("g", "Vinyl")]]);
+    expect(resolveDepartmentId("Vinyl / Graphics", alt)).toBe("g");
+  });
+  it("returns null for an unknown or empty name", () => {
+    expect(resolveDepartmentId("Nonexistent", live)).toBeNull();
+    expect(resolveDepartmentId(null, live)).toBeNull();
   });
 });

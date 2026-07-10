@@ -2,8 +2,11 @@ export interface BcPlanningLine {
   lineNo: number;
   description: string;
   estimatedHours: number;
-  /** BC resource code (crfdf_no) — drives the production/installation split. */
+  /** BC resource code (crfdf_no) — the exact department labor category. */
   resourceNo?: string;
+  /** BC job task no (crfdf_jobtaskno) — 3000s Production, 4000s Installation.
+   *  Drives which calendar the line shows on in Add Job. */
+  jobTaskNo?: string;
 }
 
 export interface BcJob {
@@ -19,10 +22,10 @@ export const MOCK_BC_JOBS: BcJob[] = [
     customerName: "Sunset Bowling",
     promisedDate: "2026-06-12",
     planningLines: [
-      { lineNo: 10, description: "Metal cabinet fabrication", estimatedHours: 12, resourceNo: "2010" },
-      { lineNo: 20, description: "Paint and powder coat", estimatedHours: 6, resourceNo: "2020" },
-      { lineNo: 30, description: "LED assembly and wiring", estimatedHours: 8, resourceNo: "2030" },
-      { lineNo: 40, description: "Vinyl graphics application", estimatedHours: 3, resourceNo: "2040" },
+      { lineNo: 10, description: "Metal cabinet fabrication", estimatedHours: 12, resourceNo: "2011", jobTaskNo: "3020" },
+      { lineNo: 20, description: "Paint and powder coat", estimatedHours: 6, resourceNo: "2112", jobTaskNo: "3020" },
+      { lineNo: 30, description: "LED assembly and wiring", estimatedHours: 8, resourceNo: "2212", jobTaskNo: "3020" },
+      { lineNo: 40, description: "Vinyl graphics application", estimatedHours: 3, resourceNo: "2416", jobTaskNo: "3020" },
     ],
   },
   {
@@ -30,10 +33,10 @@ export const MOCK_BC_JOBS: BcJob[] = [
     customerName: "Oak & Vine Restaurant",
     promisedDate: "2026-06-05",
     planningLines: [
-      { lineNo: 10, description: "Channel letter fabrication", estimatedHours: 16, resourceNo: "2010" },
-      { lineNo: 20, description: "Paint channel letters", estimatedHours: 4, resourceNo: "2020" },
-      // On-site mount → installation band (outside 2000–2999).
-      { lineNo: 30, description: "Mount and final assembly", estimatedHours: 5, resourceNo: "4010" },
+      { lineNo: 10, description: "Channel letter fabrication", estimatedHours: 16, resourceNo: "2014", jobTaskNo: "3020" },
+      { lineNo: 20, description: "Paint channel letters", estimatedHours: 4, resourceNo: "2112", jobTaskNo: "3020" },
+      // On-site mount → installation task band (4000s).
+      { lineNo: 30, description: "Mount and final assembly", estimatedHours: 5, jobTaskNo: "4010" },
     ],
   },
   {
@@ -41,11 +44,11 @@ export const MOCK_BC_JOBS: BcJob[] = [
     customerName: "Northgate Hospital",
     promisedDate: "2026-07-01",
     planningLines: [
-      { lineNo: 10, description: "Wayfinding metal blanks", estimatedHours: 10, resourceNo: "2010" },
-      { lineNo: 20, description: "Paint wayfinding signs", estimatedHours: 5, resourceNo: "2020" },
-      { lineNo: 30, description: "Vinyl + braille application", estimatedHours: 6, resourceNo: "2040" },
-      // On-site install of the wayfinding package → installation band.
-      { lineNo: 40, description: "On-site install & anchoring", estimatedHours: 4, resourceNo: "4010" },
+      { lineNo: 10, description: "Wayfinding metal blanks", estimatedHours: 10, resourceNo: "2011", jobTaskNo: "3020" },
+      { lineNo: 20, description: "Paint wayfinding signs", estimatedHours: 5, resourceNo: "2112", jobTaskNo: "3020" },
+      { lineNo: 30, description: "Vinyl + braille application", estimatedHours: 6, resourceNo: "2416", jobTaskNo: "3020" },
+      // On-site install of the wayfinding package → installation task band (4000s).
+      { lineNo: 40, description: "On-site install & anchoring", estimatedHours: 4, jobTaskNo: "4010" },
     ],
   },
 ];

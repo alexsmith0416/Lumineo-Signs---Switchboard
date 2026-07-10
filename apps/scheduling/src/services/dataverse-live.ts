@@ -627,7 +627,15 @@ export interface BcJobLive {
   billToNo: string;
   promisedDate: string;
   remainingBalance: number;
-  planningLines: Array<{ lineNo: number; description: string; estimatedHours: number; resourceNo: string }>;
+  planningLines: Array<{
+    lineNo: number;
+    description: string;
+    estimatedHours: number;
+    /** BC resource code (crfdf_no) → department labor category. */
+    resourceNo: string;
+    /** BC job task no (crfdf_jobtaskno) → phase: 3000s Production, 4000s Install. */
+    jobTaskNo: string;
+  }>;
 }
 
 const odataLit = (v: string) => v.replace(/'/g, "''");
@@ -635,8 +643,11 @@ const odataLit = (v: string) => v.replace(/'/g, "''");
 async function planningLinesFor(jobNo: string) {
   // Planning lines match the BC job on crfdf_jobno (NOT crfdf_jobnumber, which
   // is empty on this table). Resource-type lines only — G/L / Item lines aren't
-  // schedulable labor. crfdf_no is the BC resource code, which drives the
-  // production/installation split by range (see AddJobPanel).
+  // schedulable labor.
+  //   crfdf_jobtaskno drives the Production (3000s) / Installation (4000s) split.
+  //   crfdf_no is the resource code → the exact department labor category.
+  //   crfdf_quantity is the estimated hours (crfdf_estimatedhours is a
+  //     schedule-line column and is empty on planning lines).
   const rows = await list(BC.planning, {
     filter: `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_type eq 'Resource'`,
     orderby: "crfdf_lineno asc",
@@ -644,8 +655,9 @@ async function planningLinesFor(jobNo: string) {
   return rows.map((r) => ({
     lineNo: n(r.crfdf_lineno),
     description: s(r.crfdf_description),
-    estimatedHours: n(r.crfdf_estimatedhours),
+    estimatedHours: n(r.crfdf_quantity) || n(r.crfdf_estimatedhours),
     resourceNo: s(r.crfdf_no),
+    jobTaskNo: s(r.crfdf_jobtaskno),
   }));
 }
 
