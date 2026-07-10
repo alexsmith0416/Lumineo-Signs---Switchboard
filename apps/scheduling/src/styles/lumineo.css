@@ -1177,10 +1177,14 @@ input, select, textarea {
 
 /* Stacked layout (installation) — same column structure, just taller +
    the addons row is meaningful here. The base .job-card already pins
-   text-align: left, so no further override is required. */
+   text-align: left, so no further override is required. A merged install
+   card lists each task on its own line (description is newline-joined), so
+   honor the line breaks instead of collapsing them to one ellipsized line. */
 .job-card--stacked .job-card__desc {
   font-size: 10px;
   margin-top: 1px;
+  white-space: pre-line;
+  text-overflow: clip;
 }
 
 /* Custom cards (PTO / Holiday / Maintenance / etc.) — a single bold
