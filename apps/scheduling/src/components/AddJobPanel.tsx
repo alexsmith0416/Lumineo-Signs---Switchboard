@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
 import {
   departmentNameForLine,
-  isProductionTask,
+  isInstallResource,
+  isProductionResource,
   resolveDepartmentId,
 } from "../services/planning-line-mapping";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
@@ -87,13 +88,15 @@ export default function AddJobPanel({
     [selected, departments],
   );
 
-  // Split by this calendar's kind using the BC job-task band: Production shows
-  // the 3000-band tasks; Installation (and other kinds) show everything else.
-  // All downstream selection/commit works off this filtered list.
+  // Split by this calendar's kind using the BC resource code (crfdf_no):
+  // Production shows the 2000-band shop labor; Installation (and other kinds)
+  // show everything outside that band, minus non-schedulable resources
+  // (e.g. 1110 Sketch Resource labor). All downstream selection/commit works
+  // off this filtered list.
   const visibleLines = useMemo(
     () =>
       resolvedLines.filter((l) =>
-        kind === "production" ? isProductionTask(l.jobTaskNo) : !isProductionTask(l.jobTaskNo),
+        kind === "production" ? isProductionResource(l.resourceNo) : isInstallResource(l.resourceNo),
       ),
     [resolvedLines, kind],
   );

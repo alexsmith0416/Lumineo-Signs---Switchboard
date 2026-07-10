@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Department } from "../engine/types";
 import {
   departmentNameForLine,
-  isProductionTask,
+  isInstallResource,
+  isProductionResource,
   mapPlanningLine,
   mapPlanningLines,
   resolveDepartmentId,
@@ -48,16 +49,31 @@ describe("mapPlanningLines", () => {
   });
 });
 
-describe("isProductionTask", () => {
-  it("treats 3000-band job tasks as production", () => {
-    expect(isProductionTask("3020")).toBe(true);
-    expect(isProductionTask("3999")).toBe(true);
+describe("isProductionResource", () => {
+  it("treats 2000-band resource codes as production", () => {
+    expect(isProductionResource("2000")).toBe(true);
+    expect(isProductionResource("2011")).toBe(true);
+    expect(isProductionResource("2999")).toBe(true);
   });
-  it("treats 4000-band (install) and everything else as non-production", () => {
-    expect(isProductionTask("4010")).toBe(false);
-    expect(isProductionTask("2000")).toBe(false);
-    expect(isProductionTask("")).toBe(false);
-    expect(isProductionTask(undefined)).toBe(false);
+  it("treats anything outside the 2000-band as non-production", () => {
+    expect(isProductionResource("1110")).toBe(false);
+    expect(isProductionResource("3000")).toBe(false);
+    expect(isProductionResource("4010")).toBe(false);
+    expect(isProductionResource("WK 2 MAN - TBD")).toBe(false);
+    expect(isProductionResource("")).toBe(false);
+    expect(isProductionResource(undefined)).toBe(false);
+  });
+});
+
+describe("isInstallResource", () => {
+  it("includes every resource outside the production 2000-band", () => {
+    expect(isInstallResource("4010")).toBe(true);
+    expect(isInstallResource("WK 2 MAN - TBD")).toBe(true);
+    expect(isInstallResource("")).toBe(true); // blank crew placeholder → install
+  });
+  it("excludes production resources and non-schedulable ones (1110 Sketch)", () => {
+    expect(isInstallResource("2011")).toBe(false); // production, not install
+    expect(isInstallResource("1110")).toBe(false); // Sketch Resource labor → hidden
   });
 });
 

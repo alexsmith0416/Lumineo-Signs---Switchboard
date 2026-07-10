@@ -108,10 +108,23 @@ export function resolveDepartmentId(
   return contains;
 }
 
-/** Production job tasks are BC job-task numbers in the 3000-band; the 4000-band
- *  is Installation. Drives which calendar a line shows on in Add Job. A line
- *  with no/unparseable task number is treated as non-production (installation). */
-export function isProductionTask(jobTaskNo: string | null | undefined): boolean {
-  const num = parseInt((jobTaskNo ?? "").trim(), 10);
-  return Number.isFinite(num) && num >= 3000 && num < 4000;
+// BC resource codes (crfdf_no) that are neither production nor schedulable
+// installation labor — hidden from Add Job on every calendar.
+const NON_SCHEDULABLE_RESOURCES = new Set([
+  "1110", // Sketch Resource labor
+]);
+
+/** Production labor: a BC resource code (crfdf_no) in the 2000-band
+ *  (2000–2999). These are the shop fabrication labor categories. */
+export function isProductionResource(resourceNo: string | null | undefined): boolean {
+  const num = parseInt((resourceNo ?? "").trim(), 10);
+  return Number.isFinite(num) && num >= 2000 && num < 3000;
+}
+
+/** Installation labor: any resource OUTSIDE the production 2000-band — crew
+ *  placeholders, install travel, blank codes — minus the non-schedulable
+ *  exclusions (e.g. 1110 Sketch Resource labor, which shows on neither board). */
+export function isInstallResource(resourceNo: string | null | undefined): boolean {
+  if (isProductionResource(resourceNo)) return false;
+  return !NON_SCHEDULABLE_RESOURCES.has((resourceNo ?? "").trim());
 }
