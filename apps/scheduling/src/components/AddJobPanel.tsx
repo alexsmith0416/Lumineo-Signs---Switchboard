@@ -342,6 +342,7 @@ export default function AddJobPanel({
           </button>
         </div>
 
+        <div className="slide-over__body">
         {cardKind === "bc" && (
         <>
         <div style={{ padding: 12 }}>
@@ -454,7 +455,7 @@ export default function AddJobPanel({
         )}
 
         {cardKind === "custom" && (
-          <div style={{ padding: 12, overflowY: "auto" }}>
+          <div style={{ padding: 12 }}>
             <div
               style={{
                 fontSize: 10,
@@ -766,8 +767,12 @@ export default function AddJobPanel({
           </div>
         )}
 
-        <div style={{ flex: 1 }} />
-        <div style={{ padding: 12, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
+        </div>
+
+        <div
+          className="slide-over__footer"
+          style={{ padding: 12, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}
+        >
           <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>
             Cancel
           </button>

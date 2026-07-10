@@ -1217,6 +1217,20 @@ input, select, textarea {
   flex-direction: column;
 }
 
+/* Scrollable middle region so a long content list (e.g. the Add Job planning
+   lines) scrolls inside the panel instead of pushing the footer off-screen.
+   min-height:0 lets this flex child shrink below its content and actually
+   scroll; the footer stays pinned so Cancel/Schedule are always visible. */
+.slide-over__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.slide-over__footer {
+  flex-shrink: 0;
+}
+
 .section-title {
   background: var(--lumineo-navy);
   color: #fff;

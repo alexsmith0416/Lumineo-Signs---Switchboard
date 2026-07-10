@@ -645,8 +645,10 @@ async function planningLinesFor(jobNo: string) {
   // Planning lines match the BC job on crfdf_jobno (NOT crfdf_jobnumber, which
   // is empty on this table). Resource-type lines only — G/L / Item lines aren't
   // schedulable labor.
-  //   crfdf_no (resource code) drives the Production (2000-band) / Installation
-  //     split AND the exact department labor category.
+  //   The resource code drives the Production (2000-band) / Installation split
+  //     AND the exact department labor category. BC mirrors it into TWO columns
+  //     — crfdf_resourceno (the dedicated Resource No.) and crfdf_no (the line
+  //     "No."); crfdf_no is empty on this mirror, so prefer crfdf_resourceno.
   //   crfdf_quantity is the estimated hours (crfdf_estimatedhours is a
   //     schedule-line column and is empty on planning lines).
   //   crfdf_jobtaskno is surfaced for reference (BC phase task band).
@@ -658,7 +660,7 @@ async function planningLinesFor(jobNo: string) {
     lineNo: n(r.crfdf_lineno),
     description: s(r.crfdf_description),
     estimatedHours: n(r.crfdf_quantity) || n(r.crfdf_estimatedhours),
-    resourceNo: s(r.crfdf_no),
+    resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no),
     jobTaskNo: s(r.crfdf_jobtaskno),
   }));
 }
