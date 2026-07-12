@@ -72,7 +72,7 @@ function mockView(zip: string, forDate: Date): WeatherView {
 }
 
 export default function WeatherChip({ zip, forDate, size = "compact" }: WeatherChipProps) {
-  const real = useWeather(zip);
+  const real = useWeather(zip, forDate);
   if (!zip) return null;
 
   // Live: use the cached forecast; hide the chip when there's no row for the ZIP

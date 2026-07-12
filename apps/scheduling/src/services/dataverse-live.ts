@@ -879,23 +879,32 @@ export interface WeatherInfo {
   iconUrl: string;
   humidity: number;
 }
+// DateOnly (lum_date) comes back as "2026-07-13" (or full ISO); keep the day part.
+const weatherDateKey = (v: unknown): string => s(v).trim().slice(0, 10);
+
+// Map keyed BOTH ways: per-day forecast rows under `${zip}|${yyyy-mm-dd}`, and a
+// legacy per-ZIP current-conditions row (no lum_date) under `${zip}`. useWeather
+// prefers the dated row for the card's day, then falls back to the ZIP row.
 let weatherPromise: Promise<Map<string, WeatherInfo>> | null = null;
 export function weatherByZip(): Promise<Map<string, WeatherInfo>> {
   if (!weatherPromise) {
     weatherPromise = (async () => {
       const rows = await list("lum_weathercaches", {
-        select: "lum_location,lum_tempf,lum_conditiontext,lum_iconurl,lum_humidity",
+        select: "lum_location,lum_date,lum_tempf,lum_conditiontext,lum_iconurl,lum_humidity",
       });
       const m = new Map<string, WeatherInfo>();
       for (const r of rows) {
         const loc = s(r.lum_location).trim();
         if (!loc) continue;
-        m.set(loc, {
+        const info: WeatherInfo = {
           tempF: n(r.lum_tempf),
           condition: s(r.lum_conditiontext),
           iconUrl: s(r.lum_iconurl),
           humidity: n(r.lum_humidity),
-        });
+        };
+        const date = weatherDateKey(r.lum_date);
+        if (date) m.set(`${loc}|${date}`, info); // per-day forecast row
+        else if (!m.has(loc)) m.set(loc, info); // legacy dateless fallback
       }
       return m;
     })().catch(() => new Map<string, WeatherInfo>());
