@@ -792,24 +792,31 @@ export interface BcJobCrew {
 }
 
 /** Derive per-trip crew for a job from its BC planning lines, mirroring the
- *  Production trips model: each Install-Travel resource line (job task 402x) OR
- *  crew-placeholder line ("N MAN") is one trip; men-per-trip come from the
- *  placeholder text, else the line quantity, else 1; trucks default to 1 per
- *  trip (BC has no explicit truck line). Returns null when the job has no
- *  install-travel/crew lines. */
+ *  Production trips model. Only Install-Travel lines (job task 402x) count as
+ *  trips — a job like J34000 has a 4020 "Travel" line per trip plus a 4010
+ *  install-labor line ("Reinstall sign") that carries the SAME "N MAN" crew
+ *  code; the 4010 line is the work on that trip, not a separate trip, so it
+ *  must not be counted. Men-per-trip come from the crew placeholder ("WK 2 MAN
+ *  - TBD" → 2) on any of the job's lines, else the travel-line quantity, else 1;
+ *  trucks default to 1 per trip (BC has no explicit truck line). Returns null
+ *  when the job has no install-travel lines. */
 function deriveCrewFromLines(
   lines: Array<{ description: string; estimatedHours: number; resourceNo: string; jobTaskNo: string }>,
 ): BcJobCrew | null {
   let trips = 0;
   let men = 0;
+  let travelQtyMen = 0;
   for (const l of lines) {
-    const isTravel = (l.jobTaskNo ?? "").startsWith("402");
     const parsed = menFromText(l.resourceNo) ?? menFromText(l.description);
-    if (!isTravel && parsed == null) continue;
-    trips += 1;
-    men = Math.max(men, parsed ?? (l.estimatedHours >= 1 ? Math.round(l.estimatedHours) : 1));
+    if (parsed != null) men = Math.max(men, parsed); // crew size from any "N MAN" line
+    if ((l.jobTaskNo ?? "").startsWith("402")) {
+      trips += 1; // trips = Install-Travel lines only
+      if (l.estimatedHours >= 1) travelQtyMen = Math.max(travelQtyMen, Math.round(l.estimatedHours));
+    }
   }
-  return trips > 0 ? { crewTrips: trips, crewPersons: men || 1, crewTrucks: 1 } : null;
+  return trips > 0
+    ? { crewTrips: trips, crewPersons: men || travelQtyMen || 1, crewTrucks: 1 }
+    : null;
 }
 
 /** A card carries manually-entered crew (persisted in crfdf_crew*) — in which
