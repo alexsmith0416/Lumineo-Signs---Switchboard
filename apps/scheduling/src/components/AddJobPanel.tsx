@@ -48,8 +48,11 @@ export default function AddJobPanel({
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
   const [mode, setMode] = useState<Mode>("single");
-  const [checkedLines, setCheckedLines] = useState<Set<number>>(new Set());
-  const [singleLineNo, setSingleLineNo] = useState<number | null>(null);
+  // Selection is tracked by ROW INDEX into visibleLines, NOT by lineNo: BC gives
+  // several planning lines the same lineNo, so keying on lineNo would select /
+  // commit every line that shares it. The row index is unique per task.
+  const [checkedIdx, setCheckedIdx] = useState<Set<number>>(new Set());
+  const [singleIdx, setSingleIdx] = useState<number | null>(null);
 
   // Custom card state
   const [cardKind, setCardKind] = useState<CardKind>("bc");
@@ -105,17 +108,17 @@ export default function AddJobPanel({
   const overtimeState = useStore((s) => s.overtime);
   const addScheduleLine = useStore((s) => s.addScheduleLine);
 
-  const targetLineNos = useMemo(() => {
+  const targetIdx = useMemo(() => {
     if (!selected) return new Set<number>();
     if (mode === "single") {
-      return new Set<number>(singleLineNo !== null ? [singleLineNo] : []);
+      return new Set<number>(singleIdx !== null ? [singleIdx] : []);
     }
-    if (mode === "multi") return new Set<number>(checkedLines);
-    return new Set<number>(visibleLines.map((l) => l.lineNo));
-  }, [selected, visibleLines, mode, singleLineNo, checkedLines]);
+    if (mode === "multi") return new Set<number>(checkedIdx);
+    return new Set<number>(visibleLines.map((_, i) => i));
+  }, [selected, visibleLines, mode, singleIdx, checkedIdx]);
 
   const predictedSlots = useMemo(() => {
-    if (!selected || targetLineNos.size === 0) return null;
+    if (!selected || targetIdx.size === 0) return null;
     const ctx = {
       employees,
       departments,
@@ -123,7 +126,7 @@ export default function AddJobPanel({
       workHours: workHoursState,
       overtime: overtimeState,
     };
-    const targets = visibleLines.filter((l) => targetLineNos.has(l.lineNo));
+    const targets = visibleLines.filter((_, i) => targetIdx.has(i));
     const preferred =
       initialEmployeeId && mode !== "auto"
         ? Object.fromEntries(
@@ -142,17 +145,12 @@ export default function AddJobPanel({
       ctx,
       { earliestStart: initialStart, preferredEmployeeIds: preferred },
     );
-  }, [selected, targetLineNos, employees, departments, scheduleState, workHoursState, overtimeState, initialStart, initialEmployeeId, mode]);
+  }, [selected, targetIdx, employees, departments, scheduleState, workHoursState, overtimeState, initialStart, initialEmployeeId, mode]);
 
   const commit = async () => {
     if (!selected) return;
 
-    const targets =
-      mode === "single" && singleLineNo !== null
-        ? visibleLines.filter((l) => l.lineNo === singleLineNo)
-        : mode === "multi"
-          ? visibleLines.filter((l) => checkedLines.has(l.lineNo))
-          : visibleLines;
+    const targets = visibleLines.filter((_, i) => targetIdx.has(i));
 
     if (targets.length === 0) return;
 
@@ -424,6 +422,8 @@ export default function AddJobPanel({
             onChange={(e) => {
               setQuery(e.target.value);
               setSelected(null);
+              setSingleIdx(null);
+              setCheckedIdx(new Set());
             }}
             autoFocus
           />
@@ -437,7 +437,11 @@ export default function AddJobPanel({
                     <button
                       className="btn-secondary"
                       style={{ width: "100%", textAlign: "left" }}
-                      onClick={() => setSelected(r)}
+                      onClick={() => {
+                        setSelected(r);
+                        setSingleIdx(null);
+                        setCheckedIdx(new Set());
+                      }}
                     >
                       <strong>{r.job.jobNo}</strong> — {r.job.customerName}
                       {due ? ` · due ${format(due, "MMM d")}` : ""}
@@ -478,13 +482,15 @@ export default function AddJobPanel({
               </div>
 
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {visibleLines.map((line) => {
+                {visibleLines.map((line, idx) => {
                   const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
-                  const proposedSlot = predictedSlots?.find((p) => p.lineNo === line.lineNo);
-                  const isCurrent = targetLineNos.has(line.lineNo);
+                  const isCurrent = targetIdx.has(idx);
+                  const proposedSlot = isCurrent
+                    ? predictedSlots?.find((p) => p.lineNo === line.lineNo)
+                    : undefined;
                   return (
                     <li
-                      key={line.lineNo}
+                      key={idx}
                       style={{
                         padding: 8,
                         borderRadius: 4,
@@ -493,12 +499,12 @@ export default function AddJobPanel({
                         cursor: mode === "auto" ? "default" : "pointer",
                       }}
                       onClick={() => {
-                        if (mode === "single") setSingleLineNo(line.lineNo);
+                        if (mode === "single") setSingleIdx(idx);
                         else if (mode === "multi") {
-                          const next = new Set(checkedLines);
-                          if (next.has(line.lineNo)) next.delete(line.lineNo);
-                          else next.add(line.lineNo);
-                          setCheckedLines(next);
+                          const next = new Set(checkedIdx);
+                          if (next.has(idx)) next.delete(idx);
+                          else next.add(idx);
+                          setCheckedIdx(next);
                         }
                       }}
                     >
@@ -510,8 +516,14 @@ export default function AddJobPanel({
                       </div>
                       {proposedSlot && proposedSlot.employeeId && (
                         <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
-                          → {employees.get(proposedSlot.employeeId)?.name ?? proposedSlot.employeeId} on{" "}
-                          {format(proposedSlot.start, "EEE MMM d")} {format(proposedSlot.start, "HH:mm")}
+                          →{" "}
+                          {employees.get(
+                            initialEmployeeId && mode !== "auto"
+                              ? initialEmployeeId
+                              : proposedSlot.employeeId,
+                          )?.name ?? proposedSlot.employeeId}{" "}
+                          on {format(proposedSlot.start, "EEE MMM d")}{" "}
+                          {format(proposedSlot.start, "HH:mm")}
                         </div>
                       )}
                     </li>
@@ -852,8 +864,8 @@ export default function AddJobPanel({
             disabled={
               cardKind === "bc"
                 ? !selected ||
-                  (mode === "single" && singleLineNo === null) ||
-                  (mode === "multi" && checkedLines.size === 0)
+                  (mode === "single" && singleIdx === null) ||
+                  (mode === "multi" && checkedIdx.size === 0)
                 : !customTitle ||
                   (customScope === "resource" && !customEmployeeId) ||
                   (customScope === "department" && !customDeptId) ||
