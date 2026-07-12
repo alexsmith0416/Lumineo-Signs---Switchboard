@@ -400,16 +400,37 @@ function createLiveInstallDataSource(
     async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
       const rows = await list(SHIP.cards, { filter: `crfdf_region eq ${isNek}` });
       const meta = await bcJobMetaByJobNo();
-      const all = rows.map(mapCardRecord).map((l) => {
+      const mapped = rows.map(mapCardRecord);
+      // Auto-fill crew (trips/men/trucks) from BC planning lines for any card
+      // that has no manually-entered crew. One planning-line read per distinct
+      // job on the board that needs it; manual entry (crfdf_crew*) still wins.
+      const needCrew = [
+        ...new Set(mapped.filter((l) => l.jobNo && !hasManualCrew(l)).map((l) => l.jobNo)),
+      ];
+      const crewByJob = new Map<string, BcJobCrew>();
+      await Promise.all(
+        needCrew.map(async (jn) => {
+          const c = deriveCrewFromLines(await planningLinesFor(jn));
+          if (c) crewByJob.set(jn, c);
+        }),
+      );
+      const all = mapped.map((l) => {
         const m = l.jobNo ? meta.get(l.jobNo) : undefined;
-        return m
-          ? {
-              ...l,
-              customerName: m.name || l.customerName,
-              remainingValue: m.remaining,
-              installZip: l.installZip || m.shipToZip || null,
-            }
-          : l;
+        const c = l.jobNo && !hasManualCrew(l) ? crewByJob.get(l.jobNo) : undefined;
+        if (!m && !c) return l;
+        return {
+          ...l,
+          ...(m
+            ? {
+                customerName: m.name || l.customerName,
+                remainingValue: m.remaining,
+                installZip: l.installZip || m.shipToZip || null,
+              }
+            : {}),
+          ...(c
+            ? { crewTrips: c.crewTrips, crewPersons: c.crewPersons, crewTrucks: c.crewTrucks }
+            : {}),
+        };
       });
       setRegionCards(region, all);
       return all.filter((l) => l.startDateTime >= from && l.startDateTime <= to);
@@ -755,6 +776,46 @@ async function planningLinesFor(jobNo: string) {
     jobTaskNo: s(r.crfdf_jobtaskno),
   }));
 }
+
+// Crew-size placeholders encode men-per-trip in the code/description text:
+// "WK 2 MAN - TBD" / "NEK 1 MAN - TBD" → 2 / 1. Returns the man-count, or null
+// when the text isn't a crew placeholder.
+const menFromText = (v: string): number | null => {
+  const m = /(\d+)\s*MAN/i.exec(v ?? "");
+  return m ? parseInt(m[1], 10) : null;
+};
+
+export interface BcJobCrew {
+  crewTrips: number;
+  crewPersons: number;
+  crewTrucks: number;
+}
+
+/** Derive per-trip crew for a job from its BC planning lines, mirroring the
+ *  Production trips model: each Install-Travel resource line (job task 402x) OR
+ *  crew-placeholder line ("N MAN") is one trip; men-per-trip come from the
+ *  placeholder text, else the line quantity, else 1; trucks default to 1 per
+ *  trip (BC has no explicit truck line). Returns null when the job has no
+ *  install-travel/crew lines. */
+function deriveCrewFromLines(
+  lines: Array<{ description: string; estimatedHours: number; resourceNo: string; jobTaskNo: string }>,
+): BcJobCrew | null {
+  let trips = 0;
+  let men = 0;
+  for (const l of lines) {
+    const isTravel = (l.jobTaskNo ?? "").startsWith("402");
+    const parsed = menFromText(l.resourceNo) ?? menFromText(l.description);
+    if (!isTravel && parsed == null) continue;
+    trips += 1;
+    men = Math.max(men, parsed ?? (l.estimatedHours >= 1 ? Math.round(l.estimatedHours) : 1));
+  }
+  return trips > 0 ? { crewTrips: trips, crewPersons: men || 1, crewTrucks: 1 } : null;
+}
+
+/** A card carries manually-entered crew (persisted in crfdf_crew*) — in which
+ *  case it overrides the BC-derived crew. */
+const hasManualCrew = (l: ScheduleLine): boolean =>
+  l.crewPersons != null || l.crewTrucks != null || l.crewTrips != null;
 
 // Real customer name lives on crfdf_bccustomers.crfdf_customername, joined via
 // the job's bill-to code. The job row's own crfdf_customername is actually the
