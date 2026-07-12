@@ -1,0 +1,203 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": { "name": "shared_commondataserviceforapps" },
+        "connection": { "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_4a52d" },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps-1": {
+        "api": { "name": "shared_commondataserviceforapps" },
+        "connection": { "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_e01b8" },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "$connections": { "defaultValue": {}, "type": "Object" }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": { "interval": 6, "frequency": "Hour" }
+        }
+      },
+      "actions": {
+        "List_Job_Locations": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_bcjobs",
+              "$select": "crfdf_shiptozip",
+              "$filter": "crfdf_shiptozip ne null",
+              "$top": 500
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        },
+        "Select_Locations": {
+          "type": "Select",
+          "runAfter": { "List_Job_Locations": ["Succeeded"] },
+          "inputs": {
+            "from": "@body('List_Job_Locations')?['value']",
+            "select": "@item()?['crfdf_shiptozip']"
+          }
+        },
+        "Unique_Locations": {
+          "type": "Compose",
+          "runAfter": { "Select_Locations": ["Succeeded"] },
+          "inputs": "@union(body('Select_Locations'), body('Select_Locations'))"
+        },
+        "Loop_Locations": {
+          "type": "Foreach",
+          "runAfter": { "Unique_Locations": ["Succeeded"] },
+          "foreach": "@outputs('Unique_Locations')",
+          "runtimeConfiguration": { "concurrency": { "repetitions": 5 } },
+          "actions": {
+            "Geocode": {
+              "type": "Http",
+              "runAfter": {},
+              "inputs": {
+                "method": "GET",
+                "uri": "https://api.zippopotam.us/us/@{items('Loop_Locations')}"
+              }
+            },
+            "Check_Geo": {
+              "type": "If",
+              "runAfter": { "Geocode": ["Succeeded", "Failed"] },
+              "expression": { "equals": ["@outputs('Geocode')?['statusCode']", 200] },
+              "actions": {
+                "Compose_Lat": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@json(string(body('Geocode')))?['places'][0]?['latitude']"
+                },
+                "Compose_Lon": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@json(string(body('Geocode')))?['places'][0]?['longitude']"
+                },
+                "NWS_Points": {
+                  "type": "Http",
+                  "runAfter": { "Compose_Lat": ["Succeeded"], "Compose_Lon": ["Succeeded"] },
+                  "inputs": {
+                    "method": "GET",
+                    "uri": "https://api.weather.gov/points/@{outputs('Compose_Lat')},@{outputs('Compose_Lon')}",
+                    "headers": {
+                      "User-Agent": "LumineoScheduler/1.0 (asmith@lumineosigns.com)",
+                      "Accept": "application/geo+json"
+                    }
+                  }
+                },
+                "NWS_Forecast": {
+                  "type": "Http",
+                  "runAfter": { "NWS_Points": ["Succeeded"] },
+                  "inputs": {
+                    "method": "GET",
+                    "uri": "@{json(string(body('NWS_Points')))?['properties']?['forecast']}",
+                    "headers": {
+                      "User-Agent": "LumineoScheduler/1.0 (asmith@lumineosigns.com)",
+                      "Accept": "application/geo+json"
+                    }
+                  }
+                },
+                "Loop_Periods": {
+                  "type": "Foreach",
+                  "runAfter": { "NWS_Forecast": ["Succeeded"] },
+                  "foreach": "@json(string(body('NWS_Forecast')))?['properties']?['periods']",
+                  "actions": {
+                    "Check_Daytime": {
+                      "type": "If",
+                      "runAfter": {},
+                      "expression": { "equals": ["@items('Loop_Periods')?['isDaytime']", true] },
+                      "actions": {
+                        "Get_Cache_Record": {
+                          "type": "OpenApiConnection",
+                          "runAfter": {},
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "lum_weathercaches",
+                              "$filter": "lum_location eq '@{items('Loop_Locations')}' and lum_date eq @{substring(items('Loop_Periods')?['startTime'],0,10)}",
+                              "$top": 1
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          }
+                        },
+                        "Upsert_Cache": {
+                          "type": "If",
+                          "runAfter": { "Get_Cache_Record": ["Succeeded"] },
+                          "expression": { "greater": ["@length(body('Get_Cache_Record')?['value'])", 0] },
+                          "actions": {
+                            "Update_Weather": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {},
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "lum_weathercaches",
+                                  "recordId": "@first(body('Get_Cache_Record')?['value'])?['lum_weathercacheid']",
+                                  "item/lum_conditiontext": "@{items('Loop_Periods')?['shortForecast']}",
+                                  "item/lum_humidity": "@items('Loop_Periods')?['relativeHumidity']?['value']",
+                                  "item/lum_iconurl": "@{items('Loop_Periods')?['icon']}",
+                                  "item/lum_lastupdated": "@utcNow()",
+                                  "item/lum_tempf": "@float(items('Loop_Periods')?['temperature'])"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "UpdateRecord",
+                                  "connectionName": "shared_commondataserviceforapps-1"
+                                }
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Create_Weather": {
+                                "type": "OpenApiConnection",
+                                "runAfter": {},
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "lum_weathercaches",
+                                    "item/lum_weathercache_name": "@{items('Loop_Locations')} @{substring(items('Loop_Periods')?['startTime'],0,10)}",
+                                    "item/lum_location": "@{items('Loop_Locations')}",
+                                    "item/lum_date": "@{substring(items('Loop_Periods')?['startTime'],0,10)}",
+                                    "item/lum_conditiontext": "@{items('Loop_Periods')?['shortForecast']}",
+                                    "item/lum_humidity": "@items('Loop_Periods')?['relativeHumidity']?['value']",
+                                    "item/lum_iconurl": "@{items('Loop_Periods')?['icon']}",
+                                    "item/lum_lastupdated": "@utcNow()",
+                                    "item/lum_tempf": "@float(items('Loop_Periods')?['temperature'])"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "operationId": "CreateRecord",
+                                    "connectionName": "shared_commondataserviceforapps-1"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
