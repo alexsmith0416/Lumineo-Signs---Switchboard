@@ -1,0 +1,207 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_4a52d"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_dynamicssmbsaas": {
+        "api": {
+          "name": "shared_dynamicssmbsaas"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_shareddynamicssmbsaas_69260"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Central Standard Time",
+            "schedule": {
+              "hours": [
+                "3"
+              ],
+              "minutes": [
+                30
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "List_rows": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_bcjobs",
+              "$select": "crfdf_jobnumber"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {}
+        },
+        "For_each_job": {
+          "type": "Foreach",
+          "foreach": "@outputs('List_rows')?['body/value']",
+          "actions": {
+            "List_BC_PlanningLines": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "bcenvironment": "PRODUCTION",
+                  "company": "4738bfb5-a06d-ec11-bf27-000d3a132a9e",
+                  "dataset": "microsoft/analytics/v1.0",
+                  "table": "jobPlanningLines",
+                  "$filter": "jobNo eq '@{items('For_each_job')?['crfdf_jobnumber']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                  "operationId": "GetItemsV3",
+                  "connectionName": "shared_dynamicssmbsaas"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              }
+            },
+            "Filter_resource_lines": {
+              "type": "Query",
+              "description": "Filter resource lines to only include jobs where 'Order Released' is Yes and 'Status' is Open. Excludes all other jobs.",
+              "inputs": {
+                "from": "@outputs('List_BC_PlanningLines')?['body/value']",
+                "where": "@or(\r\n  equals(item()?['lineType'], 'Billable'),\r\n  and(\r\n    equals(item()?['jobType'], 'Resource'),\r\n    not(equals(int(coalesce(item()?['jobTaskNo'], '0')), 2010))\r\n  )\r\n)"
+              },
+              "runAfter": {
+                "List_BC_PlanningLines": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "For_each_line": {
+              "type": "Foreach",
+              "foreach": "@body('Filter_resource_lines')",
+              "actions": {
+                "List_rows_-_existing_line": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcplanninglines",
+                      "$filter": "crfdf_jobno eq '@{items('For_each_job')?['crfdf_jobnumber']}' and crfdf_jobtaskno eq '@{items('For_each_line')?['jobTaskNo']}' and crfdf_lineno eq @{items('For_each_line')?['lineNo']}",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                },
+                "Update_a_row": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcplanninglines",
+                      "recordId": "@first(outputs('List_rows_-_existing_line')?['body/value'])?['crfdf_bcplanninglineid']",
+                      "item/crfdf_description": "@items('For_each_line')?['description']",
+                      "item/crfdf_jobno": "@items('For_each_job')?['crfdf_jobnumber']",
+                      "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
+                      "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
+                      "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
+                      "item/crfdf_name": "@items('For_each_line')?['description']",
+                      "item/crfdf_planningdate": "@items('For_each_line')?['planningDate']",
+                      "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
+                      "item/crfdf_resourceno": "@items('For_each_line')?['no']",
+                      "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
+                      "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "List_rows_-_existing_line": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Add_a_new_row": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcplanninglines",
+                      "item/crfdf_description": "@items('For_each_line')?['description']",
+                      "item/crfdf_jobno": "@items('For_each_job')?['crfdf_jobnumber']",
+                      "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
+                      "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
+                      "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
+                      "item/crfdf_name": "@items('For_each_line')?['description']",
+                      "item/crfdf_planningdate": "@items('For_each_line')?['planningDate']",
+                      "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
+                      "item/crfdf_resourceno": "@items('For_each_line')?['no']",
+                      "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
+                      "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_a_row": [
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Filter_resource_lines": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "List_rows": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "description": "Nightly sync of BC job planning lines (resource lines, excl sketch) into crfdf_bcplanninglines. Built by agent. #flowstudio-mcp"
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

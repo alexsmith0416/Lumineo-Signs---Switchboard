@@ -1,0 +1,275 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_4a52d"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_dynamicssmbsaas": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_shareddynamicssmbsaas_69260"
+        },
+        "api": {
+          "name": "shared_dynamicssmbsaas"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Central Standard Time",
+            "schedule": {
+              "hours": [
+                "1"
+              ],
+              "minutes": [
+                30
+              ]
+            }
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "List_rows_BC_Jobs": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_bcjobs",
+              "$select": "crfdf_bcjobid,crfdf_jobnumber,crfdf_customername,crfdf_description"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        },
+        "Apply_to_each_BC_Job": {
+          "foreach": "@outputs('List_rows_BC_Jobs')?['body/value']",
+          "actions": {
+            "List_records_SalesLines": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "bcenvironment": "PRODUCTION",
+                  "company": "4738bfb5-a06d-ec11-bf27-000d3a132a9e",
+                  "dataset": "microsoft/analytics/v1.0",
+                  "table": "salesLines",
+                  "$filter": "projectNo eq '@{items('Apply_to_each_BC_Job')?['crfdf_jobnumber']}' and documentType eq 'Order'",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                  "operationId": "GetItemsV3",
+                  "connectionName": "shared_dynamicssmbsaas"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 5000
+                }
+              }
+            },
+            "Condition": {
+              "actions": {
+                "Compose_SalesLineSellToNo": {
+                  "type": "Compose",
+                  "inputs": "@first(body('List_records_SalesLines')?['value'])?['sellToCustomerNo']"
+                },
+                "Compose_SalesLineDescription": {
+                  "runAfter": {
+                    "Compose_SalesLineSellToNo": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@first(body('List_records_SalesLines')?['value'])?['description']"
+                },
+                "Compose_SalesDocumentNo": {
+                  "runAfter": {
+                    "Compose_SalesLineDescription": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@first(body('List_records_SalesLines')?['value'])?['documentNo']"
+                },
+                "Compose_RemainingBalance": {
+                  "runAfter": {
+                    "Compose_SalesDocumentNo": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@first(body('List_records_SalesLines')?['value'])?['outstandingAmountLCY']"
+                }
+              },
+              "runAfter": {
+                "List_records_SalesLines": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Update_a_row_3": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "crfdf_bcjobs",
+                        "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
+                        "item/crfdf_appjobname": "@coalesce(\r\n  items('Apply_to_each_BC_Job')?['crfdf_customername'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_description'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_jobnumber']\r\n)",
+                        "item/crfdf_saleslinefound": false
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(body('List_records_SalesLines')?['value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "List_rows_BC_Customers": {
+              "runAfter": {
+                "Condition": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bccustomers",
+                  "$select": "crfdf_bccustomerid,crfdf_customerno,crfdf_customername",
+                  "$filter": "crfdf_customerno eq '@{outputs('Compose_SalesLineSellToNo')}'",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "Condition_1": {
+              "actions": {
+                "Compose_AppJobName": {
+                  "type": "Compose",
+                  "inputs": "@first(body('List_rows_BC_Customers')?['value'])?['crfdf_customername']"
+                },
+                "Update_a_row_1": {
+                  "runAfter": {
+                    "Compose_AppJobName": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcjobs",
+                      "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
+                      "item/crfdf_appjobname": "@outputs('Compose_AppJobName')",
+                      "item/crfdf_remainingbalance": "@outputs('Compose_RemainingBalance')",
+                      "item/crfdf_salesdocumentno": "@outputs('Compose_SalesDocumentNo')",
+                      "item/crfdf_saleslinedescription": "@outputs('Compose_SalesLineDescription')",
+                      "item/crfdf_saleslinefound": true,
+                      "item/crfdf_saleslinesselltono": "@outputs('Compose_SalesLineSellToNo')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "List_rows_BC_Customers": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Update_a_row_2": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "crfdf_bcjobs",
+                        "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
+                        "item/crfdf_appjobname": "@coalesce(\r\n  items('Apply_to_each_BC_Job')?['crfdf_customername'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_description'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_jobnumber']\r\n)",
+                        "item/crfdf_remainingbalance": "@outputs('Compose_RemainingBalance')",
+                        "item/crfdf_salesdocumentno": "@outputs('Compose_SalesDocumentNo')",
+                        "item/crfdf_saleslinedescription": "@outputs('Compose_SalesLineDescription')",
+                        "item/crfdf_saleslinefound": true,
+                        "item/crfdf_saleslinesselltono": "@outputs('Compose_SalesLineSellToNo')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(body('List_rows_BC_Customers')?['value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "List_rows_BC_Jobs": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,177 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_dynamicssmbsaas": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_shareddynamicssmbsaas_69260"
+        },
+        "api": {
+          "name": "shared_dynamicssmbsaas"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_4a52d"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2026-07-06T05:00:00Z"
+          },
+          "metadata": {
+            "operationMetadataId": "a50fea4f-e5bd-4629-b385-ea82a99855d8"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Find_records_(V3)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "75af1a58-599c-4e49-b00d-ce7a8c6fd8f6"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "bcenvironment": "PRODUCTION",
+              "company": "4738bfb5-a06d-ec11-bf27-000d3a132a9e",
+              "dataset": "v2.0",
+              "table": "customers",
+              "$filter": "blocked eq ' '"
+            },
+            "host": {
+              "connectionName": "shared_dynamicssmbsaas",
+              "operationId": "GetItemsV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas"
+            }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 100000
+            }
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@outputs('Find_records_(V3)')?['body/value']",
+          "actions": {
+            "List_rows_-_existing_customer": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "d66d7a97-bedd-4f10-a04d-d717dbf3ef62"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bccustomers",
+                  "$filter": "crfdf_customerno eq '@{items('Apply_to_each')?['number']}'",
+                  "$top": 1
+                },
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                }
+              }
+            },
+            "Update_a_row": {
+              "runAfter": {
+                "List_rows_-_existing_customer": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2f9334d9-f757-4c4a-a036-8f73c22d9ce9"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bccustomers",
+                  "recordId": "@first(outputs('List_rows_-_existing_customer')?['body/value'])?['crfdf_bccustomerid']",
+                  "item/crfdf_addressline1": "@items('Apply_to_each')?['addressLine1']",
+                  "item/crfdf_city": "@items('Apply_to_each')?['city']",
+                  "item/crfdf_country": "@items('Apply_to_each')?['country']",
+                  "item/crfdf_customername": "@items('Apply_to_each')?['displayName']",
+                  "item/crfdf_customerno": "@items('Apply_to_each')?['number']",
+                  "item/crfdf_email": "@items('Apply_to_each')?['email']",
+                  "item/crfdf_phone": "@items('Apply_to_each')?['phoneNumber']",
+                  "item/crfdf_postalcode": "@items('Apply_to_each')?['postalCode']",
+                  "item/crfdf_salespersoncode": "@items('Apply_to_each')?['salespersonCode']",
+                  "item/crfdf_state": "@items('Apply_to_each')?['state']"
+                },
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                }
+              }
+            },
+            "Add_a_new_row": {
+              "runAfter": {
+                "Update_a_row": [
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2473133d-dcc9-4279-b48e-5b84bfd9e5b0"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bccustomers",
+                  "item/crfdf_addressline1": "@items('Apply_to_each')?['addressLine1']",
+                  "item/crfdf_city": "@items('Apply_to_each')?['city']",
+                  "item/crfdf_country": "@items('Apply_to_each')?['country']",
+                  "item/crfdf_customername": "@items('Apply_to_each')?['displayName']",
+                  "item/crfdf_customerno": "@items('Apply_to_each')?['number']",
+                  "item/crfdf_email": "@items('Apply_to_each')?['email']",
+                  "item/crfdf_phone": "@items('Apply_to_each')?['phoneNumber']",
+                  "item/crfdf_postalcode": "@items('Apply_to_each')?['postalCode']",
+                  "item/crfdf_salespersoncode": "@items('Apply_to_each')?['salespersonCode']",
+                  "item/crfdf_state": "@items('Apply_to_each')?['state']"
+                },
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Find_records_(V3)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ca40ddfa-38c9-476c-aa80-40bc41053b55"
+          },
+          "type": "Foreach"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}
