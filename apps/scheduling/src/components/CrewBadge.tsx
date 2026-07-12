@@ -16,6 +16,8 @@ function badgeColor(total: number): { bg: string; text: string } {
 }
 
 export default function CrewBadge({ line, size = "compact" }: CrewBadgeProps) {
+  // crewPersons / crewTrucks / etc. are the crew PER trip; crewTrips is how many
+  // trips the install takes.
   const parts: string[] = [];
   if (line.crewPersons) parts.push(`${line.crewPersons}M`);
   if (line.crewTrucks) parts.push(`${line.crewTrucks}T`);
@@ -23,10 +25,26 @@ export default function CrewBadge({ line, size = "compact" }: CrewBadgeProps) {
   if (line.crewLifts) parts.push(`${line.crewLifts}L`);
   if (line.crewBuckets) parts.push(`${line.crewBuckets}B`);
 
-  if (parts.length === 0) return null;
+  const trips = line.crewTrips ?? 0;
+  if (parts.length === 0 && trips <= 0) return null;
+
+  const perTrip = parts.join(" ");
+  // Compact: "3× 4M 2T" (3 trips, 4 men + 2 trucks each). Detail spells it out.
+  const label =
+    trips > 0
+      ? perTrip
+        ? size === "detail"
+          ? `${trips} trips · ${perTrip}/trip`
+          : `${trips}× ${perTrip}`
+        : `${trips} trips`
+      : perTrip;
 
   const total = totalCrew(line);
   const color = badgeColor(total);
+  const title =
+    trips > 0
+      ? `${trips} trip${trips === 1 ? "" : "s"} · ${perTrip || "crew TBD"} per trip`
+      : `Crew: ${perTrip} (total ${total})`;
 
   return (
     <span
@@ -43,9 +61,9 @@ export default function CrewBadge({ line, size = "compact" }: CrewBadgeProps) {
         letterSpacing: 0.3,
         whiteSpace: "nowrap",
       }}
-      title={`Crew: ${parts.join(" ")} (total ${total})`}
+      title={title}
     >
-      {parts.join(" ")}
+      {label}
     </span>
   );
 }

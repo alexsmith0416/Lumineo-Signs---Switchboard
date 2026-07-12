@@ -22,6 +22,12 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [overrideHours, setOverrideHours] = useState(
     line.overrideHours?.toString() ?? line.estimatedHours.toString(),
   );
+  const [jobDescription, setJobDescription] = useState(line.jobDescription ?? "");
+  const [taskDescription, setTaskDescription] = useState(line.planningLineDescription ?? "");
+  const [crewTrips, setCrewTrips] = useState(line.crewTrips?.toString() ?? "");
+  const [crewPersons, setCrewPersons] = useState(line.crewPersons?.toString() ?? "");
+  const [crewTrucks, setCrewTrucks] = useState(line.crewTrucks?.toString() ?? "");
+  const [installZip, setInstallZip] = useState(line.installZip ?? "");
   const [employeeId, setEmployeeId] = useState(line.employeeId);
   const [startDate, setStartDate] = useState(
     format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
@@ -46,8 +52,30 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
       ) {
         await shiftTaskAndCommit(line.id, newStart, employeeId, true);
       }
-      if (isLocked !== line.isLocked) {
-        await dataSource.updateScheduleLine(line.id, { isLocked });
+      const numOrNull = (v: string): number | null => {
+        const t = v.trim();
+        if (t === "") return null;
+        const n = Number(t);
+        return Number.isNaN(n) ? null : n;
+      };
+      const changes: Partial<ScheduleLine> = {};
+      if (isLocked !== line.isLocked) changes.isLocked = isLocked;
+      if (
+        jobDescription !== (line.jobDescription ?? "") ||
+        taskDescription !== (line.planningLineDescription ?? "")
+      ) {
+        changes.jobDescription = jobDescription;
+        changes.planningLineDescription = taskDescription;
+      }
+      if (numOrNull(crewTrips) !== (line.crewTrips ?? null)) changes.crewTrips = numOrNull(crewTrips);
+      if (numOrNull(crewPersons) !== (line.crewPersons ?? null))
+        changes.crewPersons = numOrNull(crewPersons);
+      if (numOrNull(crewTrucks) !== (line.crewTrucks ?? null))
+        changes.crewTrucks = numOrNull(crewTrucks);
+      if ((installZip.trim() || null) !== (line.installZip ?? null))
+        changes.installZip = installZip.trim() || null;
+      if (Object.keys(changes).length > 0) {
+        await dataSource.updateScheduleLine(line.id, changes);
         await loadWeek();
       }
       onClose();
@@ -74,8 +102,27 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           {line.jobNo} · {line.customerName}
         </div>
 
-        <div style={{ padding: 12, fontSize: 11, color: "var(--text-secondary)" }}>
-          {line.planningLineDescription}
+        <div className="form-field">
+          <div className="form-field__label">Job description</div>
+          <textarea
+            className="form-field__input"
+            rows={2}
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            placeholder="BC job summary (shown under the job name)"
+            style={{ resize: "vertical", fontFamily: "inherit" }}
+          />
+        </div>
+        <div className="form-field">
+          <div className="form-field__label">Task / card text</div>
+          <textarea
+            className="form-field__input"
+            rows={2}
+            value={taskDescription}
+            onChange={(e) => setTaskDescription(e.target.value)}
+            placeholder="Task description shown on the card"
+            style={{ resize: "vertical", fontFamily: "inherit" }}
+          />
         </div>
 
         <div className="form-field">
@@ -129,6 +176,51 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             />
             <span style={{ fontSize: 12 }}>Pin task — cascade flows around it</span>
           </label>
+        </div>
+
+        <div className="form-field">
+          <div className="form-field__label">Trips · crew per trip</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <input
+              className="form-field__input"
+              type="number"
+              min="0"
+              step="1"
+              value={crewTrips}
+              onChange={(e) => setCrewTrips(e.target.value)}
+              placeholder="Trips"
+              title="Number of trips"
+            />
+            <input
+              className="form-field__input"
+              type="number"
+              min="0"
+              step="1"
+              value={crewPersons}
+              onChange={(e) => setCrewPersons(e.target.value)}
+              placeholder="Men"
+              title="Men per trip"
+            />
+            <input
+              className="form-field__input"
+              type="number"
+              min="0"
+              step="1"
+              value={crewTrucks}
+              onChange={(e) => setCrewTrucks(e.target.value)}
+              placeholder="Trucks"
+              title="Trucks per trip"
+            />
+          </div>
+        </div>
+        <div className="form-field">
+          <div className="form-field__label">Install ZIP (weather)</div>
+          <input
+            className="form-field__input"
+            value={installZip}
+            onChange={(e) => setInstallZip(e.target.value)}
+            placeholder="e.g. 67501"
+          />
         </div>
 
         <PreviewPane

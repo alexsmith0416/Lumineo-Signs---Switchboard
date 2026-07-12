@@ -131,9 +131,22 @@ export default function JobCard({
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
             {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
-            {showInvoice && typeof line.invoiceAmount === "number" && line.invoiceAmount > 0 && (
-              <span className="job-card__invoice">{formatMoney(line.invoiceAmount)}</span>
-            )}
+            {showInvoice &&
+              (() => {
+                // Prefer the BC outstanding value (feature: remaining value under $);
+                // fall back to a stored invoice amount.
+                const val =
+                  typeof line.remainingValue === "number" && line.remainingValue > 0
+                    ? line.remainingValue
+                    : typeof line.invoiceAmount === "number" && line.invoiceAmount > 0
+                      ? line.invoiceAmount
+                      : null;
+                return val != null ? (
+                  <span className="job-card__invoice" title="Remaining value (BC)">
+                    {formatMoney(val)}
+                  </span>
+                ) : null;
+              })()}
           </div>
         )}
         <div className="job-card__icons">

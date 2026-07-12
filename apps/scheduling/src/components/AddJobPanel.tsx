@@ -197,6 +197,7 @@ export default function AddJobPanel({
           customerDueDate: safeDate(selected.job.promisedDate),
           isLocked: false,
           jobSequence: first.lineNo,
+          installZip: selected.job.shipToZip || null,
         };
         const end = calculateEndTime(cursor, effectiveHours(mergedLine, emp), emp, ctxForEngine);
         await addScheduleLine({
@@ -268,6 +269,7 @@ export default function AddJobPanel({
         customerDueDate: safeDate(selected.job.promisedDate),
         isLocked: false,
         jobSequence: first.lineNo,
+        installZip: selected.job.shipToZip || null,
       };
       const end = emp
         ? calculateEndTime(first.start, effectiveHours(mergedLine, emp), emp, ctxForEngine)

@@ -50,8 +50,13 @@ export interface ScheduleLine {
   // leave these null; install lines populate them so the UI can render the
   // weather chip, crew badge, and dollar amount.
   invoiceAmount?: number | null;
+  /** Outstanding order value (crfdf_bcjobs.crfdf_remainingbalance), overlaid by
+   *  job number at read time. Shown on the card under the $ toggle. */
+  remainingValue?: number | null;
   crewPersons?: number | null;
   crewTrucks?: number | null;
+  /** Number of install trips. crewPersons / crewTrucks are the crew PER trip. */
+  crewTrips?: number | null;
   crewCranes?: number | null;
   crewLifts?: number | null;
   crewBuckets?: number | null;

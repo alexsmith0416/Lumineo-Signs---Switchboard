@@ -250,7 +250,17 @@ export const liveProductionDataSource: ScheduleDataSource = {
   async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
     const filter = `crfdf_startdatetime ge ${from.toISOString()} and crfdf_startdatetime le ${to.toISOString()}`;
     const rows = await list(SET.lines, { filter, orderby: "crfdf_startdatetime asc" });
-    return rows.map(mapLine);
+    const lines = rows.map(mapLine);
+    // Overlay the current ship-to / sales-order customer name + outstanding
+    // value from BC so cards reflect BC even for lines created earlier. Falls
+    // back to the line's stored values when BC has none for that job.
+    const meta = await bcJobMetaByJobNo();
+    return lines.map((l) => {
+      const m = l.jobNo ? meta.get(l.jobNo) : undefined;
+      return m
+        ? { ...l, customerName: m.name || l.customerName, remainingValue: m.remaining }
+        : l;
+    });
   },
 
   // No Dataverse tables for these yet — empty until crfdf_employeeworkhours /
@@ -384,7 +394,13 @@ function createLiveInstallDataSource(
     // Shipping "Scheduled" badge is accurate) and return the week's subset.
     async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
       const rows = await list(SHIP.cards, { filter: `crfdf_region eq ${isNek}` });
-      const all = rows.map(mapCardRecord);
+      const meta = await bcJobMetaByJobNo();
+      const all = rows.map(mapCardRecord).map((l) => {
+        const m = l.jobNo ? meta.get(l.jobNo) : undefined;
+        return m
+          ? { ...l, customerName: m.name || l.customerName, remainingValue: m.remaining }
+          : l;
+      });
       setRegionCards(region, all);
       return all.filter((l) => l.startDateTime >= from && l.startDateTime <= to);
     },
@@ -479,8 +495,14 @@ function mapCardRecord(r: Row): ScheduleLine {
   const desc = decodeDesc(s(r.crfdf_notes));
   return {
     id: s(r.crfdf_installcardid),
-    jobNo: title,
+    jobNo: s(r.crfdf_jobno) || title,
     customerName: title,
+    installZip: s(r.crfdf_installzip) || null,
+    crewPersons: nOrNull(r.crfdf_crewpersons),
+    crewTrucks: nOrNull(r.crfdf_crewtrucks),
+    crewTrips: nOrNull(r.crfdf_crewtrips),
+    crewCranes: nOrNull(r.crfdf_crewcranes),
+    crewLifts: nOrNull(r.crfdf_crewlifts),
     jobDescription: desc.jobDescription,
     planningLineDescription: desc.planningLineDescription,
     startDateTime: dt(r.crfdf_startdatetime),
@@ -514,6 +536,13 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;
   if (line.customColor !== undefined) rec.crfdf_customcolor = line.customColor;
   if (line.customTextColor !== undefined) rec.crfdf_customtextcolor = line.customTextColor;
+  if (line.jobNo !== undefined && !line.isCustom) rec.crfdf_jobno = line.jobNo;
+  if (line.installZip !== undefined) rec.crfdf_installzip = line.installZip;
+  if (line.crewPersons !== undefined) rec.crfdf_crewpersons = line.crewPersons;
+  if (line.crewTrucks !== undefined) rec.crfdf_crewtrucks = line.crewTrucks;
+  if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
+  if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
+  if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
   if (forCreate) rec.crfdf_region = isNek;
   if (line.employeeId) rec["crfdf_employee@odata.bind"] = `/${INSTALL_SET}(${line.employeeId})`;
   if (line.shipmentLoadId) rec["crfdf_shipmentload@odata.bind"] = `/${SHIP.loads}(${line.shipmentLoadId})`;
@@ -645,9 +674,15 @@ const BC = {
 export interface BcJobLive {
   jobNo: string;
   customerName: string;
+  /** Ship-to / sales-order customer name (crfdf_appjobname), set by the
+   *  BCSync_SalesLines flow from the order's sell-to customer. This is the name
+   *  we want on job cards; falls back to the bill-to customer / description. */
+  appJobName: string;
   description: string;
   /** Bill-to code (crfdf_billtocustomerno) — join key to crfdf_bccustomers. */
   billToNo: string;
+  /** Ship-to ZIP (crfdf_shiptozip) — used to look up the install weather. */
+  shipToZip: string;
   promisedDate: string;
   remainingBalance: number;
   planningLines: Array<{
@@ -704,14 +739,73 @@ async function resolveCustomerName(billToNo: string): Promise<string> {
   return name;
 }
 
+// Session cache: BC job number → { ship-to/sales-order customer name, remaining
+// order value }. Lets schedule lines display the current name + outstanding
+// balance from BC without re-adding them. Refreshed on reload (nightly sync).
+export interface BcJobMeta {
+  name: string;
+  remaining: number;
+}
+let bcJobMetaPromise: Promise<Map<string, BcJobMeta>> | null = null;
+export function bcJobMetaByJobNo(): Promise<Map<string, BcJobMeta>> {
+  if (!bcJobMetaPromise) {
+    bcJobMetaPromise = (async () => {
+      const rows = await list(BC.jobs, {
+        select: "crfdf_jobnumber,crfdf_appjobname,crfdf_remainingbalance",
+      });
+      const m = new Map<string, BcJobMeta>();
+      for (const r of rows) {
+        const jn = s(r.crfdf_jobnumber);
+        if (jn) m.set(jn, { name: s(r.crfdf_appjobname), remaining: n(r.crfdf_remainingbalance) });
+      }
+      return m;
+    })().catch(() => new Map<string, BcJobMeta>());
+  }
+  return bcJobMetaPromise;
+}
+
+// Session cache: install ZIP → current weather (lum_weathercaches, keyed by
+// lum_location = ZIP; refreshed by the WeatherCache_Refresh flow).
+export interface WeatherInfo {
+  tempF: number;
+  condition: string;
+  iconUrl: string;
+  humidity: number;
+}
+let weatherPromise: Promise<Map<string, WeatherInfo>> | null = null;
+export function weatherByZip(): Promise<Map<string, WeatherInfo>> {
+  if (!weatherPromise) {
+    weatherPromise = (async () => {
+      const rows = await list("lum_weathercaches", {
+        select: "lum_location,lum_tempf,lum_conditiontext,lum_iconurl,lum_humidity",
+      });
+      const m = new Map<string, WeatherInfo>();
+      for (const r of rows) {
+        const loc = s(r.lum_location).trim();
+        if (!loc) continue;
+        m.set(loc, {
+          tempF: n(r.lum_tempf),
+          condition: s(r.lum_conditiontext),
+          iconUrl: s(r.lum_iconurl),
+          humidity: n(r.lum_humidity),
+        });
+      }
+      return m;
+    })().catch(() => new Map<string, WeatherInfo>());
+  }
+  return weatherPromise;
+}
+
 function mapBcJobHead(r: Row): Omit<BcJobLive, "planningLines"> {
   const due = r.crfdf_promiseddate;
   return {
     jobNo: s(r.crfdf_jobnumber),
+    appJobName: s(r.crfdf_appjobname),
     // Fallback only — replaced by the crfdf_bccustomers join below.
     customerName: s(r.crfdf_customername),
     description: s(r.crfdf_description),
     billToNo: s(r.crfdf_billtocustomerno),
+    shipToZip: s(r.crfdf_shiptozip),
     promisedDate: due == null || due === "" ? "" : String(due).slice(0, 10),
     remainingBalance: n(r.crfdf_remainingbalance),
   };
@@ -730,7 +824,9 @@ export async function searchBcJobsLive(query: string, limit = 8): Promise<BcJobL
   return Promise.all(
     heads.map(async (h) => ({
       ...h,
-      customerName: (await resolveCustomerName(h.billToNo)) || h.customerName,
+      // Ship-to / sales-order customer name wins; then the bill-to join; then
+      // the raw crfdf_customername / description fallback from the head.
+      customerName: h.appJobName || (await resolveCustomerName(h.billToNo)) || h.customerName,
       planningLines: await planningLinesFor(h.jobNo),
     })),
   );
@@ -742,7 +838,7 @@ export async function getBcJobLive(jobNo: string): Promise<BcJobLive | null> {
   const head = mapBcJobHead(rows[0]!);
   return {
     ...head,
-    customerName: (await resolveCustomerName(head.billToNo)) || head.customerName,
+    customerName: head.appJobName || (await resolveCustomerName(head.billToNo)) || head.customerName,
     planningLines: await planningLinesFor(head.jobNo),
   };
 }

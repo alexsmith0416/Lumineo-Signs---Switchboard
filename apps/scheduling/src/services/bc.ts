@@ -18,6 +18,7 @@ const toBcJob = (j: BcJobLive): BcJob => ({
   customerName: j.customerName,
   description: j.description,
   promisedDate: j.promisedDate,
+  shipToZip: j.shipToZip,
   planningLines: j.planningLines,
 });
 

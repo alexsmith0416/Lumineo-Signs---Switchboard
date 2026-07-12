@@ -15,6 +15,8 @@ export interface BcJob {
   /** BC job header description (crfdf_description) — the overall job summary. */
   description?: string;
   promisedDate: string;
+  /** Ship-to ZIP (crfdf_shiptozip) — seeds the install card's weather ZIP. */
+  shipToZip?: string;
   planningLines: BcPlanningLine[];
 }
 
