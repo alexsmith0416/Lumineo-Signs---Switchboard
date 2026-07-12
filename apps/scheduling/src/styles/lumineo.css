@@ -1117,6 +1117,7 @@ input, select, textarea {
   white-space: nowrap;
   overflow: hidden;
   font-size: 11px;
+  line-height: 1.3;
   height: 100%;
 }
 

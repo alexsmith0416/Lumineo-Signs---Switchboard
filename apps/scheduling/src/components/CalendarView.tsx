@@ -88,6 +88,61 @@ function getDayIndex(date: Date, weekStart: Date): number {
   return differenceInCalendarDays(date, weekStart);
 }
 
+// Card vertical sizing. Gantt lanes are fixed-height, so a lane must be tall
+// enough for the content of its tallest card or the text clips (overflow:
+// hidden). We size each row's lanes to the max content-line count among its
+// cards instead of a single constant, so adding lines (e.g. the BC job
+// description) never truncates a card.
+const CARD_LINE_PX = 15; // per text row (matches .job-card line-height: 1.3)
+const CARD_LINE_GAP = 2; // .job-card gap between rows
+const CARD_V_CHROME = 16; // .job-card padding (8) + .gantt-card top/bottom inset (8)
+
+interface CardAddonFlags {
+  showInvoice: boolean;
+  showCrewBadge: boolean;
+  showWeather: boolean;
+}
+
+/** Number of text rows a JobCard renders — mirrors JobCard's JSX so a lane can
+ *  be sized to fit it exactly. */
+function cardContentLines(
+  line: ScheduleLine,
+  layout: "compact" | "stacked",
+  flags: CardAddonFlags,
+): number {
+  let lines = 1; // header (job# + customer) or custom title
+  if (line.jobDescription) lines += 1;
+  const hasDesc = line.shipmentLoadId ? true : Boolean(line.planningLineDescription);
+  if (hasDesc) {
+    if (layout === "stacked") {
+      // Stacked desc honors newlines (merged install cards list each task).
+      const descLines = line.shipmentLoadId
+        ? 2
+        : Math.min((line.planningLineDescription || "").split("\n").length, 4);
+      lines += Math.max(1, descLines);
+    } else {
+      lines += 1; // compact desc is single-line (ellipsized)
+    }
+  }
+  if (flags.showInvoice || flags.showCrewBadge || flags.showWeather) lines += 1; // addons row
+  return lines;
+}
+
+/** Lane height sized to the tallest card in the row, so no card clips its text. */
+function computeLaneHeight(
+  cards: CardLayout[],
+  layout: "compact" | "stacked",
+  flags: CardAddonFlags,
+): number {
+  const maxLines = cards.reduce(
+    (m, c) => Math.max(m, cardContentLines(c.line, layout, flags)),
+    1,
+  );
+  const content = maxLines * CARD_LINE_PX + (maxLines - 1) * CARD_LINE_GAP;
+  const floor = layout === "stacked" ? 60 : 40;
+  return Math.max(floor, content + CARD_V_CHROME);
+}
+
 function computeRowCards(lines: ScheduleLine[], weekStart: Date): CardLayout[] {
   const out: CardLayout[] = [];
   const ordered = [...lines].sort(
@@ -511,7 +566,11 @@ export default function CalendarView({
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
-              const laneHeight = cardLayout === "stacked" ? 68 : 46;
+              const laneHeight = computeLaneHeight(cards, cardLayout, {
+                showInvoice,
+                showCrewBadge,
+                showWeather,
+              });
               const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
               return (
