@@ -932,8 +932,14 @@ function mapBcJobHead(r: Row): Omit<BcJobLive, "planningLines"> {
  *  back to the mock). */
 export async function searchBcJobsLive(query: string, limit = 8): Promise<BcJobLive[]> {
   const q = odataLit(query.trim());
+  // Search the job number AND both name sources: crfdf_appjobname (the ship-to /
+  // sales-order name actually shown in results, e.g. "Peachy Cheeks") and the raw
+  // crfdf_customername. Without appjobname, typing the displayed name found nothing.
   const rows = await list(BC.jobs, {
-    filter: `contains(crfdf_jobnumber,'${q}') or contains(crfdf_customername,'${q}')`,
+    filter:
+      `contains(crfdf_jobnumber,'${q}') or ` +
+      `contains(crfdf_appjobname,'${q}') or ` +
+      `contains(crfdf_customername,'${q}')`,
     orderby: "crfdf_jobnumber asc",
   });
   const heads = rows.slice(0, limit).map(mapBcJobHead);
