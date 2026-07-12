@@ -126,6 +126,47 @@
                   },
                   "type": "Compose",
                   "inputs": "@first(body('List_records_SalesLines')?['value'])?['outstandingAmountLCY']"
+                },
+                "List_SalesOrder": {
+                  "runAfter": {
+                    "Compose_RemainingBalance": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "bcenvironment": "PRODUCTION",
+                      "company": "4738bfb5-a06d-ec11-bf27-000d3a132a9e",
+                      "dataset": "v2.0",
+                      "table": "salesOrders",
+                      "$filter": "number eq '@{outputs('Compose_SalesDocumentNo')}'",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                      "operationId": "GetItemsV3",
+                      "connectionName": "shared_dynamicssmbsaas"
+                    }
+                  }
+                },
+                "Compose_ShipToName": {
+                  "runAfter": {
+                    "List_SalesOrder": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@first(body('List_SalesOrder')?['value'])?['shipToName']"
+                },
+                "Compose_ShipToZip": {
+                  "runAfter": {
+                    "Compose_ShipToName": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@first(body('List_SalesOrder')?['value'])?['shipToPostCode']"
                 }
               },
               "runAfter": {
@@ -203,7 +244,8 @@
                     "parameters": {
                       "entityName": "crfdf_bcjobs",
                       "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
-                      "item/crfdf_appjobname": "@outputs('Compose_AppJobName')",
+                      "item/crfdf_appjobname": "@coalesce(outputs('Compose_ShipToName'), outputs('Compose_AppJobName'))",
+                      "item/crfdf_shiptozip": "@outputs('Compose_ShipToZip')",
                       "item/crfdf_remainingbalance": "@outputs('Compose_RemainingBalance')",
                       "item/crfdf_salesdocumentno": "@outputs('Compose_SalesDocumentNo')",
                       "item/crfdf_saleslinedescription": "@outputs('Compose_SalesLineDescription')",
@@ -231,7 +273,8 @@
                       "parameters": {
                         "entityName": "crfdf_bcjobs",
                         "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
-                        "item/crfdf_appjobname": "@coalesce(\r\n  items('Apply_to_each_BC_Job')?['crfdf_customername'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_description'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_jobnumber']\r\n)",
+                        "item/crfdf_appjobname": "@coalesce(outputs('Compose_ShipToName'), items('Apply_to_each_BC_Job')?['crfdf_customername'], items('Apply_to_each_BC_Job')?['crfdf_description'], items('Apply_to_each_BC_Job')?['crfdf_jobnumber'])",
+                        "item/crfdf_shiptozip": "@outputs('Compose_ShipToZip')",
                         "item/crfdf_remainingbalance": "@outputs('Compose_RemainingBalance')",
                         "item/crfdf_salesdocumentno": "@outputs('Compose_SalesDocumentNo')",
                         "item/crfdf_saleslinedescription": "@outputs('Compose_SalesLineDescription')",

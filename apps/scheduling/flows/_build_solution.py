@@ -5,7 +5,7 @@ import os, re, shutil, zipfile
 FLOWS = os.path.dirname(os.path.abspath(__file__))
 EXPORT_CUST = r"C:\Users\Alex\Downloads\_bcsync_extract\customizations.xml"
 STAGE = r"C:\Users\Alex\Downloads\bcsync_build"
-OUT_ZIP = r"C:\Users\Alex\Downloads\BCSyncReview_1_0_0_2.zip"
+OUT_ZIP = r"C:\Users\Alex\Downloads\BCSyncReview_1_0_0_3.zip"
 
 # Flow files (name -> (guid, filename))
 FLOW_FILES = {
@@ -93,7 +93,7 @@ solution = f'''<?xml version="1.0" encoding="utf-8"?>
       <LocalizedName description="BC Sync Review" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.2</Version>
+    <Version>1.0.0.3</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>LumineoSigns</UniqueName>

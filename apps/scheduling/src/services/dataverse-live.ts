@@ -258,7 +258,12 @@ export const liveProductionDataSource: ScheduleDataSource = {
     return lines.map((l) => {
       const m = l.jobNo ? meta.get(l.jobNo) : undefined;
       return m
-        ? { ...l, customerName: m.name || l.customerName, remainingValue: m.remaining }
+        ? {
+            ...l,
+            customerName: m.name || l.customerName,
+            remainingValue: m.remaining,
+            installZip: l.installZip || m.shipToZip || null,
+          }
         : l;
     });
   },
@@ -398,7 +403,12 @@ function createLiveInstallDataSource(
       const all = rows.map(mapCardRecord).map((l) => {
         const m = l.jobNo ? meta.get(l.jobNo) : undefined;
         return m
-          ? { ...l, customerName: m.name || l.customerName, remainingValue: m.remaining }
+          ? {
+              ...l,
+              customerName: m.name || l.customerName,
+              remainingValue: m.remaining,
+              installZip: l.installZip || m.shipToZip || null,
+            }
           : l;
       });
       setRegionCards(region, all);
@@ -768,18 +778,24 @@ async function resolveCustomerName(billToNo: string): Promise<string> {
 export interface BcJobMeta {
   name: string;
   remaining: number;
+  shipToZip: string;
 }
 let bcJobMetaPromise: Promise<Map<string, BcJobMeta>> | null = null;
 export function bcJobMetaByJobNo(): Promise<Map<string, BcJobMeta>> {
   if (!bcJobMetaPromise) {
     bcJobMetaPromise = (async () => {
       const rows = await list(BC.jobs, {
-        select: "crfdf_jobnumber,crfdf_appjobname,crfdf_remainingbalance",
+        select: "crfdf_jobnumber,crfdf_appjobname,crfdf_remainingbalance,crfdf_shiptozip",
       });
       const m = new Map<string, BcJobMeta>();
       for (const r of rows) {
         const jn = s(r.crfdf_jobnumber);
-        if (jn) m.set(jn, { name: s(r.crfdf_appjobname), remaining: n(r.crfdf_remainingbalance) });
+        if (jn)
+          m.set(jn, {
+            name: s(r.crfdf_appjobname),
+            remaining: n(r.crfdf_remainingbalance),
+            shipToZip: s(r.crfdf_shiptozip),
+          });
       }
       return m;
     })().catch(() => new Map<string, BcJobMeta>());
