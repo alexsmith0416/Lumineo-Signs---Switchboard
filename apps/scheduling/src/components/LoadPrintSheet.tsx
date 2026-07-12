@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { format } from "date-fns";
 import { loadLocations, type ShipmentLoad } from "../shipping/types";
+import { printMarkup } from "../services/print";
 
 /**
  * Printable loading list for a single load — mirrors the Excel sheet
@@ -16,9 +18,10 @@ export default function LoadPrintSheet({
 }) {
   const locations = loadLocations(load);
   const showLocation = locations.length > 1;
+  const sheetRef = useRef<HTMLDivElement>(null);
   return (
     <div className="load-print" onClick={onClose}>
-      <div className="load-print__sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="load-print__sheet" ref={sheetRef} onClick={(e) => e.stopPropagation()}>
         <div className="load-print__head">
           <div className="load-print__title">{load.name.toUpperCase()} — SHIPPING LIST</div>
           <div className="load-print__date">Shipping Date: {format(load.shipDate, "M/d/yy")}</div>
@@ -68,7 +71,14 @@ export default function LoadPrintSheet({
 
         <div className="load-print__actions">
           <button className="btn-secondary" onClick={onClose}>Close</button>
-          <button className="btn-primary" onClick={() => window.print()}>Print</button>
+          <button
+            className="btn-primary"
+            onClick={() =>
+              printMarkup(`${load.name} — Shipping List`, sheetRef.current?.outerHTML ?? "")
+            }
+          >
+            Print
+          </button>
         </div>
       </div>
     </div>

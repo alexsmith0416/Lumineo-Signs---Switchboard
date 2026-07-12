@@ -5,6 +5,7 @@ import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
+import { printMarkup } from "../services/print";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { CcoBadge } from "./CcoBadge";
@@ -438,6 +439,7 @@ export default function CalendarView({
     `${count} ${count === 1 ? kindMeta.resourceLabel.toLowerCase() : kindMeta.resourceLabelPlural.toLowerCase()}`;
 
   const context = { employees, departments, schedule, workHours, overtime };
+  const gridRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="calendar-view">
@@ -470,7 +472,19 @@ export default function CalendarView({
         {toolbarExtras}
         <button
           className="calendar-toolbar__print"
-          onClick={() => window.print()}
+          onClick={() => {
+            const grid = gridRef.current;
+            const heading = `${kindMeta.title} — Week of ${format(weekStart, "MMM d, yyyy")}`;
+            if (!grid) {
+              window.print();
+              return;
+            }
+            printMarkup(
+              heading,
+              `<div class="print-doc__title">${heading}</div>` +
+                `<div class="calendar-view">${grid.outerHTML}</div>`,
+            );
+          }}
           title="Print this week"
           aria-label="Print this week"
         >
@@ -479,7 +493,7 @@ export default function CalendarView({
         {addAction}
       </div>
 
-      <div className="calendar-grid">
+      <div className="calendar-grid" ref={gridRef}>
         <div className="calendar-header-row">
           <div
             className={
