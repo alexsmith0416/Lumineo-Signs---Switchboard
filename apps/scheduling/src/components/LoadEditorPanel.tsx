@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { useLoadsStore } from "../shipping/loads-store";
 import { STATUS_LABEL, STATUS_ORDER, type ShipmentItem, type ShipmentStatus } from "../shipping/types";
@@ -11,6 +11,22 @@ interface LoadEditorPanelProps {
   onClose: () => void;
   onPrint: () => void;
 }
+
+// Week ‹ / › arrows that flank the day picker — sized to match the day buttons.
+const weekArrowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 24,
+  border: "1px solid var(--border)",
+  background: "var(--input-bg)",
+  borderRadius: 4,
+  color: "var(--text-primary)",
+  fontSize: 15,
+  lineHeight: 1,
+  cursor: "pointer",
+  flexShrink: 0,
+};
 
 export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditorPanelProps) {
   const load = useLoadsStore((s) => s.loads.find((l) => l.id === loadId));
@@ -46,40 +62,18 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
         </div>
 
         <div className="form-field">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 6,
-            }}
-          >
-            <div className="form-field__label" style={{ margin: 0 }}>Ship day</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ padding: "2px 8px" }}
-                title="Previous week"
-                onClick={() => setPickerWeek(addDays(week, -7))}
-              >
-                ‹
-              </button>
-              <span style={{ fontSize: 11, color: "var(--text-secondary)", minWidth: 90, textAlign: "center" }}>
-                Week of {format(week, "MMM d")}
-              </span>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ padding: "2px 8px" }}
-                title="Next week"
-                onClick={() => setPickerWeek(addDays(week, 7))}
-              >
-                ›
-              </button>
-            </div>
-          </div>
-          <div className="load-day-picker">
+          <div className="form-field__label">Ship day</div>
+          <div style={{ display: "flex", alignItems: "stretch", gap: 4, padding: "6px 8px" }}>
+            <button
+              type="button"
+              title="Previous week"
+              aria-label="Previous week"
+              onClick={() => setPickerWeek(addDays(week, -7))}
+              style={weekArrowStyle}
+            >
+              ‹
+            </button>
+            <div className="load-day-picker" style={{ flex: 1 }}>
             {days.map((d) => {
               const on = isSameDay(d, load.shipDate);
               return (
@@ -98,6 +92,16 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
                 </button>
               );
             })}
+            </div>
+            <button
+              type="button"
+              title="Next week"
+              aria-label="Next week"
+              onClick={() => setPickerWeek(addDays(week, 7))}
+              style={weekArrowStyle}
+            >
+              ›
+            </button>
           </div>
         </div>
 
