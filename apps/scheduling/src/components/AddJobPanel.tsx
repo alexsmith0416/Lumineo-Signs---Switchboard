@@ -615,12 +615,13 @@ export default function AddJobPanel({
                   }}
                 >
                   <option value="">— None (manual card) —</option>
+                  {/* Show every load, not just loaded/delivered ones — a freshly
+                      made load is "planned" and still needs to be schedulable. */}
                   {[...loads]
-                    .filter((l) => l.status === "loaded" || l.status === "delivered")
                     .sort((a, b) => a.shipDate.getTime() - b.shipDate.getTime())
                     .map((l) => (
                       <option key={l.id} value={l.id}>
-                        {l.name} · {l.items.length} item{l.items.length === 1 ? "" : "s"}
+                        {l.name} · {l.items.length} item{l.items.length === 1 ? "" : "s"} · {l.status}
                       </option>
                     ))}
                 </select>
