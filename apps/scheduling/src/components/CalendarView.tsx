@@ -243,6 +243,9 @@ export default function CalendarView({
   const [reorderDragId, setReorderDragId] = useState<string | null>(null);
   const [reorderHoverId, setReorderHoverId] = useState<string | null>(null);
   const [headerDropLoc, setHeaderDropLoc] = useState<string | null>(null);
+  // Printable grid element (used by the Print button). Declared with the other
+  // hooks — above the loading/error early returns — to keep hook order stable.
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const applyRosterDrop = (draggedId: string, drop: RosterDropTarget) => {
     const moves = computeRosterReorder([...employees.values()], draggedId, drop);
@@ -439,7 +442,6 @@ export default function CalendarView({
     `${count} ${count === 1 ? kindMeta.resourceLabel.toLowerCase() : kindMeta.resourceLabelPlural.toLowerCase()}`;
 
   const context = { employees, departments, schedule, workHours, overtime };
-  const gridRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="calendar-view">
