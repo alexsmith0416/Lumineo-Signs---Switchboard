@@ -20,10 +20,14 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
   const updateItem = useLoadsStore((s) => s.updateItem);
   const removeItem = useLoadsStore((s) => s.removeItem);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Week shown in the day-picker. Null = follow the load's own week; set by the
+  // ‹ / › arrows so a load can be moved to a different week, not just another day
+  // in the same week.
+  const [pickerWeek, setPickerWeek] = useState<Date | null>(null);
 
   if (!load) return null;
 
-  const week = startOfWeek(load.shipDate, { weekStartsOn: 1 });
+  const week = pickerWeek ?? startOfWeek(load.shipDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
 
   return (
@@ -42,7 +46,39 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
         </div>
 
         <div className="form-field">
-          <div className="form-field__label">Ship day</div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 6,
+            }}
+          >
+            <div className="form-field__label" style={{ margin: 0 }}>Ship day</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: "2px 8px" }}
+                title="Previous week"
+                onClick={() => setPickerWeek(addDays(week, -7))}
+              >
+                ‹
+              </button>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)", minWidth: 90, textAlign: "center" }}>
+                Week of {format(week, "MMM d")}
+              </span>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: "2px 8px" }}
+                title="Next week"
+                onClick={() => setPickerWeek(addDays(week, 7))}
+              >
+                ›
+              </button>
+            </div>
+          </div>
           <div className="load-day-picker">
             {days.map((d) => {
               const on = isSameDay(d, load.shipDate);
