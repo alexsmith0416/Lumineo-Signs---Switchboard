@@ -11,7 +11,7 @@ import { CcoBadge } from "./CcoBadge";
 import { LockIcon } from "./LockIcon";
 import { PrintIcon } from "./PrintIcon";
 import EmployeeAdminPanel from "./EmployeeAdminPanel";
-import JobCard from "./JobCard";
+import JobCard, { cardHasAddons } from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
 import CascadeConfirmDialog, {
@@ -38,6 +38,8 @@ interface CalendarViewProps {
   showWeather?: boolean;
   /** Add billing-aware stats to WeekSummary. */
   showBillingStats?: boolean;
+  /** Show the "Total Value" (sum of jobs' remaining value) stat in WeekSummary. */
+  showTotalValue?: boolean;
   /** External monthly goal (combined across regions, used by WeekSummary). */
   monthlyGoal?: number;
   /** Combined billing reference total (used when a region toggle shows partial billing). */
@@ -124,7 +126,7 @@ function cardContentLines(
       lines += 1; // compact desc is single-line (ellipsized)
     }
   }
-  if (flags.showInvoice || flags.showCrewBadge || flags.showWeather) lines += 1; // addons row
+  if (cardHasAddons(line, flags)) lines += 1; // addons row (only when it has content)
   return lines;
 }
 
@@ -194,6 +196,7 @@ export default function CalendarView({
   showCrewBadge = false,
   showWeather = false,
   showBillingStats = false,
+  showTotalValue = false,
   monthlyGoal,
   combinedBillingThisWeek,
   onNavigate,
@@ -444,6 +447,7 @@ export default function CalendarView({
         weekStart={weekStart}
         resourceLabelPlural={kindMeta.resourceLabelPlural}
         showBillingStats={showBillingStats}
+        showTotalValue={showTotalValue}
         monthlyGoal={monthlyGoal}
         combinedBillingThisWeek={combinedBillingThisWeek}
       />

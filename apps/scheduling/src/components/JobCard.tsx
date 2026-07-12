@@ -24,6 +24,38 @@ function formatMoney(amount: number): string {
   return `$${amount.toLocaleString("en-US")}`;
 }
 
+/** The $ value shown under the $ toggle — BC remaining value, else a stored
+ *  invoice amount. */
+export function cardMoneyValue(line: ScheduleLine): number | null {
+  if (typeof line.remainingValue === "number" && line.remainingValue > 0) return line.remainingValue;
+  if (typeof line.invoiceAmount === "number" && line.invoiceAmount > 0) return line.invoiceAmount;
+  return null;
+}
+
+function hasCrew(line: ScheduleLine): boolean {
+  return !!(
+    line.crewPersons ||
+    line.crewTrucks ||
+    line.crewTrips ||
+    line.crewCranes ||
+    line.crewLifts ||
+    line.crewBuckets
+  );
+}
+
+/** Whether the addons row will render anything — so the card (and its lane
+ *  height) don't reserve an empty line. */
+export function cardHasAddons(
+  line: ScheduleLine,
+  f: { showInvoice?: boolean; showCrewBadge?: boolean; showWeather?: boolean },
+): boolean {
+  return (
+    (!!f.showInvoice && cardMoneyValue(line) != null) ||
+    (!!f.showCrewBadge && hasCrew(line)) ||
+    (!!f.showWeather && !!line.installZip)
+  );
+}
+
 function deptStyle(dept: Department | undefined): { bg: string; text: string } {
   if (!dept) return { bg: "#cccccc", text: "#222222" };
   const bg = dept.color;
@@ -127,26 +159,15 @@ export default function JobCard({
           <div className="job-card__job-desc">{line.jobDescription}</div>
         )}
         {cardDesc && <div className="job-card__desc">{cardDesc}</div>}
-        {(showCrewBadge || showWeather || showInvoice) && (
+        {cardHasAddons(line, { showInvoice, showCrewBadge, showWeather }) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
             {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
-            {showInvoice &&
-              (() => {
-                // Prefer the BC outstanding value (feature: remaining value under $);
-                // fall back to a stored invoice amount.
-                const val =
-                  typeof line.remainingValue === "number" && line.remainingValue > 0
-                    ? line.remainingValue
-                    : typeof line.invoiceAmount === "number" && line.invoiceAmount > 0
-                      ? line.invoiceAmount
-                      : null;
-                return val != null ? (
-                  <span className="job-card__invoice" title="Remaining value (BC)">
-                    {formatMoney(val)}
-                  </span>
-                ) : null;
-              })()}
+            {showInvoice && cardMoneyValue(line) != null && (
+              <span className="job-card__invoice" title="Remaining value (BC)">
+                {formatMoney(cardMoneyValue(line)!)}
+              </span>
+            )}
           </div>
         )}
         <div className="job-card__icons">

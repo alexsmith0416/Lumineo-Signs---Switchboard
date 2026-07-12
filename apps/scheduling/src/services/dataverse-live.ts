@@ -413,9 +413,16 @@ function createLiveInstallDataSource(
 
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
       const { S, org } = await sdk();
-      const res = await S.UpdateRecordWithOrganization(
+      let res = await S.UpdateRecordWithOrganization(
         PREFER_WRITE, ACCEPT, org, SHIP.cards, id, cardToRecord(changes, isNek, false),
       );
+      if (!res.success && installExtraColsAvailable) {
+        // Newer columns may be missing — drop them and retry so the edit sticks.
+        installExtraColsAvailable = false;
+        res = await S.UpdateRecordWithOrganization(
+          PREFER_WRITE, ACCEPT, org, SHIP.cards, id, cardToRecord(changes, isNek, false),
+        );
+      }
       if (!res.success) throw new Error(res.error?.message ?? `UpdateInstallCard(${id}) failed`);
       const body = res.data as Row | undefined;
       const line = body?.crfdf_installcardid ? mapCardRecord(body) : ({ id, ...changes } as ScheduleLine);
@@ -425,8 +432,16 @@ function createLiveInstallDataSource(
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
       const { S, org } = await sdk();
       const id = uuid();
-      const rec = { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) };
-      const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SHIP.cards, rec);
+      let res = await S.CreateRecordWithOrganization(
+        PREFER_WRITE, ACCEPT, org, SHIP.cards, { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) },
+      );
+      if (!res.success && installExtraColsAvailable) {
+        // Newer columns may be missing — drop them and retry so the card saves.
+        installExtraColsAvailable = false;
+        res = await S.CreateRecordWithOrganization(
+          PREFER_WRITE, ACCEPT, org, SHIP.cards, { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) },
+        );
+      }
       if (!res.success) throw new Error(res.error?.message ?? "CreateInstallCard failed");
       const created = { ...line, id };
       cacheAddCard(region, created);
@@ -490,6 +505,10 @@ export const liveNekInstallDataSource = createLiveInstallDataSource(
 // ---------------------------------------------------------------------------
 // Install cards (crfdf_installcard) — map / payload
 // ---------------------------------------------------------------------------
+// Flipped off (for the session) if a write fails because the newer install-card
+// columns aren't provisioned yet — so cards keep saving. Reset on reload.
+let installExtraColsAvailable = true;
+
 function mapCardRecord(r: Row): ScheduleLine {
   const title = s(r.crfdf_name);
   const desc = decodeDesc(s(r.crfdf_notes));
@@ -536,13 +555,17 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;
   if (line.customColor !== undefined) rec.crfdf_customcolor = line.customColor;
   if (line.customTextColor !== undefined) rec.crfdf_customtextcolor = line.customTextColor;
-  if (line.jobNo !== undefined && !line.isCustom) rec.crfdf_jobno = line.jobNo;
-  if (line.installZip !== undefined) rec.crfdf_installzip = line.installZip;
-  if (line.crewPersons !== undefined) rec.crfdf_crewpersons = line.crewPersons;
-  if (line.crewTrucks !== undefined) rec.crfdf_crewtrucks = line.crewTrucks;
-  if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
-  if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
-  if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
+  // The jobno/zip/crew/trips columns are newer; only include them while they're
+  // known to be provisioned, so a card still saves if the schema lags behind.
+  if (installExtraColsAvailable) {
+    if (line.jobNo !== undefined && !line.isCustom) rec.crfdf_jobno = line.jobNo;
+    if (line.installZip !== undefined) rec.crfdf_installzip = line.installZip;
+    if (line.crewPersons !== undefined) rec.crfdf_crewpersons = line.crewPersons;
+    if (line.crewTrucks !== undefined) rec.crfdf_crewtrucks = line.crewTrucks;
+    if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
+    if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
+    if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
+  }
   if (forCreate) rec.crfdf_region = isNek;
   if (line.employeeId) rec["crfdf_employee@odata.bind"] = `/${INSTALL_SET}(${line.employeeId})`;
   if (line.shipmentLoadId) rec["crfdf_shipmentload@odata.bind"] = `/${SHIP.loads}(${line.shipmentLoadId})`;

@@ -29,6 +29,8 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         useStore={useScheduleStore}
         kindMeta={KIND_META.production}
         readOnly={readOnly}
+        showInvoice
+        showTotalValue
         bannerSlot={bannerSlot}
         onNavigate={onNavigate}
         supportsScenarioSandbox={true}

@@ -10,6 +10,8 @@ interface WeekSummaryProps {
   showBillingStats?: boolean;
   monthlyGoal?: number;
   combinedBillingThisWeek?: number;
+  /** Show a "Total Value" stat — sum of each current job's remaining value. */
+  showTotalValue?: boolean;
 }
 
 function formatMoney(amount: number): string {
@@ -25,6 +27,7 @@ export default function WeekSummary({
   showBillingStats = false,
   monthlyGoal,
   combinedBillingThisWeek,
+  showTotalValue = false,
 }: WeekSummaryProps) {
   const stats = useMemo(() => {
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
@@ -66,6 +69,16 @@ export default function WeekSummary({
       }
     }
 
+    // Total value of current jobs = each job's remaining value counted once
+    // (the value is overlaid identically on every line of a job).
+    const valueByJob = new Map<string, number>();
+    for (const line of context.schedule) {
+      const v = line.remainingValue ?? 0;
+      if (v > 0 && !valueByJob.has(line.jobNo)) valueByJob.set(line.jobNo, v);
+    }
+    let totalValue = 0;
+    for (const v of valueByJob.values()) totalValue += v;
+
     const utilization = totalCapacity > 0 ? totalScheduled / totalCapacity : 0;
     return {
       totalCapacity,
@@ -76,6 +89,7 @@ export default function WeekSummary({
       lines: context.schedule.length,
       weekBilling,
       monthBilling,
+      totalValue,
     };
   }, [context, weekStart]);
 
@@ -102,6 +116,13 @@ export default function WeekSummary({
       <Stat label="Capacity" value={`${stats.totalCapacity.toFixed(0)}h`} />
       <Stat label="Jobs" value={String(stats.jobs)} />
       <Stat label="Lines" value={String(stats.lines)} />
+
+      {showTotalValue && (
+        <>
+          <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+          <Stat label="Total Value" value={formatMoney(stats.totalValue)} money />
+        </>
+      )}
 
       {showBillingStats && (
         <>
