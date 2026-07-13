@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { addDays, startOfMonth, endOfMonth, startOfWeek } from "date-fns";
 import { getDayCapacity, effectiveHours, isWeekend } from "../engine/capacity";
 import type { ScheduleContext } from "../engine/types";
+import { cardMoneyValue } from "./JobCard";
 
 interface WeekSummaryProps {
   context: ScheduleContext;
@@ -45,39 +46,35 @@ export default function WeekSummary({
       }
     }
 
-    let weekBilling = 0;
-    let monthBilling = 0;
     const monthStart = startOfMonth(weekStart);
     const monthEnd = endOfMonth(weekStart);
+    const weekEnd = addDays(start, 7);
 
     for (const line of context.schedule) {
       const emp = context.employees.get(line.employeeId);
       if (!emp) continue;
-      const lineStart = line.startDateTime;
-      const lineEnd = line.endDateTime;
-      if (lineEnd >= start && lineStart < addDays(start, 7)) {
+      if (line.endDateTime >= start && line.startDateTime < weekEnd) {
         totalScheduled += effectiveHours(line, emp);
-      }
-      const invoice = line.invoiceAmount ?? 0;
-      if (invoice > 0) {
-        if (lineStart >= start && lineStart < addDays(start, 7)) {
-          weekBilling += invoice;
-        }
-        if (lineStart >= monthStart && lineStart <= monthEnd) {
-          monthBilling += invoice;
-        }
       }
     }
 
-    // Total value of current jobs = each job's remaining value counted once
-    // (the value is overlaid identically on every line of a job).
-    const valueByJob = new Map<string, number>();
+    // $ figures are counted ONCE per job number — a job's value is the same on
+    // every card/line of that job, so multiple cards must not multiply it.
+    const weekJobs = new Map<string, number>();
+    const monthJobs = new Map<string, number>();
+    const allJobs = new Map<string, number>();
     for (const line of context.schedule) {
-      const v = line.remainingValue ?? 0;
-      if (v > 0 && !valueByJob.has(line.jobNo)) valueByJob.set(line.jobNo, v);
+      const v = cardMoneyValue(line) ?? 0;
+      if (v <= 0) continue;
+      const s0 = line.startDateTime;
+      if (!allJobs.has(line.jobNo)) allJobs.set(line.jobNo, v);
+      if (s0 >= start && s0 < weekEnd && !weekJobs.has(line.jobNo)) weekJobs.set(line.jobNo, v);
+      if (s0 >= monthStart && s0 <= monthEnd && !monthJobs.has(line.jobNo)) monthJobs.set(line.jobNo, v);
     }
-    let totalValue = 0;
-    for (const v of valueByJob.values()) totalValue += v;
+    const sumValues = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
+    const weekBilling = sumValues(weekJobs);
+    const monthBilling = sumValues(monthJobs);
+    const totalValue = sumValues(allJobs);
 
     const utilization = totalCapacity > 0 ? totalScheduled / totalCapacity : 0;
     return {

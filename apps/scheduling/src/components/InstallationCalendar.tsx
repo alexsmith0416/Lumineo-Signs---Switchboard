@@ -10,6 +10,7 @@ import {
 } from "../store/scenario-store";
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
+import { cardMoneyValue } from "./JobCard";
 import AddJobPanel from "./AddJobPanel";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
@@ -69,11 +70,14 @@ export default function InstallationCalendar({
   const combinedThisWeek = (() => {
     const ws = region === "WK" ? wkWeekStart : nekWeekStart;
     const wsEnd = new Date(ws.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const sumForRange = (lines: typeof wkSchedule) =>
-      lines
-        .filter((l) => l.startDateTime >= ws && l.startDateTime < wsEnd)
-        .reduce((s, l) => s + (l.invoiceAmount ?? 0), 0);
-    return sumForRange(wkSchedule) + sumForRange(nekSchedule);
+    // Each job counted once (across both regions), by its card money value.
+    const jobs = new Map<string, number>();
+    for (const l of [...wkSchedule, ...nekSchedule]) {
+      if (l.startDateTime < ws || l.startDateTime >= wsEnd) continue;
+      const v = cardMoneyValue(l) ?? 0;
+      if (v > 0 && !jobs.has(l.jobNo)) jobs.set(l.jobNo, v);
+    }
+    return [...jobs.values()].reduce((a, b) => a + b, 0);
   })();
 
   const toolbar = (
