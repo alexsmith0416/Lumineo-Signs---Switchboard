@@ -73,9 +73,8 @@ type Row = Record<string, unknown>;
 // GetOrganizations nor the app context surfaces it.
 const ORG_FALLBACK = "https://org8fa22efd.crm.dynamics.com";
 
-let _svc: typeof import("../generated").MicrosoftDataverseService | null = null;
-let _org = "";
-async function resolveOrg(S: NonNullable<typeof _svc>): Promise<string> {
+type Svc = typeof import("../generated").MicrosoftDataverseService;
+async function resolveOrg(S: Svc): Promise<string> {
   // 1. The connector's own organization list (portable; one entry per env).
   try {
     const r = await S.GetOrganizations();
@@ -95,22 +94,46 @@ async function resolveOrg(S: NonNullable<typeof _svc>): Promise<string> {
   // 3. Known env org URL.
   return ORG_FALLBACK;
 }
-async function sdk() {
-  if (!_svc) {
-    _svc = (await import("../generated")).MicrosoftDataverseService;
-    _org = await resolveOrg(_svc);
+// Single in-flight init promise so EVERY caller awaits the SAME service+org
+// resolution. (The old code assigned the service before the org URL resolved, so
+// a concurrent call — e.g. the burst of reads a resize/reload fires — could grab
+// an empty org and fail with "Invalid organization URL provided".)
+let _sdkPromise: Promise<{ S: Svc; org: string }> | null = null;
+async function sdk(): Promise<{ S: Svc; org: string }> {
+  if (!_sdkPromise) {
+    _sdkPromise = (async () => {
+      const S = (await import("../generated")).MicrosoftDataverseService;
+      const org = await resolveOrg(S);
+      if (!org) throw new Error("Could not resolve Dataverse organization URL");
+      return { S, org };
+    })();
   }
-  return { S: _svc, org: _org };
+  try {
+    return await _sdkPromise;
+  } catch (e) {
+    _sdkPromise = null; // a failed init shouldn't poison every future call
+    throw e;
+  }
 }
+
+const isOrgUrlError = (msg: string) => /organization url/i.test(msg);
 
 async function list(
   entitySet: string,
   opts: { select?: string; filter?: string; orderby?: string } = {},
 ): Promise<Row[]> {
-  const { S, org } = await sdk();
-  const res = await S.ListRecordsWithOrganization(
-    org, entitySet, PREFER_READ, ACCEPT, false, false, opts.select, opts.filter, opts.orderby,
-  );
+  const run = async () => {
+    const { S, org } = await sdk();
+    return S.ListRecordsWithOrganization(
+      org, entitySet, PREFER_READ, ACCEPT, false, false, opts.select, opts.filter, opts.orderby,
+    );
+  };
+  let res = await run();
+  // Belt-and-suspenders: if a stale/empty org slipped through, re-resolve once.
+  if (!res.success && isOrgUrlError(res.error?.message ?? "")) {
+    _sdkPromise = null;
+    res = await run();
+  }
   if (!res.success) throw new Error(res.error?.message ?? `ListRecords(${entitySet}) failed`);
   const data = res.data as { value?: Row[] } | undefined;
   return (data?.value ?? []).map((it) => ((it as { dynamicProperties?: Row }).dynamicProperties ?? it) as Row);
