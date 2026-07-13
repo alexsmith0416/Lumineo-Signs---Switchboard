@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
 import { calculateEndTime } from "../engine/time-walker";
+import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -23,9 +24,13 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const shiftTaskAndCommit = useStore((s) => s.shiftTaskAndCommit);
   const loadWeek = useStore((s) => s.loadWeek);
   const deleteScheduleLine = useStore((s) => s.deleteScheduleLine);
+  const addScheduleLine = useStore((s) => s.addScheduleLine);
 
   // Trips/crew and Install ZIP are install-only widgets.
   const isInstall = dataSource.kind === "installation";
+
+  const [duplicating, setDuplicating] = useState(false);
+  const [dupEmployeeIds, setDupEmployeeIds] = useState<Set<string>>(new Set());
 
   const [overrideHours, setOverrideHours] = useState(
     line.overrideHours?.toString() ?? line.estimatedHours.toString(),
@@ -55,6 +60,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     null,
     employeeId,
     useStore,
+    line.id,
   );
 
   // Editing End sets the duration: binary-search the hours whose engine end lands
@@ -130,6 +136,32 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     setBusy(true);
     try {
       await deleteScheduleLine(line.id);
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Duplicate this card onto one or more other employees (same job, task, hours,
+  // and start day; end recomputed per employee).
+  const onDuplicate = async () => {
+    if (dupEmployeeIds.size === 0) return;
+    setBusy(true);
+    try {
+      const ctx: ScheduleContext = { employees, departments, schedule, workHours, overtime };
+      for (const empId of dupEmployeeIds) {
+        const emp = employees.get(empId);
+        if (!emp) continue;
+        const copy: ScheduleLine = {
+          ...line,
+          id: `line-${line.jobNo || "job"}-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          employeeId: emp.id,
+          departmentId: emp.departmentId,
+          preferredStart: line.startDateTime,
+        };
+        const end = calculateEndTime(line.startDateTime, effectiveHours(copy, emp), emp, ctx, copy.id);
+        await addScheduleLine({ ...copy, endDateTime: end });
+      }
       onClose();
     } finally {
       setBusy(false);
@@ -285,6 +317,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           employeeId={employeeId}
           useStore={useStore}
           currentEnd={line.endDateTime}
+          ignoreLineId={line.id}
         />
         {employee && (
           <div
@@ -316,6 +349,16 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           >
             Delete
           </button>
+          <button
+            className="btn-secondary"
+            disabled={busy}
+            onClick={() => {
+              setDupEmployeeIds(new Set());
+              setDuplicating(true);
+            }}
+          >
+            Duplicate
+          </button>
           <div style={{ flex: 1 }} />
           <button className="btn-secondary" disabled={busy} onClick={onClose}>
             Cancel
@@ -338,6 +381,75 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
         onCancel={() => setConfirmingDelete(false)}
       />
     )}
+    {duplicating && (
+      <div
+        className="modal-scrim"
+        onClick={(e) => {
+          e.stopPropagation();
+          setDuplicating(false);
+        }}
+      >
+        <div
+          className="modal-card"
+          onClick={(e) => e.stopPropagation()}
+          style={{ display: "flex", flexDirection: "column", maxHeight: "80vh" }}
+        >
+          <div className="modal-card__title">Duplicate to employees</div>
+          <div className="modal-card__body" style={{ padding: "0 0 8px" }}>
+            {line.jobNo} · {line.customerName} — pick who else gets this card.
+          </div>
+          <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+            {[...employees.values()]
+              .filter((e) => e.id !== line.employeeId)
+              .map((e) => {
+                const checked = dupEmployeeIds.has(e.id);
+                return (
+                  <label
+                    key={e.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "7px 8px",
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        setDupEmployeeIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(e.id)) next.delete(e.id);
+                          else next.add(e.id);
+                          return next;
+                        })
+                      }
+                    />
+                    <span>{e.name}</span>
+                    {e.truckNumber && (
+                      <span style={{ color: "var(--text-tertiary)", fontSize: 11 }}>{e.truckNumber}</span>
+                    )}
+                  </label>
+                );
+              })}
+          </div>
+          <div className="modal-card__actions">
+            <button className="btn-secondary" disabled={busy} onClick={() => setDuplicating(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              disabled={busy || dupEmployeeIds.size === 0}
+              onClick={onDuplicate}
+            >
+              {busy ? "Duplicating…" : `Duplicate (${dupEmployeeIds.size})`}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
@@ -348,9 +460,10 @@ interface PreviewPaneProps {
   employeeId: string;
   useStore: UseScheduleStore;
   currentEnd: Date;
+  ignoreLineId?: string;
 }
 
-function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd }: PreviewPaneProps) {
+function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd, ignoreLineId }: PreviewPaneProps) {
   const start = startInput ? new Date(startInput) : null;
   const preview = useLivePreview(
     start,
@@ -358,6 +471,7 @@ function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd }: Pr
     null,
     employeeId,
     useStore,
+    ignoreLineId,
   );
   const changedEnd =
     preview.end && preview.end.getTime() !== currentEnd.getTime();
