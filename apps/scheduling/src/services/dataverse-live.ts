@@ -441,7 +441,9 @@ export async function createAssistRow(input: {
   const rec: Row = {
     crfdf_employeename: input.name,
     crfdf_region: input.regionIsNek,
-    crfdf_location: 6, // "Additional Jobs"
+    // Bottom of the region's primary location group (Hutchinson for WK, Olathe
+    // for NEK) — position 9999 sorts them last within it.
+    crfdf_location: (input.regionIsNek ? REGION_LOCATIONS.nek : REGION_LOCATIONS.wk)[0],
     crfdf_positiononschedule: "9999",
     crfdf_assistsourceemp: input.sourceEmpId,
     crfdf_assistweekstart: input.weekStart,
