@@ -31,6 +31,8 @@ interface SidebarProps {
   current?: string;
   /** Switch views (the sidebar drives navigation now). */
   onSelect?: (id: string) => void;
+  /** Label for the "My Schedule" item — "Employee Schedules" for admin/ops. */
+  myScheduleLabel?: string;
 }
 
 function NavItem({
@@ -57,7 +59,7 @@ function NavItem({
   );
 }
 
-export default function Sidebar({ current, onSelect }: SidebarProps) {
+export default function Sidebar({ current, onSelect, myScheduleLabel }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
   return (
@@ -68,7 +70,12 @@ export default function Sidebar({ current, onSelect }: SidebarProps) {
 
       <nav className="sb-nav">
         {TOP.map((i) => (
-          <NavItem key={i.id} item={i} />
+          <NavItem
+            key={i.id}
+            item={i.id === "my-schedule" && myScheduleLabel ? { ...i, label: myScheduleLabel } : i}
+            active={current === i.id}
+            onClick={() => onSelect?.(i.id)}
+          />
         ))}
       </nav>
 

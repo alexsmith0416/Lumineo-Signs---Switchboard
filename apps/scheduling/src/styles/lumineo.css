@@ -1844,3 +1844,183 @@ input, select, textarea {
   }
   .employee-row__name { padding: 4px 4px; font-size: 10px; }
 }
+
+/* ============ My Schedule / Employee Schedules ============ */
+.my-schedule {
+  padding: 4px 2px 24px;
+}
+.my-schedule__switch {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0 10px;
+}
+.my-schedule__switch:hover {
+  color: var(--text-primary);
+}
+.my-schedule__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.my-schedule__who {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.my-schedule__sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.my-schedule__weeknav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.my-schedule__weeknav button {
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border-radius: 4px;
+  min-width: 26px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.my-schedule__days {
+  display: grid;
+  gap: 8px;
+}
+.my-schedule__day {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.my-schedule__day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.my-schedule__day-head span {
+  color: var(--text-secondary);
+}
+.my-schedule__empty {
+  padding: 8px 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.my-schedule__task {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+.my-schedule__task-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-brand);
+}
+.my-schedule__task-hours {
+  color: var(--text-secondary);
+}
+.my-schedule__task-job {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+.my-schedule__task-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.emp-picker {
+  padding: 8px 2px 24px;
+}
+.emp-picker__title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.emp-picker__section {
+  margin-bottom: 14px;
+}
+.emp-picker__group {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+}
+.emp-picker__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.emp-picker__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.emp-picker__item:hover {
+  border-color: var(--accent-brand);
+  background: var(--bg-tertiary);
+}
+.emp-picker__truck {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.emp-browser__tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 4px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+.emp-browser__tab {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.emp-browser__tab--active {
+  background: var(--lumineo-navy);
+  color: #fff;
+  font-weight: 600;
+}

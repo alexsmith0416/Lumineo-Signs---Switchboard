@@ -7,14 +7,17 @@ import InstallationCalendar from "./components/InstallationCalendar";
 import ShippingBoard from "./components/ShippingBoard";
 import ScenarioSandbox from "./components/ScenarioSandbox";
 import MonthlyPlanView from "./components/MonthlyPlanView";
+import MyScheduleScreen from "./components/MyScheduleScreen";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
+import { useCurrentUser } from "./services/current-user";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
-type View = "production" | "installation" | "shipping" | "scenario" | "monthly";
+type View = "my-schedule" | "production" | "installation" | "shipping" | "scenario" | "monthly";
 
 const VIEW_TITLES: Record<View, string> = {
+  "my-schedule": "My Schedule",
   production: "Production Schedule",
   installation: "Installation & Service Schedule",
   shipping: "Shipping Schedule",
@@ -36,6 +39,11 @@ export default function App() {
   const [view, setView] = useState<View>("production");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Admin/ops browse every roster ("Employee Schedules"); shared floor logins
+  // see their own ("My Schedule"). Drives the sidebar item + topbar title.
+  const { role } = useCurrentUser();
+  const myScheduleLabel = role.kind === "admin" ? "Employee Schedules" : "My Schedule";
+
   // Live: load shipping loads + the install-card cache (for the Scheduled badge)
   // from Dataverse once at startup.
   useEffect(() => {
@@ -46,11 +54,19 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar current={view} onSelect={(id) => setView(id as View)} />
+      <Sidebar
+        current={view}
+        onSelect={(id) => setView(id as View)}
+        myScheduleLabel={myScheduleLabel}
+      />
 
       <main className="app-main">
-        <Topbar title={VIEW_TITLES[view]} onMenu={() => setDrawerOpen(true)} />
+        <Topbar
+          title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
+          onMenu={() => setDrawerOpen(true)}
+        />
         <div className="app-content">
+          {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
             <ProductionCalendar onNavigate={(v) => setView(v as View)} />
           )}
