@@ -5,17 +5,22 @@ import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
 import VisibilityMenu from "./VisibilityMenu";
+import ToggleChip from "./ToggleChip";
 
 interface ProductionCalendarProps {
   readOnly?: boolean;
   bannerSlot?: React.ReactNode;
   onNavigate?: (view: string) => void;
+  /** $ values are Admin/Ops only; hides the $ toggle + dollar figures. */
+  canSeeMoney?: boolean;
 }
 
-export default function ProductionCalendar({ readOnly = false, bannerSlot, onNavigate }: ProductionCalendarProps) {
+export default function ProductionCalendar({ readOnly = false, bannerSlot, onNavigate, canSeeMoney = false }: ProductionCalendarProps) {
   const weekStart = useScheduleStore((s) => s.weekStart);
   const employees = useScheduleStore((s) => s.employees);
   const departments = useScheduleStore((s) => s.departments);
+  const [showInvoice, setShowInvoice] = useState(true);
+  const showMoney = canSeeMoney && showInvoice;
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
     employeeId?: string;
@@ -29,8 +34,8 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         useStore={useScheduleStore}
         kindMeta={KIND_META.production}
         readOnly={readOnly}
-        showInvoice
-        showTotalValue
+        showInvoice={showMoney}
+        showTotalValue={showMoney}
         bannerSlot={bannerSlot}
         onNavigate={onNavigate}
         supportsScenarioSandbox={true}
@@ -38,6 +43,15 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
         toolbarExtras={
+          <>
+            {canSeeMoney && (
+              <ToggleChip
+                label="$"
+                active={showInvoice}
+                onClick={() => setShowInvoice((v) => !v)}
+                accent="var(--status-green)"
+              />
+            )}
           <VisibilityMenu
             departments={[...departments.values()]}
             employees={[...employees.values()]}
@@ -66,6 +80,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
             resourceLabel="Employee"
             departmentLabel="Department"
           />
+          </>
         }
         addAction={
           <button

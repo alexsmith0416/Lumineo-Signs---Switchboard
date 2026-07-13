@@ -33,6 +33,8 @@ interface SidebarProps {
   onSelect?: (id: string) => void;
   /** Label for the "My Schedule" item — "Employee Schedules" for admin/ops. */
   myScheduleLabel?: string;
+  /** Monthly Gameplanning is Admin/Ops only. */
+  showMonthly?: boolean;
 }
 
 function NavItem({
@@ -59,9 +61,10 @@ function NavItem({
   );
 }
 
-export default function Sidebar({ current, onSelect, myScheduleLabel }: SidebarProps) {
+export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
+  const views = showMonthly ? VIEWS : VIEWS.filter((v) => v.id !== "monthly");
   return (
     <aside className="switchboard-sidebar" aria-label="Scheduler navigation">
       <div className="sb-brand">
@@ -82,7 +85,7 @@ export default function Sidebar({ current, onSelect, myScheduleLabel }: SidebarP
       <div className="sb-divider" />
 
       <nav className="sb-nav">
-        {VIEWS.map((i) => (
+        {views.map((i) => (
           <NavItem
             key={i.id}
             item={i}

@@ -36,18 +36,23 @@ const VIEW_NAV = [
 ];
 
 export default function App() {
-  const [view, setView] = useState<View>("production");
+  const [view, setView] = useState<View | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Admin/ops browse every roster ("Employee Schedules"); shared floor logins
-  // see their own ("My Schedule"). Drives the sidebar item + topbar title.
-  const { role } = useCurrentUser();
+  // The signed-in user's type drives the landing screen, the sidebar item
+  // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
+  const { role, loading: userLoading, permissions, defaultView, installRegion } = useCurrentUser();
   const myScheduleLabel =
     role.kind === "admin"
       ? "Employee Schedules"
       : role.kind === "sales" || role.kind === "pm"
         ? "My Active Jobs"
         : "My Schedule";
+
+  // Open on the user's default screen once their type resolves.
+  useEffect(() => {
+    if (!userLoading && view === null) setView(defaultView as View);
+  }, [userLoading, defaultView, view]);
 
   // Live: load shipping loads + the install-card cache (for the Scheduled badge)
   // from Dataverse once at startup.
@@ -57,12 +62,24 @@ export default function App() {
     void hydrateInstallCardCache().catch(() => {});
   }, []);
 
+  // Monthly Gameplanning is Admin/Ops only — hide it from both navs.
+  const navItems = permissions.monthly ? VIEW_NAV : VIEW_NAV.filter((v) => v.id !== "monthly");
+
+  if (view === null) {
+    return (
+      <div className="app-shell">
+        <div className="loading">Loading…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
         current={view}
         onSelect={(id) => setView(id as View)}
         myScheduleLabel={myScheduleLabel}
+        showMonthly={permissions.monthly}
       />
 
       <main className="app-main">
@@ -73,21 +90,28 @@ export default function App() {
         <div className="app-content">
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
-            <ProductionCalendar onNavigate={(v) => setView(v as View)} />
+            <ProductionCalendar
+              canSeeMoney={permissions.money}
+              onNavigate={(v) => setView(v as View)}
+            />
           )}
           {view === "installation" && (
-            <InstallationCalendar onNavigate={(v) => setView(v as View)} />
+            <InstallationCalendar
+              canSeeMoney={permissions.money}
+              initialRegion={installRegion}
+              onNavigate={(v) => setView(v as View)}
+            />
           )}
           {view === "shipping" && <ShippingBoard />}
           {view === "scenario" && <ScenarioSandbox />}
-          {view === "monthly" && <MonthlyPlanView />}
+          {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
         </div>
       </main>
 
       <NavDrawer
         open={drawerOpen}
         current={view}
-        items={VIEW_NAV}
+        items={navItems}
         onSelect={(id) => setView(id as View)}
         onClose={() => setDrawerOpen(false)}
       />

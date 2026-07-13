@@ -12,18 +12,28 @@ import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
 import VisibilityMenu from "./VisibilityMenu";
+import ToggleChip from "./ToggleChip";
+
+type Region = "WK" | "NEK";
 
 interface InstallationCalendarProps {
   onNavigate?: (view: string) => void;
+  /** $ values are Admin/Ops only; hides the $ toggle + billing figures. */
+  canSeeMoney?: boolean;
+  /** Which region the board opens on (installer types default to theirs). */
+  initialRegion?: Region;
 }
 
 export const MONTHLY_INSTALL_GOAL = 1_100_000;
 
-type Region = "WK" | "NEK";
-
-export default function InstallationCalendar({ onNavigate }: InstallationCalendarProps = {}) {
-  const [region, setRegion] = useState<Region>("WK");
+export default function InstallationCalendar({
+  onNavigate,
+  canSeeMoney = false,
+  initialRegion = "WK",
+}: InstallationCalendarProps = {}) {
+  const [region, setRegion] = useState<Region>(initialRegion);
   const [showInvoice, setShowInvoice] = useState(true);
+  const showMoney = canSeeMoney && showInvoice;
   const [showWeather, setShowWeather] = useState(true);
   const [showCrew, setShowCrew] = useState(true);
   const [addJobContext, setAddJobContext] = useState<{
@@ -94,7 +104,9 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
           </button>
         ))}
       </div>
-      <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="var(--status-green)" />
+      {canSeeMoney && (
+        <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="var(--status-green)" />
+      )}
       <ToggleChip label="🌤" active={showWeather} onClick={() => setShowWeather((v) => !v)} />
       <ToggleChip label="Crew/Truck" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
       <VisibilityMenu
@@ -137,12 +149,12 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
           title: `Installation & Service Schedule · ${region}`,
         }}
         cardLayout="stacked"
-        showInvoice={showInvoice}
+        showInvoice={showMoney}
         showCrewBadge={showCrew}
         showWeather={showWeather}
-        showBillingStats={showInvoice}
-        monthlyGoal={showInvoice ? MONTHLY_INSTALL_GOAL : undefined}
-        combinedBillingThisWeek={showInvoice ? combinedThisWeek : undefined}
+        showBillingStats={showMoney}
+        monthlyGoal={showMoney ? MONTHLY_INSTALL_GOAL : undefined}
+        combinedBillingThisWeek={showMoney ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}
@@ -175,38 +187,5 @@ export default function InstallationCalendar({ onNavigate }: InstallationCalenda
         />
       )}
     </>
-  );
-}
-
-function ToggleChip({
-  label,
-  active,
-  onClick,
-  accent,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  accent?: string;
-}) {
-  const activeBg = accent ?? "var(--lumineo-navy)";
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "5px 9px",
-        fontSize: 12,
-        fontWeight: 600,
-        background: active ? activeBg : "#fff",
-        color: active ? "#fff" : activeBg,
-        border: `1px solid ${activeBg}`,
-        borderRadius: 5,
-        cursor: "pointer",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-      }}
-      title={`Toggle ${label}`}
-    >
-      {label}
-    </button>
   );
 }
