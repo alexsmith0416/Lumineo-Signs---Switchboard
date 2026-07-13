@@ -1177,6 +1177,18 @@ input, select, textarea {
   text-overflow: clip;
 }
 
+.job-card__pm {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  text-align: left;
+}
+
 /* Custom cards (PTO / Holiday / Maintenance / etc.) — a single bold
    title block on the colored background. */
 .job-card--custom .job-card__custom-title {

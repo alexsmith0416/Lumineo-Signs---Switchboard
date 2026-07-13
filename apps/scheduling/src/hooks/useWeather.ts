@@ -31,7 +31,8 @@ export function useWeather(
     void weatherByZip().then((m) => {
       if (!alive) return;
       const z = zip.trim();
-      setInfo((dateKey ? m.get(`${z}|${dateKey}`) : undefined) ?? m.get(z) ?? null);
+      const dated = dateKey ? m.get(`${z}|${dateKey}`) : undefined;
+      setInfo(dated ?? m.get(z) ?? null);
     });
     return () => {
       alive = false;

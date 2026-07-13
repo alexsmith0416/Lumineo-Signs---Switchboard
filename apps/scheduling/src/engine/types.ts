@@ -62,6 +62,10 @@ export interface ScheduleLine {
   crewBuckets?: number | null;
   installZip?: string | null;
   region?: string | null;
+  /** BC salesperson code for this job (crfdf_bcjobs.crfdf_salespersoncode),
+   *  overlaid by job number at read time. Drives the card's PM line and the
+   *  Sales/PM "Active Jobs" views. */
+  salespersonCode?: string | null;
 
   // Optional: marks a non-BC card used to block out time (PTO, Holiday,
   // Maintenance, etc.). When `isCustom` is true the card uses
