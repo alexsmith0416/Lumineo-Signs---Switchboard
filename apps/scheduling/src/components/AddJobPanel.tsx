@@ -174,71 +174,34 @@ export default function AddJobPanel({
       let cursor = initialStart ? new Date(initialStart) : new Date();
       if (cursor.getHours() < 8) cursor.setHours(8, 0, 0, 0);
 
-      // Installation/service: a job's tasks that land together (e.g. "Travel
-      // for removal" + "removal labor") belong on ONE card — the task names
-      // stack under the job header and their hours sum. Extra cards per task
-      // just clutter the board. Only Production keeps a card per department task.
-      if (kind !== "production") {
-        const first = targets[0]!;
-        const mergedLine: ScheduleLine = {
-          id: "tmp",
-          jobNo: selected.job.jobNo,
-          customerName: selected.job.customerName,
-          jobDescription: selected.job.description,
-          planningLineDescription: targets.map((t) => t.description).join("\n"),
-          startDateTime: cursor,
-          endDateTime: cursor,
-          estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
-          overrideHours: null,
-          employeeId: initialEmployeeId,
-          departmentId: emp.departmentId,
-          customerDueDate: safeDate(selected.job.promisedDate),
-          isLocked: false,
-          jobSequence: first.lineNo,
-          installZip: selected.job.shipToZip || null,
-        };
-        const end = calculateEndTime(cursor, effectiveHours(mergedLine, emp), emp, ctxForEngine);
-        await addScheduleLine({
-          ...mergedLine,
-          id: `line-${selected.job.jobNo}-${first.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          endDateTime: end,
-        });
-        onClose();
-        return;
-      }
-
-      for (const line of targets) {
-        const tempLine: ScheduleLine = {
-          id: "tmp",
-          jobNo: selected.job.jobNo,
-          customerName: selected.job.customerName,
-          jobDescription: selected.job.description,
-          planningLineDescription: line.description,
-          startDateTime: cursor,
-          endDateTime: cursor,
-          estimatedHours: line.estimatedHours,
-          overrideHours: null,
-          employeeId: initialEmployeeId,
-          departmentId: emp.departmentId,
-          customerDueDate: safeDate(selected.job.promisedDate),
-          isLocked: false,
-          jobSequence: line.lineNo,
-        };
-        const end = calculateEndTime(
-          cursor,
-          effectiveHours(tempLine, emp),
-          emp,
-          ctxForEngine,
-        );
-
-        const newLine: ScheduleLine = {
-          ...tempLine,
-          id: `line-${selected.job.jobNo}-${line.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          endDateTime: end,
-        };
-        await addScheduleLine(newLine);
-        cursor = new Date(end);
-      }
+      // A job's selected tasks belong on ONE card — the task names stack under
+      // the job header and their hours sum. Since a cell click targets a single
+      // employee, Production merges here just like Installation (previously
+      // Production made a separate card per task).
+      const first = targets[0]!;
+      const mergedLine: ScheduleLine = {
+        id: "tmp",
+        jobNo: selected.job.jobNo,
+        customerName: selected.job.customerName,
+        jobDescription: selected.job.description,
+        planningLineDescription: targets.map((t) => t.description).join("\n"),
+        startDateTime: cursor,
+        endDateTime: cursor,
+        estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
+        overrideHours: null,
+        employeeId: initialEmployeeId,
+        departmentId: emp.departmentId,
+        customerDueDate: safeDate(selected.job.promisedDate),
+        isLocked: false,
+        jobSequence: first.lineNo,
+        installZip: selected.job.shipToZip || null,
+      };
+      const end = calculateEndTime(cursor, effectiveHours(mergedLine, emp), emp, ctxForEngine);
+      await addScheduleLine({
+        ...mergedLine,
+        id: `line-${selected.job.jobNo}-${first.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        endDateTime: end,
+      });
       onClose();
       return;
     }
@@ -247,20 +210,29 @@ export default function AddJobPanel({
     if (!predictedSlots) return;
     const validSlots = predictedSlots.filter((s) => s.employeeId && s.departmentId);
 
-    // Installation/service: merge the job's tasks into one card (see the
-    // cell-click flow above). Production keeps a card per department task.
-    if (kind !== "production" && validSlots.length > 0) {
-      const first = validSlots[0]!;
+    // Merge a job's tasks that land on the SAME employee + department into one
+    // card (summed hours, stacked task names). Installation lands a job's tasks
+    // together, so they collapse to one card; Production tasks that route to
+    // different departments still get a card each.
+    const groups = new Map<string, typeof validSlots>();
+    for (const slot of validSlots) {
+      const key = `${slot.employeeId}|${slot.departmentId}`;
+      const g = groups.get(key);
+      if (g) g.push(slot);
+      else groups.set(key, [slot]);
+    }
+    for (const group of groups.values()) {
+      const first = group[0]!;
       const emp = employees.get(first.employeeId!);
       const mergedLine: ScheduleLine = {
         id: "tmp",
         jobNo: selected.job.jobNo,
         customerName: selected.job.customerName,
         jobDescription: selected.job.description,
-        planningLineDescription: validSlots.map((s) => s.description).join("\n"),
+        planningLineDescription: group.map((s) => s.description).join("\n"),
         startDateTime: first.start,
         endDateTime: first.start,
-        estimatedHours: validSlots.reduce((sum, s) => sum + s.estimatedHours, 0),
+        estimatedHours: group.reduce((sum, s) => sum + s.estimatedHours, 0),
         overrideHours: null,
         employeeId: first.employeeId!,
         departmentId: first.departmentId!,
@@ -277,28 +249,6 @@ export default function AddJobPanel({
         id: `line-${selected.job.jobNo}-${first.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         endDateTime: end,
       });
-      onClose();
-      return;
-    }
-
-    for (const slot of validSlots) {
-      const newLine: ScheduleLine = {
-        id: `line-${selected.job.jobNo}-${slot.lineNo}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        jobNo: selected.job.jobNo,
-        customerName: selected.job.customerName,
-        jobDescription: selected.job.description,
-        planningLineDescription: slot.description,
-        startDateTime: slot.start,
-        endDateTime: slot.end,
-        estimatedHours: slot.estimatedHours,
-        overrideHours: null,
-        employeeId: slot.employeeId!,
-        departmentId: slot.departmentId!,
-        customerDueDate: safeDate(selected.job.promisedDate),
-        isLocked: false,
-        jobSequence: slot.lineNo,
-      };
-      await addScheduleLine(newLine);
     }
     onClose();
   };
