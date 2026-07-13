@@ -1,4 +1,4 @@
-import LumineoLogo from "./LumineoLogo";
+import LumineoWordmark from "./LumineoWordmark";
 import { SidebarIcon, type SidebarIconName } from "./SidebarIcon";
 import { useTheme } from "../theme";
 
@@ -63,13 +63,7 @@ export default function Sidebar({ current, onSelect }: SidebarProps) {
   return (
     <aside className="switchboard-sidebar" aria-label="Scheduler navigation">
       <div className="sb-brand">
-        <div className="sb-brand__logo">
-          <LumineoLogo size={44} color="#EE0800" />
-        </div>
-        <div className="sb-brand__text">
-          <span className="sb-brand__name">LUMINEO SIGNS</span>
-          <span className="sb-brand__sub">SWITCHBOARD</span>
-        </div>
+        <LumineoWordmark className="sb-brand__wordmark" />
       </div>
 
       <nav className="sb-nav">
