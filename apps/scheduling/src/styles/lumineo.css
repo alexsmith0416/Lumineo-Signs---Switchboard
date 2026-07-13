@@ -183,6 +183,7 @@ input, select, textarea {
   display: block;
   width: 85%;
   height: auto;
+  margin: 0 auto;
 }
 
 .sb-caption {
