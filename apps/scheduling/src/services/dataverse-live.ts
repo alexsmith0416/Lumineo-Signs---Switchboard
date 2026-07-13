@@ -898,6 +898,97 @@ export function salespersonByJobNo(): Promise<Map<string, string>> {
   return salespersonPromise;
 }
 
+// --- Sales/PM "Active Jobs" ---------------------------------------------------
+// Every job currently scheduled anywhere (Production, Installation, Shipping),
+// from a given date forward, with where it sits so Sales/PM can see their book.
+export interface ActivePlacement {
+  kind: "production" | "installation" | "shipping";
+  label: string;
+  date: Date;
+}
+export interface ActiveJob {
+  jobNo: string;
+  customerName: string;
+  salespersonCode: string | null;
+  earliest: Date;
+  placements: ActivePlacement[];
+}
+
+export async function fetchActiveJobs(from: Date): Promise<ActiveJob[]> {
+  const fromIso = from.toISOString();
+  const [prodRows, deptRows, cardRows, loads, meta, salesByJob] = await Promise.all([
+    list(SET.lines, { filter: `crfdf_startdatetime ge ${fromIso}`, orderby: "crfdf_startdatetime asc" }),
+    list(SET.departments, { select: "crfdf_department1id,crfdf_departmentname" }),
+    list(SHIP.cards, {}),
+    fetchShipmentLoads(),
+    bcJobMetaByJobNo(),
+    salespersonByJobNo(),
+  ]);
+
+  const deptName = new Map<string, string>();
+  for (const d of deptRows) deptName.set(s(d.crfdf_department1id), s(d.crfdf_departmentname, "Production"));
+
+  type Acc = { customerName: string; placements: Map<string, ActivePlacement> };
+  const jobs = new Map<string, Acc>();
+  const addPlacement = (jobNo: string, customer: string, p: ActivePlacement) => {
+    let acc = jobs.get(jobNo);
+    if (!acc) {
+      acc = { customerName: customer, placements: new Map() };
+      jobs.set(jobNo, acc);
+    } else if (!acc.customerName && customer) acc.customerName = customer;
+    // Collapse repeats (e.g. many production lines) to one chip, earliest date.
+    const key = `${p.kind}|${p.label}`;
+    const existing = acc.placements.get(key);
+    if (!existing || p.date < existing.date) acc.placements.set(key, p);
+  };
+
+  for (const r of prodRows) {
+    const l = mapLine(r);
+    if (!l.jobNo || l.isCustom) continue;
+    const dn = l.departmentId ? deptName.get(l.departmentId) : undefined;
+    addPlacement(l.jobNo, l.customerName, {
+      kind: "production",
+      label: dn ? `Production · ${dn}` : "Production",
+      date: l.startDateTime,
+    });
+  }
+  for (const r of cardRows) {
+    const c = mapCardRecord(r);
+    if (!c.jobNo || c.isCustom || c.shipmentLoadId || c.startDateTime < from) continue;
+    addPlacement(c.jobNo, c.customerName, {
+      kind: "installation",
+      label: c.region ? `Installation · ${c.region}` : "Installation",
+      date: c.startDateTime,
+    });
+  }
+  for (const load of loads) {
+    if (load.shipDate < from) continue;
+    for (const it of load.items) {
+      if (!it.jobNo) continue;
+      addPlacement(it.jobNo, it.customerName, {
+        kind: "shipping",
+        label: `Shipping · ${load.name}`,
+        date: load.shipDate,
+      });
+    }
+  }
+
+  const out: ActiveJob[] = [];
+  for (const [jobNo, acc] of jobs) {
+    const placements = [...acc.placements.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+    if (placements.length === 0) continue;
+    out.push({
+      jobNo,
+      customerName: meta.get(jobNo)?.name || acc.customerName || jobNo,
+      salespersonCode: salesByJob.get(jobNo) ?? null,
+      earliest: placements[0].date,
+      placements,
+    });
+  }
+  out.sort((a, b) => a.earliest.getTime() - b.earliest.getTime());
+  return out;
+}
+
 // Session cache: install ZIP → current weather (lum_weathercaches, keyed by
 // lum_location = ZIP; refreshed by the WeatherCache_Refresh flow).
 export interface WeatherInfo {

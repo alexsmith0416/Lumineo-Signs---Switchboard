@@ -3,6 +3,9 @@ import { useCurrentUser, type EmployeeGroup } from "../services/current-user";
 import { ADMIN_TABS, FLOOR_GROUPS, GROUP_LABELS, GROUP_STORES } from "../services/employee-groups";
 import { useMyScheduleSelection } from "../hooks/useMyScheduleSelection";
 import MySchedule from "./MySchedule";
+import { PersonalActiveJobs, SalesPmBrowser } from "./MyActiveJobs";
+
+type AdminTab = EmployeeGroup | "sales-pm";
 
 /** A clickable roster of one group's employees. */
 function EmployeeList({
@@ -37,9 +40,10 @@ function EmployeeList({
 
 /** Admin / ops view: browse every roster's employees and open their schedule. */
 function EmployeeSchedules() {
-  const [tab, setTab] = useState<EmployeeGroup>("production");
+  const [tab, setTab] = useState<AdminTab>("production");
   const [picked, setPicked] = useState<{ group: EmployeeGroup; employeeId: string } | null>(null);
 
+  // A picked employee (only set from a roster tab) opens their schedule.
   if (picked) {
     return (
       <MySchedule
@@ -55,9 +59,14 @@ function EmployeeSchedules() {
     );
   }
 
+  const goTab = (t: AdminTab) => {
+    setPicked(null);
+    setTab(t);
+  };
+
   return (
     <div className="emp-browser">
-      <div className="emp-browser__tabs" role="tablist" aria-label="Employee roster">
+      <div className="emp-browser__tabs" role="tablist" aria-label="Schedules">
         {ADMIN_TABS.map((g) => (
           <button
             key={g}
@@ -65,17 +74,30 @@ function EmployeeSchedules() {
             role="tab"
             aria-selected={tab === g}
             className={`emp-browser__tab${tab === g ? " emp-browser__tab--active" : ""}`}
-            onClick={() => setTab(g)}
+            onClick={() => goTab(g)}
           >
             {GROUP_LABELS[g]}
           </button>
         ))}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "sales-pm"}
+          className={`emp-browser__tab${tab === "sales-pm" ? " emp-browser__tab--active" : ""}`}
+          onClick={() => goTab("sales-pm")}
+        >
+          Sales / PM
+        </button>
       </div>
-      <EmployeeList
-        key={tab}
-        group={tab}
-        onPick={(employeeId) => setPicked({ group: tab, employeeId })}
-      />
+      {tab === "sales-pm" ? (
+        <SalesPmBrowser />
+      ) : (
+        <EmployeeList
+          key={tab}
+          group={tab}
+          onPick={(employeeId) => setPicked({ group: tab as EmployeeGroup, employeeId })}
+        />
+      )}
     </div>
   );
 }
@@ -92,6 +114,8 @@ export default function MyScheduleScreen() {
   if (loading) return <div className="loading">Loading…</div>;
 
   if (role.kind === "admin") return <EmployeeSchedules />;
+  if (role.kind === "sales") return <PersonalActiveJobs code={role.code} type="sales" />;
+  if (role.kind === "pm") return <PersonalActiveJobs code={role.code} type="pm" />;
 
   // Floor login — pick a name (once per device), then show that person's week.
   const groups = FLOOR_GROUPS[role.group];

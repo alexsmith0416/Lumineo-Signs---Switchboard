@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { personByCode } from "./sales-pm";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -20,12 +21,23 @@ export const SHARED_FLOOR_ACCOUNTS: Record<string, FloorGroup> = {};
 
 export type Role =
   | { kind: "floor"; group: FloorGroup }
+  | { kind: "sales"; code: string }
+  | { kind: "pm"; code: string }
   | { kind: "admin" };
 
-/** Classify a signed-in UPN/email as a shared floor login or an admin/ops user. */
+/**
+ * Classify a signed-in UPN/email: shared floor login, Sales/PM person, or
+ * admin/ops. Sales/PM people sign in with <code>@lumineosigns.com — the email
+ * local-part IS their BC salesperson code (ccarson@ → CCARSON).
+ */
 export function resolveRole(upn: string | undefined): Role {
-  const group = upn ? SHARED_FLOOR_ACCOUNTS[upn.trim().toLowerCase()] : undefined;
-  return group ? { kind: "floor", group } : { kind: "admin" };
+  const email = upn?.trim().toLowerCase();
+  const group = email ? SHARED_FLOOR_ACCOUNTS[email] : undefined;
+  if (group) return { kind: "floor", group };
+  const person = personByCode(email?.split("@")[0]);
+  if (person?.type === "sales") return { kind: "sales", code: person.code };
+  if (person?.type === "pm") return { kind: "pm", code: person.code };
+  return { kind: "admin" };
 }
 
 export interface CurrentUser {

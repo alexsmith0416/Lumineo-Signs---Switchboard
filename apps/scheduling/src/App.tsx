@@ -42,7 +42,12 @@ export default function App() {
   // Admin/ops browse every roster ("Employee Schedules"); shared floor logins
   // see their own ("My Schedule"). Drives the sidebar item + topbar title.
   const { role } = useCurrentUser();
-  const myScheduleLabel = role.kind === "admin" ? "Employee Schedules" : "My Schedule";
+  const myScheduleLabel =
+    role.kind === "admin"
+      ? "Employee Schedules"
+      : role.kind === "sales" || role.kind === "pm"
+        ? "My Active Jobs"
+        : "My Schedule";
 
   // Live: load shipping loads + the install-card cache (for the Scheduled badge)
   // from Dataverse once at startup.
