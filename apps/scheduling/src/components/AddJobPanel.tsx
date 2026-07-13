@@ -36,7 +36,7 @@ interface AddJobPanelProps {
   useStore?: UseScheduleStore;
 }
 
-type Mode = "single" | "multi" | "auto";
+type Mode = "single" | "multi" | "auto" | "custom-task";
 type CardKind = "bc" | "custom";
 
 export default function AddJobPanel({
@@ -53,6 +53,11 @@ export default function AddJobPanel({
   // commit every line that shares it. The row index is unique per task.
   const [checkedIdx, setCheckedIdx] = useState<Set<number>>(new Set());
   const [singleIdx, setSingleIdx] = useState<number | null>(null);
+  // Custom task on a BC job — for jobs that have no BC planning line and so
+  // otherwise can't be scheduled.
+  const [customTaskDesc, setCustomTaskDesc] = useState("");
+  const [customTaskHours, setCustomTaskHours] = useState(8);
+  const [customTaskEmployeeId, setCustomTaskEmployeeId] = useState<string>(initialEmployeeId ?? "");
 
   // Custom card state
   const [cardKind, setCardKind] = useState<CardKind>("bc");
@@ -114,7 +119,8 @@ export default function AddJobPanel({
       return new Set<number>(singleIdx !== null ? [singleIdx] : []);
     }
     if (mode === "multi") return new Set<number>(checkedIdx);
-    return new Set<number>(visibleLines.map((_, i) => i));
+    if (mode === "auto") return new Set<number>(visibleLines.map((_, i) => i));
+    return new Set<number>(); // custom-task: no planning lines involved
   }, [selected, visibleLines, mode, singleIdx, checkedIdx]);
 
   const predictedSlots = useMemo(() => {
@@ -250,6 +256,51 @@ export default function AddJobPanel({
         endDateTime: end,
       });
     }
+    onClose();
+  };
+
+  // Schedule a user-entered task on the selected BC job (job keeps its number /
+  // customer / ship-to; the task text + hours come from the form). Lets a job
+  // with no BC planning line still be put on the board.
+  const commitCustomTask = async () => {
+    if (!selected) return;
+    const emp = customTaskEmployeeId ? employees.get(customTaskEmployeeId) : undefined;
+    const hours = Number(customTaskHours);
+    if (!emp || !customTaskDesc.trim() || Number.isNaN(hours) || hours <= 0) return;
+
+    let cursor = initialStart ? new Date(initialStart) : new Date();
+    if (cursor.getHours() < 8) cursor.setHours(8, 0, 0, 0);
+
+    const ctxForEngine = {
+      employees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+    const base: ScheduleLine = {
+      id: "tmp",
+      jobNo: selected.job.jobNo,
+      customerName: selected.job.customerName,
+      jobDescription: selected.job.description,
+      planningLineDescription: customTaskDesc.trim(),
+      startDateTime: cursor,
+      endDateTime: cursor,
+      estimatedHours: hours,
+      overrideHours: null,
+      employeeId: emp.id,
+      departmentId: emp.departmentId,
+      customerDueDate: safeDate(selected.job.promisedDate),
+      isLocked: false,
+      jobSequence: 0,
+      installZip: selected.job.shipToZip || null,
+    };
+    const end = calculateEndTime(cursor, effectiveHours(base, emp), emp, ctxForEngine);
+    await addScheduleLine({
+      ...base,
+      id: `line-${selected.job.jobNo}-custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      endDateTime: end,
+    });
     onClose();
   };
 
@@ -427,11 +478,70 @@ export default function AddJobPanel({
                   style={{ flex: 1 }}
                   onClick={() => setMode("auto")}
                 >
-                  Auto-schedule
+                  Auto
+                </button>
+                <button
+                  className={mode === "custom-task" ? "btn-primary" : "btn-secondary"}
+                  style={{ flex: 1 }}
+                  onClick={() => setMode("custom-task")}
+                >
+                  Custom task
                 </button>
               </div>
 
+              {mode === "custom-task" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                    Add a task to this job manually — use this when the job has no BC
+                    planning line to schedule.
+                  </div>
+                  <div>
+                    <div className="form-field__label">Task description</div>
+                    <textarea
+                      className="form-field__input"
+                      rows={2}
+                      value={customTaskDesc}
+                      onChange={(e) => setCustomTaskDesc(e.target.value)}
+                      placeholder="e.g. Field measure / install labor"
+                      style={{ resize: "vertical", fontFamily: "inherit", width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div className="form-field__label">Hours</div>
+                      <input
+                        className="form-field__input"
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={customTaskHours}
+                        onChange={(e) => setCustomTaskHours(Number(e.target.value))}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                    <div style={{ flex: 2 }}>
+                      <div className="form-field__label">Employee</div>
+                      <select
+                        className="form-field__select"
+                        value={customTaskEmployeeId}
+                        onChange={(e) => setCustomTaskEmployeeId(e.target.value)}
+                        style={{ width: "100%" }}
+                      >
+                        <option value="">Select…</option>
+                        {[...employees.values()].map((e) => (
+                          <option key={e.id} value={e.id}>{e.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {visibleLines.length === 0 && (
+                  <li style={{ fontSize: 11, color: "var(--text-secondary)", padding: 8 }}>
+                    No BC planning lines for this job. Use “Custom task” to add one.
+                  </li>
+                )}
                 {visibleLines.map((line, idx) => {
                   const dept = line.departmentId ? departments.get(line.departmentId) : undefined;
                   const isCurrent = targetIdx.has(idx);
@@ -480,6 +590,7 @@ export default function AddJobPanel({
                   );
                 })}
               </ul>
+              )}
             </div>
           </>
         )}
@@ -814,15 +925,26 @@ export default function AddJobPanel({
             style={{ flex: 1 }}
             disabled={
               cardKind === "bc"
-                ? !selected ||
-                  (mode === "single" && singleIdx === null) ||
-                  (mode === "multi" && checkedIdx.size === 0)
+                ? mode === "custom-task"
+                  ? !selected ||
+                    !customTaskDesc.trim() ||
+                    !customTaskEmployeeId ||
+                    Number(customTaskHours) <= 0
+                  : !selected ||
+                    (mode === "single" && singleIdx === null) ||
+                    (mode === "multi" && checkedIdx.size === 0)
                 : !customTitle ||
                   (customScope === "resource" && !customEmployeeId) ||
                   (customScope === "department" && !customDeptId) ||
                   customHours <= 0
             }
-            onClick={cardKind === "bc" ? commit : commitCustom}
+            onClick={
+              cardKind === "bc"
+                ? mode === "custom-task"
+                  ? commitCustomTask
+                  : commit
+                : commitCustom
+            }
           >
             Schedule
           </button>
