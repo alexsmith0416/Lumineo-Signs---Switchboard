@@ -182,7 +182,7 @@
                       "parameters": {
                         "entityName": "crfdf_bcjobs",
                         "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
-                        "item/crfdf_appjobname": "@coalesce(\r\n  items('Apply_to_each_BC_Job')?['crfdf_customername'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_description'],\r\n  items('Apply_to_each_BC_Job')?['crfdf_jobnumber']\r\n)",
+                        "item/crfdf_appjobname": "@coalesce(items('Apply_to_each_BC_Job')?['crfdf_customername'], items('Apply_to_each_BC_Job')?['crfdf_jobnumber'])",
                         "item/crfdf_saleslinefound": false
                       },
                       "host": {
@@ -273,7 +273,7 @@
                       "parameters": {
                         "entityName": "crfdf_bcjobs",
                         "recordId": "@items('Apply_to_each_BC_Job')?['crfdf_bcjobid']",
-                        "item/crfdf_appjobname": "@coalesce(outputs('Compose_ShipToName'), items('Apply_to_each_BC_Job')?['crfdf_customername'], items('Apply_to_each_BC_Job')?['crfdf_description'], items('Apply_to_each_BC_Job')?['crfdf_jobnumber'])",
+                        "item/crfdf_appjobname": "@coalesce(outputs('Compose_ShipToName'), items('Apply_to_each_BC_Job')?['crfdf_customername'], items('Apply_to_each_BC_Job')?['crfdf_jobnumber'])",
                         "item/crfdf_shiptozip": "@outputs('Compose_ShipToZip')",
                         "item/crfdf_remainingbalance": "@outputs('Compose_RemainingBalance')",
                         "item/crfdf_salesdocumentno": "@outputs('Compose_SalesDocumentNo')",

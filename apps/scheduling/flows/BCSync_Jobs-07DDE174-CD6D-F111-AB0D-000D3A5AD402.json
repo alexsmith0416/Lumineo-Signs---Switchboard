@@ -86,7 +86,7 @@
                   "entityName": "crfdf_bcjobs",
                   "recordId": "@first(outputs('List_rows')?['body/value'])?['crfdf_bcjobid']",
                   "item/crfdf_billtocustomerno": "@items('Apply_to_each')?['billToCustomerNo']",
-                  "item/crfdf_customername": "@coalesce(first(body('Filter_array'))?['crfdf_customername'], items('Apply_to_each')?['description'])",
+                  "item/crfdf_customername": "@coalesce(first(body('Filter_array'))?['crfdf_customername'], items('Apply_to_each')?['no'])",
                   "item/crfdf_description": "@items('Apply_to_each')?['description']",
                   "item/crfdf_jobnumber": "@items('Apply_to_each')?['no']",
                   "item/crfdf_promiseddate": "@items('Apply_to_each')?['endingDate']",
@@ -114,7 +114,7 @@
                 "parameters": {
                   "entityName": "crfdf_bcjobs",
                   "item/crfdf_billtocustomerno": "@items('Apply_to_each')?['billToCustomerNo']",
-                  "item/crfdf_customername": "@coalesce(first(body('Filter_array'))?['crfdf_customername'], items('Apply_to_each')?['description'])",
+                  "item/crfdf_customername": "@coalesce(first(body('Filter_array'))?['crfdf_customername'], items('Apply_to_each')?['no'])",
                   "item/crfdf_description": "@items('Apply_to_each')?['description']",
                   "item/crfdf_jobnumber": "@items('Apply_to_each')?['no']",
                   "item/crfdf_promiseddate": "@items('Apply_to_each')?['endingDate']",
