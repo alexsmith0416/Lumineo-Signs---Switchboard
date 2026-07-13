@@ -9,6 +9,7 @@ import { shipmentCardDesc, shipmentSummary } from "../shipping/types";
 import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
+import { bcJobUrl, sharepointJobUrl } from "../services/job-links";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -124,6 +125,9 @@ export default function JobCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | undefined>(undefined);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  // Right-click links are only meaningful for a real BC job card.
+  const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
 
   const open = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -144,6 +148,16 @@ export default function JobCard({
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={open}
         onMouseLeave={close}
+        onContextMenu={
+          canOpenLinks
+            ? (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                close();
+                setMenu({ x: e.clientX, y: e.clientY });
+              }
+            : undefined
+        }
       >
         {line.isCustom ? (
           <div className="job-card__custom-title">
@@ -188,6 +202,49 @@ export default function JobCard({
             deptStyle={style}
             showWeather={showWeather}
           />,
+          document.body,
+        )}
+      {menu &&
+        createPortal(
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 300 }}
+              onClick={() => setMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setMenu(null);
+              }}
+            />
+            <div
+              className="job-context-menu"
+              style={{
+                position: "fixed",
+                top: Math.min(menu.y, window.innerHeight - 96),
+                left: Math.min(menu.x, window.innerWidth - 220),
+                zIndex: 301,
+              }}
+            >
+              <div className="job-context-menu__head">{line.jobNo}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(bcJobUrl(line.jobNo), "_blank", "noopener");
+                  setMenu(null);
+                }}
+              >
+                Open Project
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(sharepointJobUrl(line.jobNo), "_blank", "noopener");
+                  setMenu(null);
+                }}
+              >
+                Open SharePoint Folder
+              </button>
+            </div>
+          </>,
           document.body,
         )}
     </>

@@ -1201,6 +1201,38 @@ input, select, textarea {
   text-overflow: clip;
 }
 
+.job-context-menu {
+  min-width: 200px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.job-context-menu__head {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 6px 8px 4px;
+}
+.job-context-menu button {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.job-context-menu button:hover {
+  background: var(--bg-tertiary);
+}
+
 .job-card__pm {
   font-size: 10px;
   font-weight: 600;
