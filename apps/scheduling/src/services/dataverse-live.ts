@@ -419,10 +419,14 @@ export async function fetchAssistRows(): Promise<AssistAssignment[]> {
       regionIsNek: Boolean(r.crfdf_region),
       sourceEmpId: s(r.crfdf_assistsourceemp).trim(),
       weekStart: s(r.crfdf_assistweekstart).slice(0, 10),
-      days: s(r.crfdf_assistdays)
-        .split(",")
-        .map((x) => Number(x.trim()))
-        .filter((x) => !Number.isNaN(x)),
+      // Empty (all week) must stay []; "".split(",") is [""] which Number()s to
+      // 0, so guard the empty case before splitting.
+      days: s(r.crfdf_assistdays).trim()
+        ? s(r.crfdf_assistdays)
+            .split(",")
+            .map((x) => Number(x.trim()))
+            .filter((x) => !Number.isNaN(x))
+        : [],
     }));
 }
 
