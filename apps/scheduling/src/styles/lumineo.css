@@ -1881,6 +1881,25 @@ input, select, textarea {
   color: var(--text-secondary);
   margin-top: 2px;
 }
+.my-schedule__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.my-schedule__print {
+  border: 1px solid var(--border);
+  background: var(--lumineo-navy);
+  color: #fff;
+  border-radius: 4px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.my-schedule__print:hover {
+  filter: brightness(1.08);
+}
 .my-schedule__weeknav {
   display: flex;
   align-items: center;

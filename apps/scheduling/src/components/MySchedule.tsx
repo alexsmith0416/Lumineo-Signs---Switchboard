@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import type { EmployeeGroup } from "../services/current-user";
 import { GROUP_STORES } from "../services/employee-groups";
+import { printMarkup } from "../services/print";
 
 interface MyScheduleProps {
   group: EmployeeGroup;
@@ -12,8 +13,8 @@ interface MyScheduleProps {
 
 /**
  * One employee's personal weekly schedule — the jobs/tasks assigned to them,
- * grouped by day. Reads the roster store for the given group. Week navigation
- * moves the shared roster week (same data the main calendar uses).
+ * grouped by day. No times or hours are shown. Week navigation moves the shared
+ * roster week (same data the main calendar uses); Print outputs just the agenda.
  */
 export default function MySchedule({ group, employeeId, lead }: MyScheduleProps) {
   const store = GROUP_STORES[group];
@@ -21,6 +22,7 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
   const schedule = store((s) => s.schedule);
   const weekStart = store((s) => s.weekStart);
   const loadWeek = store((s) => s.loadWeek);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Make sure this roster has been loaded at least once.
   useEffect(() => {
@@ -39,7 +41,14 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
     [schedule, employeeId],
   );
 
-  const totalHours = mine.reduce((sum, l) => sum + (l.overrideHours ?? l.estimatedHours), 0);
+  const onPrint = () => {
+    const name = emp?.name ?? "Employee";
+    printMarkup(
+      `${name} — Schedule`,
+      `<div class="print-doc__title">${name} — Week of ${format(week, "MMM d, yyyy")}</div>` +
+        (printRef.current?.outerHTML ?? ""),
+    );
+  };
 
   return (
     <div className="my-schedule">
@@ -49,17 +58,22 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
           <div className="my-schedule__who">{emp?.name ?? "Employee"}</div>
           <div className="my-schedule__sub">
             {emp?.truckNumber ? `${emp.truckNumber} · ` : ""}
-            {mine.length} task{mine.length === 1 ? "" : "s"} · {totalHours.toFixed(1)}h this week
+            {mine.length} task{mine.length === 1 ? "" : "s"} this week
           </div>
         </div>
-        <div className="my-schedule__weeknav">
-          <button type="button" onClick={() => void loadWeek(addDays(week, -7))} aria-label="Previous week">‹</button>
-          <span>Week of {format(week, "MMM d")}</span>
-          <button type="button" onClick={() => void loadWeek(addDays(week, 7))} aria-label="Next week">›</button>
+        <div className="my-schedule__actions">
+          <div className="my-schedule__weeknav">
+            <button type="button" onClick={() => void loadWeek(addDays(week, -7))} aria-label="Previous week">‹</button>
+            <span>Week of {format(week, "MMM d")}</span>
+            <button type="button" onClick={() => void loadWeek(addDays(week, 7))} aria-label="Next week">›</button>
+          </div>
+          <button type="button" className="my-schedule__print" onClick={onPrint}>
+            Print
+          </button>
         </div>
       </div>
 
-      <div className="my-schedule__days">
+      <div className="my-schedule__days" ref={printRef}>
         {days.map((day) => {
           const dayTasks = mine.filter((l) => isSameDay(l.startDateTime, day));
           return (
@@ -73,12 +87,6 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
               ) : (
                 dayTasks.map((l) => (
                   <div key={l.id} className="my-schedule__task">
-                    <div className="my-schedule__task-time">
-                      {format(l.startDateTime, "h:mm a")}
-                      <span className="my-schedule__task-hours">
-                        {(l.overrideHours ?? l.estimatedHours).toFixed(1)}h
-                      </span>
-                    </div>
                     <div className="my-schedule__task-job">{l.customerName || l.jobNo}</div>
                     {l.planningLineDescription && (
                       <div className="my-schedule__task-desc">{l.planningLineDescription}</div>
