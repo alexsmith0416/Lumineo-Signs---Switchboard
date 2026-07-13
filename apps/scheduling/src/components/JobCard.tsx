@@ -8,7 +8,7 @@ import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentCardDesc, shipmentSummary } from "../shipping/types";
 import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
-import { pmForSalespersonCode } from "../services/sales-pm";
+import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -120,9 +120,6 @@ export default function JobCard({
   const overlap = lineConflicts.some(
     (c) => c.type === "employee-overlap" || c.type === "department-order",
   );
-  // A Project Manager only appears on the card when the job's salesperson has
-  // one (per the Sales/PM reference data). Real BC cards only.
-  const pm = line.isCustom ? undefined : pmForSalespersonCode(line.salespersonCode);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | undefined>(undefined);
@@ -163,7 +160,6 @@ export default function JobCard({
           <div className="job-card__job-desc">{line.jobDescription}</div>
         )}
         {cardDesc && <div className="job-card__desc">{cardDesc}</div>}
-        {pm && <div className="job-card__pm">PM · {pm.name}</div>}
         {cardHasAddons(line, { showInvoice, showCrewBadge, showWeather }) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
@@ -190,6 +186,7 @@ export default function JobCard({
             conflicts={lineConflicts}
             anchorRect={tooltipRect}
             deptStyle={style}
+            showWeather={showWeather}
           />,
           document.body,
         )}
@@ -204,9 +201,14 @@ interface JobTooltipProps {
   conflicts: Conflict[];
   anchorRect: DOMRect;
   deptStyle: { bg: string; text: string };
+  /** Install-context signal — production cards pass false, hiding the
+   *  install-only Location (ZIP) + Weather sections. */
+  showWeather: boolean;
 }
 
-function JobTooltip({ line, department, employee, conflicts, anchorRect, deptStyle }: JobTooltipProps) {
+function JobTooltip({ line, department, employee, conflicts, anchorRect, deptStyle, showWeather }: JobTooltipProps) {
+  const salesperson = line.isCustom ? undefined : personByCode(line.salespersonCode);
+  const pm = line.isCustom ? undefined : pmForSalespersonCode(line.salespersonCode);
   const TOOLTIP_W = 300;
   const TOOLTIP_H_ESTIMATE = 360;
   const margin = 8;
@@ -305,7 +307,10 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
           />
         )}
 
-        {line.installZip && (() => {
+        {salesperson && <Row label="Salesperson" value={salesperson.name} />}
+        {pm && <Row label="PM" value={pm.name} />}
+
+        {showWeather && line.installZip && (() => {
           const geo = lookupZip(line.installZip);
           return (
             <Row
@@ -324,7 +329,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
           );
         })()}
 
-        {line.installZip && (
+        {showWeather && line.installZip && (
           <div style={{ marginTop: 8 }}>
             <div
               style={{
