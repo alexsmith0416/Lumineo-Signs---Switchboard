@@ -146,7 +146,12 @@ function computeLaneHeight(
   return Math.max(floor, content + CARD_V_CHROME);
 }
 
-function computeRowCards(lines: ScheduleLine[], weekStart: Date): CardLayout[] {
+// Last visible working-day column: Friday (4) when the employee doesn't work
+// weekends, else Sunday (6). Weekends sit at indices 5–6 (Mon-first week), so
+// clipping a bar's end to Friday makes a job that spills past Friday "skip the
+// weekend" — it shows an overflow arrow and resumes on next week's Monday,
+// mirroring the engine (weekends are zero-capacity for these employees).
+function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: boolean): CardLayout[] {
   const out: CardLayout[] = [];
   const ordered = [...lines].sort(
     (a, b) => a.startDateTime.getTime() - b.startDateTime.getTime(),
@@ -161,7 +166,10 @@ function computeRowCards(lines: ScheduleLine[], weekStart: Date): CardLayout[] {
     const endIdx = getDayIndex(line.endDateTime, weekStart);
     if (endIdx < 0 || startIdx > 6) continue;
     const clippedStart = Math.max(0, startIdx);
-    const clippedEnd = Math.min(6, endIdx);
+    let clippedEnd = Math.min(6, endIdx);
+    // Don't draw a weekday employee's bar across the weekend columns.
+    if (skipWeekend && clippedStart <= 4) clippedEnd = Math.min(clippedEnd, 4);
+    if (clippedEnd < clippedStart) continue;
 
     let lane = laneEnds.findIndex((end) => end < clippedStart);
     if (lane === -1) {
@@ -176,7 +184,7 @@ function computeRowCards(lines: ScheduleLine[], weekStart: Date): CardLayout[] {
       startIdx: clippedStart,
       spanDays: clippedEnd - clippedStart + 1,
       overflowLeft: startIdx < 0,
-      overflowRight: endIdx > 6,
+      overflowRight: endIdx > clippedEnd,
       lane,
     });
   }
@@ -584,7 +592,7 @@ export default function CalendarView({
             </div>
             {emps.map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
-              const cards = computeRowCards(empLines, days[0]!);
+              const cards = computeRowCards(empLines, days[0]!, !emp.worksWeekends);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
               const laneHeight = computeLaneHeight(cards, cardLayout, {
                 showInvoice,
