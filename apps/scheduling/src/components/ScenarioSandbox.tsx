@@ -31,6 +31,10 @@ const KIND_TABS: Array<{ id: Kind; label: string }> = [
 
 export default function ScenarioSandbox() {
   const [kind, setKind] = useState<Kind>("production");
+  // Which kinds have finished their initial live-schedule load. Used to gate the
+  // "Loading…" screen — an EMPTY week is a valid loaded state, so we can't key
+  // off schedule.length (that left the sandbox stuck loading forever).
+  const [loadedKinds, setLoadedKinds] = useState<Set<Kind>>(new Set());
 
   // Subscribe to every scenario store's pending-change count so the tab
   // labels can show "(N)" badges. Hook order is stable across renders.
@@ -76,21 +80,28 @@ export default function ScenarioSandbox() {
   const enter = scenarioStore((s) => s.enter);
   const getContext = scheduleStore((s) => s.getContext);
   const loadWeek = scheduleStore((s) => s.loadWeek);
-  const schedule = scheduleStore((s) => s.schedule);
   const liveWeekStart = scheduleStore((s) => s.weekStart);
 
-  // Make sure the matching live schedule has been loaded once
-  useEffect(() => {
-    if (schedule.length === 0) void loadWeek();
-  }, [schedule.length, loadWeek]);
+  const booted = loadedKinds.has(kind);
 
-  // Auto-enter the sandbox the moment the user lands on this kind (or after
-  // they Commit / Discard). No more splash screen.
+  // Load the selected kind's live schedule once, then mark it booted. An empty
+  // result is fine — we still proceed (the old code hung waiting for rows).
   useEffect(() => {
-    if (!active && schedule.length > 0) {
-      enter(getContext());
-    }
-  }, [active, schedule.length, enter, getContext]);
+    if (booted) return;
+    let alive = true;
+    void loadWeek().finally(() => {
+      if (alive) setLoadedKinds((prev) => new Set(prev).add(kind));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [booted, kind, loadWeek]);
+
+  // Auto-enter the sandbox once its data is loaded (even for an empty week), and
+  // after the user Commits / Discards. No splash screen.
+  useEffect(() => {
+    if (booted && !active) enter(getContext());
+  }, [booted, active, enter, getContext]);
 
   // Keep the preview store in sync with the scenario state so the embedded
   // CalendarView reflects every staged change in real time.
@@ -111,7 +122,7 @@ export default function ScenarioSandbox() {
     });
   }, [active, result, liveWeekStart, getContext, kind]);
 
-  if (schedule.length === 0) {
+  if (!booted) {
     return <div className="loading">Loading schedule…</div>;
   }
 

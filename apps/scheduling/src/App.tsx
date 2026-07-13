@@ -18,7 +18,7 @@ const VIEW_TITLES: Record<View, string> = {
   production: "Production Schedule",
   installation: "Installation & Service Schedule",
   shipping: "Shipping Schedule",
-  scenario: "Scenario Sandbox",
+  scenario: "Scenario Schedule",
   monthly: "Monthly Install Plan",
 };
 
