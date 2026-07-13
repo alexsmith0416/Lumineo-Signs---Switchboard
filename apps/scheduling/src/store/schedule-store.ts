@@ -221,7 +221,7 @@ export function createScheduleStore(
     updateTaskHours: async (lineId, overrideHours) => {
       const state = get();
       const ctx = buildContext(state);
-      const diff = diffResize(ctx, lineId, overrideHours, true);
+      const diff = diffResize(ctx, lineId, overrideHours, true, true);
       const ds = state.dataSource;
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,

@@ -372,7 +372,7 @@ export default function CalendarView({
 
   const tryResizeWithConfirm = async (line: ScheduleLine, newHours: number) => {
     const ctx = getContext();
-    const diff = diffResize(ctx, line.id, newHours, true);
+    const diff = diffResize(ctx, line.id, newHours, true, true);
     const moves = summarizeCascadeMoves(ctx, diff, line.id);
 
     if (moves.length === 0) {
@@ -414,7 +414,7 @@ export default function CalendarView({
     const line = ctx.schedule.find((l) => l.id === lineId);
     if (!line) return;
     // Recompute only this line's end using the engine, no cascade.
-    const r = diffResize(ctx, lineId, hours, false);
+    const r = diffResize(ctx, lineId, hours, false, true);
     const updated = r.target;
     if (!updated) return;
     await dataSource.updateScheduleLine(lineId, {

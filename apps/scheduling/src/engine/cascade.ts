@@ -258,6 +258,9 @@ export function updateDuration(
   lineId: ScheduleLineId,
   overrideHours: number,
   cascade: boolean = true,
+  /** Manual resize / end-set: the target spans its own hours even on a full day
+   *  (the overlap is flagged as a conflict rather than pushing the end out). */
+  ignoreOccupancy: boolean = false,
 ): ShiftResult {
   const work = cloneContext(ctx);
   const target = work.schedule.find((l) => l.id === lineId);
@@ -272,6 +275,7 @@ export function updateDuration(
       emp,
       work,
       target.id,
+      ignoreOccupancy,
     );
   }
 
@@ -382,13 +386,14 @@ export function diffResize(
   lineId: ScheduleLineId,
   overrideHours: number,
   cascade: boolean = true,
+  ignoreOccupancy: boolean = false,
 ): DiffShiftResult {
   const target = ctx.schedule.find((l) => l.id === lineId);
   if (!target) {
     const work = cloneContext(ctx);
     return { committed: work, changed: [], target: null, conflicts: detectConflicts(work) };
   }
-  const move = updateDuration(ctx, lineId, overrideHours, cascade);
+  const move = updateDuration(ctx, lineId, overrideHours, cascade, ignoreOccupancy);
   if (!cascade) {
     return {
       committed: move.context,

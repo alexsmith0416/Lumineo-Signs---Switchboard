@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
@@ -61,7 +61,15 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     employeeId,
     useStore,
     line.id,
+    true, // manual edit: span the task's own hours regardless of a full day
   );
+
+  // The End field mirrors the computed end, but holds the user's picked value
+  // during a change so a native picker doesn't snap it back.
+  const [endInput, setEndInput] = useState(() => format(line.endDateTime, "yyyy-MM-dd'T'HH:mm"));
+  useEffect(() => {
+    if (preview.end) setEndInput(format(preview.end, "yyyy-MM-dd'T'HH:mm"));
+  }, [preview.end]);
 
   // Editing End sets the duration: binary-search the hours whose engine end lands
   // on the picked date (the engine re-derives end from hours on reload, so the
@@ -72,7 +80,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     const target = new Date(v);
     if (Number.isNaN(target.getTime()) || target.getTime() <= startObj.getTime()) return;
     const ctx: ScheduleContext = { employees, departments, schedule, workHours, overtime };
-    const endAt = (h: number) => calculateEndTime(startObj, h, emp, ctx, line.id).getTime();
+    const endAt = (h: number) => calculateEndTime(startObj, h, emp, ctx, line.id, true).getTime();
     let lo = 0;
     let hi = 1;
     for (let i = 0; i < 40 && endAt(hi) < target.getTime(); i++) hi *= 2;
@@ -237,8 +245,12 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           <input
             className="form-field__input"
             type="datetime-local"
-            value={preview.end ? format(preview.end, "yyyy-MM-dd'T'HH:mm") : ""}
-            onChange={(e) => onEndChange(e.target.value)}
+            value={endInput}
+            onChange={(e) => {
+              setEndInput(e.target.value);
+              onEndChange(e.target.value);
+            }}
+            onBlur={(e) => onEndChange(e.target.value)}
             title="Set the end date — adjusts the hours to land here"
           />
         </div>

@@ -18,6 +18,11 @@ export function calculateEndTime(
   employee: Employee,
   ctx: ScheduleContext,
   ignoreLineId?: string,
+  /** When true, ignore other tasks' hours on each day — the task spans purely
+   *  its own hours over the workday window (weekends still skipped). Used for
+   *  MANUAL resize / end-set so the user can pin a duration even on a full day;
+   *  the resulting overlap is surfaced as a conflict rather than pushing the end. */
+  ignoreOccupancy = false,
 ): Date {
   if (hoursNeeded <= 0) return new Date(start);
 
@@ -45,7 +50,9 @@ export function calculateEndTime(
       continue;
     }
 
-    const used = getHoursUsedOnDay(employee.id, cursor, ctx.schedule, ignoreLineId);
+    const used = ignoreOccupancy
+      ? 0
+      : getHoursUsedOnDay(employee.id, cursor, ctx.schedule, ignoreLineId);
     const freeCapacity = Math.max(0, dayCapacity - used);
     const hoursUntilDayEnd = DAY_END_HOUR - hoursOfDay;
     const available = Math.min(freeCapacity, hoursUntilDayEnd);

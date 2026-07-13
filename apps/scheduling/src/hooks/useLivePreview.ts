@@ -18,6 +18,8 @@ export function useLivePreview(
    *  double-counted against the day's capacity (which would push the end
    *  later than the real, saved end). */
   ignoreLineId?: string,
+  /** Manual edits: span the task's own hours regardless of other tasks. */
+  ignoreOccupancy = false,
 ): LivePreview {
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
@@ -41,7 +43,8 @@ export function useLivePreview(
       emp,
       { employees, departments, schedule, workHours, overtime },
       ignoreLineId,
+      ignoreOccupancy,
     );
     return { start, end, effectiveHours: eff };
-  }, [start, estimatedHours, overrideHours, employeeId, employees, departments, schedule, workHours, overtime, ignoreLineId]);
+  }, [start, estimatedHours, overrideHours, employeeId, employees, departments, schedule, workHours, overtime, ignoreLineId, ignoreOccupancy]);
 }
