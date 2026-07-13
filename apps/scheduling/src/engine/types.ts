@@ -69,6 +69,9 @@ export interface ScheduleLine {
    *  overlaid by job number at read time. Drives the card's PM line and the
    *  Sales/PM "Active Jobs" views. */
   salespersonCode?: string | null;
+  /** Direct URL to the job's SharePoint folder (crfdf_bcjobs.crfdf_sharepointurl),
+   *  overlaid by job number. Used by the card's "Open SharePoint Folder". */
+  sharepointUrl?: string | null;
 
   // Optional: marks a non-BC card used to block out time (PTO, Holiday,
   // Maintenance, etc.). When `isCustom` is true the card uses

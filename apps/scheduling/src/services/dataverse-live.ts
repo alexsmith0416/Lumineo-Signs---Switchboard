@@ -277,11 +277,16 @@ export const liveProductionDataSource: ScheduleDataSource = {
     // Overlay the current ship-to / sales-order customer name + outstanding
     // value from BC so cards reflect BC even for lines created earlier. Falls
     // back to the line's stored values when BC has none for that job.
-    const [meta, salesByJob] = await Promise.all([bcJobMetaByJobNo(), salespersonByJobNo()]);
+    const [meta, salesByJob, spByJob] = await Promise.all([
+      bcJobMetaByJobNo(),
+      salespersonByJobNo(),
+      sharepointUrlByJobNo(),
+    ]);
     return lines.map((l) => {
       const m = l.jobNo ? meta.get(l.jobNo) : undefined;
       const sales = l.jobNo ? salesByJob.get(l.jobNo) : undefined;
-      if (!m && !sales) return l;
+      const sp = l.jobNo ? spByJob.get(l.jobNo) : undefined;
+      if (!m && !sales && !sp) return l;
       return {
         ...l,
         ...(m
@@ -292,6 +297,7 @@ export const liveProductionDataSource: ScheduleDataSource = {
             }
           : {}),
         ...(sales ? { salespersonCode: sales } : {}),
+        ...(sp ? { sharepointUrl: sp } : {}),
       };
     });
   },
@@ -491,7 +497,11 @@ function createLiveInstallDataSource(
     // Shipping "Scheduled" badge is accurate) and return the week's subset.
     async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
       const rows = await list(SHIP.cards, { filter: `crfdf_region eq ${isNek}` });
-      const [meta, salesByJob] = await Promise.all([bcJobMetaByJobNo(), salespersonByJobNo()]);
+      const [meta, salesByJob, spByJob] = await Promise.all([
+        bcJobMetaByJobNo(),
+        salespersonByJobNo(),
+        sharepointUrlByJobNo(),
+      ]);
       const mapped = rows.map(mapCardRecord);
       // Auto-fill crew (trips/men/trucks) from BC planning lines for any card
       // that has no manually-entered crew. One planning-line read per distinct
@@ -509,8 +519,9 @@ function createLiveInstallDataSource(
       const all = mapped.map((l) => {
         const m = l.jobNo ? meta.get(l.jobNo) : undefined;
         const sales = l.jobNo ? salesByJob.get(l.jobNo) : undefined;
+        const sp = l.jobNo ? spByJob.get(l.jobNo) : undefined;
         const c = l.jobNo && !hasManualCrew(l) ? crewByJob.get(l.jobNo) : undefined;
-        if (!m && !c && !sales) return l;
+        if (!m && !c && !sales && !sp) return l;
         return {
           ...l,
           ...(m
@@ -521,6 +532,7 @@ function createLiveInstallDataSource(
               }
             : {}),
           ...(sales ? { salespersonCode: sales } : {}),
+          ...(sp ? { sharepointUrl: sp } : {}),
           ...(c
             ? { crewTrips: c.crewTrips, crewPersons: c.crewPersons, crewTrucks: c.crewTrucks }
             : {}),
@@ -983,6 +995,25 @@ export function salespersonByJobNo(): Promise<Map<string, string>> {
     })().catch(() => new Map<string, string>());
   }
   return salespersonPromise;
+}
+
+// jobNo → direct SharePoint folder URL (crfdf_bcjobs.crfdf_sharepointurl). Its
+// own guarded query so a not-yet-added column can't break the value/name overlay.
+let sharepointPromise: Promise<Map<string, string>> | null = null;
+export function sharepointUrlByJobNo(): Promise<Map<string, string>> {
+  if (!sharepointPromise) {
+    sharepointPromise = (async () => {
+      const rows = await list(BC.jobs, { select: "crfdf_jobnumber,crfdf_sharepointurl" });
+      const m = new Map<string, string>();
+      for (const r of rows) {
+        const jn = s(r.crfdf_jobnumber);
+        const url = s(r.crfdf_sharepointurl).trim();
+        if (jn && url) m.set(jn, url);
+      }
+      return m;
+    })().catch(() => new Map<string, string>());
+  }
+  return sharepointPromise;
 }
 
 // --- Sales/PM "Active Jobs" ---------------------------------------------------

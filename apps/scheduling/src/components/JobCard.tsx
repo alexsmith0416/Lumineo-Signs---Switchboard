@@ -237,7 +237,11 @@ export default function JobCard({
               <button
                 type="button"
                 onClick={() => {
-                  window.open(sharepointJobUrl(line.jobNo), "_blank", "noopener");
+                  window.open(
+                    line.sharepointUrl || sharepointJobUrl(line.jobNo),
+                    "_blank",
+                    "noopener",
+                  );
                   setMenu(null);
                 }}
               >
