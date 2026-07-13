@@ -991,6 +991,30 @@ input, select, textarea {
   background: var(--weekend-cell);
 }
 
+/* A production employee's day lent to Installation — greyed + labelled. */
+.day-cell--assist {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg-tertiary),
+    var(--bg-tertiary) 6px,
+    var(--bg-secondary) 6px,
+    var(--bg-secondary) 12px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+.day-cell__assist {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  transform: rotate(-6deg);
+  pointer-events: none;
+}
+
 .day-cell--empty:hover {
   background: var(--bg-tertiary);
   cursor: pointer;

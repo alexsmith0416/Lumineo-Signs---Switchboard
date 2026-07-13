@@ -26,6 +26,9 @@ export interface Employee {
   truckNumber?: string | null;
   isCertifiedCraneOperator?: boolean;
   position?: number;
+  /** True when this install-board row is a production employee temporarily lent
+   *  to the install schedule (a temp "assist" crew row). */
+  isAssist?: boolean;
 }
 
 export interface ScheduleLine {

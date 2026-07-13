@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { addDays } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { addDays, format, startOfWeek } from "date-fns";
 import { useScheduleStore } from "../store/schedule-store";
+import { useAssistStore } from "../store/assist-store";
 import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
@@ -28,12 +29,29 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
+  // "Assist installation" — grey the source employee's assigned days this week.
+  const assistRows = useAssistStore((s) => s.rows);
+  const refreshAssist = useAssistStore((s) => s.refresh);
+  useEffect(() => {
+    void refreshAssist();
+  }, [refreshAssist]);
+  const weekMonday = format(startOfWeek(weekStart, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const assistDaysByEmployee = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    for (const a of assistRows) {
+      if (a.weekStart !== weekMonday) continue;
+      m.set(a.sourceEmpId, new Set(a.days.length ? a.days : [0, 1, 2, 3, 4]));
+    }
+    return m;
+  }, [assistRows, weekMonday]);
+
   return (
     <>
       <CalendarView
         useStore={useScheduleStore}
         kindMeta={KIND_META.production}
         readOnly={readOnly}
+        assistDaysByEmployee={assistDaysByEmployee}
         showInvoice={showMoney}
         showTotalValue={showMoney}
         bannerSlot={bannerSlot}

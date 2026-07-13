@@ -67,6 +67,9 @@ interface CalendarViewProps {
    *  The unlock state itself is toggled by right-clicking the resource column
    *  header (no visible button). */
   rosterUnlockable?: boolean;
+  /** Production only: employee id → weekday indices (0=Mon) the person is lent
+   *  to Installation. Those day cells render greyed + labelled "Installation". */
+  assistDaysByEmployee?: Map<string, Set<number>>;
 }
 
 interface PendingShift {
@@ -216,6 +219,7 @@ export default function CalendarView({
   enableResourceAdmin = false,
   installRegionIsNek,
   rosterUnlockable = false,
+  assistDaysByEmployee,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -623,6 +627,7 @@ export default function CalendarView({
                   }
                   days={days}
                   cards={cards}
+                  assistDays={assistDaysByEmployee?.get(emp.id)}
                   departments={departments}
                   conflicts={conflicts}
                   rowMinHeight={rowMinHeight}
@@ -737,6 +742,8 @@ interface EmployeeRowProps {
   onRosterDrop?: (e: React.DragEvent) => void;
   days: Date[];
   cards: CardLayout[];
+  /** Weekday indices this employee is lent to Installation (greyed + labelled). */
+  assistDays?: Set<number>;
   departments: Map<string, Department>;
   conflicts: Conflict[];
   rowMinHeight: number;
@@ -765,6 +772,7 @@ function EmployeeRow({
   onRosterDrop,
   days,
   cards,
+  assistDays,
   departments,
   conflicts,
   rowMinHeight,
@@ -866,16 +874,19 @@ function EmployeeRow({
             (c) => i >= c.startIdx && i < c.startIdx + c.spanDays,
           );
           const weekend = isWeekend(day);
+          const assist = assistDays?.has(i) ?? false;
           return (
             <div
               key={i}
-              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere ? " day-cell--empty" : ""}${dropHoverIdx === i ? " day-cell--drop-target" : ""}`}
-              onDragOver={handleStripDragOver}
-              onDrop={handleStripDrop}
+              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere && !assist ? " day-cell--empty" : ""}${dropHoverIdx === i ? " day-cell--drop-target" : ""}${assist ? " day-cell--assist" : ""}`}
+              onDragOver={assist ? undefined : handleStripDragOver}
+              onDrop={assist ? undefined : handleStripDrop}
               onClick={() => {
-                if (!occupiedHere) onCellClick(day);
+                if (!occupiedHere && !assist) onCellClick(day);
               }}
-            />
+            >
+              {assist && <span className="day-cell__assist">Installation</span>}
+            </div>
           );
         })}
 

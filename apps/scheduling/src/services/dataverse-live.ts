@@ -392,7 +392,65 @@ function mapInstallEmployee(r: Row): Employee {
     truckNumber: truck === "" ? null : truck,
     isCertifiedCraneOperator: Boolean(r.crfdf_certifiedcraneoperator),
     position: n(r.crfdf_positiononschedule, 0),
+    isAssist: Boolean(s(r.crfdf_assistsourceemp).trim()),
   };
+}
+
+// --- "Assist installation": a production employee lent to an install board ---
+// Stored as a crfdf_installationemployees row with crfdf_assistsourceemp set
+// (the production employee id). It shows as a crew row on that region's board;
+// the production board greys the source employee's assigned days.
+export interface AssistAssignment {
+  id: string;
+  name: string;
+  regionIsNek: boolean;
+  sourceEmpId: string;
+  weekStart: string; // yyyy-mm-dd
+  days: number[]; // weekday indices 0=Mon..4=Fri; [] = all week
+}
+
+export async function fetchAssistRows(): Promise<AssistAssignment[]> {
+  const rows = await list(INSTALL_SET, {}).catch(() => [] as Row[]);
+  return rows
+    .filter((r) => s(r.crfdf_assistsourceemp).trim())
+    .map((r) => ({
+      id: s(r.crfdf_installationemployeesid),
+      name: s(r.crfdf_employeename),
+      regionIsNek: Boolean(r.crfdf_region),
+      sourceEmpId: s(r.crfdf_assistsourceemp).trim(),
+      weekStart: s(r.crfdf_assistweekstart).slice(0, 10),
+      days: s(r.crfdf_assistdays)
+        .split(",")
+        .map((x) => Number(x.trim()))
+        .filter((x) => !Number.isNaN(x)),
+    }));
+}
+
+export async function createAssistRow(input: {
+  sourceEmpId: string;
+  name: string;
+  regionIsNek: boolean;
+  weekStart: string;
+  days: number[];
+}): Promise<void> {
+  const { S, org } = await sdk();
+  const rec: Row = {
+    crfdf_employeename: input.name,
+    crfdf_region: input.regionIsNek,
+    crfdf_location: 6, // "Additional Jobs"
+    crfdf_positiononschedule: "9999",
+    crfdf_assistsourceemp: input.sourceEmpId,
+    crfdf_assistweekstart: input.weekStart,
+    crfdf_assistdays: input.days.join(","),
+  };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, INSTALL_SET, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "createAssistRow failed");
+}
+
+export async function removeAssistRow(id: string): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.DeleteRecordWithOrganization(org, INSTALL_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? "removeAssistRow failed");
 }
 
 function createLiveInstallDataSource(

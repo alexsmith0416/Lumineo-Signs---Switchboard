@@ -1,9 +1,18 @@
 import { useState } from "react";
+import { format, startOfWeek } from "date-fns";
 import type { Department, Employee } from "../engine/types";
 import type { ResourceAdminInput, ScheduleKind } from "../services/data-source";
-import type { UseScheduleStore } from "../store/schedule-store";
+import {
+  useInstallationStoreNEK,
+  useInstallationStoreWK,
+  type UseScheduleStore,
+} from "../store/schedule-store";
+import { useAssistStore } from "../store/assist-store";
+import { createAssistRow, removeAssistRow } from "../services/dataverse-live";
 import { INSTALL_LOCATIONS, REGION_LOCATIONS } from "../services/install-meta";
 import ConfirmDialog from "./ConfirmDialog";
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 interface EmployeeAdminPanelProps {
   kind: ScheduleKind;
@@ -65,6 +74,63 @@ export default function EmployeeAdminPanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const locOptions = REGION_LOCATIONS[region ? "nek" : "wk"];
+
+  // --- Assist Installation (production employee lent to an install board) ----
+  const weekStart = useStore((s) => s.weekStart);
+  const assistRows = useAssistStore((s) => s.rows);
+  const assistMonday = format(startOfWeek(weekStart, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const currentAssist =
+    !isInstall && emp
+      ? assistRows.find((a) => a.sourceEmpId === emp.id && a.weekStart === assistMonday)
+      : undefined;
+  const [assistRegionNek, setAssistRegionNek] = useState(false);
+  const [assistAllWeek, setAssistAllWeek] = useState(true);
+  const [assistDaySet, setAssistDaySet] = useState<Set<number>>(new Set());
+
+  const reloadAfterAssist = async () => {
+    await useAssistStore.getState().refresh();
+    await Promise.all([
+      useInstallationStoreWK.getState().loadWeek(),
+      useInstallationStoreNEK.getState().loadWeek(),
+    ]);
+  };
+
+  const onAssign = async () => {
+    if (!emp) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const days = assistAllWeek ? [] : [...assistDaySet].sort((a, b) => a - b);
+      await createAssistRow({
+        sourceEmpId: emp.id,
+        name: emp.name,
+        regionIsNek: assistRegionNek,
+        weekStart: assistMonday,
+        days,
+      });
+      await reloadAfterAssist();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onRemoveAssist = async () => {
+    if (!currentAssist) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await removeAssistRow(currentAssist.id);
+      await reloadAfterAssist();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const onRegionChange = (next: boolean) => {
     setRegion(next);
@@ -253,6 +319,101 @@ export default function EmployeeAdminPanel({
               </label>
             </div>
           </>
+        )}
+
+        {!isInstall && mode === "edit" && emp && (
+          <div className="form-field" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            <div className="form-field__label">Assist Installation</div>
+            {currentAssist ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  Lent to <strong>{currentAssist.regionIsNek ? "NEK" : "WK"}</strong> this week
+                  {currentAssist.days.length
+                    ? ` · ${currentAssist.days.map((d) => WEEKDAYS[d]).join(", ")}`
+                    : " · all week"}
+                  . Their production days are greyed and they appear on that install board.
+                </div>
+                <button className="btn-secondary" disabled={busy} onClick={onRemoveAssist}>
+                  Remove assist
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                  Temporarily lend this person to an install schedule for the week of{" "}
+                  {format(startOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d")}.
+                </div>
+                <div style={{ display: "inline-flex", borderRadius: 5, overflow: "hidden", border: "1px solid var(--lumineo-navy)", alignSelf: "flex-start" }}>
+                  {([["WK", false], ["NEK", true]] as const).map(([lbl, val]) => (
+                    <button
+                      key={lbl}
+                      type="button"
+                      onClick={() => setAssistRegionNek(val)}
+                      style={{
+                        padding: "6px 16px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: assistRegionNek === val ? "var(--lumineo-navy)" : "#fff",
+                        color: assistRegionNek === val ? "#fff" : "var(--lumineo-navy)",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={assistAllWeek}
+                    onChange={(e) => setAssistAllWeek(e.target.checked)}
+                  />
+                  All week
+                </label>
+                {!assistAllWeek && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {WEEKDAYS.map((lbl, i) => {
+                      const on = assistDaySet.has(i);
+                      return (
+                        <button
+                          key={lbl}
+                          type="button"
+                          onClick={() =>
+                            setAssistDaySet((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(i)) next.delete(i);
+                              else next.add(i);
+                              return next;
+                            })
+                          }
+                          style={{
+                            padding: "5px 10px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            borderRadius: 4,
+                            border: "1px solid var(--lumineo-navy)",
+                            background: on ? "var(--lumineo-navy)" : "#fff",
+                            color: on ? "#fff" : "var(--lumineo-navy)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {lbl}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <button
+                  className="btn-primary"
+                  disabled={busy || (!assistAllWeek && assistDaySet.size === 0)}
+                  onClick={onAssign}
+                >
+                  {busy ? "Assigning…" : "Assign to Installation"}
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {err && (
