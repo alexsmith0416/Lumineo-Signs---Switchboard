@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
-import type { ScheduleLine } from "../engine/types";
+import type { ScheduleContext, ScheduleLine } from "../engine/types";
+import { calculateEndTime } from "../engine/time-walker";
 import { useLivePreview } from "../hooks/useLivePreview";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -13,11 +14,18 @@ interface EditJobPanelProps {
 
 export default function EditJobPanel({ line, onClose, useStore = useScheduleStore }: EditJobPanelProps) {
   const employees = useStore((s) => s.employees);
+  const departments = useStore((s) => s.departments);
+  const schedule = useStore((s) => s.schedule);
+  const workHours = useStore((s) => s.workHours);
+  const overtime = useStore((s) => s.overtime);
   const dataSource = useStore((s) => s.dataSource);
   const updateTaskHours = useStore((s) => s.updateTaskHours);
   const shiftTaskAndCommit = useStore((s) => s.shiftTaskAndCommit);
   const loadWeek = useStore((s) => s.loadWeek);
   const deleteScheduleLine = useStore((s) => s.deleteScheduleLine);
+
+  // Trips/crew and Install ZIP are install-only widgets.
+  const isInstall = dataSource.kind === "installation";
 
   const [overrideHours, setOverrideHours] = useState(
     line.overrideHours?.toString() ?? line.estimatedHours.toString(),
@@ -37,6 +45,40 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const employee = employees.get(line.employeeId);
+
+  // Live end preview shared by the End field + the Predicted pane.
+  const startObj = startDate ? new Date(startDate) : null;
+  const hoursNum = Number(overrideHours);
+  const preview = useLivePreview(
+    startObj,
+    Number.isNaN(hoursNum) ? line.estimatedHours : hoursNum,
+    null,
+    employeeId,
+    useStore,
+  );
+
+  // Editing End sets the duration: binary-search the hours whose engine end lands
+  // on the picked date (the engine re-derives end from hours on reload, so the
+  // end has to be expressed as hours to persist).
+  const onEndChange = (v: string) => {
+    const emp = employees.get(employeeId);
+    if (!emp || !startObj || !v) return;
+    const target = new Date(v);
+    if (Number.isNaN(target.getTime()) || target.getTime() <= startObj.getTime()) return;
+    const ctx: ScheduleContext = { employees, departments, schedule, workHours, overtime };
+    const endAt = (h: number) => calculateEndTime(startObj, h, emp, ctx, line.id).getTime();
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 40 && endAt(hi) < target.getTime(); i++) hi *= 2;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (endAt(mid) < target.getTime()) lo = mid;
+      else hi = mid;
+    }
+    const rate = emp.productivityRate === 0 ? 1 : emp.productivityRate;
+    const raw = Math.max(0.25, Math.round(((lo + hi) / 2) * rate * 4) / 4);
+    setOverrideHours(String(raw));
+  };
 
   const onSave = async () => {
     setBusy(true);
@@ -159,6 +201,16 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           />
         </div>
         <div className="form-field">
+          <div className="form-field__label">End</div>
+          <input
+            className="form-field__input"
+            type="datetime-local"
+            value={preview.end ? format(preview.end, "yyyy-MM-dd'T'HH:mm") : ""}
+            onChange={(e) => onEndChange(e.target.value)}
+            title="Set the end date — adjusts the hours to land here"
+          />
+        </div>
+        <div className="form-field">
           <div className="form-field__label">Locked</div>
           <label
             style={{
@@ -178,6 +230,8 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           </label>
         </div>
 
+        {isInstall && (
+        <>
         <div className="form-field">
           <div className="form-field__label">Trips · crew per trip</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -222,6 +276,8 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             placeholder="e.g. 67501"
           />
         </div>
+        </>
+        )}
 
         <PreviewPane
           startInput={startDate}
