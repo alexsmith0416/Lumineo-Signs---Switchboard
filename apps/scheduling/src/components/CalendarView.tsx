@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
-import { isWeekend } from "../engine/capacity";
+import { effectiveHours, isWeekend } from "../engine/capacity";
+import { calculateEndTime } from "../engine/time-walker";
 import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
@@ -249,6 +250,8 @@ export default function CalendarView({
     shiftTaskAndCommit,
     updateTaskHours,
     updateResources,
+    deleteScheduleLine,
+    addScheduleLine,
   } = useStore();
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
@@ -295,6 +298,26 @@ export default function CalendarView({
     const targetDept = drop.groupId ?? employees.get(drop.beforeId ?? "")?.departmentId;
     if (!targetDept || targetDept === dragged.departmentId) return;
     void updateResources([{ id: draggedId, input: { departmentId: targetDept } }]);
+  };
+
+  // Right-click card actions. Delete removes the card; Duplicate drops an
+  // identical copy on the same resource immediately after the original (so it
+  // doesn't overlap), which the user can then drag/edit.
+  const handleDeleteLine = (line: ScheduleLine) => {
+    void deleteScheduleLine(line.id);
+  };
+  const handleDuplicateLine = (line: ScheduleLine) => {
+    const ctx = getContext();
+    const emp = ctx.employees.get(line.employeeId);
+    const start = new Date(line.endDateTime);
+    const copy: ScheduleLine = {
+      ...line,
+      id: `line-${line.jobNo || "job"}-dup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      startDateTime: start,
+      preferredStart: start,
+    };
+    const end = emp ? calculateEndTime(start, effectiveHours(copy, emp), emp, ctx, copy.id) : line.endDateTime;
+    void addScheduleLine({ ...copy, endDateTime: end });
   };
 
   const onRosterDragStart = (e: React.DragEvent, empId: string) => {
@@ -723,6 +746,8 @@ export default function CalendarView({
                   onResize={async (line, newHours) => {
                     await tryResizeWithConfirm(line, newHours);
                   }}
+                  onDuplicateLine={readOnly ? undefined : handleDuplicateLine}
+                  onDeleteLine={readOnly ? undefined : handleDeleteLine}
                 />
               );
             })}
@@ -861,6 +886,9 @@ interface EmployeeRowProps {
   onCellClick: (day: Date) => void;
   onJobClick: (line: ScheduleLine) => void;
   onResize: (line: ScheduleLine, newHours: number) => Promise<void>;
+  /** Right-click card actions (omitted on read-only boards). */
+  onDuplicateLine?: (line: ScheduleLine) => void;
+  onDeleteLine?: (line: ScheduleLine) => void;
 }
 
 function EmployeeRow({
@@ -890,6 +918,8 @@ function EmployeeRow({
   onCellClick,
   onJobClick,
   onResize,
+  onDuplicateLine,
+  onDeleteLine,
 }: EmployeeRowProps) {
   const daysRef = useRef<HTMLDivElement>(null);
   // Day index currently under a drag, for the drop-target highlight. Null when
@@ -1020,6 +1050,8 @@ function EmployeeRow({
             onCardDrop={handleStripDrop}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
+            onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
+            onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
           />
         ))}
       </div>
@@ -1044,6 +1076,8 @@ interface GanttCardProps {
   onCardDrop: (e: React.DragEvent) => void;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
 }
 
 function GanttCard({
@@ -1063,6 +1097,8 @@ function GanttCard({
   onCardDrop,
   onClick,
   onResize,
+  onDuplicate,
+  onDelete,
 }: GanttCardProps) {
   const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
 
@@ -1153,6 +1189,8 @@ function GanttCard({
         showInvoice={showInvoice}
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
       />
       {!readOnly && !line.isLocked && (
         <>

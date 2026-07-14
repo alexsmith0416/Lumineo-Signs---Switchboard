@@ -1275,6 +1275,12 @@ input, select, textarea {
 .job-context-menu button:hover {
   background: var(--bg-tertiary);
 }
+.job-context-menu__danger {
+  color: var(--lumineo-red) !important;
+}
+.job-context-menu__danger:hover {
+  background: rgba(232, 21, 27, 0.1) !important;
+}
 
 .job-card__pm {
   font-size: 10px;

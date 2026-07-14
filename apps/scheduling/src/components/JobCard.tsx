@@ -20,6 +20,10 @@ interface JobCardProps {
   showCrewBadge?: boolean;
   showWeather?: boolean;
   layout?: "compact" | "stacked";
+  /** Right-click menu action: duplicate this card (omitted on read-only boards). */
+  onDuplicate?: () => void;
+  /** Right-click menu action: delete this card (omitted on read-only boards). */
+  onDelete?: () => void;
 }
 
 function formatMoney(amount: number): string {
@@ -94,6 +98,8 @@ export default function JobCard({
   showCrewBadge = false,
   showWeather = false,
   layout = "compact",
+  onDuplicate,
+  onDelete,
 }: JobCardProps) {
   const style = cardStyle(line, department);
   // Shipment cards are a LIVE reference to the load — title + summary derive
@@ -128,6 +134,9 @@ export default function JobCard({
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   // Right-click links are only meaningful for a real BC job card.
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
+  // The context menu opens if there's anything to show: BC links and/or the
+  // duplicate/delete actions (present only on editable boards).
+  const hasMenu = canOpenLinks || !!onDuplicate || !!onDelete;
 
   const open = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -149,7 +158,7 @@ export default function JobCard({
         onMouseEnter={open}
         onMouseLeave={close}
         onContextMenu={
-          canOpenLinks
+          hasMenu
             ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -206,12 +215,21 @@ export default function JobCard({
         )}
       {menu &&
         createPortal(
+          // stopPropagation on the backdrop and menu is essential: this menu is
+          // portaled to <body>, but React bubbles portal events through the
+          // COMPONENT tree — so without it, clicking an option (or the backdrop
+          // to dismiss) bubbles up to the card's onClick and wrongly opens the
+          // edit panel. The edit panel must only open on a left-click of the card.
           <>
             <div
               style={{ position: "fixed", inset: 0, zIndex: 300 }}
-              onClick={() => setMenu(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenu(null);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 setMenu(null);
               }}
             />
@@ -219,34 +237,62 @@ export default function JobCard({
               className="job-context-menu"
               style={{
                 position: "fixed",
-                top: Math.min(menu.y, window.innerHeight - 96),
+                top: Math.min(menu.y, window.innerHeight - 160),
                 left: Math.min(menu.x, window.innerWidth - 220),
                 zIndex: 301,
               }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="job-context-menu__head">{line.jobNo}</div>
-              <button
-                type="button"
-                onClick={() => {
-                  window.open(bcJobUrl(line.jobNo), "_blank", "noopener");
-                  setMenu(null);
-                }}
-              >
-                Open Project
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.open(
-                    line.sharepointUrl || sharepointJobUrl(line.jobNo),
-                    "_blank",
-                    "noopener",
-                  );
-                  setMenu(null);
-                }}
-              >
-                Open SharePoint Folder
-              </button>
+              <div className="job-context-menu__head">{line.jobNo || cardTitle}</div>
+              {canOpenLinks && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(bcJobUrl(line.jobNo), "_blank", "noopener");
+                      setMenu(null);
+                    }}
+                  >
+                    Open Project
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        line.sharepointUrl || sharepointJobUrl(line.jobNo),
+                        "_blank",
+                        "noopener",
+                      );
+                      setMenu(null);
+                    }}
+                  >
+                    Open SharePoint Folder
+                  </button>
+                </>
+              )}
+              {onDuplicate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDuplicate();
+                    setMenu(null);
+                  }}
+                >
+                  Duplicate
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  className="job-context-menu__danger"
+                  onClick={() => {
+                    onDelete();
+                    setMenu(null);
+                  }}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </>,
           document.body,
