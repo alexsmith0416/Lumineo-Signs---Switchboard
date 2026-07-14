@@ -113,7 +113,12 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
       </button>
       <nav className="sb-nav">
         {OTHER.map((i) => (
-          <NavItem key={i.id} item={i} />
+          <NavItem
+            key={i.id}
+            item={i}
+            active={current === i.id}
+            onClick={i.id === "settings" ? () => onSelect?.(i.id) : undefined}
+          />
         ))}
       </nav>
     </aside>

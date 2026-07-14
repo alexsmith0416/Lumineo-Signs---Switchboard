@@ -69,6 +69,9 @@ interface CascadeConfirmDialogProps {
   onMoveOnly: () => void;
   onEnterScenario: () => void;
   onContinue: () => void;
+  /** Turn the cascade prompt off entirely (applies this move as move-only, then
+   *  stops prompting — re-enable in Settings). */
+  onTurnOff: () => void;
 }
 
 export default function CascadeConfirmDialog({
@@ -85,6 +88,7 @@ export default function CascadeConfirmDialog({
   onMoveOnly,
   onEnterScenario,
   onContinue,
+  onTurnOff,
 }: CascadeConfirmDialogProps) {
   // Escape cancels — gives keyboard users a fast exit from the modal
   useEffect(() => {
@@ -211,14 +215,38 @@ export default function CascadeConfirmDialog({
 
         <div
           style={{
-            padding: 12,
             borderTop: "1px solid var(--border)",
-            display: "grid",
-            gridTemplateColumns: showScenarioOption ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr",
-            gap: 8,
             background: "var(--bg-secondary)",
           }}
         >
+          <button
+            type="button"
+            onClick={onTurnOff}
+            title="Stop showing this dialog — moves and resizes apply as-is (full override). Re-enable in Settings."
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "10px 12px",
+              border: "none",
+              borderBottom: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text-secondary)",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            ⛔ Turn off auto-cascade — move freely from now on{" "}
+            <span style={{ color: "var(--text-tertiary)" }}>(re-enable in Settings)</span>
+          </button>
+          <div
+            style={{
+              padding: 12,
+              display: "grid",
+              gridTemplateColumns: showScenarioOption ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr",
+              gap: 8,
+            }}
+          >
           <button className="btn-secondary" onClick={onCancel}>
             Cancel
           </button>
@@ -241,6 +269,7 @@ export default function CascadeConfirmDialog({
           <button className="btn-primary" onClick={onContinue}>
             Continue with cascade
           </button>
+          </div>
         </div>
       </div>
     </div>

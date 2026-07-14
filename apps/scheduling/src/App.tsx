@@ -9,13 +9,21 @@ import ShippingBoard from "./components/ShippingBoard";
 import ScenarioSandbox from "./components/ScenarioSandbox";
 import MonthlyPlanView from "./components/MonthlyPlanView";
 import MyScheduleScreen from "./components/MyScheduleScreen";
+import SettingsScreen from "./components/SettingsScreen";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
 import { useCurrentUser } from "./services/current-user";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
-type View = "my-schedule" | "production" | "installation" | "shipping" | "scenario" | "monthly";
+type View =
+  | "my-schedule"
+  | "production"
+  | "installation"
+  | "shipping"
+  | "scenario"
+  | "monthly"
+  | "settings";
 
 const VIEW_TITLES: Record<View, string> = {
   "my-schedule": "My Schedule",
@@ -24,6 +32,7 @@ const VIEW_TITLES: Record<View, string> = {
   shipping: "Shipping Schedule",
   scenario: "Scenario Schedule",
   monthly: "Monthly Install Plan",
+  settings: "Settings",
 };
 
 // The Project Scheduler's own views — shown as the sub-nav pill row (desktop)
@@ -121,6 +130,7 @@ export default function App() {
           {view === "shipping" && <ShippingBoard />}
           {view === "scenario" && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
+          {view === "settings" && <SettingsScreen />}
         </div>
       </main>
 

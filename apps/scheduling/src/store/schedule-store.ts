@@ -16,6 +16,7 @@ import {
 } from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
 import { isLaneEmployeeId, laneDeptId, laneEmployeesFor } from "../services/department-lane";
+import { useSettingsStore } from "./settings-store";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -184,14 +185,21 @@ export function createScheduleStore(
         // settled board is a true fixpoint; on top of that, the confirm dialog
         // and commit isolate each change via `diffShift` (move-vs-noop), so a
         // drag still reports only the moves it actually causes.
-        const settled = settleSchedule({ ...ctxForNormalize, schedule: normalized });
+        //
+        // When the user has turned cascade OFF (full-override mode), skip the
+        // settle so the board keeps its stored positions exactly — overlaps just
+        // surface a conflict icon instead of tasks auto-moving.
+        const normalizedCtx = { ...ctxForNormalize, schedule: normalized };
+        const final = useSettingsStore.getState().cascadeEnabled
+          ? settleSchedule(normalizedCtx)
+          : normalizedCtx;
         set({
           employees: empMap,
           departments: deptMap,
-          schedule: settled.schedule,
+          schedule: final.schedule,
           workHours,
           overtime,
-          conflicts: detectConflicts(settled),
+          conflicts: detectConflicts(final),
           loading: false,
         });
       } catch (err) {

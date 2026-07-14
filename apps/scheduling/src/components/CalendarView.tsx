@@ -10,6 +10,7 @@ import { laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
 import { printMarkup } from "../services/print";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
+import { useSettingsStore } from "../store/settings-store";
 import { CcoBadge } from "./CcoBadge";
 import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
@@ -344,6 +345,10 @@ export default function CalendarView({
   const enterScenario = scenarioStore((s) => s.enter);
   const addScenarioChange = scenarioStore((s) => s.addChange);
   const getContext = useStore((s) => s.getContext);
+  // Cascade / conflict prompt on/off (Settings). When off, moves & resizes
+  // apply as a full override (move only, no dialog, no auto-move of others).
+  const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
+  const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
 
   useEffect(() => {
     void loadWeek();
@@ -410,6 +415,12 @@ export default function CalendarView({
       return;
     }
 
+    // Cascade off (full override): move only this task, no dialog.
+    if (!cascadeEnabled) {
+      await shiftTaskAndCommit(lineId, newStart, newEmployeeId, false);
+      return;
+    }
+
     const diff = diffShift(ctx, lineId, newStart, newEmployeeId, { cascade: true });
     const moves = summarizeCascadeMoves(ctx, diff, lineId);
 
@@ -427,6 +438,11 @@ export default function CalendarView({
   };
 
   const tryResizeWithConfirm = async (line: ScheduleLine, newHours: number) => {
+    // Cascade off (full override): resize this task only, no dialog.
+    if (!cascadeEnabled) {
+      await applyResizeNoCascade(line.id, newHours);
+      return;
+    }
     const ctx = getContext();
     const diff = diffResize(ctx, line.id, newHours, true, true);
     const moves = summarizeCascadeMoves(ctx, diff, line.id);
@@ -849,6 +865,10 @@ export default function CalendarView({
             onMoveOnly={() => commitPending(false)}
             onEnterScenario={handleEnterScenario}
             onContinue={() => commitPending(true)}
+            onTurnOff={() => {
+              setCascadeEnabled(false);
+              void commitPending(false);
+            }}
           />
         );
       })()}
