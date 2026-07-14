@@ -934,11 +934,6 @@ input, select, textarea {
   font-style: italic;
   color: var(--text-secondary);
 }
-.employee-row__name--lane strong::before {
-  content: "🏢";
-  font-style: normal;
-  margin-right: 2px;
-}
 
 .employee-row__name strong {
   display: inline-flex;

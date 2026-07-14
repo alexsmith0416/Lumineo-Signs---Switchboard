@@ -10,6 +10,7 @@ import { printMarkup } from "../services/print";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { CcoBadge } from "./CcoBadge";
+import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
 import { PrintIcon } from "./PrintIcon";
 import EmployeeAdminPanel from "./EmployeeAdminPanel";
@@ -955,6 +956,7 @@ function EmployeeRow({
         }
       >
         <strong>
+          {emp.isDepartmentLane ? <GroupIcon /> : null}
           {emp.name}
           {emp.isCertifiedCraneOperator ? <CcoBadge /> : null}
         </strong>
