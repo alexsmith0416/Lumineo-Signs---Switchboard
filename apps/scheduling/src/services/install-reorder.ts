@@ -13,6 +13,9 @@ export interface RosterDropTarget {
   beforeId?: string;
   /** Append to the end of this location group (header drop / empty group). */
   groupLocation?: number;
+  /** Production only: the target department id (string group) for a banner drop.
+   *  Installation ignores this and uses the numeric `groupLocation`. */
+  groupId?: string;
 }
 
 const pad = (n: number): string => String(Math.max(0, Math.trunc(n))).padStart(2, "0");

@@ -260,11 +260,23 @@ export default function CalendarView({
   const gridRef = useRef<HTMLDivElement>(null);
 
   const applyRosterDrop = (draggedId: string, drop: RosterDropTarget) => {
-    const moves = computeRosterReorder([...employees.values()], draggedId, drop);
-    if (moves.length === 0) return;
-    void updateResources(
-      moves.map((m) => ({ id: m.id, input: { location: m.location, position: m.position } })),
-    );
+    // Installation rosters carry a numeric location + explicit position, so a
+    // drop renumbers the region (computeRosterReorder). Production employees
+    // group by department id (string) with no manual ordering, so a drop simply
+    // reassigns the dragged employee to the target department.
+    if (kindMeta.kind === "installation") {
+      const moves = computeRosterReorder([...employees.values()], draggedId, drop);
+      if (moves.length === 0) return;
+      void updateResources(
+        moves.map((m) => ({ id: m.id, input: { location: m.location, position: m.position } })),
+      );
+      return;
+    }
+    const dragged = employees.get(draggedId);
+    if (!dragged) return;
+    const targetDept = drop.groupId ?? employees.get(drop.beforeId ?? "")?.departmentId;
+    if (!targetDept || targetDept === dragged.departmentId) return;
+    void updateResources([{ id: draggedId, input: { departmentId: targetDept } }]);
   };
 
   const onRosterDragStart = (e: React.DragEvent, empId: string) => {
@@ -577,7 +589,11 @@ export default function CalendarView({
                       e.preventDefault();
                       const draggedId = e.dataTransfer.getData("text/crewId");
                       onRosterDragEnd();
-                      if (draggedId) applyRosterDrop(draggedId, { groupLocation: Number(dept.id) });
+                      if (draggedId)
+                        applyRosterDrop(draggedId, {
+                          groupId: dept.id,
+                          groupLocation: Number(dept.id),
+                        });
                     }
                   : undefined
               }
