@@ -3,6 +3,7 @@ import { addDays, format, startOfWeek } from "date-fns";
 import { useScheduleStore } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
 import { KIND_META } from "../services/data-source";
+import { isLaneEmployeeId, laneDeptId } from "../services/department-lane";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
 import VisibilityMenu from "./VisibilityMenu";
@@ -25,6 +26,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
     employeeId?: string;
+    departmentId?: string;
   } | null>(null);
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
@@ -59,6 +61,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         supportsScenarioSandbox={true}
         enableResourceAdmin={!readOnly}
         rosterUnlockable={!readOnly}
+        enableDepartmentLane
         hideEmptyGroups
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
@@ -113,13 +116,18 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
           </button>
         }
         onEmptyCellClick={({ start, employeeId }) =>
-          setAddJobContext({ start, employeeId })
+          // A click on the shared department lane (or the "+ Team job" button)
+          // targets the whole department; a normal cell targets one employee.
+          isLaneEmployeeId(employeeId)
+            ? setAddJobContext({ start, departmentId: laneDeptId(employeeId) })
+            : setAddJobContext({ start, employeeId })
         }
       />
       {addJobContext && (
         <AddJobPanel
           initialStart={addJobContext.start}
           initialEmployeeId={addJobContext.employeeId}
+          initialDepartmentId={addJobContext.departmentId}
           onClose={() => setAddJobContext(null)}
         />
       )}

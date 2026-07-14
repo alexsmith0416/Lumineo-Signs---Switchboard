@@ -16,6 +16,7 @@
  * called (i.e. under `pac code run`, never in plain dev/build/tests).
  */
 import type { ResourceAdminInput, ScheduleDataSource } from "./data-source";
+import { isLaneEmployeeId, laneEmployeeId } from "./department-lane";
 import {
   INSTALL_LOCATIONS,
   INSTALL_LOCATION_COLORS,
@@ -175,8 +176,13 @@ function mapLine(r: Row): ScheduleLine {
     endDateTime: dt(r.crfdf_enddatetime),
     estimatedHours: n(r.crfdf_estimatedhours),
     overrideHours: nOrNull(r.crfdf_overridehours),
-    employeeId: s(r["_crfdf_employee_value"]),
+    // Team (department-wide) lines store no employee; their runtime resource is
+    // the synthetic department lane so the board + engine can key off it.
+    employeeId: Boolean(r.crfdf_departmentwide)
+      ? laneEmployeeId(s(r["_crfdf_department_value"]))
+      : s(r["_crfdf_employee_value"]),
     departmentId: s(r["_crfdf_department_value"]),
+    departmentWide: Boolean(r.crfdf_departmentwide) || undefined,
     customerDueDate: dtOrNull(r.crfdf_customerduedate),
     isLocked: Boolean(r.crfdf_islocked),
     jobSequence: n(r.crfdf_jobsequence),
@@ -221,8 +227,14 @@ function toRecord(line: Partial<ScheduleLine>): Row {
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;
   if (line.customColor !== undefined) rec.crfdf_customcolor = line.customColor;
   if (line.customTextColor !== undefined) rec.crfdf_customtextcolor = line.customTextColor;
-  // Lookups via @odata.bind
-  if (line.employeeId) rec["crfdf_Employee@odata.bind"] = `/${SET.employees}(${line.employeeId})`;
+  // Team (department-wide) flag. NOTE: requires a Yes/No column
+  // `crfdf_departmentwide` on crfdf_productionscheduleline; without it, team
+  // jobs won't persist in the deployed app (dev/mock is unaffected).
+  if (line.departmentWide !== undefined) rec.crfdf_departmentwide = line.departmentWide;
+  // Lookups via @odata.bind. A team line's employeeId is the synthetic lane id
+  // (not a real GUID), so never bind it — the line belongs to the department.
+  if (line.employeeId && !isLaneEmployeeId(line.employeeId))
+    rec["crfdf_Employee@odata.bind"] = `/${SET.employees}(${line.employeeId})`;
   if (line.departmentId) rec["crfdf_Department@odata.bind"] = `/${SET.departments}(${line.departmentId})`;
   return rec;
 }

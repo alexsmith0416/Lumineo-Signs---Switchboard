@@ -5,6 +5,7 @@ import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
+import { laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
 import { printMarkup } from "../services/print";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
@@ -65,6 +66,10 @@ interface CalendarViewProps {
   /** Enables the right-click roster admin (add via group header, edit/delete
    *  via name). Set by the Production and Installation calendars. */
   enableResourceAdmin?: boolean;
+  /** Enables department-wide ("team") scheduling: a shared lane under each
+   *  department banner for jobs assigned to the whole team, plus a "+ Team job"
+   *  button on the banner. Production only. */
+  enableDepartmentLane?: boolean;
   /** Installation only: the current region (crfdf_region) — false = WK,
    *  true = NEK. Required by the admin editor for install rosters. */
   installRegionIsNek?: boolean;
@@ -223,6 +228,7 @@ export default function CalendarView({
   hiddenEmployeeIds,
   hideEmptyGroups = false,
   enableResourceAdmin = false,
+  enableDepartmentLane = false,
   installRegionIsNek,
   rosterUnlockable = false,
   assistDaysByEmployee,
@@ -248,6 +254,11 @@ export default function CalendarView({
   const [editEmployeeId, setEditEmployeeId] = useState<string | null>(null);
   // Group id (department / location) right-clicked to add a new member.
   const [addGroupId, setAddGroupId] = useState<string | null>(null);
+  // Right-click context menu on a department banner (production): offers
+  // "Add employee" and "Add team job". Positioned at the cursor.
+  const [bannerMenu, setBannerMenu] = useState<{ deptId: string; x: number; y: number } | null>(
+    null,
+  );
   const [pendingShift, setPendingShift] = useState<PendingShift | null>(null);
   // Right-click roster admin (add via header, edit/delete via name).
   const adminEditEnabled = enableResourceAdmin;
@@ -579,7 +590,14 @@ export default function CalendarView({
                 adminEditEnabled
                   ? (e) => {
                       e.preventDefault();
-                      setAddGroupId(dept.id);
+                      // Department lane enabled (production): show a small menu
+                      // with Add employee / Add team job. Otherwise (install)
+                      // right-click adds an employee directly, as before.
+                      if (enableDepartmentLane) {
+                        setBannerMenu({ deptId: dept.id, x: e.clientX, y: e.clientY });
+                      } else {
+                        setAddGroupId(dept.id);
+                      }
                     }
                   : undefined
               }
@@ -608,7 +626,9 @@ export default function CalendarView({
               }
               title={
                 adminEditEnabled
-                  ? `Right-click to add a ${kindMeta.resourceLabel.toLowerCase()}`
+                  ? enableDepartmentLane
+                    ? "Right-click for options (add employee / team job)"
+                    : `Right-click to add a ${kindMeta.resourceLabel.toLowerCase()}`
                   : undefined
               }
             >
@@ -619,7 +639,18 @@ export default function CalendarView({
                 </span>
               </div>
             </div>
-            {emps.map((emp) => {
+            {(() => {
+              // Prepend the shared "team" lane row when this department has any
+              // department-wide jobs. The lane is a synthetic resource whose id
+              // matches those lines' employeeId, so the same row machinery below
+              // (empLines filter, cards, drag) works unchanged.
+              const laneRow =
+                enableDepartmentLane &&
+                schedule.some((l) => l.departmentWide && l.departmentId === dept.id)
+                  ? makeLaneEmployee(dept)
+                  : null;
+              return (laneRow ? [laneRow, ...emps] : emps);
+            })().map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!, !emp.worksWeekends);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
@@ -636,19 +667,29 @@ export default function CalendarView({
                   emp={emp}
                   kind={kindMeta.kind}
                   onNameContextMenu={
-                    adminEditEnabled ? () => setEditEmployeeId(emp.id) : undefined
+                    adminEditEnabled && !emp.isDepartmentLane
+                      ? () => setEditEmployeeId(emp.id)
+                      : undefined
                   }
-                  rosterDraggable={rosterDragEnabled}
+                  rosterDraggable={rosterDragEnabled && !emp.isDepartmentLane}
                   rosterDropHover={reorderHoverId === emp.id}
                   onRosterDragStart={
-                    rosterDragEnabled ? (e) => onRosterDragStart(e, emp.id) : undefined
+                    rosterDragEnabled && !emp.isDepartmentLane
+                      ? (e) => onRosterDragStart(e, emp.id)
+                      : undefined
                   }
-                  onRosterDragEnd={rosterDragEnabled ? onRosterDragEnd : undefined}
+                  onRosterDragEnd={
+                    rosterDragEnabled && !emp.isDepartmentLane ? onRosterDragEnd : undefined
+                  }
                   onRosterDragOver={
-                    rosterDragEnabled ? (e) => onRosterRowDragOver(e, emp.id) : undefined
+                    rosterDragEnabled && !emp.isDepartmentLane
+                      ? (e) => onRosterRowDragOver(e, emp.id)
+                      : undefined
                   }
                   onRosterDrop={
-                    rosterDragEnabled ? (e) => onRosterRowDrop(e, emp.id) : undefined
+                    rosterDragEnabled && !emp.isDepartmentLane
+                      ? (e) => onRosterRowDrop(e, emp.id)
+                      : undefined
                   }
                   days={days}
                   cards={cards}
@@ -722,10 +763,46 @@ export default function CalendarView({
           mode="create"
           departments={departments}
           regionIsNek={installRegionIsNek}
-          initialGroupId={addGroupId}
+          initialGroupId={addGroupId ?? undefined}
           useStore={useStore}
           onClose={() => setAddGroupId(null)}
         />
+      )}
+
+      {bannerMenu && (
+        <>
+          <div className="context-menu__backdrop" onClick={() => setBannerMenu(null)} />
+          <div
+            className="context-menu"
+            style={{ top: bannerMenu.y, left: bannerMenu.x }}
+            role="menu"
+          >
+            <button
+              type="button"
+              className="context-menu__item"
+              onClick={() => {
+                setAddGroupId(bannerMenu.deptId);
+                setBannerMenu(null);
+              }}
+            >
+              Add employee…
+            </button>
+            {!readOnly && onEmptyCellClick && (
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  const start = new Date(days[0]!);
+                  start.setHours(8, 0, 0, 0);
+                  onEmptyCellClick({ start, employeeId: laneEmployeeId(bannerMenu.deptId) });
+                  setBannerMenu(null);
+                }}
+              >
+                Add team job…
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {pendingShift && (() => {
@@ -844,10 +921,14 @@ function EmployeeRow({
   };
 
   return (
-    <div className="employee-row" style={{ minHeight: rowMinHeight }}>
+    <div
+      className={"employee-row" + (emp.isDepartmentLane ? " employee-row--lane" : "")}
+      style={{ minHeight: rowMinHeight }}
+    >
       <div
         className={
           "employee-row__name" +
+          (emp.isDepartmentLane ? " employee-row__name--lane" : "") +
           (onNameContextMenu ? " employee-row__name--editable" : "") +
           (rosterDraggable ? " employee-row__name--draggable" : "") +
           (rosterDropHover ? " employee-row__name--drop-before" : "")

@@ -15,6 +15,7 @@ import {
   wkInstallDataSource,
 } from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
+import { isLaneEmployeeId, laneDeptId, laneEmployeesFor } from "../services/department-lane";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -91,8 +92,15 @@ function applyResourceInput(
 }
 
 function buildContext(state: ScheduleStoreState): ScheduleContext {
+  // Merge synthetic department-lane resources so team lines (departmentWide)
+  // resolve to a resource for the engine. These are never stored in
+  // state.employees — the real roster stays person-only for the UI.
+  const lanes = laneEmployeesFor(state.schedule, state.departments);
+  const employees = lanes.size
+    ? new Map([...state.employees, ...lanes])
+    : state.employees;
   return {
-    employees: state.employees,
+    employees,
     departments: state.departments,
     schedule: state.schedule,
     workHours: state.workHours,
@@ -136,8 +144,13 @@ export function createScheduleStore(
         ]);
         const empMap = new Map(employees.map((e) => [e.id, e]));
         const deptMap = new Map(departments.map((d) => [d.id, d]));
+        // Engine map also carries the synthetic department-lane resources so
+        // team lines recompute their end times and cascade. state.employees
+        // (set below) stays person-only.
+        const lanes = laneEmployeesFor(schedule, deptMap);
+        const engineEmpMap = lanes.size ? new Map([...empMap, ...lanes]) : empMap;
         const ctxForNormalize: ScheduleContext = {
-          employees: empMap,
+          employees: engineEmpMap,
           departments: deptMap,
           schedule,
           workHours,
@@ -148,7 +161,7 @@ export function createScheduleStore(
         // Also seeds `preferredStart` to the loaded position when absent,
         // so the cascade has a "user-intended" floor to pull tasks back to.
         const normalized = schedule.map((line) => {
-          const emp = empMap.get(line.employeeId);
+          const emp = engineEmpMap.get(line.employeeId);
           const seededPreferred =
             line.preferredStart instanceof Date
               ? line
@@ -197,12 +210,39 @@ export function createScheduleStore(
       // precisely what gets written (no ambient cascade churn).
       const diff = diffShift(ctx, lineId, newStart, newEmployeeId, { cascade });
       const ds = state.dataSource;
-      const toPersist = [diff.target, ...diff.changed].filter(
-        (l): l is NonNullable<typeof l> => l != null,
-      );
+
+      // Dropping a card onto the shared department lane converts it to a team
+      // job (departmentWide); dropping it back onto a person makes it an
+      // individual job again. Keep departmentId consistent with the drop target.
+      const convert =
+        newEmployeeId !== undefined
+          ? {
+              departmentWide: isLaneEmployeeId(newEmployeeId) || undefined,
+              departmentId: isLaneEmployeeId(newEmployeeId)
+                ? laneDeptId(newEmployeeId)
+                : state.employees.get(newEmployeeId)?.departmentId,
+            }
+          : null;
+      const applyConvert = (l: ScheduleLine): ScheduleLine =>
+        convert && l.id === lineId
+          ? {
+              ...l,
+              departmentWide: convert.departmentWide,
+              departmentId: convert.departmentId ?? l.departmentId,
+            }
+          : l;
+      const oldWide = !!state.schedule.find((l) => l.id === lineId)?.departmentWide;
+      const boundaryChanged = !!convert && oldWide !== !!convert.departmentWide;
+
+      const toPersist = [diff.target, ...diff.changed]
+        .filter((l): l is NonNullable<typeof l> => l != null)
+        .map(applyConvert);
       // Optimistic: move the card on the board immediately, then persist the
       // affected lines to Dataverse in the background (resync on failure).
-      set({ schedule: diff.committed.schedule, conflicts: diff.conflicts });
+      set({
+        schedule: convert ? diff.committed.schedule.map(applyConvert) : diff.committed.schedule,
+        conflicts: diff.conflicts,
+      });
       void Promise.all(
         toPersist.map((line) =>
           ds.updateScheduleLine(line.id, {
@@ -210,12 +250,20 @@ export function createScheduleStore(
             endDateTime: line.endDateTime,
             employeeId: line.employeeId,
             departmentId: line.departmentId,
+            departmentWide: line.departmentWide ?? false,
           }),
         ),
-      ).catch((e) => {
-        console.error("[schedule] shift persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      )
+        .then(() => {
+          // A team/individual boundary crossing changes which resource owns the
+          // line — reload so the lane resource is present and the board settles
+          // to a true fixpoint (end times, lane membership).
+          if (boundaryChanged) void get().loadWeek();
+        })
+        .catch((e) => {
+          console.error("[schedule] shift persist failed — resyncing", e);
+          void get().loadWeek();
+        });
     },
 
     updateTaskHours: async (lineId, overrideHours) => {

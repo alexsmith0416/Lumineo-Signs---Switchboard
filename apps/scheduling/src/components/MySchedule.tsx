@@ -36,9 +36,15 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
   const mine = useMemo(
     () =>
       schedule
-        .filter((l) => l.employeeId === employeeId)
+        // Personal jobs, plus any team (department-wide) job scheduled to this
+        // person's department — the whole team shares those.
+        .filter(
+          (l) =>
+            l.employeeId === employeeId ||
+            (l.departmentWide && !!emp && l.departmentId === emp.departmentId),
+        )
         .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime()),
-    [schedule, employeeId],
+    [schedule, employeeId, emp],
   );
 
   const onPrint = () => {

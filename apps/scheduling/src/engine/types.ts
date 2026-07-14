@@ -29,6 +29,11 @@ export interface Employee {
   /** True when this install-board row is a production employee temporarily lent
    *  to the install schedule (a temp "assist" crew row). */
   isAssist?: boolean;
+  /** True for the synthetic "whole department" resource that owns a department's
+   *  shared/team schedule lane. These never appear in the real roster (kept out
+   *  of the store's employees map); they are merged into the engine context only
+   *  so team lines cascade as one resource. See services/department-lane.ts. */
+  isDepartmentLane?: boolean;
 }
 
 export interface ScheduleLine {
@@ -48,6 +53,13 @@ export interface ScheduleLine {
   customerDueDate: Date | null;
   isLocked: boolean;
   jobSequence: number;
+
+  /** True when this line is scheduled to a whole department rather than one
+   *  person. It renders on the department's shared "team" lane (not on any
+   *  individual row), rolls into every department member's My Schedule, and its
+   *  `employeeId` is the synthetic department-lane id (see department-lane.ts).
+   *  Persisted as crfdf_departmentwide; production lines default false. */
+  departmentWide?: boolean;
 
   // Optional billing + install-specific metadata. Production lines typically
   // leave these null; install lines populate them so the UI can render the

@@ -6,6 +6,7 @@ import type {
   ScheduleLine,
   WorkHoursOverride,
 } from "../engine/types";
+import { laneEmployeeId } from "../services/department-lane";
 
 const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
 function at(dayOffset: number, hour: number): Date {
@@ -79,6 +80,15 @@ function mkLine(s: JobLineSeed): ScheduleLine {
 // Monday — so `day: 0` = this week Mon. Negative offsets pull jobs from
 // the previous week (e.g., long-running jobs that began last week).
 export const MOCK_SCHEDULE: ScheduleLine[] = [
+  // ============ Paint — whole-department (team) job ============
+  // Demonstrates the shared department lane: the Paint crew works this booth
+  // job together, so it's scheduled to the department, not one person. Every
+  // Paint member sees it in their My Schedule.
+  {
+    ...mkLine({ id: "paint-team-1", jobNo: "J37410", customer: "Ascension Via Christi", desc: "Booth repaint — full crew", emp: laneEmployeeId("dept-paint"), dept: "dept-paint", day: 1, hours: 16, dueDays: 12 }),
+    departmentWide: true,
+  },
+
   // ============ Vinyl / Graphics — Tanner Rue ============
   // Heavy graphics output spanning multiple jobs each week.
   mkLine({ id: "vr-1", jobNo: "J36732", customer: "Cypress Medical Park BLDG 300", desc: "Vinyl graphics + window film", emp: "emp-tanner", dept: "dept-vinyl", day: 0, hours: 16, dueDays: 14 }),

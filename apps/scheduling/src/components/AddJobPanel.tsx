@@ -12,6 +12,7 @@ import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { CUSTOM_CARD_PRESETS, type CustomCardPreset } from "../data/custom-card-presets";
+import { makeLaneEmployee } from "../services/department-lane";
 import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentSummary } from "../shipping/types";
 import type { ScheduleLine } from "../engine/types";
@@ -33,6 +34,9 @@ interface AddJobPanelProps {
   onClose: () => void;
   initialStart?: Date;
   initialEmployeeId?: string;
+  /** When set, the job is scheduled to the WHOLE department (team lane) rather
+   *  than one employee — creates department-wide lines. Production only. */
+  initialDepartmentId?: string;
   useStore?: UseScheduleStore;
 }
 
@@ -43,6 +47,7 @@ export default function AddJobPanel({
   onClose,
   initialStart,
   initialEmployeeId,
+  initialDepartmentId,
   useStore = useScheduleStore,
 }: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
@@ -77,6 +82,21 @@ export default function AddJobPanel({
   const loads = useLoadsStore((s) => s.loads);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
+
+  // Department-wide ("team") target: the job is scheduled to the whole
+  // department's shared lane rather than one person. `laneEmp` is the synthetic
+  // resource that owns that lane; `ctxEmployees` includes it so the engine can
+  // compute end times for team lines.
+  const laneEmp = useMemo(() => {
+    if (!initialDepartmentId) return null;
+    const d = departments.get(initialDepartmentId);
+    return d ? makeLaneEmployee(d) : null;
+  }, [initialDepartmentId, departments]);
+  const isTeam = !!laneEmp;
+  const ctxEmployees = useMemo(
+    () => (laneEmp ? new Map([...employees, [laneEmp.id, laneEmp]]) : employees),
+    [employees, laneEmp],
+  );
 
   // Resolve each line's department to an ACTUAL loaded department id: the BC
   // resource code (or description) gives a canonical dept name, which we match
@@ -161,20 +181,20 @@ export default function AddJobPanel({
     if (targets.length === 0) return;
 
     const ctxForEngine = {
-      employees,
+      employees: ctxEmployees,
       departments,
       schedule: scheduleState,
       workHours: workHoursState,
       overtime: overtimeState,
     };
 
-    // Cell-click flow (single/multi mode with a preset employee): respect
-    // the clicked resource verbatim. Skip proposeSchedule's department
-    // matching — useful for installation/shipping where the resource's
-    // "department" is a base location, not a flow step that maps from a BC
-    // planning-line keyword.
-    if (initialEmployeeId && mode !== "auto") {
-      const emp = employees.get(initialEmployeeId);
+    // Cell-click flow (single/multi mode with a preset employee OR a team
+    // target): respect the clicked resource verbatim. Skip proposeSchedule's
+    // department matching — useful for installation/shipping where the
+    // resource's "department" is a base location, and for team jobs where the
+    // target is the whole department lane.
+    if ((initialEmployeeId || isTeam) && mode !== "auto") {
+      const emp = isTeam ? laneEmp! : employees.get(initialEmployeeId!);
       if (!emp) return;
 
       let cursor = initialStart ? new Date(initialStart) : new Date();
@@ -195,8 +215,9 @@ export default function AddJobPanel({
         endDateTime: cursor,
         estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
         overrideHours: null,
-        employeeId: initialEmployeeId,
+        employeeId: emp.id,
         departmentId: emp.departmentId,
+        departmentWide: isTeam || undefined,
         customerDueDate: safeDate(selected.job.promisedDate),
         isLocked: false,
         jobSequence: first.lineNo,
@@ -264,7 +285,11 @@ export default function AddJobPanel({
   // with no BC planning line still be put on the board.
   const commitCustomTask = async () => {
     if (!selected) return;
-    const emp = customTaskEmployeeId ? employees.get(customTaskEmployeeId) : undefined;
+    const emp = isTeam
+      ? laneEmp!
+      : customTaskEmployeeId
+        ? employees.get(customTaskEmployeeId)
+        : undefined;
     const hours = Number(customTaskHours);
     if (!emp || !customTaskDesc.trim() || Number.isNaN(hours) || hours <= 0) return;
 
@@ -272,7 +297,7 @@ export default function AddJobPanel({
     if (cursor.getHours() < 8) cursor.setHours(8, 0, 0, 0);
 
     const ctxForEngine = {
-      employees,
+      employees: ctxEmployees,
       departments,
       schedule: scheduleState,
       workHours: workHoursState,
@@ -290,6 +315,7 @@ export default function AddJobPanel({
       overrideHours: null,
       employeeId: emp.id,
       departmentId: emp.departmentId,
+      departmentWide: isTeam || undefined,
       customerDueDate: safeDate(selected.job.promisedDate),
       isLocked: false,
       jobSequence: 0,
@@ -381,9 +407,18 @@ export default function AddJobPanel({
   return (
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
-        <div className="section-title">Add Job</div>
+        <div className="section-title">{isTeam ? "Add Team Job" : "Add Job"}</div>
+        {isTeam && (
+          <div style={{ padding: "0 12px 8px", fontSize: 11, color: "var(--text-secondary)" }}>
+            Scheduling to the whole{" "}
+            <strong>{departments.get(initialDepartmentId!)?.name ?? "department"}</strong>{" "}
+            team — every member sees this on their schedule.
+          </div>
+        )}
 
-        {/* Kind toggle: BC Job (search) vs Custom Card (block out time) */}
+        {/* Kind toggle: BC Job (search) vs Custom Card (block out time). Team
+            jobs are BC-only for now. */}
+        {!isTeam && (
         <div
           style={{
             display: "flex",
@@ -410,6 +445,7 @@ export default function AddJobPanel({
             Custom Card
           </button>
         </div>
+        )}
 
         <div className="slide-over__body">
         {cardKind === "bc" && (
@@ -473,13 +509,15 @@ export default function AddJobPanel({
                 >
                   Multi
                 </button>
-                <button
-                  className={mode === "auto" ? "btn-primary" : "btn-secondary"}
-                  style={{ flex: 1 }}
-                  onClick={() => setMode("auto")}
-                >
-                  Auto
-                </button>
+                {!isTeam && (
+                  <button
+                    className={mode === "auto" ? "btn-primary" : "btn-secondary"}
+                    style={{ flex: 1 }}
+                    onClick={() => setMode("auto")}
+                  >
+                    Auto
+                  </button>
+                )}
                 <button
                   className={mode === "custom-task" ? "btn-primary" : "btn-secondary"}
                   style={{ flex: 1 }}
@@ -520,18 +558,29 @@ export default function AddJobPanel({
                       />
                     </div>
                     <div style={{ flex: 2 }}>
-                      <div className="form-field__label">Employee</div>
-                      <select
-                        className="form-field__select"
-                        value={customTaskEmployeeId}
-                        onChange={(e) => setCustomTaskEmployeeId(e.target.value)}
-                        style={{ width: "100%" }}
-                      >
-                        <option value="">Select…</option>
-                        {[...employees.values()].map((e) => (
-                          <option key={e.id} value={e.id}>{e.name}</option>
-                        ))}
-                      </select>
+                      <div className="form-field__label">
+                        {isTeam ? "Assigned to" : "Employee"}
+                      </div>
+                      {isTeam ? (
+                        <div
+                          className="form-field__input"
+                          style={{ width: "100%", color: "var(--text-secondary)" }}
+                        >
+                          Whole department
+                        </div>
+                      ) : (
+                        <select
+                          className="form-field__select"
+                          value={customTaskEmployeeId}
+                          onChange={(e) => setCustomTaskEmployeeId(e.target.value)}
+                          style={{ width: "100%" }}
+                        >
+                          <option value="">Select…</option>
+                          {[...employees.values()].map((e) => (
+                            <option key={e.id} value={e.id}>{e.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -574,17 +623,24 @@ export default function AddJobPanel({
                       <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                         {line.estimatedHours}h · {dept?.name ?? "unmapped"}
                       </div>
-                      {proposedSlot && proposedSlot.employeeId && (
+                      {isTeam ? (
                         <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
-                          →{" "}
-                          {employees.get(
-                            initialEmployeeId && mode !== "auto"
-                              ? initialEmployeeId
-                              : proposedSlot.employeeId,
-                          )?.name ?? proposedSlot.employeeId}{" "}
-                          on {format(proposedSlot.start, "EEE MMM d")}{" "}
-                          {format(proposedSlot.start, "HH:mm")}
+                          → Whole department
+                          {initialStart ? ` on ${format(initialStart, "EEE MMM d")}` : ""}
                         </div>
+                      ) : (
+                        proposedSlot && proposedSlot.employeeId && (
+                          <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
+                            →{" "}
+                            {employees.get(
+                              initialEmployeeId && mode !== "auto"
+                                ? initialEmployeeId
+                                : proposedSlot.employeeId,
+                            )?.name ?? proposedSlot.employeeId}{" "}
+                            on {format(proposedSlot.start, "EEE MMM d")}{" "}
+                            {format(proposedSlot.start, "HH:mm")}
+                          </div>
+                        )
                       )}
                     </li>
                   );
@@ -928,7 +984,7 @@ export default function AddJobPanel({
                 ? mode === "custom-task"
                   ? !selected ||
                     !customTaskDesc.trim() ||
-                    !customTaskEmployeeId ||
+                    (!isTeam && !customTaskEmployeeId) ||
                     Number(customTaskHours) <= 0
                   : !selected ||
                     (mode === "single" && singleIdx === null) ||
