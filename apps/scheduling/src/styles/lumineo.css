@@ -174,8 +174,7 @@ input, select, textarea {
 }
 
 .sb-brand {
-  padding: 6px 4px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 4px 4px;
 }
 
 /* Horizontal Lumineo Signs wordmark (replaces the old icon + text). */
@@ -255,14 +254,21 @@ input, select, textarea {
 
 .sb-spacer { flex: 1; }
 
-/* Divider under "My Schedule", above the relocated scheduler views. */
+/* The two matching rules that bracket "My Schedule" — one above, one below.
+   Symmetric vertical margin keeps the button centered between them. */
 .sb-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.14);
-  margin: 8px 8px 10px;
+  margin: 8px;
 }
 [data-theme="light"] .sb-divider {
   background: rgba(255, 255, 255, 0.22);
+}
+
+/* The My Schedule band sits between the two dividers; center its button so it's
+   equidistant from each line. */
+.sb-nav--top {
+  justify-content: center;
 }
 
 .sb-theme-toggle {

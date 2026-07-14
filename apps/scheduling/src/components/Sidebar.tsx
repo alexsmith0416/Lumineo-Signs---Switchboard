@@ -71,7 +71,9 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
         <LumineoWordmark className="sb-brand__wordmark" />
       </div>
 
-      <nav className="sb-nav">
+      <div className="sb-divider" />
+
+      <nav className="sb-nav sb-nav--top">
         {TOP.map((i) => (
           <NavItem
             key={i.id}
