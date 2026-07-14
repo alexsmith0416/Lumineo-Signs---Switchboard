@@ -108,10 +108,23 @@ function EmployeeSchedules() {
  * admin/ops browse every roster and open any employee's schedule.
  */
 export default function MyScheduleScreen() {
-  const { loading, role } = useCurrentUser();
+  const { loading, role, impersonatedGroup, impersonatedEmployeeId } =
+    useCurrentUser();
   const { selection, select, clear } = useMyScheduleSelection();
 
   if (loading) return <div className="loading">Loading…</div>;
+
+  // Viewing as a specific floor person: show THEIR schedule directly (skip the
+  // shared-device "pick your name" step).
+  if (impersonatedGroup && impersonatedEmployeeId) {
+    return (
+      <MySchedule
+        key={`${impersonatedGroup}:${impersonatedEmployeeId}`}
+        group={impersonatedGroup}
+        employeeId={impersonatedEmployeeId}
+      />
+    );
+  }
 
   if (role.kind === "admin") return <EmployeeSchedules />;
   if (role.kind === "sales") return <PersonalActiveJobs code={role.code} type="sales" />;

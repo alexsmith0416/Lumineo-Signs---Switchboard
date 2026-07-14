@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { personByCode } from "./sales-pm";
+import { useImpersonationStore } from "../store/impersonation-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -133,6 +134,18 @@ export interface CurrentUser {
   defaultView: AppView;
   /** Preferred install region (for installer types). */
   installRegion?: "WK" | "NEK";
+
+  // --- Impersonation ("view as user") ---------------------------------------
+  /** The real signed-in user's type (unchanged by impersonation). Only real
+   *  admins may impersonate. */
+  realType: UserType;
+  /** True while a real admin is previewing the app as another user. */
+  isImpersonating: boolean;
+  /** Display name of the person being previewed (when impersonating). */
+  viewingAsName?: string;
+  /** Impersonated floor person's My-Schedule identity (roster group + id). */
+  impersonatedGroup?: EmployeeGroup;
+  impersonatedEmployeeId?: string;
 }
 
 /**
@@ -167,14 +180,33 @@ export function useCurrentUser(): CurrentUser {
       alive = false;
     };
   }, []);
-  const type = resolveUserType(state.upn);
+  const realType = resolveUserType(state.upn);
+  // Only real admins may "view as" another user — a non-admin can never escalate.
+  const canImpersonate = realType === "admin";
+  const imp = useImpersonationStore((s) => s.active);
+  const active = canImpersonate ? imp : null;
+
+  const type = active ? active.type : realType;
   const cfg = TYPE_CONFIG[type];
+  // Impersonated role: a floor/sales/pm person adopts that identity so their
+  // My Schedule / Active Jobs resolve to the right person.
+  const role: Role = active
+    ? active.code
+      ? { kind: active.type === "pm" ? "pm" : "sales", code: active.code }
+      : roleForType(active.type, undefined)
+    : roleForType(realType, state.upn);
+
   return {
     ...state,
     type,
-    role: roleForType(type, state.upn),
+    role,
     permissions: { money: cfg.money, monthly: cfg.monthly },
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,
+    realType,
+    isImpersonating: !!active,
+    viewingAsName: active?.name,
+    impersonatedGroup: active?.group,
+    impersonatedEmployeeId: active?.employeeId,
   };
 }

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 import NavDrawer from "./components/NavDrawer";
 import ProductionCalendar from "./components/ProductionCalendar";
 import InstallationCalendar from "./components/InstallationCalendar";
@@ -41,7 +42,8 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, permissions, defaultView, installRegion } = useCurrentUser();
+  const { role, loading: userLoading, permissions, defaultView, installRegion, isImpersonating, viewingAsName } =
+    useCurrentUser();
   const myScheduleLabel =
     role.kind === "admin"
       ? "Employee Schedules"
@@ -53,6 +55,19 @@ export default function App() {
   useEffect(() => {
     if (!userLoading && view === null) setView(defaultView as View);
   }, [userLoading, defaultView, view]);
+
+  // When an admin enters / switches / exits "view as user", land on that
+  // identity's default screen so the preview starts where they'd start (and a
+  // now-hidden screen like Monthly isn't left showing blank).
+  const impId = isImpersonating ? viewingAsName ?? "?" : "__real__";
+  const prevImpRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (userLoading) return;
+    if (prevImpRef.current !== null && prevImpRef.current !== impId) {
+      setView(defaultView as View);
+    }
+    prevImpRef.current = impId;
+  }, [impId, userLoading, defaultView]);
 
   // Live: load shipping loads + the install-card cache (for the Scheduled badge)
   // from Dataverse once at startup.
@@ -87,6 +102,7 @@ export default function App() {
           title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
           onMenu={() => setDrawerOpen(true)}
         />
+        <ImpersonationBanner />
         <div className="app-content">
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (

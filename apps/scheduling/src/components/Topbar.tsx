@@ -1,3 +1,5 @@
+import ViewAsMenu from "./ViewAsMenu";
+
 interface TopbarProps {
   title: string;
   /** Mobile only — opens the nav drawer. The button is hidden ≥900px via CSS. */
@@ -30,13 +32,7 @@ export default function Topbar({ title, onMenu }: TopbarProps) {
           <span>⌕</span>
           <span>Search schedules…</span>
         </div>
-        <div className="app-topbar__user">
-          <div className="app-topbar__avatar">AS</div>
-          <div className="app-topbar__user-info">
-            <span className="app-topbar__user-name">Alex Smith</span>
-            <span className="app-topbar__user-role">Scheduler</span>
-          </div>
-        </div>
+        <ViewAsMenu />
       </div>
     </header>
   );
