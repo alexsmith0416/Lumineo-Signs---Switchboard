@@ -59,6 +59,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         supportsScenarioSandbox={true}
         enableResourceAdmin={!readOnly}
         rosterUnlockable={!readOnly}
+        hideEmptyGroups
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
         toolbarExtras={

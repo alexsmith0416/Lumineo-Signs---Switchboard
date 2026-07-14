@@ -55,6 +55,11 @@ interface CalendarViewProps {
   scenarioStore?: UseScenarioStore;
   /** Department IDs to hide from the rendered grid. */
   hiddenDeptIds?: Set<string>;
+  /** Hide department groups that currently have zero visible members. Production
+   *  passes this so e.g. an empty "Fabrication Help" banner doesn't clutter the
+   *  board; the department still appears in the add-employee dropdown so it can
+   *  be repopulated. Installation leaves it off (empty locations stay visible). */
+  hideEmptyGroups?: boolean;
   /** Employee/resource IDs to hide from the rendered grid. */
   hiddenEmployeeIds?: Set<string>;
   /** Enables the right-click roster admin (add via group header, edit/delete
@@ -216,6 +221,7 @@ export default function CalendarView({
   scenarioStore = useScenarioStore,
   hiddenDeptIds,
   hiddenEmployeeIds,
+  hideEmptyGroups = false,
   enableResourceAdmin = false,
   installRegionIsNek,
   rosterUnlockable = false,
@@ -332,12 +338,15 @@ export default function CalendarView({
           if (a.position != null && b.position != null) return a.position - b.position;
           return a.name.localeCompare(b.name);
         });
-        // Include the dept even if empty — newly-added custom locations
-        // and pinned-empty groups should still appear so the user sees them.
+        // Production hides zero-member departments (hideEmptyGroups) to keep the
+        // board tidy — the dept still shows in the add-employee dropdown, so it
+        // reappears once someone is assigned. Installation keeps empty locations
+        // visible (newly-added custom locations / pinned-empty groups).
+        if (hideEmptyGroups && emps.length === 0) return;
         ordered.push({ dept, emps });
       });
     return ordered;
-  }, [employees, departments, hiddenDeptIds, hiddenEmployeeIds]);
+  }, [employees, departments, hiddenDeptIds, hiddenEmployeeIds, hideEmptyGroups]);
 
   const onCellDrop = async (e: React.DragEvent, employeeId: string, day: Date) => {
     if (readOnly) return;
