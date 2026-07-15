@@ -86,8 +86,14 @@ export default function App() {
     void hydrateInstallCardCache().catch(() => {});
   }, []);
 
-  // Monthly Gameplanning is Admin/Ops only — hide it from both navs.
-  const navItems = permissions.monthly ? VIEW_NAV : VIEW_NAV.filter((v) => v.id !== "monthly");
+  // Monthly Gameplanning and Scenarios are Admin/Ops only — hide from both navs.
+  const navItems = VIEW_NAV.filter(
+    (v) =>
+      (v.id !== "monthly" || permissions.monthly) &&
+      (v.id !== "scenario" || permissions.scenarios),
+  );
+  // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.
+  const canEdit = permissions.editSchedule;
 
   if (view === null) {
     return (
@@ -104,6 +110,7 @@ export default function App() {
         onSelect={(id) => setView(id as View)}
         myScheduleLabel={myScheduleLabel}
         showMonthly={permissions.monthly}
+        showScenario={permissions.scenarios}
       />
 
       <main className="app-main">
@@ -116,19 +123,21 @@ export default function App() {
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
             <ProductionCalendar
+              readOnly={!canEdit}
               canSeeMoney={permissions.money}
               onNavigate={(v) => setView(v as View)}
             />
           )}
           {view === "installation" && (
             <InstallationCalendar
+              readOnly={!canEdit}
               canSeeMoney={permissions.money}
               initialRegion={installRegion}
               onNavigate={(v) => setView(v as View)}
             />
           )}
-          {view === "shipping" && <ShippingBoard />}
-          {view === "scenario" && <ScenarioSandbox />}
+          {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
+          {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
           {view === "settings" && <SettingsScreen />}
         </div>

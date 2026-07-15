@@ -53,6 +53,11 @@ export interface Permissions {
   money: boolean;
   /** May see the Monthly Gameplanning view. */
   monthly: boolean;
+  /** May see + use the Scenario Sandbox (Admin/Ops only). */
+  scenarios: boolean;
+  /** May edit the schedules — drag/drop, add/edit/delete jobs, roster admin,
+   *  shipping loads. When false the boards are view-only (Admin/Ops only). */
+  editSchedule: boolean;
 }
 
 interface TypeConfig {
@@ -61,18 +66,22 @@ interface TypeConfig {
   defaultView: AppView;
   money: boolean;
   monthly: boolean;
+  /** Scenario Sandbox visibility. */
+  scenarios: boolean;
+  /** May edit schedules (vs. view-only). */
+  editSchedule: boolean;
   /** For installers: which install region their board defaults to. */
   installRegion?: "WK" | "NEK";
 }
 
 export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
-  admin: { label: "Admin", defaultView: "production", money: true, monthly: true },
-  ops: { label: "Ops", defaultView: "production", money: true, monthly: true },
-  production: { label: "Production", defaultView: "production", money: false, monthly: false },
-  "install-wk": { label: "WK Install", defaultView: "installation", money: false, monthly: false, installRegion: "WK" },
-  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, monthly: false, installRegion: "NEK" },
-  sales: { label: "Sales", defaultView: "my-schedule", money: false, monthly: false },
-  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, monthly: false },
+  admin: { label: "Admin", defaultView: "production", money: true, monthly: true, scenarios: true, editSchedule: true },
+  ops: { label: "Ops", defaultView: "production", money: true, monthly: true, scenarios: true, editSchedule: true },
+  production: { label: "Production", defaultView: "production", money: false, monthly: false, scenarios: false, editSchedule: false },
+  "install-wk": { label: "WK Install", defaultView: "installation", money: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "WK" },
+  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
+  sales: { label: "Sales", defaultView: "my-schedule", money: false, monthly: false, scenarios: false, editSchedule: false },
+  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, monthly: false, scenarios: false, editSchedule: false },
 };
 
 // Roster: login email (lower-case) → user type. Fill this from the provided list.
@@ -202,7 +211,12 @@ export function useCurrentUser(): CurrentUser {
     ...state,
     type,
     role,
-    permissions: { money: cfg.money, monthly: cfg.monthly },
+    permissions: {
+      money: cfg.money,
+      monthly: cfg.monthly,
+      scenarios: cfg.scenarios,
+      editSchedule: cfg.editSchedule,
+    },
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,
     realType,

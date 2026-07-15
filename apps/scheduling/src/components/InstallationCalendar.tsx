@@ -23,6 +23,8 @@ interface InstallationCalendarProps {
   canSeeMoney?: boolean;
   /** Which region the board opens on (installer types default to theirs). */
   initialRegion?: Region;
+  /** View-only (non-Admin/Ops): disables all editing affordances. */
+  readOnly?: boolean;
 }
 
 export const MONTHLY_INSTALL_GOAL = 1_100_000;
@@ -31,6 +33,7 @@ export default function InstallationCalendar({
   onNavigate,
   canSeeMoney = false,
   initialRegion = "WK",
+  readOnly = false,
 }: InstallationCalendarProps = {}) {
   const [region, setRegion] = useState<Region>(initialRegion);
   const [showInvoice, setShowInvoice] = useState(true);
@@ -148,6 +151,7 @@ export default function InstallationCalendar({
     <>
       <CalendarView
         useStore={useStore}
+        readOnly={readOnly}
         kindMeta={{
           ...KIND_META.installation,
           title: `Installation & Service Schedule · ${region}`,
@@ -165,21 +169,23 @@ export default function InstallationCalendar({
         scenarioStore={scenarioStore}
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
-        enableResourceAdmin
+        enableResourceAdmin={!readOnly}
         installRegionIsNek={region === "NEK"}
-        rosterUnlockable
+        rosterUnlockable={!readOnly}
         addAction={
-          <button
-            className="btn-add-job"
-            onClick={() =>
-              setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
-            }
-          >
-            + Add Job
-          </button>
+          readOnly ? undefined : (
+            <button
+              className="btn-add-job"
+              onClick={() =>
+                setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
+              }
+            >
+              + Add Job
+            </button>
+          )
         }
-        onEmptyCellClick={({ start, employeeId }) =>
-          setAddJobContext({ start, employeeId })
+        onEmptyCellClick={
+          readOnly ? undefined : ({ start, employeeId }) => setAddJobContext({ start, employeeId })
         }
       />
       {addJobContext && (

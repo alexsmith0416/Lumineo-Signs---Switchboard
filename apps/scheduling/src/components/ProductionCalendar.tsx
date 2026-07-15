@@ -106,21 +106,26 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
           </>
         }
         addAction={
-          <button
-            className="btn-add-job"
-            onClick={() =>
-              setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
-            }
-          >
-            + Add Job
-          </button>
+          readOnly ? undefined : (
+            <button
+              className="btn-add-job"
+              onClick={() =>
+                setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
+              }
+            >
+              + Add Job
+            </button>
+          )
         }
-        onEmptyCellClick={({ start, employeeId }) =>
-          // A click on the shared department lane (or the "+ Team job" button)
-          // targets the whole department; a normal cell targets one employee.
-          isLaneEmployeeId(employeeId)
-            ? setAddJobContext({ start, departmentId: laneDeptId(employeeId) })
-            : setAddJobContext({ start, employeeId })
+        onEmptyCellClick={
+          readOnly
+            ? undefined
+            : ({ start, employeeId }) =>
+                // A click on the shared department lane (or the "+ Team job" button)
+                // targets the whole department; a normal cell targets one employee.
+                isLaneEmployeeId(employeeId)
+                  ? setAddJobContext({ start, departmentId: laneDeptId(employeeId) })
+                  : setAddJobContext({ start, employeeId })
         }
       />
       {addJobContext && (

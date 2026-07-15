@@ -12,9 +12,11 @@ const OTHER = "__other__";
 export default function LocationSelect({
   value,
   onChange,
+  disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
+  disabled?: boolean;
 }) {
   const isStandard = STANDARD_LOCATIONS.includes(value);
   const [otherMode, setOtherMode] = useState(!!value && !isStandard);
@@ -25,6 +27,7 @@ export default function LocationSelect({
       <select
         className="load-item__field"
         value={selectVal}
+        disabled={disabled}
         onChange={(e) => {
           const v = e.target.value;
           if (v === OTHER) {
@@ -50,6 +53,7 @@ export default function LocationSelect({
           autoFocus
           placeholder="Custom location"
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
         />
       )}
     </div>

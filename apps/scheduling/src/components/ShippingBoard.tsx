@@ -12,7 +12,12 @@ import LoadPrintSheet from "./LoadPrintSheet";
  * resource rows. Build loads as needed on any day; a load can carry multiple
  * delivery locations. No truck/employee assignment.
  */
-export default function ShippingBoard() {
+interface ShippingBoardProps {
+  /** View-only (non-Admin/Ops): hide add buttons; loads open read-only. */
+  readOnly?: boolean;
+}
+
+export default function ShippingBoard({ readOnly = false }: ShippingBoardProps = {}) {
   const weekStart = useLoadsStore((s) => s.weekStart);
   const setWeekStart = useLoadsStore((s) => s.setWeekStart);
   const loads = useLoadsStore((s) => s.loads);
@@ -63,9 +68,11 @@ export default function ShippingBoard() {
         <button onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
         <div className="calendar-toolbar__spacer" />
-        <button className="btn-add-job" onClick={() => addOn(new Date(isThisWeek ? new Date() : weekStart))}>
-          + Add Load
-        </button>
+        {!readOnly && (
+          <button className="btn-add-job" onClick={() => addOn(new Date(isThisWeek ? new Date() : weekStart))}>
+            + Add Load
+          </button>
+        )}
       </div>
 
       <div className="ship-board">
@@ -86,7 +93,9 @@ export default function ShippingBoard() {
                     onPrint={() => setPrintId(load.id)}
                   />
                 ))}
-                <button className="ship-col__add" onClick={() => addOn(day)}>+ Add load</button>
+                {!readOnly && (
+                  <button className="ship-col__add" onClick={() => addOn(day)}>+ Add load</button>
+                )}
               </div>
             </div>
           );
@@ -98,6 +107,7 @@ export default function ShippingBoard() {
           loadId={editId}
           onClose={() => setEditId(null)}
           onPrint={() => setPrintId(editId)}
+          readOnly={readOnly}
         />
       )}
       {printLoad && <LoadPrintSheet load={printLoad} onClose={() => setPrintId(null)} />}

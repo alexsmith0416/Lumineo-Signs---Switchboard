@@ -779,6 +779,7 @@ export default function CalendarView({
             line={editing}
             onClose={() => setEditLineId(null)}
             useStore={useStore}
+            readOnly={readOnly}
           />
         );
       })()}

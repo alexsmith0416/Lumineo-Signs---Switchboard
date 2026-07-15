@@ -10,6 +10,8 @@ interface LoadEditorPanelProps {
   loadId: string;
   onClose: () => void;
   onPrint: () => void;
+  /** View-only: disable every field and hide add/remove/delete (Print stays). */
+  readOnly?: boolean;
 }
 
 // Week ‹ / › arrows that flank the day picker — sized to match the day buttons.
@@ -28,7 +30,7 @@ const weekArrowStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditorPanelProps) {
+export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = false }: LoadEditorPanelProps) {
   const load = useLoadsStore((s) => s.loads.find((l) => l.id === loadId));
   const updateLoad = useLoadsStore((s) => s.updateLoad);
   const deleteLoad = useLoadsStore((s) => s.deleteLoad);
@@ -49,7 +51,10 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
   return (
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel slide-over__panel--wide" onClick={(e) => e.stopPropagation()}>
-        <div className="section-title">Edit load</div>
+        <div className="section-title">
+          {readOnly ? "View load" : "Edit load"}
+          {readOnly && <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>· View only</span>}
+        </div>
 
         <div className="form-field">
           <div className="form-field__label">Load / route name</div>
@@ -58,6 +63,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
             type="text"
             value={load.name}
             onChange={(e) => updateLoad(load.id, { name: e.target.value })}
+            disabled={readOnly}
           />
         </div>
 
@@ -70,6 +76,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
               aria-label="Previous week"
               onClick={() => setPickerWeek(addDays(week, -7))}
               style={weekArrowStyle}
+              disabled={readOnly}
             >
               ‹
             </button>
@@ -81,6 +88,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
                   key={d.toISOString()}
                   type="button"
                   className={`load-day-picker__day${on ? " load-day-picker__day--on" : ""}`}
+                  disabled={readOnly}
                   onClick={() => {
                     const next = new Date(d);
                     next.setHours(8, 0, 0, 0);
@@ -99,6 +107,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
               aria-label="Next week"
               onClick={() => setPickerWeek(addDays(week, 7))}
               style={weekArrowStyle}
+              disabled={readOnly}
             >
               ›
             </button>
@@ -111,6 +120,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
             className="form-field__select"
             value={load.status}
             onChange={(e) => updateLoad(load.id, { status: e.target.value as ShipmentStatus })}
+            disabled={readOnly}
           >
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
@@ -126,6 +136,7 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
             value={load.generalNotes}
             placeholder="Trailer swaps, sequencing, etc."
             onChange={(e) => updateLoad(load.id, { generalNotes: e.target.value })}
+            disabled={readOnly}
           />
         </div>
 
@@ -138,38 +149,43 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint }: LoadEditor
             <ItemRow
               key={it.id}
               item={it}
+              readOnly={readOnly}
               onChange={(patch) => updateItem(load.id, it.id, patch)}
               onRemove={() => removeItem(load.id, it.id)}
             />
           ))}
 
-          <div className="load-items__add">
-            <JobSearch
-              onPick={(job) =>
-                addItem(load.id, {
-                  jobNo: job.jobNo,
-                  customerName: job.customerName,
-                  description: job.description,
-                })
-              }
-            />
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => addItem(load.id, { customerName: "" })}
-            >
-              + Manual item
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="load-items__add">
+              <JobSearch
+                onPick={(job) =>
+                  addItem(load.id, {
+                    jobNo: job.jobNo,
+                    customerName: job.customerName,
+                    description: job.description,
+                  })
+                }
+              />
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => addItem(load.id, { customerName: "" })}
+              >
+                + Manual item
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1 }} />
 
         <div style={{ padding: 12, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
-          <button className="btn-danger" onClick={() => setConfirmDelete(true)}>Delete</button>
+          {!readOnly && (
+            <button className="btn-danger" onClick={() => setConfirmDelete(true)}>Delete</button>
+          )}
           <div style={{ flex: 1 }} />
           <button className="btn-secondary" onClick={onPrint}>Print</button>
-          <button className="btn-primary" onClick={onClose}>Done</button>
+          <button className="btn-primary" onClick={onClose}>{readOnly ? "Close" : "Done"}</button>
         </div>
       </div>
 
@@ -194,10 +210,12 @@ function ItemRow({
   item,
   onChange,
   onRemove,
+  readOnly = false,
 }: {
   item: ShipmentItem;
   onChange: (patch: Partial<ShipmentItem>) => void;
   onRemove: () => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className={`load-item${item.kind === "pickup" ? " load-item--pickup" : ""}`}>
@@ -207,6 +225,7 @@ function ItemRow({
             type="checkbox"
             checked={item.loaded}
             onChange={(e) => onChange({ loaded: e.target.checked })}
+            disabled={readOnly}
           />
         </label>
         <span className="load-item__jobno">{item.jobNo ?? "—"}</span>
@@ -216,6 +235,7 @@ function ItemRow({
           value={item.customerName}
           placeholder="Customer / item"
           onChange={(e) => onChange({ customerName: e.target.value })}
+          disabled={readOnly}
         />
         <div className="load-item__kind">
           {(["delivery", "pickup"] as const).map((k) => (
@@ -224,12 +244,15 @@ function ItemRow({
               type="button"
               className={`load-item__kind-btn${item.kind === k ? " load-item__kind-btn--on" : ""}`}
               onClick={() => onChange({ kind: k })}
+              disabled={readOnly}
             >
               {k === "delivery" ? "Deliver" : "Pickup"}
             </button>
           ))}
         </div>
-        <button type="button" className="load-item__remove" title="Remove" onClick={onRemove}>×</button>
+        {!readOnly && (
+          <button type="button" className="load-item__remove" title="Remove" onClick={onRemove}>×</button>
+        )}
       </div>
       <textarea
         className="load-item__field load-item__desc"
@@ -237,15 +260,17 @@ function ItemRow({
         value={item.description}
         placeholder="Description (editable)"
         onChange={(e) => onChange({ description: e.target.value })}
+        disabled={readOnly}
       />
       <div className="load-item__bottom">
-        <LocationSelect value={item.location} onChange={(loc) => onChange({ location: loc })} />
+        <LocationSelect value={item.location} onChange={(loc) => onChange({ location: loc })} disabled={readOnly} />
         <input
           className="load-item__field load-item__notes"
           type="text"
           value={item.notes}
           placeholder="Loading / unloading notes"
           onChange={(e) => onChange({ notes: e.target.value })}
+          disabled={readOnly}
         />
       </div>
     </div>

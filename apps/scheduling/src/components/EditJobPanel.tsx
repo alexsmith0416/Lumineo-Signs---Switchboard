@@ -11,9 +11,11 @@ interface EditJobPanelProps {
   line: ScheduleLine;
   onClose: () => void;
   useStore?: UseScheduleStore;
+  /** View-only: disable every field and hide Save/Delete/Duplicate. */
+  readOnly?: boolean;
 }
 
-export default function EditJobPanel({ line, onClose, useStore = useScheduleStore }: EditJobPanelProps) {
+export default function EditJobPanel({ line, onClose, useStore = useScheduleStore, readOnly = false }: EditJobPanelProps) {
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
   const schedule = useStore((s) => s.schedule);
@@ -182,6 +184,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
           {line.jobNo} · {line.customerName}
+          {readOnly && <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>· View only</span>}
         </div>
 
         <div className="form-field">
@@ -193,6 +196,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             onChange={(e) => setJobDescription(e.target.value)}
             placeholder="BC job summary (shown under the job name)"
             style={{ resize: "vertical", fontFamily: "inherit" }}
+            disabled={readOnly}
           />
         </div>
         <div className="form-field">
@@ -204,6 +208,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             onChange={(e) => setTaskDescription(e.target.value)}
             placeholder="Task description shown on the card"
             style={{ resize: "vertical", fontFamily: "inherit" }}
+            disabled={readOnly}
           />
         </div>
 
@@ -213,6 +218,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             className="form-field__select"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
+            disabled={readOnly}
           >
             {[...employees.values()].map((e) => (
               <option key={e.id} value={e.id}>{e.name}</option>
@@ -226,6 +232,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             type="datetime-local"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            disabled={readOnly}
           />
         </div>
         <div className="form-field">
@@ -238,6 +245,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             value={overrideHours}
             onChange={(e) => setOverrideHours(e.target.value)}
             placeholder={`est. ${line.estimatedHours}`}
+            disabled={readOnly}
           />
         </div>
         <div className="form-field">
@@ -252,6 +260,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             }}
             onBlur={(e) => onEndChange(e.target.value)}
             title="Set the end date — adjusts the hours to land here"
+            disabled={readOnly}
           />
         </div>
         <div className="form-field">
@@ -269,6 +278,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
               type="checkbox"
               checked={isLocked}
               onChange={(e) => setIsLocked(e.target.checked)}
+              disabled={readOnly}
             />
             <span style={{ fontSize: 12 }}>Pin task — cascade flows around it</span>
           </label>
@@ -288,6 +298,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
               onChange={(e) => setCrewTrips(e.target.value)}
               placeholder="Trips"
               title="Number of trips"
+              disabled={readOnly}
             />
             <input
               className="form-field__input"
@@ -298,6 +309,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
               onChange={(e) => setCrewPersons(e.target.value)}
               placeholder="Men"
               title="Men per trip"
+              disabled={readOnly}
             />
             <input
               className="form-field__input"
@@ -308,6 +320,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
               onChange={(e) => setCrewTrucks(e.target.value)}
               placeholder="Trucks"
               title="Trucks per trip"
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -318,6 +331,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             value={installZip}
             onChange={(e) => setInstallZip(e.target.value)}
             placeholder="e.g. 67501"
+            disabled={readOnly}
           />
         </div>
         </>
@@ -354,30 +368,41 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             gap: 8,
           }}
         >
-          <button
-            className="btn-danger"
-            disabled={busy}
-            onClick={() => setConfirmingDelete(true)}
-          >
-            Delete
-          </button>
-          <button
-            className="btn-secondary"
-            disabled={busy}
-            onClick={() => {
-              setDupEmployeeIds(new Set());
-              setDuplicating(true);
-            }}
-          >
-            Duplicate
-          </button>
-          <div style={{ flex: 1 }} />
-          <button className="btn-secondary" disabled={busy} onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn-primary" disabled={busy} onClick={onSave}>
-            {busy ? "Saving…" : "Save"}
-          </button>
+          {readOnly ? (
+            <>
+              <div style={{ flex: 1 }} />
+              <button className="btn-primary" onClick={onClose}>
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn-danger"
+                disabled={busy}
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete
+              </button>
+              <button
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => {
+                  setDupEmployeeIds(new Set());
+                  setDuplicating(true);
+                }}
+              >
+                Duplicate
+              </button>
+              <div style={{ flex: 1 }} />
+              <button className="btn-secondary" disabled={busy} onClick={onClose}>
+                Cancel
+              </button>
+              <button className="btn-primary" disabled={busy} onClick={onSave}>
+                {busy ? "Saving…" : "Save"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -35,6 +35,8 @@ interface SidebarProps {
   myScheduleLabel?: string;
   /** Monthly Gameplanning is Admin/Ops only. */
   showMonthly?: boolean;
+  /** Scenarios is Admin/Ops only. */
+  showScenario?: boolean;
 }
 
 function NavItem({
@@ -61,10 +63,12 @@ function NavItem({
   );
 }
 
-export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true }: SidebarProps) {
+export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true, showScenario = true }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
-  const views = showMonthly ? VIEWS : VIEWS.filter((v) => v.id !== "monthly");
+  const views = VIEWS.filter(
+    (v) => (v.id !== "monthly" || showMonthly) && (v.id !== "scenario" || showScenario),
+  );
   return (
     <aside className="switchboard-sidebar" aria-label="Scheduler navigation">
       <div className="sb-brand">
