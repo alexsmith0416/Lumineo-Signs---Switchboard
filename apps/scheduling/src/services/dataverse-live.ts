@@ -37,6 +37,7 @@ import type {
   WorkHoursOverride,
 } from "../engine/types";
 import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/types";
+import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -1227,6 +1228,151 @@ export async function fetchBcBillingLive(): Promise<
     remainingAmount: n(r.crfdf_remainingamount),
     date: r.crfdf_billdate == null ? "" : String(r.crfdf_billdate).slice(0, 10),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Job Queue (crfdf_jobqueuegroup / crfdf_jobqueueitem)
+// ---------------------------------------------------------------------------
+// A per-board (crfdf_kind) set of named, ordered groups, each holding parked
+// jobs ready to drag onto the schedule. Items reference their group by a plain
+// GUID string column (crfdf_groupid) — no Dataverse relationship. Job + task
+// text share the crfdf_description column via the same sentinel as schedule
+// lines / install cards (see encodeDesc / decodeDesc).
+const QUEUE = {
+  groups: "crfdf_jobqueuegroups",
+  items: "crfdf_jobqueueitems",
+} as const;
+
+function mapQueueGroup(r: Row): Omit<QueueGroup, "items"> {
+  return {
+    id: s(r.crfdf_jobqueuegroupid),
+    kind: (s(r.crfdf_kind) || "production") as QueueKind,
+    name: s(r.crfdf_name, "Group"),
+    color: s(r.crfdf_color) || "#141464",
+    textColor: s(r.crfdf_textcolor) || "#ffffff",
+    collapsed: n(r.crfdf_collapsed) === 1,
+    sortOrder: n(r.crfdf_sortorder),
+  };
+}
+
+function mapQueueItem(r: Row): QueueItem {
+  const desc = decodeDesc(s(r.crfdf_description));
+  return {
+    id: s(r.crfdf_jobqueueitemid),
+    groupId: s(r.crfdf_groupid),
+    jobNo: s(r.crfdf_jobno),
+    customerName: s(r.crfdf_customername),
+    jobDescription: desc.jobDescription,
+    planningLineDescription: desc.planningLineDescription,
+    estimatedHours: n(r.crfdf_estimatedhours, 8),
+    departmentId: s(r.crfdf_departmentid),
+    crewPersons: nOrNull(r.crfdf_crewpersons),
+    crewTrucks: nOrNull(r.crfdf_crewtrucks),
+    crewTrips: nOrNull(r.crfdf_crewtrips),
+    installZip: r.crfdf_installzip == null ? null : s(r.crfdf_installzip),
+    invoiceAmount: nOrNull(r.crfdf_invoiceamount),
+    isCustom: n(r.crfdf_iscustom) === 1,
+    customColor: r.crfdf_customcolor == null ? null : s(r.crfdf_customcolor),
+    customTextColor: r.crfdf_customtextcolor == null ? null : s(r.crfdf_customtextcolor),
+    sortOrder: n(r.crfdf_sortorder),
+  };
+}
+
+function queueGroupToRecord(g: Partial<QueueGroup>): Row {
+  const rec: Row = {};
+  if (g.name !== undefined) rec.crfdf_name = g.name;
+  if (g.kind !== undefined) rec.crfdf_kind = g.kind;
+  if (g.color !== undefined) rec.crfdf_color = g.color;
+  if (g.textColor !== undefined) rec.crfdf_textcolor = g.textColor;
+  if (g.collapsed !== undefined) rec.crfdf_collapsed = g.collapsed ? 1 : 0;
+  if (g.sortOrder !== undefined) rec.crfdf_sortorder = g.sortOrder;
+  return rec;
+}
+
+function queueItemToRecord(it: Partial<QueueItem>): Row {
+  const rec: Row = {};
+  if (it.customerName !== undefined || it.jobNo !== undefined)
+    rec.crfdf_name = it.customerName || it.jobNo || "Job";
+  if (it.groupId !== undefined) rec.crfdf_groupid = it.groupId;
+  if (it.jobNo !== undefined) rec.crfdf_jobno = it.jobNo;
+  if (it.customerName !== undefined) rec.crfdf_customername = it.customerName;
+  if (it.planningLineDescription !== undefined || it.jobDescription !== undefined)
+    rec.crfdf_description = encodeDesc({
+      jobDescription: it.jobDescription,
+      planningLineDescription: it.planningLineDescription,
+    });
+  if (it.estimatedHours !== undefined) rec.crfdf_estimatedhours = it.estimatedHours;
+  if (it.departmentId !== undefined) rec.crfdf_departmentid = it.departmentId;
+  if (it.crewPersons !== undefined) rec.crfdf_crewpersons = it.crewPersons;
+  if (it.crewTrucks !== undefined) rec.crfdf_crewtrucks = it.crewTrucks;
+  if (it.crewTrips !== undefined) rec.crfdf_crewtrips = it.crewTrips;
+  if (it.installZip !== undefined) rec.crfdf_installzip = it.installZip;
+  if (it.invoiceAmount !== undefined) rec.crfdf_invoiceamount = it.invoiceAmount;
+  if (it.isCustom !== undefined) rec.crfdf_iscustom = it.isCustom ? 1 : 0;
+  if (it.customColor !== undefined) rec.crfdf_customcolor = it.customColor;
+  if (it.customTextColor !== undefined) rec.crfdf_customtextcolor = it.customTextColor;
+  if (it.sortOrder !== undefined) rec.crfdf_sortorder = it.sortOrder;
+  return rec;
+}
+
+/** All groups (with their items) for one board, ordered by sortOrder. */
+export async function fetchQueueGroups(kind: QueueKind): Promise<QueueGroup[]> {
+  const [groupRows, itemRows] = await Promise.all([
+    list(QUEUE.groups, { filter: `crfdf_kind eq '${odataLit(kind)}'`, orderby: "crfdf_sortorder asc" }),
+    list(QUEUE.items, { orderby: "crfdf_sortorder asc" }),
+  ]);
+  const byGroup = new Map<string, QueueItem[]>();
+  for (const r of itemRows) {
+    const it = mapQueueItem(r);
+    if (!it.groupId) continue;
+    const arr = byGroup.get(it.groupId) ?? [];
+    arr.push(it);
+    byGroup.set(it.groupId, arr);
+  }
+  return groupRows.map(mapQueueGroup).map((g) => ({
+    ...g,
+    items: (byGroup.get(g.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
+  }));
+}
+
+export async function createQueueGroup(g: QueueGroup): Promise<void> {
+  const { S, org } = await sdk();
+  const rec = { crfdf_jobqueuegroupid: g.id, ...queueGroupToRecord(g) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.groups, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "createQueueGroup failed");
+}
+
+export async function updateQueueGroup(id: string, changes: Partial<QueueGroup>): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.groups, id, queueGroupToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateQueueGroup(${id}) failed`);
+}
+
+/** Delete a group and all of its parked items. */
+export async function deleteQueueGroup(id: string, itemIds: string[]): Promise<void> {
+  const { S, org } = await sdk();
+  await Promise.all(itemIds.map((iid) => S.DeleteRecordWithOrganization(org, QUEUE.items, iid)));
+  const res = await S.DeleteRecordWithOrganization(org, QUEUE.groups, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteQueueGroup(${id}) failed`);
+}
+
+export async function createQueueItem(it: QueueItem): Promise<void> {
+  const { S, org } = await sdk();
+  const rec = { crfdf_jobqueueitemid: it.id, ...queueItemToRecord(it) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.items, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "createQueueItem failed");
+}
+
+export async function updateQueueItem(id: string, changes: Partial<QueueItem>): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.items, id, queueItemToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateQueueItem(${id}) failed`);
+}
+
+export async function deleteQueueItem(id: string): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.DeleteRecordWithOrganization(org, QUEUE.items, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteQueueItem(${id}) failed`);
 }
 
 /**

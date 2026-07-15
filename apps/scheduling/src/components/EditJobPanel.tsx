@@ -6,6 +6,7 @@ import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
 import ConfirmDialog from "./ConfirmDialog";
+import JobTaskPicker from "./JobTaskPicker";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
@@ -50,6 +51,10 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [isLocked, setIsLocked] = useState(line.isLocked);
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Set when the user re-picks the job's BC tasks: their descriptions + summed
+  // BC estimated hours replace the card's text and re-link the base hours
+  // (clearing any manual override) on save.
+  const [repick, setRepick] = useState<{ descriptions: string[]; hours: number } | null>(null);
 
   const employee = employees.get(line.employeeId);
 
@@ -100,7 +105,9 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     setBusy(true);
     try {
       const newHours = Number(overrideHours);
-      if (!Number.isNaN(newHours) && newHours !== line.overrideHours) {
+      // When tasks were re-picked, the hours change is applied below as the new
+      // base estimatedHours (override cleared) — so skip the override path here.
+      if (!repick && !Number.isNaN(newHours) && newHours !== line.overrideHours) {
         await updateTaskHours(line.id, newHours);
       }
       const newStart = new Date(startDate);
@@ -118,7 +125,15 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
       };
       const changes: Partial<ScheduleLine> = {};
       if (isLocked !== line.isLocked) changes.isLocked = isLocked;
-      if (
+      if (repick) {
+        // Re-link the card to the newly-chosen BC tasks: text + base estimated
+        // hours, clearing any override. A manual edit to the Hours field after
+        // re-picking wins over the summed estimate. loadWeek re-derives the end.
+        changes.jobDescription = jobDescription;
+        changes.planningLineDescription = taskDescription;
+        changes.estimatedHours = !Number.isNaN(newHours) && newHours > 0 ? newHours : repick.hours;
+        changes.overrideHours = null;
+      } else if (
         jobDescription !== (line.jobDescription ?? "") ||
         taskDescription !== (line.planningLineDescription ?? "")
       ) {
@@ -199,6 +214,22 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             disabled={readOnly}
           />
         </div>
+        {!readOnly && line.jobNo && !line.isCustom && (
+          <div className="form-field">
+            <div className="form-field__label">Job tasks (from BC)</div>
+            <JobTaskPicker
+              jobNo={line.jobNo}
+              kind={isInstall ? "installation" : "production"}
+              currentDescriptions={taskDescription.split("\n")}
+              onChange={(descriptions, totalHours) => {
+                setTaskDescription(descriptions.join("\n"));
+                const h = totalHours || line.estimatedHours;
+                setOverrideHours(String(h));
+                setRepick({ descriptions, hours: h });
+              }}
+            />
+          </div>
+        )}
         <div className="form-field">
           <div className="form-field__label">Task / card text</div>
           <textarea

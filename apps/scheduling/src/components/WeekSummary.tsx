@@ -13,6 +13,8 @@ interface WeekSummaryProps {
   combinedBillingThisWeek?: number;
   /** Show a "Total Value" stat — sum of each current job's remaining value. */
   showTotalValue?: boolean;
+  /** Replaces the "N resources this week" note (e.g. the Job Queue toggle). */
+  trailing?: React.ReactNode;
 }
 
 function formatMoney(amount: number): string {
@@ -29,6 +31,7 @@ export default function WeekSummary({
   monthlyGoal,
   combinedBillingThisWeek,
   showTotalValue = false,
+  trailing,
 }: WeekSummaryProps) {
   const stats = useMemo(() => {
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
@@ -153,9 +156,11 @@ export default function WeekSummary({
       )}
 
       <div style={{ flex: 1 }} />
-      <div style={{ color: "var(--text-tertiary)", alignSelf: "center" }}>
-        {context.employees.size} {resourceLabelPlural.toLowerCase()} this week
-      </div>
+      {trailing ?? (
+        <div style={{ color: "var(--text-tertiary)", alignSelf: "center" }}>
+          {context.employees.size} {resourceLabelPlural.toLowerCase()} this week
+        </div>
+      )}
     </div>
   );
 }

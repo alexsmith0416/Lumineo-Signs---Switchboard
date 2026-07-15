@@ -6,8 +6,16 @@ import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
-import { laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
+import { isLaneEmployeeId, laneDeptId, laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
 import { printMarkup } from "../services/print";
+import {
+  useProductionQueueStore,
+  useInstallQueueStoreWK,
+  useInstallQueueStoreNEK,
+} from "../store/job-queue-store";
+import { lineFromQueueItem, queueItemFromLine } from "../services/job-queue-data";
+import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
+import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { useSettingsStore } from "../store/settings-store";
@@ -83,6 +91,8 @@ interface CalendarViewProps {
   /** Production only: employee id → weekday indices (0=Mon) the person is lent
    *  to Installation. Those day cells render greyed + labelled "Installation". */
   assistDaysByEmployee?: Map<string, Set<number>>;
+  /** Enables the right-hand Job Queue slide-out (Production + Installation). */
+  enableJobQueue?: boolean;
 }
 
 interface PendingShift {
@@ -235,6 +245,7 @@ export default function CalendarView({
   installRegionIsNek,
   rosterUnlockable = false,
   assistDaysByEmployee,
+  enableJobQueue = false,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -350,6 +361,48 @@ export default function CalendarView({
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
   const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
 
+  // --- Job Queue (Production + Installation) -------------------------------
+  // Pick the per-board queue store (each board keeps its own queue). Selecting a
+  // store REFERENCE here (not calling a hook conditionally) keeps hook order stable.
+  const queueStore =
+    kindMeta.kind === "installation"
+      ? installRegionIsNek
+        ? useInstallQueueStoreNEK
+        : useInstallQueueStoreWK
+      : useProductionQueueStore;
+  const [queueOpen, setQueueOpen] = useState(false);
+
+  // Drop a queue card onto a cell → create a schedule line from it (instant
+  // placement with the job's stored hours/dept), then remove it from the queue.
+  const placeQueueItem = (itemId: string, employeeId: string, day: Date) => {
+    const q = queueStore.getState();
+    const item = q.groups.flatMap((g) => g.items).find((it) => it.id === itemId);
+    if (!item) return;
+    const isLane = isLaneEmployeeId(employeeId);
+    const deptId = isLane ? laneDeptId(employeeId) : employees.get(employeeId)?.departmentId ?? "";
+    const emp = isLane
+      ? makeLaneEmployee(departments.get(deptId) ?? { id: deptId, name: "Team", flowOrder: 0, color: "#cccccc" })
+      : employees.get(employeeId);
+    if (!emp) return;
+    const start = new Date(day);
+    start.setHours(8, 0, 0, 0);
+    const base = lineFromQueueItem(item, employeeId, deptId, start);
+    const line = isLane ? { ...base, departmentWide: true as const } : base;
+    const end = calculateEndTime(start, effectiveHours(line, emp), emp, getContext(), line.id);
+    void addScheduleLine({ ...line, endDateTime: end });
+    q.removeItem(itemId);
+  };
+
+  // Drop a calendar card into a queue group → store it, then delete the line.
+  const handleCalendarCardToQueue = (lineId: string, groupId: string) => {
+    const line = schedule.find((l) => l.id === lineId);
+    if (!line) return;
+    const q = queueStore.getState();
+    const group = q.groups.find((g) => g.id === groupId);
+    q.addItem(queueItemFromLine(line, groupId, group ? group.items.length : 0));
+    void deleteScheduleLine(lineId);
+  };
+
   useEffect(() => {
     void loadWeek();
   }, [loadWeek]);
@@ -391,6 +444,12 @@ export default function CalendarView({
   const onCellDrop = async (e: React.DragEvent, employeeId: string, day: Date) => {
     if (readOnly) return;
     e.preventDefault();
+    // A card dragged from the Job Queue: place it here and remove it from the queue.
+    const queueItemId = e.dataTransfer.getData(DND_QUEUE_ITEM);
+    if (queueItemId) {
+      placeQueueItem(queueItemId, employeeId, day);
+      return;
+    }
     const lineId = e.dataTransfer.getData("text/lineId");
     if (!lineId) return;
     const newStart = new Date(day);
@@ -538,6 +597,20 @@ export default function CalendarView({
         showTotalValue={showTotalValue}
         monthlyGoal={monthlyGoal}
         combinedBillingThisWeek={combinedBillingThisWeek}
+        trailing={
+          enableJobQueue ? (
+            <button
+              type="button"
+              className={"wk-queue-toggle" + (queueOpen ? " wk-queue-toggle--on" : "")}
+              onClick={() => setQueueOpen((v) => !v)}
+              title="Toggle the Job Queue"
+              aria-pressed={queueOpen}
+            >
+              <QueueToggleIcon size={16} />
+              <span>Job Queue</span>
+            </button>
+          ) : undefined
+        }
       />
       <div className="calendar-toolbar">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
@@ -873,6 +946,17 @@ export default function CalendarView({
           />
         );
       })()}
+
+      {enableJobQueue && (
+        <JobQueuePanel
+          useQueueStore={queueStore}
+          open={queueOpen}
+          onClose={() => setQueueOpen(false)}
+          canEdit={!readOnly}
+          departments={[...departments.values()]}
+          onCalendarCardDrop={handleCalendarCardToQueue}
+        />
+      )}
     </div>
   );
 }

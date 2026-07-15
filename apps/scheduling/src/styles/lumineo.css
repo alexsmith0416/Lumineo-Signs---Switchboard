@@ -2526,3 +2526,389 @@ input, select, textarea {
   background: rgba(56, 161, 105, 0.15);
   color: #2f855a;
 }
+
+/* ============================================================
+   Job Queue — right-hand slide-out (Production + Installation)
+   ============================================================ */
+.job-queue {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 344px;
+  max-width: 92vw;
+  background: var(--surface-raised);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+}
+.job-queue--open {
+  transform: translateX(0);
+}
+.job-queue__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--lumineo-navy);
+  color: #fff;
+  flex-shrink: 0;
+}
+.job-queue__title {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+}
+.job-queue__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.job-queue__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+.job-queue__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.job-queue__icon-btn--on {
+  background: #fff;
+  color: var(--lumineo-navy);
+}
+.job-queue__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.job-queue__empty-all {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  padding: 20px 8px;
+  text-align: center;
+}
+.job-queue__add-group {
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--lumineo-navy);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.job-queue__add-group:hover {
+  background: var(--bg-tertiary);
+}
+
+.jq-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+.jq-group__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+.jq-group__head--dragging {
+  opacity: 0.5;
+}
+.jq-group__caret {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.jq-group__name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jq-group__meta {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.jq-group__edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.jq-group__edit-actions button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+.jq-group__grip {
+  cursor: grab;
+  font-size: 13px;
+  opacity: 0.8;
+}
+.jq-group__body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-tertiary);
+}
+.jq-group__body--drop {
+  outline: 2px dashed var(--lumineo-navy);
+  outline-offset: -3px;
+}
+.jq-group__empty {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.jq-card {
+  display: flex;
+  gap: 8px;
+  padding: 7px 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid #c9ced8;
+  border-radius: 6px;
+  cursor: grab;
+}
+.jq-card:active {
+  cursor: grabbing;
+}
+.jq-card__main {
+  flex: 1;
+  min-width: 0;
+}
+.jq-card__top {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.jq-card__jobno {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--lumineo-navy);
+}
+.jq-card__cust {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jq-card__jobdesc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+.jq-card__desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.jq-card__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+}
+.jq-card__hours {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.jq-card__remove {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.jq-card__remove:hover {
+  color: var(--lumineo-red);
+}
+
+.jq-add-job {
+  margin-top: 2px;
+}
+.jq-add-job-btn {
+  border: 1px dashed var(--border);
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.jq-add-job-btn:hover {
+  background: var(--surface-raised);
+  border-color: var(--lumineo-navy);
+}
+
+.jq-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px;
+}
+.jq-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.jq-swatch--on {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--surface-raised) inset;
+}
+
+/* Week-summary toggle that replaces the resource count */
+.wk-queue-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  border: 1px solid var(--lumineo-navy);
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wk-queue-toggle:hover {
+  background: var(--bg-tertiary);
+}
+.wk-queue-toggle--on {
+  background: var(--lumineo-navy);
+  color: #fff;
+}
+
+/* Group dialog: "build your own" color row (mirrors the custom-card picker) */
+.jq-color-builder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--input-bg);
+  border-radius: 4px;
+}
+.jq-color-builder input[type="color"] {
+  width: 40px;
+  height: 28px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.jq-color-builder__preview {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Clickable queue card (opens the item editor) */
+.jq-card--clickable { cursor: pointer; }
+.jq-card--clickable:hover {
+  border-color: var(--lumineo-navy);
+  box-shadow: 0 1px 4px rgba(20, 20, 100, 0.12);
+}
+
+/* Job task (planning-line) re-picker — used in Edit Job + queue item editors */
+.jtp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+  background: var(--input-bg);
+}
+.jtp__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.jtp__row:hover {
+  background: var(--bg-tertiary);
+}
+.jtp__row--on {
+  background: var(--bg-tertiary);
+}
+.jtp__desc {
+  flex: 1;
+  min-width: 0;
+}
+.jtp__hours {
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.jtp__total {
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+.jtp__note {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
