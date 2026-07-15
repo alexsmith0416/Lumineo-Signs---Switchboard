@@ -9,6 +9,7 @@ import {
   computeDesign,
   designPressureAt,
   elementPressure,
+  momentAtHeight,
   requiredSectionModulus,
   selectSection,
   solveEmbedment,
@@ -150,6 +151,8 @@ function baseInput(): DesignInput {
     pierWidthFt: 3,
     pierLengthFt: 3,
     signWeightLb: null,
+    mowPad: { enabled: false, widthFt: 4, lengthFt: 12, heightIn: 5.5 },
+    transition: { enabled: false, spliceFt: null },
     basePlate: {
       enabled: true,
       boltsPerLine: 2,
@@ -247,5 +250,107 @@ describe('computeDesign end-to-end (20 ft × 10 ft cabinet, top at 25 ft, 2 pipe
     input.pierLengthFt = 4;
     const r = computeDesign(input);
     expect(r.footing!.effectiveWidthFt).toBeCloseTo(5, 9);
+  });
+});
+
+describe('mow pad', () => {
+  it('computes the pad volume and the 6-inch footing clearance', () => {
+    const input = baseInput(); // round caisson Ø 3'
+    input.mowPad = { enabled: true, widthFt: 4, lengthFt: 12, heightIn: 5.5 };
+    const r = computeDesign(input);
+    const mp = r.mowPad!;
+    expect(mp.volumeYd3).toBeCloseTo((4 * 12 * (5.5 / 12)) / 27, 9);
+    expect(mp.requiredWidthFt).toBeCloseTo(3.5, 9); // Ø 3' + 6"
+    expect(mp.requiredLengthFt).toBeCloseTo(3.5, 9);
+    expect(mp.sizeOk).toBe(true);
+    expect(r.warnings.some((w) => w.includes('Mow pad'))).toBe(false);
+  });
+
+  it('warns when the pad does not clear the footing by 6 inches', () => {
+    const input = baseInput();
+    // Pad exactly the footing size — must be flagged.
+    input.mowPad = { enabled: true, widthFt: 3, lengthFt: 12, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.mowPad!.sizeOk).toBe(false);
+    expect(r.warnings.some((w) => w.includes('Mow pad'))).toBe(true);
+  });
+
+  it('checks each pad axis against the matching pier dimension', () => {
+    const input = baseInput();
+    input.footingType = 'rect';
+    input.pierWidthFt = 3; // parallel to face → pad LENGTH must clear it
+    input.pierLengthFt = 4; // perpendicular → pad WIDTH must clear it
+    input.mowPad = { enabled: true, widthFt: 4.5, lengthFt: 3.5, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.mowPad!.requiredLengthFt).toBeCloseTo(3.5, 9);
+    expect(r.mowPad!.requiredWidthFt).toBeCloseTo(4.5, 9);
+    expect(r.mowPad!.sizeOk).toBe(true);
+    input.mowPad.widthFt = 4.4;
+    expect(computeDesign(input).mowPad!.sizeOk).toBe(false);
+  });
+});
+
+describe('pole length & transition pipe', () => {
+  it('computes moment about a height, dropping elements below it', () => {
+    const r = computeDesign(baseInput()); // one element, area 200, centroid 20
+    const p = r.elements[0].pressurePsf;
+    expect(momentAtHeight(r.elements, 10)).toBeCloseTo(200 * p * (20 - 10), 6);
+    expect(momentAtHeight(r.elements, 0)).toBeCloseTo(r.momentAtGradeLbFt, 6);
+    expect(momentAtHeight(r.elements, 25)).toBe(0);
+  });
+
+  it('reports total pole length (height + embedment) and haul/order limits', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    const r = computeDesign(input);
+    const pl = r.poleLength!;
+    expect(pl.embedFt).toBeCloseTo(r.footing!.depthFt - 0.25, 9);
+    expect(pl.totalFt).toBeCloseTo(25 + pl.embedFt, 9);
+    expect(pl.totalFt).toBeGreaterThan(30); // 25' top + ~9' embed
+    expect(pl.haulOk).toBe(false);
+    expect(pl.recommendTransition).toBe(true);
+    expect(r.warnings.some((w) => w.includes('haul') || w.includes('order'))).toBe(true);
+  });
+
+  it('has zero embedment when base-plate mounted', () => {
+    const r = computeDesign(baseInput()); // base plate enabled
+    expect(r.poleLength!.embedFt).toBe(0);
+    expect(r.poleLength!.totalFt).toBe(25);
+  });
+
+  it('sizes a transition pipe that fits inside the base pipe ID', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    input.transition = { enabled: true, spliceFt: 15 };
+    const r = computeDesign(input);
+    const tr = r.transition!;
+    const base = r.column.section!; // 14"(.375): ID = 14 − 0.75 = 13.25
+    expect(tr.spliceFt).toBe(15);
+    expect(tr.momentAtSpliceLbFt).toBeCloseTo(
+      200 * r.elements[0].pressurePsf * (20 - 15),
+      6,
+    );
+    expect(tr.section).not.toBeNull();
+    expect(tr.section!.odIn).toBeLessThan(tr.baseIdIn);
+    expect(tr.baseIdIn).toBeCloseTo(base.odIn - 2 * base.wallIn, 9);
+    expect(tr.fitsInside).toBe(true);
+    expect(tr.ok).toBe(true);
+    // Piece lengths: base = embed + splice; upper = (top − splice) + 2' overlap.
+    expect(tr.basePipeFt).toBeCloseTo(r.poleLength!.embedFt + 15, 9);
+    expect(tr.upperPipeFt).toBeCloseTo(25 - 15 + 2, 9);
+    // Ring plates: outer = base OD, inner = base ID, bored for the upper pipe.
+    expect(tr.ringOuterOdIn).toBeCloseTo(base.odIn, 9);
+    expect(tr.ringInnerOdIn).toBeCloseTo(tr.baseIdIn, 9);
+    expect(tr.ringBoreIn).toBeCloseTo(tr.section!.odIn, 9);
+    expect(tr.ringThicknessIn).toBe(0.5);
+  });
+
+  it('auto-places the splice at the lowest face bottom when tall enough', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 20, heightFt: 10, topFt: 40 }];
+    input.transition = { enabled: true, spliceFt: null };
+    const r = computeDesign(input);
+    expect(r.transition!.spliceFt).toBe(30); // bottom of face = 40 − 10
   });
 });

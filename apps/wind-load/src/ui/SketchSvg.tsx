@@ -115,10 +115,14 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const poleXs = layoutXs(input.numColumns, widest);
   const footXs = layoutXs(input.numFootings, widest);
 
+  const mowPad = input.mowPad.enabled ? result.mowPad : null;
+  const transition = result.transition;
+
   const maxHalfX = Math.max(
     widest / 2,
     ...footXs.map((x) => Math.abs(x) + footWFt / 2),
     ...poleXs.map((x) => Math.abs(x) + poleWFt / 2),
+    mowPad ? input.mowPad.lengthFt / 2 : 0,
   );
   const scale = Math.min(
     (SKETCH_VB_H - PAD_T - PAD_B) / (topMax + depth),
@@ -188,11 +192,36 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         </g>
       ))}
 
+      {/* Mow pad: concrete apron sitting on top of the soil */}
+      {mowPad && (() => {
+        const padWpx = input.mowPad.lengthFt * scale; // along-face dimension in elevation
+        const padHpx = Math.max((input.mowPad.heightIn / 12) * scale, 4);
+        return (
+          <g>
+            <rect x={cx - padWpx / 2} y={gradeY - padHpx} width={padWpx} height={padHpx} fill={p.footingFill} stroke={p.footingStroke} strokeWidth={1.5} />
+            <rect x={cx - padWpx / 2} y={gradeY - padHpx} width={padWpx} height={padHpx} fill={`url(#${concId})`} />
+          </g>
+        );
+      })()}
+
       {/* Poles (embedded to 3" above footing bottom, or stopped on base plates) */}
       {poleXs.map((px, i) => {
-        const topY = Y(topMax);
         const botY = input.basePlate.enabled ? gradeY : footBotY - Math.min(6, 0.25 * scale);
-        return <rect key={`p-${i}`} x={X(px) - poleWpx / 2} y={topY} width={poleWpx} height={botY - topY} fill={p.pole} />;
+        if (transition?.section) {
+          // Spliced pole: base pipe up to the splice, narrower upper pipe
+          // extending 2' down inside it.
+          const spliceY = Y(transition.spliceFt);
+          const upperWpx = Math.max((transition.section.odIn / 12) * scale, 5);
+          const overlapY = Y(Math.max(0, transition.spliceFt - transition.overlapFt));
+          return (
+            <g key={`p-${i}`}>
+              <rect x={X(px) - poleWpx / 2} y={spliceY} width={poleWpx} height={botY - spliceY} fill={p.pole} />
+              <rect x={X(px) - upperWpx / 2} y={Y(topMax)} width={upperWpx} height={overlapY - Y(topMax)} fill={p.pole} />
+              <line x1={X(px) - poleWpx / 2 - 4} y1={spliceY} x2={X(px) + poleWpx / 2 + 4} y2={spliceY} stroke={p.plate} strokeWidth={2} />
+            </g>
+          );
+        }
+        return <rect key={`p-${i}`} x={X(px) - poleWpx / 2} y={Y(topMax)} width={poleWpx} height={botY - Y(topMax)} fill={p.pole} />;
       })}
 
       {/* Base plates + anchor bolts */}
@@ -266,15 +295,39 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         </text>
       </g>
 
-      {/* Pole leader + label */}
+      {/* Pole leader + label (base pipe when spliced) */}
       {(() => {
         const px = poleXs[poleXs.length - 1];
-        const midY = Y(Math.max(lowestFaceBottom / 2, lowestFaceBottom > 2 ? lowestFaceBottom / 2 : topMax * 0.12));
+        const anchor = transition?.section
+          ? Math.max(transition.spliceFt / 2, 0.5)
+          : Math.max(lowestFaceBottom / 2, lowestFaceBottom > 2 ? lowestFaceBottom / 2 : topMax * 0.12);
+        const midY = Y(anchor);
         const lx = X(px) + poleWpx / 2;
+        const label = transition?.section ? `base: ${poleLabel}` : poleLabel;
         return (
           <g>
             <line x1={lx} y1={midY} x2={lx + 26} y2={midY - 14} stroke={p.dim} strokeWidth={1} />
-            <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>{poleLabel}</text>
+            <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>{label}</text>
+          </g>
+        );
+      })()}
+
+      {/* Splice callout */}
+      {transition?.section && (() => {
+        const px = poleXs[poleXs.length - 1];
+        const upperWpx = Math.max((transition.section.odIn / 12) * scale, 5);
+        const midY = Y(transition.spliceFt + (topMax - transition.spliceFt) / 2);
+        const lx = X(px) + upperWpx / 2;
+        const spliceY = Y(transition.spliceFt);
+        return (
+          <g>
+            <line x1={lx} y1={midY} x2={lx + 26} y2={midY - 14} stroke={p.dim} strokeWidth={1} />
+            <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>
+              upper: {input.numColumns} × {input.columnType === 'P' ? 'pipe' : 'tube'} {transition.section.name}
+            </text>
+            <text x={X(px) + poleWpx / 2 + 8} y={spliceY + 4} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
+              splice {fmtFtIn(transition.spliceFt)} · 2'-0" inside
+            </text>
           </g>
         );
       })()}

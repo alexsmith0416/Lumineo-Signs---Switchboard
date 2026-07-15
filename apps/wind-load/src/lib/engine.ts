@@ -29,6 +29,22 @@ export interface SignElementInput {
 
 export type FootingType = 'round' | 'rect';
 
+export interface MowPadInput {
+  enabled: boolean;
+  /** Plan width, ft — runs along the SIDES of the cabinet (⊥ to sign face). */
+  widthFt: number;
+  /** Plan length, ft — runs along the FACE side of the sign. */
+  lengthFt: number;
+  /** Pad height above soil, in (typical 5.5"). */
+  heightIn: number;
+}
+
+export interface TransitionInput {
+  enabled: boolean;
+  /** Splice elevation above grade, ft (null = auto at the lowest face bottom). */
+  spliceFt: number | null;
+}
+
 export interface BasePlateInput {
   enabled: boolean;
   /** Bolts per line, front and back (workbook default 2). */
@@ -74,6 +90,8 @@ export interface DesignInput {
   /** Total sign + steel weight, lb (null = auto at 15 psf of sign area). */
   signWeightLb: number | null;
 
+  mowPad: MowPadInput;
+  transition: TransitionInput;
   basePlate: BasePlateInput;
 }
 
@@ -161,6 +179,48 @@ export interface BasePlateResult {
   weldOk: boolean;
 }
 
+export interface MowPadResult {
+  volumeYd3: number;
+  /** Required minimum pad plan dimensions (footing + 6" clearance), ft. */
+  requiredWidthFt: number;
+  requiredLengthFt: number;
+  /** True when the pad clears the footing by ≥ 6" on the smallest dimension. */
+  sizeOk: boolean;
+}
+
+export interface PoleLengthResult {
+  /** Depth of pole inside the footing, ft (0 when base-plate mounted). */
+  embedFt: number;
+  /** Full pole length: overall height + embedment, ft. */
+  totalFt: number;
+  orderOk: boolean; // ≤ 40 ft (longest pipe we can order)
+  haulOk: boolean; // ≤ 30 ft (longest we can haul)
+  recommendTransition: boolean;
+}
+
+export interface TransitionResult {
+  spliceFt: number;
+  overlapFt: number;
+  momentAtSpliceLbFt: number;
+  requiredSm: number;
+  section: SteelSection | null;
+  /** Upper pipe OD fits inside the base pipe ID. */
+  fitsInside: boolean;
+  fbKsi: number | null;
+  FbKsi: number | null;
+  ok: boolean;
+  basePipeFt: number;
+  upperPipeFt: number;
+  baseIdIn: number;
+  /** 1/2" ring plates: outer welded to the top of the base pipe, inner snug in its ID. */
+  ringOuterOdIn: number;
+  ringInnerOdIn: number;
+  ringBoreIn: number | null;
+  ringThicknessIn: number;
+  orderOk: boolean;
+  haulOk: boolean;
+}
+
 export interface SeismicResult {
   z: number;
   fpPsf: number;
@@ -177,6 +237,9 @@ export interface DesignResult {
   shearAtGradeLb: number;
   column: ColumnResult;
   footing: FootingResult | null;
+  mowPad: MowPadResult | null;
+  poleLength: PoleLengthResult | null;
+  transition: TransitionResult | null;
   basePlate: BasePlateResult | null;
   seismic: SeismicResult;
   errors: string[];
@@ -264,6 +327,35 @@ export function selectSection(requiredSm: number, shape: SectionShape): SteelSec
   return null;
 }
 
+/** Allowable bending stress incl. compactness check (AISC 9th ed. ASD). */
+export function allowableBendingKsi(
+  section: SteelSection,
+  shape: SectionShape,
+  stressIncrease: number,
+): { FbKsi: number | null; note: string } {
+  if (shape === 'P') {
+    const dt = section.odIn / section.wallIn;
+    return dt < 94.29
+      ? { FbKsi: 23.1 * stressIncrease, note: 'd/t < 3300/Fy — compact, Fb = 0.66Fy' }
+      : { FbKsi: 21 * stressIncrease, note: 'd/t > 3300/Fy — Fb = 0.6Fy' };
+  }
+  const bt = (section.odIn - 3 * section.wallIn) / section.wallIn;
+  if (bt < 28.01) return { FbKsi: 30.36 * stressIncrease, note: 'b/t < 190/√Fy — compact, Fb = 0.66Fy' };
+  if (bt < 35.09) return { FbKsi: 27.6 * stressIncrease, note: 'b/t < 238/√Fy — Fb = 0.6Fy' };
+  return { FbKsi: null, note: 'b/t slender — verify with an engineer' };
+}
+
+/**
+ * Wind moment about a height h above grade (lb-ft): elements whose centroid
+ * sits below h drop out, matching the workbook's critical-height tables.
+ */
+export function momentAtHeight(elements: readonly ElementResult[], hFt: number): number {
+  return elements.reduce(
+    (s, e) => (hFt > e.centroidFt ? s : s + e.areaSqFt * e.pressurePsf * (e.centroidFt - hFt)),
+    0,
+  );
+}
+
 function columnCheck(
   momentLbFt: number,
   shape: SectionShape,
@@ -285,32 +377,7 @@ function columnCheck(
   }
 
   const fbKsi = (momentLbFt * 12) / (section.sm * numColumns * 1000);
-
-  let FbKsi: number | null;
-  let compactness: string;
-  if (shape === 'P') {
-    const dt = section.odIn / section.wallIn;
-    if (dt < 94.29) {
-      FbKsi = 23.1 * stressIncrease;
-      compactness = 'd/t < 3300/Fy — compact, Fb = 0.66Fy';
-    } else {
-      FbKsi = 21 * stressIncrease;
-      compactness = 'd/t > 3300/Fy — Fb = 0.6Fy';
-    }
-  } else {
-    const bt = (section.odIn - 3 * section.wallIn) / section.wallIn;
-    if (bt < 28.01) {
-      FbKsi = 30.36 * stressIncrease;
-      compactness = 'b/t < 190/√Fy — compact, Fb = 0.66Fy';
-    } else if (bt < 35.09) {
-      FbKsi = 27.6 * stressIncrease;
-      compactness = 'b/t < 238/√Fy — Fb = 0.6Fy';
-    } else {
-      FbKsi = null;
-      compactness = 'b/t slender — verify with an engineer';
-    }
-  }
-
+  const { FbKsi, note: compactness } = allowableBendingKsi(section, shape, stressIncrease);
   const utilization = FbKsi ? fbKsi / FbKsi : null;
   return {
     requiredSm,
@@ -420,6 +487,122 @@ function footingCheck(
     bearingOk: qAllowedPsf > qMaxPsf,
     volumePerFootingYd3,
     totalVolumeYd3: volumePerFootingYd3 * n,
+  };
+}
+
+// ── Mow pad (concrete apron on top of the soil around the footing) ──────────
+
+/** Minimum clearance of the pad past the footing on each plan axis, ft (6"). */
+export const MOW_PAD_CLEARANCE_FT = 0.5;
+
+function mowPadCheck(input: DesignInput): MowPadResult | null {
+  const mp = input.mowPad;
+  if (!mp.enabled) return null;
+
+  // Pad length runs along the sign face; width runs along the cabinet sides.
+  // The matching footing dimensions must clear by ≥ 6" so the pad's form
+  // frame bears on soil and the pour can't seep under it.
+  const [footAlongFace, footAcross] =
+    input.footingType === 'round'
+      ? [input.caissonDiaFt, input.caissonDiaFt]
+      : [input.pierWidthFt, input.pierLengthFt];
+  const requiredLengthFt = footAlongFace + MOW_PAD_CLEARANCE_FT;
+  const requiredWidthFt = footAcross + MOW_PAD_CLEARANCE_FT;
+  const sizeOk = mp.lengthFt >= requiredLengthFt && mp.widthFt >= requiredWidthFt;
+
+  const volumeYd3 = (mp.widthFt * mp.lengthFt * (mp.heightIn / 12)) / 27;
+  return { volumeYd3, requiredWidthFt, requiredLengthFt, sizeOk };
+}
+
+// ── Pole length limits + transition pipe splice ──────────────────────────────
+
+/** Longest pipe we can order, ft. */
+export const MAX_ORDER_FT = 40;
+/** Longest pipe we can haul, ft. */
+export const MAX_HAUL_FT = 30;
+/** Standard splice: upper pipe extends this far into the base pipe, ft. */
+export const TRANSITION_OVERLAP_FT = 2;
+
+function poleLengthCheck(
+  input: DesignInput,
+  footing: FootingResult | null,
+  topMaxFt: number,
+): PoleLengthResult | null {
+  if (topMaxFt <= 0) return null;
+  const embedFt = input.basePlate.enabled || !footing ? 0 : Math.max(0, footing.depthFt - 0.25);
+  const totalFt = topMaxFt + embedFt;
+  return {
+    embedFt,
+    totalFt,
+    orderOk: totalFt <= MAX_ORDER_FT,
+    haulOk: totalFt <= MAX_HAUL_FT,
+    recommendTransition: totalFt > MAX_HAUL_FT && !input.transition.enabled,
+  };
+}
+
+function transitionCheck(
+  input: DesignInput,
+  elements: readonly ElementResult[],
+  baseSection: SteelSection,
+  poleLength: PoleLengthResult,
+  topMaxFt: number,
+  lowestFaceBottomFt: number,
+): TransitionResult | null {
+  if (!input.transition.enabled) return null;
+
+  // Auto splice: hide it just under the lowest face when practical.
+  const auto = lowestFaceBottomFt >= 4 ? lowestFaceBottomFt : topMaxFt / 2;
+  const spliceFt = Math.min(Math.max(input.transition.spliceFt ?? auto, 1), Math.max(1, topMaxFt - 1));
+
+  const momentAtSpliceLbFt = momentAtHeight(elements, spliceFt);
+  const requiredSm = requiredSectionModulus(
+    momentAtSpliceLbFt,
+    input.columnType,
+    input.numColumns,
+    input.stressIncrease,
+  );
+
+  const baseIdIn = baseSection.odIn - 2 * baseSection.wallIn;
+  // Upper pipe must clear the base pipe's ID (the snug part is the welded
+  // inner ring plate, not the pipe itself).
+  const candidates = sectionsFor(input.columnType).filter((s) => s.odIn < baseIdIn);
+  const section = candidates.find((s) => s.sm > requiredSm) ?? null;
+  const fitsInside = section !== null;
+
+  let fbKsi: number | null = null;
+  let FbKsi: number | null = null;
+  let ok = false;
+  if (section && momentAtSpliceLbFt > 0) {
+    fbKsi = (momentAtSpliceLbFt * 12) / (section.sm * input.numColumns * 1000);
+    FbKsi = allowableBendingKsi(section, input.columnType, input.stressIncrease).FbKsi;
+    ok = FbKsi !== null && fbKsi <= FbKsi;
+  } else if (section) {
+    ok = true;
+  }
+
+  const basePipeFt = poleLength.embedFt + spliceFt;
+  const upperPipeFt = topMaxFt - spliceFt + TRANSITION_OVERLAP_FT;
+  const longest = Math.max(basePipeFt, upperPipeFt);
+
+  return {
+    spliceFt,
+    overlapFt: TRANSITION_OVERLAP_FT,
+    momentAtSpliceLbFt,
+    requiredSm,
+    section,
+    fitsInside,
+    fbKsi,
+    FbKsi,
+    ok,
+    basePipeFt,
+    upperPipeFt,
+    baseIdIn,
+    ringOuterOdIn: baseSection.odIn,
+    ringInnerOdIn: baseIdIn,
+    ringBoreIn: section ? section.odIn : null,
+    ringThicknessIn: 0.5,
+    orderOk: longest <= MAX_ORDER_FT,
+    haulOk: longest <= MAX_HAUL_FT,
   };
 }
 
@@ -586,6 +769,53 @@ export function computeDesign(input: DesignInput): DesignResult {
     warnings.push('Soil bearing check failed (q max > q allowed) — enlarge the footing or confirm soil values.');
   }
 
+  const mowPad = mowPadCheck(input);
+  if (mowPad && !mowPad.sizeOk) {
+    warnings.push(
+      `Mow pad is too small for the footing — every pad dimension must clear the footing by at least 6" ` +
+        `(need ≥ ${mowPad.requiredLengthFt} ft along the face × ${mowPad.requiredWidthFt} ft across) so the ` +
+        `form frame bears on soil and the pour can't seep under it.`,
+    );
+  }
+
+  const validFaces = elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
+  const topMaxFt = validFaces.length ? Math.max(...validFaces.map((e) => e.topFt)) : 0;
+  const lowestFaceBottomFt = validFaces.length
+    ? Math.min(...validFaces.map((e) => Math.max(0, e.topFt - e.heightFt)))
+    : 0;
+
+  const poleLength = poleLengthCheck(input, footing, topMaxFt);
+  const transition =
+    column.section && poleLength
+      ? transitionCheck(input, elements, column.section, poleLength, topMaxFt, lowestFaceBottomFt)
+      : null;
+
+  if (poleLength && !input.transition.enabled) {
+    if (!poleLength.orderOk) {
+      warnings.push(
+        `Pole length ${poleLength.totalFt.toFixed(1)} ft exceeds the ${MAX_ORDER_FT} ft max order length — enable a transition pipe.`,
+      );
+    } else if (!poleLength.haulOk) {
+      warnings.push(
+        `Pole length ${poleLength.totalFt.toFixed(1)} ft exceeds the ${MAX_HAUL_FT} ft haul limit — consider a transition pipe.`,
+      );
+    }
+  }
+  if (transition) {
+    if (!transition.fitsInside) {
+      warnings.push(
+        'No standard upper pipe both carries the splice moment and fits inside the base pipe ID — raise the splice or upsize the base pipe.',
+      );
+    } else if (!transition.ok) {
+      warnings.push('Upper transition pipe exceeds its allowable bending stress — raise the splice or upsize.');
+    }
+    if (!transition.orderOk) {
+      warnings.push(`A transition piece still exceeds the ${MAX_ORDER_FT} ft order limit — move the splice.`);
+    } else if (!transition.haulOk) {
+      warnings.push(`A transition piece still exceeds the ${MAX_HAUL_FT} ft haul limit — move the splice.`);
+    }
+  }
+
   const basePlate = column.section
     ? basePlateCheck(input, momentAtGradeLbFt, shearAtGradeLb, column.section)
     : null;
@@ -614,6 +844,9 @@ export function computeDesign(input: DesignInput): DesignResult {
     shearAtGradeLb,
     column,
     footing,
+    mowPad,
+    poleLength,
+    transition,
     basePlate,
     seismic,
     errors,
