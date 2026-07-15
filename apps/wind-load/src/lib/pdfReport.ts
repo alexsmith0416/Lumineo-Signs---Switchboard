@@ -285,7 +285,44 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     row('Design load', `M ${fmtInt(f.momentPerFootingLbFt)} lb-ft / footing · P = M/h = ${fmtInt(f.equivalentLoadLb)} lb at h ${fmt(f.centroidFt, 1)} ft`);
     row('Lateral soil', `S1 ${fmtInt(f.s1Psf)} psf at D/3 (2 × ${fmtInt(input.lateralSoilPsf)} psf/ft, isolated pole)`);
     row('Soil bearing', `q max ${fmtInt(f.qMaxPsf)} psf vs allowed ${fmtInt(f.qAllowedPsf)} psf`, f.bearingOk ? 'OK' : 'NG');
-    row('Concrete', `${fmt(f.volumePerFootingYd3, 2)} yd³ / footing · order ${fmt(Math.ceil(f.totalVolumeYd3 * 2) / 2, 1)} yd³ total (±)`);
+    row('Concrete', `${fmt(f.volumePerFootingYd3, 2)} yd³ / footing · ${fmt(f.totalVolumeYd3, 2)} yd³ all footings (±)`);
+    const mp = result.mowPad;
+    if (mp) {
+      row(
+        'Mow pad',
+        `${fmt(input.mowPad.lengthFt)}' along face × ${fmt(input.mowPad.widthFt)}' across × ${fmt(input.mowPad.heightIn, 2)}" tall on soil · ` +
+          `${fmt(mp.volumeYd3, 2)} yd³ · needs ≥ ${fmt(mp.requiredLengthFt)}' × ${fmt(mp.requiredWidthFt)}' (footing + 6")`,
+        mp.sizeOk ? 'OK' : 'NG',
+      );
+      row('Total concrete', `order ${fmt(Math.ceil((f.totalVolumeYd3 + mp.volumeYd3) * 2) / 2, 1)} yd³ (footings ${fmt(f.totalVolumeYd3, 2)} + pad ${fmt(mp.volumeYd3, 2)}) (±)`);
+    } else {
+      row('Total concrete', `order ${fmt(Math.ceil(f.totalVolumeYd3 * 2) / 2, 1)} yd³ (±)`);
+    }
+  }
+
+  // ── Pole length / transition splice ──────────────────────────────────────
+  const pl = result.poleLength;
+  const tr = result.transition;
+  if (pl && result.column.section) {
+    sectionTitle('Pole length & transition');
+    row(
+      'Pole length',
+      `${fmtFtIn(pl.totalFt)} total (${fmtFtIn(pl.embedFt)} embedded + ${fmtFtIn(pl.totalFt - pl.embedFt)} above grade) · order max 40', haul max 30'`,
+      tr ? undefined : pl.haulOk ? 'OK' : 'NG',
+    );
+    if (tr) {
+      if (tr.section) {
+        row('Splice', `${fmtFtIn(tr.spliceFt)} above grade · upper pipe extends ${fmt(tr.overlapFt)}' inside the base pipe`);
+        row('Upper pipe', `${input.numColumns} × ${input.columnType === 'P' ? 'Pipe' : 'Tube'} ${tr.section.name} · ${fmt(tr.section.odIn, 3)}" OD fits ${fmt(tr.baseIdIn, 3)}" base ID`, tr.ok ? 'OK' : 'NG');
+        row('Piece lengths', `base ${fmtFtIn(tr.basePipeFt)} · upper ${fmtFtIn(tr.upperPipeFt)} (incl. ${fmt(tr.overlapFt)}' overlap)`, tr.orderOk && tr.haulOk ? 'OK' : 'NG');
+        row('Moment at splice', `${fmtInt(tr.momentAtSpliceLbFt)} lb-ft → ${fmt(tr.requiredSm)} in³ required per pole`);
+        row('Ring plates', `1/2" steel · outer Ø ${fmt(tr.ringOuterOdIn, 2)}" welded to top of base pipe · inner Ø ${fmt(tr.ringInnerOdIn, 2)}" snug in base pipe ID${tr.ringBoreIn ? ` · bored Ø ${fmt(tr.ringBoreIn, 2)}" for the upper pipe` : ''}`);
+      } else {
+        row('Splice', 'No standard upper size both carries the splice moment and fits inside the base pipe ID.', 'NG');
+      }
+    } else if (!pl.haulOk) {
+      row('Recommendation', `Pole exceeds the ${pl.orderOk ? '30 ft haul limit' : '40 ft order limit'} — use a transition pipe.`, 'NG');
+    }
   }
 
   // ── Base plate ───────────────────────────────────────────────────────────

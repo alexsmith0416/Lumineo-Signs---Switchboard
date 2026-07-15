@@ -1,4 +1,5 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
+import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
 import { fmt, fmtFtIn, fmtInt } from './fields';
 
 interface Props {
@@ -118,6 +119,21 @@ export function ResultsPanel({ input, result }: Props) {
                   {r.column.section.sleeveIn !== null && (
                     <Row label="Splice sleeve depth" value={`${r.column.section.sleeveIn}" (if a stepped column is used)`} />
                   )}
+                  {r.poleLength && (
+                    <Row
+                      label="Pole length"
+                      value={`${fmtFtIn(r.poleLength.totalFt)} total (${fmtFtIn(r.poleLength.embedFt)} embedded + ${fmtFtIn(r.poleLength.totalFt - r.poleLength.embedFt)} above grade) · order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
+                      chip={
+                        r.transition
+                          ? <span className="chip chip-green">SPLICED</span>
+                          : <Chip
+                              ok={r.poleLength.haulOk}
+                              okText="HAULABLE"
+                              badText={r.poleLength.orderOk ? 'OVER 30\' HAUL' : 'OVER 40\' ORDER'}
+                            />
+                      }
+                    />
+                  )}
                   <p className="hint">{r.column.compactness}</p>
                 </>
               ) : (
@@ -125,6 +141,54 @@ export function ResultsPanel({ input, result }: Props) {
               )}
             </div>
           </section>
+
+          {r.transition && (
+            <section className="panel">
+              <h2 className="panel-caption">Transition Pipe Splice</h2>
+              <div className="panel-body">
+                <div className="hero-line">
+                  <span className="hero-value">
+                    {r.transition.section
+                      ? `Upper: ${input.numColumns} × ${input.columnType === 'P' ? 'Pipe' : 'Tube'} ${r.transition.section.name}`
+                      : 'No fitting upper size'}
+                  </span>
+                  <Chip
+                    ok={r.transition.fitsInside && r.transition.ok && r.transition.orderOk && r.transition.haulOk}
+                    okText="OK"
+                    badText="CHECK"
+                  />
+                </div>
+                <Row
+                  label="Splice height"
+                  value={`${fmtFtIn(r.transition.spliceFt)} above grade · upper pipe extends ${fmt(r.transition.overlapFt)}' inside the base pipe`}
+                />
+                <Row
+                  label="Piece lengths"
+                  value={`base ${fmtFtIn(r.transition.basePipeFt)} · upper ${fmtFtIn(r.transition.upperPipeFt)} (incl. ${fmt(r.transition.overlapFt)}' overlap) · order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
+                  chip={<Chip ok={r.transition.orderOk && r.transition.haulOk} okText="HAULABLE" badText="TOO LONG" />}
+                />
+                <Row
+                  label="Moment at splice"
+                  value={`${fmtInt(r.transition.momentAtSpliceLbFt)} lb-ft → ${fmt(r.transition.requiredSm)} in³ required per pole`}
+                />
+                {r.transition.section && (
+                  <Row
+                    label="Upper pipe stress"
+                    value={
+                      r.transition.FbKsi !== null
+                        ? `fb ${fmt(r.transition.fbKsi ?? 0)} ksi vs Fb ${fmt(r.transition.FbKsi)} ksi · ${fmt(r.transition.section.odIn, 3)}" OD fits ${fmt(r.transition.baseIdIn, 3)}" base ID`
+                        : 'slender section — verify with an engineer'
+                    }
+                    chip={<Chip ok={r.transition.ok} />}
+                  />
+                )}
+                <Row
+                  label="Ring plates"
+                  value={`1/2" steel · outer Ø ${fmt(r.transition.ringOuterOdIn, 2)}" welded to top of base pipe · inner Ø ${fmt(r.transition.ringInnerOdIn, 2)}" snug in base pipe ID${r.transition.ringBoreIn ? ` · bored Ø ${fmt(r.transition.ringBoreIn, 2)}" for the upper pipe` : ''}`}
+                />
+              </div>
+            </section>
+          )}
 
           {r.footing && (
             <section className="panel">
@@ -156,8 +220,27 @@ export function ResultsPanel({ input, result }: Props) {
                 />
                 <Row
                   label="Concrete"
-                  value={`${fmt(r.footing.volumePerFootingYd3, 2)} yd³ / footing · order ${fmt(Math.ceil(r.footing.totalVolumeYd3 * 2) / 2, 1)} yd³ total (±)`}
+                  value={`${fmt(r.footing.volumePerFootingYd3, 2)} yd³ / footing · ${fmt(r.footing.totalVolumeYd3, 2)} yd³ all footings (±)`}
                 />
+                {r.mowPad && (
+                  <>
+                    <Row
+                      label="Mow pad"
+                      value={`${fmt(input.mowPad.lengthFt)}' along face × ${fmt(input.mowPad.widthFt)}' across × ${fmt(input.mowPad.heightIn, 2)}" tall on soil · ${fmt(r.mowPad.volumeYd3, 2)} yd³ · needs ≥ ${fmt(r.mowPad.requiredLengthFt)}' × ${fmt(r.mowPad.requiredWidthFt)}' (footing + 6")`}
+                      chip={<Chip ok={r.mowPad.sizeOk} okText="CLEARS FOOTING" badText="TOO SMALL" />}
+                    />
+                    <Row
+                      label="Total concrete"
+                      value={`order ${fmt(Math.ceil((r.footing.totalVolumeYd3 + r.mowPad.volumeYd3) * 2) / 2, 1)} yd³ (footings ${fmt(r.footing.totalVolumeYd3, 2)} + pad ${fmt(r.mowPad.volumeYd3, 2)}) (±)`}
+                    />
+                  </>
+                )}
+                {!r.mowPad && (
+                  <Row
+                    label="Total concrete"
+                    value={`order ${fmt(Math.ceil(r.footing.totalVolumeYd3 * 2) / 2, 1)} yd³ (±)`}
+                  />
+                )}
               </div>
             </section>
           )}

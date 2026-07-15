@@ -66,8 +66,12 @@ export function SketchPanel({ input, result, theme }: Props) {
         </div>
         <div className="kpi">
           <p className="kpi-caption">CONCRETE</p>
-          <p className="kpi-value sketch-kpi">{fmt(Math.ceil(footing.totalVolumeYd3 * 2) / 2, 1)} yd³</p>
-          <p className="kpi-foot">order volume (±)</p>
+          <p className="kpi-value sketch-kpi">
+            {fmt(Math.ceil((footing.totalVolumeYd3 + (result.mowPad?.volumeYd3 ?? 0)) * 2) / 2, 1)} yd³
+          </p>
+          <p className="kpi-foot">
+            {result.mowPad ? 'footings + mow pad, order volume (±)' : 'order volume (±)'}
+          </p>
         </div>
       </div>
     </div>

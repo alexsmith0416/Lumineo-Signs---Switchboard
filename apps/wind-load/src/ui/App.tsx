@@ -30,6 +30,16 @@ function defaultInput(): DesignInput {
     pierWidthFt: 3,
     pierLengthFt: 3,
     signWeightLb: null,
+    mowPad: {
+      enabled: false,
+      widthFt: 4,
+      lengthFt: 12,
+      heightIn: 5.5,
+    },
+    transition: {
+      enabled: false,
+      spliceFt: null,
+    },
     basePlate: {
       enabled: false,
       boltsPerLine: 2,
@@ -54,6 +64,8 @@ function loadSaved(): DesignInput {
       elements: Array.isArray(parsed.elements) && parsed.elements.length > 0
         ? parsed.elements
         : base.elements,
+      mowPad: { ...base.mowPad, ...(parsed.mowPad ?? {}) },
+      transition: { ...base.transition, ...(parsed.transition ?? {}) },
       basePlate: { ...base.basePlate, ...(parsed.basePlate ?? {}) },
     };
   } catch {

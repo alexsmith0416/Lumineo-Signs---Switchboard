@@ -1,6 +1,7 @@
 import type { DesignInput, SignElementInput } from '../lib/engine';
+import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
 import { EXPOSURE_DESCRIPTIONS, type Exposure } from '../data/tables';
-import { NumField, fmt } from './fields';
+import { FtInField, NumField, fmt } from './fields';
 import { IconPlus, IconTrash } from './icons';
 
 interface Props {
@@ -24,6 +25,10 @@ export function InputsPanel({ input, onChange }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
+  const setMp = (patch: Partial<DesignInput['mowPad']>) =>
+    onChange({ ...input, mowPad: { ...input.mowPad, ...patch } });
+  const setTr = (patch: Partial<DesignInput['transition']>) =>
+    onChange({ ...input, transition: { ...input.transition, ...patch } });
 
   const setElement = (id: string, patch: Partial<SignElementInput>) =>
     set({ elements: input.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
@@ -122,26 +127,20 @@ export function InputsPanel({ input, onChange }: Props) {
                     <IconTrash size={15} />
                   </button>
                 </div>
-                <div className="form-grid three">
-                  <NumField
+                <div className="form-grid">
+                  <FtInField
                     label="Width"
-                    suffix="ft"
                     value={el.widthFt}
-                    min={0}
                     onChange={(v) => setElement(el.id, { widthFt: v })}
                   />
-                  <NumField
+                  <FtInField
                     label="Height"
-                    suffix="ft"
                     value={el.heightFt}
-                    min={0}
                     onChange={(v) => setElement(el.id, { heightFt: v })}
                   />
-                  <NumField
+                  <FtInField
                     label="Top above grade"
-                    suffix="ft"
                     value={el.topFt}
-                    min={0}
                     onChange={(v) => setElement(el.id, { topFt: v })}
                   />
                 </div>
@@ -232,27 +231,21 @@ export function InputsPanel({ input, onChange }: Props) {
             onChange={(v) => set({ numFootings: Math.max(1, Math.round(v)) })}
           />
           {input.footingType === 'round' ? (
-            <NumField
+            <FtInField
               label="Caisson diameter"
-              suffix="ft"
               value={input.caissonDiaFt}
-              min={0}
               onChange={(v) => set({ caissonDiaFt: v })}
             />
           ) : (
             <>
-              <NumField
+              <FtInField
                 label="Width (∥ sign face)"
-                suffix="ft"
                 value={input.pierWidthFt}
-                min={0}
                 onChange={(v) => set({ pierWidthFt: v })}
               />
-              <NumField
+              <FtInField
                 label="Length (⊥ sign face)"
-                suffix="ft"
                 value={input.pierLengthFt}
-                min={0}
                 onChange={(v) => set({ pierLengthFt: v })}
               />
             </>
@@ -286,6 +279,76 @@ export function InputsPanel({ input, onChange }: Props) {
             1,330 psf bearing). Use site geotech values when available.
           </p>
         </div>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-caption">
+          <label className="caption-toggle">
+            <input
+              type="checkbox"
+              checked={input.mowPad.enabled}
+              onChange={(e) => setMp({ enabled: e.target.checked })}
+            />
+            <span>Mow Pad</span>
+          </label>
+        </h2>
+        {input.mowPad.enabled && (
+          <div className="panel-body form-grid">
+            <FtInField
+              label="Length (along sign face)"
+              value={input.mowPad.lengthFt}
+              onChange={(v) => setMp({ lengthFt: v })}
+            />
+            <FtInField
+              label="Width (along cabinet sides)"
+              value={input.mowPad.widthFt}
+              onChange={(v) => setMp({ widthFt: v })}
+            />
+            <NumField
+              label="Pad height"
+              suffix="in"
+              value={input.mowPad.heightIn}
+              min={0}
+              onChange={(v) => setMp({ heightIn: v })}
+            />
+            <p className="hint span-2">
+              Sits on top of the soil around the footing. Every pad dimension
+              must clear the footing by at least 6" so the form frame bears on
+              soil and the pour can't seep under it.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-caption">
+          <label className="caption-toggle">
+            <input
+              type="checkbox"
+              checked={input.transition.enabled}
+              onChange={(e) => setTr({ enabled: e.target.checked })}
+            />
+            <span>Transition Pipe</span>
+          </label>
+        </h2>
+        {input.transition.enabled && (
+          <div className="panel-body form-grid">
+            <FtInField
+              label="Splice height above grade"
+              value={input.transition.spliceFt}
+              allowEmpty
+              placeholder="auto"
+              onChange={() => undefined}
+              onChangeNullable={(v) => setTr({ spliceFt: v })}
+            />
+            <p className="hint span-2">
+              Splits the pole so no piece exceeds the {MAX_ORDER_FT} ft order /
+              {' '}{MAX_HAUL_FT} ft haul limits. Standard splice: upper pipe sits
+              2' inside the base pipe with 1/2" welded inner and outer ring
+              plates. Leave blank to auto-place just below the lowest sign face.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="panel">
