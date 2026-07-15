@@ -1,4 +1,4 @@
-import { IconMoon, IconPrint, IconReset, IconSun } from './icons';
+import { IconMoon, IconPdf, IconPrint, IconReset, IconSun } from './icons';
 import { RayMark } from './RayMark';
 import type { Theme } from './useTheme';
 
@@ -8,9 +8,11 @@ interface Props {
   projectName: string;
   view: View;
   theme: Theme;
+  exportingPdf: boolean;
   onChangeView: (v: View) => void;
   onToggleTheme: () => void;
   onPrint: () => void;
+  onExportPdf: () => void;
   onReset: () => void;
 }
 
@@ -22,7 +24,7 @@ const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
 
 // Standalone shell for now (no Switchboard sidebar), so the topbar carries
 // the brand block that normally lives at the top of the sidebar.
-export function Topbar({ projectName, view, theme, onChangeView, onToggleTheme, onPrint, onReset }: Props) {
+export function Topbar({ projectName, view, theme, exportingPdf, onChangeView, onToggleTheme, onPrint, onExportPdf, onReset }: Props) {
   return (
     <header className="tb">
       <div className="tb-brand" aria-hidden="true">
@@ -56,6 +58,16 @@ export function Topbar({ projectName, view, theme, onChangeView, onToggleTheme, 
         <button className="btn-soft" onClick={onPrint} title="Print a calculation summary">
           <IconPrint size={16} />
           <span>Print</span>
+        </button>
+
+        <button
+          className="btn-soft"
+          onClick={onExportPdf}
+          disabled={exportingPdf}
+          title="Download the full calculation report as a PDF"
+        >
+          <IconPdf size={16} />
+          <span>{exportingPdf ? 'Exporting…' : 'PDF'}</span>
         </button>
 
         <button className="btn-soft" onClick={onReset} title="Reset all inputs to defaults">
