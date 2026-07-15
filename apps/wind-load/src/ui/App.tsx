@@ -65,6 +65,7 @@ export function App() {
   const { theme, toggleTheme } = useTheme();
   const [input, setInput] = useState<DesignInput>(loadSaved);
   const [view, setView] = useState<View>('calc');
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // Autosave inputs so a refresh doesn't lose the design in progress.
   useEffect(() => {
@@ -81,15 +82,35 @@ export function App() {
     if (window.confirm('Reset all inputs to defaults?')) setInput(defaultInput());
   }
 
+  async function exportPdf() {
+    if (result.momentAtGradeLbFt <= 0) {
+      window.alert('Enter the sign face dimensions first — there is nothing to report yet.');
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      // Lazy-loaded so jsPDF stays out of the main bundle.
+      const { exportPdfReport } = await import('../lib/pdfReport');
+      await exportPdfReport(input, result);
+    } catch (e) {
+      console.error('[App] PDF export failed', e);
+      window.alert('PDF export failed — see the browser console for details.');
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   return (
     <div className="app-body">
       <Topbar
         projectName={input.projectName}
         view={view}
         theme={theme}
+        exportingPdf={exportingPdf}
         onChangeView={setView}
         onToggleTheme={toggleTheme}
         onPrint={() => window.print()}
+        onExportPdf={exportPdf}
         onReset={reset}
       />
 
@@ -112,7 +133,7 @@ export function App() {
             {view === 'calc' ? (
               <ResultsPanel input={input} result={result} />
             ) : (
-              <SketchPanel input={input} result={result} />
+              <SketchPanel input={input} result={result} theme={theme} />
             )}
           </div>
         )}

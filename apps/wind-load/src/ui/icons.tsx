@@ -55,6 +55,14 @@ export const IconPrint = (p: IconProps) => (
   </Svg>
 );
 
+export const IconPdf = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 2.5h8.5L19 7v14.5H6z" />
+    <path d="M14.5 2.5V7H19" />
+    <path d="M12.5 10.5v6M9.7 13.7l2.8 2.8 2.8-2.8" />
+  </Svg>
+);
+
 export const IconPlus = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 5v14M5 12h14" />
