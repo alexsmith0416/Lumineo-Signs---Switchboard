@@ -78,7 +78,9 @@ export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
 // Roster: login email (lower-case) → user type. Fill this from the provided list.
 //   "asmith@lumineosigns.com": "admin",
 //   "jdoe@lumineosigns.com": "install-nek",
-export const USER_DIRECTORY: Record<string, UserType> = {};
+export const USER_DIRECTORY: Record<string, UserType> = {
+  "jontjes@lumineosigns.com": "admin", // Joe Ontjes
+};
 
 /** Resolve a login's user type: the directory wins, else derive a sensible one. */
 export function resolveUserType(upn: string | undefined): UserType {
