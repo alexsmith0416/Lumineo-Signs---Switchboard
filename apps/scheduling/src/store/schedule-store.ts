@@ -56,7 +56,7 @@ export interface ScheduleStoreState {
     newEmployeeId?: string,
     cascade?: boolean,
   ) => Promise<void>;
-  updateTaskHours: (lineId: string, overrideHours: number) => Promise<void>;
+  updateTaskHours: (lineId: string, overrideHours: number, cascade?: boolean) => Promise<void>;
   addScheduleLine: (line: ScheduleLine) => Promise<void>;
   deleteScheduleLine: (lineId: string) => Promise<void>;
   setWeekStart: (date: Date) => void;
@@ -351,10 +351,12 @@ export function createScheduleStore(
         });
     },
 
-    updateTaskHours: async (lineId, overrideHours) => {
+    updateTaskHours: async (lineId, overrideHours, cascade = true) => {
       const state = get();
       const ctx = buildContext(state);
-      const diff = diffResize(ctx, lineId, overrideHours, true, true);
+      // cascade=false (full-override / "move only this") resizes just this task;
+      // still optimistic — no full reload — so the card grows in place.
+      const diff = diffResize(ctx, lineId, overrideHours, cascade, true);
       const ds = state.dataSource;
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,

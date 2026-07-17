@@ -565,7 +565,7 @@ export default function CalendarView({
   const tryResizeWithConfirm = async (line: ScheduleLine, newHours: number) => {
     // Cascade off (full override): resize this task only, no dialog.
     if (!cascadeEnabled) {
-      await applyResizeNoCascade(line.id, newHours);
+      await updateTaskHours(line.id, newHours, false);
       return;
     }
     const ctx = getContext();
@@ -592,35 +592,12 @@ export default function CalendarView({
     if (p.kind === "move") {
       await shiftTaskAndCommit(p.lineId, p.newStart, p.newEmployeeId, cascade);
     } else if (p.kind === "resize" && p.newOverrideHours !== undefined) {
-      // updateTaskHours always cascades; for "Move only this" we set the
-      // override on a clone via the engine, then write back fields directly
-      // — keep it simple here and call updateTaskHours (cascade=true) only
-      // for the cascade branch. For move-only, we skip the cascade by going
-      // through dataSource directly so downstream tasks aren't touched.
-      if (cascade) {
-        await updateTaskHours(p.lineId, p.newOverrideHours);
-      } else {
-        await applyResizeNoCascade(p.lineId, p.newOverrideHours);
-      }
+      // "Cascade" resizes and pushes downstream tasks; "Move only this" resizes
+      // just this task (cascade=false). Both are optimistic — the card grows in
+      // place with no reload.
+      await updateTaskHours(p.lineId, p.newOverrideHours, cascade);
     }
   };
-
-  const dataSource = useStore((s) => s.dataSource);
-  async function applyResizeNoCascade(lineId: string, hours: number) {
-    const ctx = getContext();
-    const line = ctx.schedule.find((l) => l.id === lineId);
-    if (!line) return;
-    // Recompute only this line's end using the engine, no cascade.
-    const r = diffResize(ctx, lineId, hours, false, true);
-    const updated = r.target;
-    if (!updated) return;
-    await dataSource.updateScheduleLine(lineId, {
-      startDateTime: updated.startDateTime,
-      endDateTime: updated.endDateTime,
-      overrideHours: updated.overrideHours,
-    });
-    await loadWeek();
-  }
 
   const handleEnterScenario = () => {
     if (!pendingShift) return;
