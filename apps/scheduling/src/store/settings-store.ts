@@ -12,29 +12,44 @@ import { create } from "zustand";
  * off from the cascade dialog itself.
  */
 const CASCADE_KEY = "lumineo.settings.cascadeEnabled";
+// Whether to hide the purple Power Apps player header. Default ON (hidden).
+// The actual hide/show happens by reloading the app at the hideNavBar play URL
+// (see services/power-host.ts) — this flag just remembers the preference.
+const HIDE_HEADER_KEY = "lumineo.settings.hideHeader";
 
-function readCascade(): boolean {
+function readBool(key: string, fallback: boolean): boolean {
   try {
-    const v = localStorage.getItem(CASCADE_KEY);
-    return v === null ? true : v === "true";
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === "true";
   } catch {
-    return true;
+    return fallback;
+  }
+}
+
+function writeBool(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    /* ignore disabled / quota-exceeded storage */
   }
 }
 
 interface SettingsState {
   cascadeEnabled: boolean;
   setCascadeEnabled: (value: boolean) => void;
+  hideHeader: boolean;
+  setHideHeader: (value: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  cascadeEnabled: readCascade(),
+  cascadeEnabled: readBool(CASCADE_KEY, true),
   setCascadeEnabled: (value) => {
-    try {
-      localStorage.setItem(CASCADE_KEY, String(value));
-    } catch {
-      /* ignore disabled / quota-exceeded storage */
-    }
+    writeBool(CASCADE_KEY, value);
     set({ cascadeEnabled: value });
+  },
+  hideHeader: readBool(HIDE_HEADER_KEY, true),
+  setHideHeader: (value) => {
+    writeBool(HIDE_HEADER_KEY, value);
+    set({ hideHeader: value });
   },
 }));

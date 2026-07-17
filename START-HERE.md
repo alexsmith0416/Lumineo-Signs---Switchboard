@@ -86,6 +86,16 @@ $env:NODE_OPTIONS="--use-system-ca"; pac code push
 - Dataverse org: `org8fa22efd.crm.dynamics.com`
 - Build output pushed: `dist/` (entry `index.html`)
 
+**Share/bookmark this link** — it hides the purple Power Apps header by default
+(`?hideNavBar=true`). Users can toggle the header back on in **Settings → Display**:
+```
+https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/a/d954d7c6-698a-4563-8e03-f44df090778f?hideNavBar=true
+```
+The header is Power Apps player chrome (outside the app), so hiding it is a URL
+param, not app CSS — the in-app toggle just reloads at the with/without-param URL.
+IDs are duplicated in `src/services/power-host.ts`; keep them in sync with
+`power.config.json` if the app is ever redeployed to a new environment/app id.
+
 ### Git workflow
 - Branch convention: `claude/<slug>` for in-progress work.
 - **Main branch for PRs:** `claude/master-power-apps-design-05pjY` (this is
