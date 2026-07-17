@@ -49,17 +49,27 @@ function hasCrew(line: ScheduleLine): boolean {
   );
 }
 
+/** How many addon items (crew / weather / $) this card will render for the
+ *  given toggle flags. Drives the lane height: on mobile the addons stack, so
+ *  each one needs its own line. */
+export function cardAddonCount(
+  line: ScheduleLine,
+  f: { showInvoice?: boolean; showCrewBadge?: boolean; showWeather?: boolean },
+): number {
+  let n = 0;
+  if (!!f.showCrewBadge && hasCrew(line)) n += 1;
+  if (!!f.showWeather && !!line.installZip) n += 1;
+  if (!!f.showInvoice && cardMoneyValue(line) != null) n += 1;
+  return n;
+}
+
 /** Whether the addons row will render anything — so the card (and its lane
  *  height) don't reserve an empty line. */
 export function cardHasAddons(
   line: ScheduleLine,
   f: { showInvoice?: boolean; showCrewBadge?: boolean; showWeather?: boolean },
 ): boolean {
-  return (
-    (!!f.showInvoice && cardMoneyValue(line) != null) ||
-    (!!f.showCrewBadge && hasCrew(line)) ||
-    (!!f.showWeather && !!line.installZip)
-  );
+  return cardAddonCount(line, f) > 0;
 }
 
 function deptStyle(dept: Department | undefined): { bg: string; text: string } {

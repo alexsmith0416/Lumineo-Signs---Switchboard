@@ -815,6 +815,17 @@ input, select, textarea {
   .calendar-toolbar__print {
     display: none !important;
   }
+
+  /* Job cards: a mobile day column is too narrow to fit crew + weather + $ on
+     one row, so stack the addons — each gets its own line + a little breathing
+     room. The lane height grows to match (see useStackedAddons in CalendarView),
+     and hiding an addon via the toolbar toggles shrinks the card back down. */
+  .job-card__addons {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    margin-top: 1px;
+  }
 }
 
 /* Legacy top-bar shell — only `.app-header__logo*` is still used (mobile nav

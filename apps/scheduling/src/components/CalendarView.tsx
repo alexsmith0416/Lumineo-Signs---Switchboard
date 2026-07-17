@@ -24,7 +24,7 @@ import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
 import { PrintIcon } from "./PrintIcon";
 import EmployeeAdminPanel from "./EmployeeAdminPanel";
-import JobCard, { cardHasAddons } from "./JobCard";
+import JobCard, { cardHasAddons, cardAddonCount } from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
 import CascadeConfirmDialog, {
@@ -133,11 +133,14 @@ interface CardAddonFlags {
 }
 
 /** Number of text rows a JobCard renders — mirrors JobCard's JSX so a lane can
- *  be sized to fit it exactly. */
+ *  be sized to fit it exactly. When `stackAddons` is set (narrow screens), the
+ *  crew / weather / $ addons wrap onto their own lines instead of sharing one,
+ *  so each counts as a line. */
 function cardContentLines(
   line: ScheduleLine,
   layout: "compact" | "stacked",
   flags: CardAddonFlags,
+  stackAddons: boolean,
 ): number {
   let lines = 1; // header (job# + customer) or custom title
   if (line.jobDescription) lines += 1;
@@ -153,7 +156,8 @@ function cardContentLines(
       lines += 1; // compact desc is single-line (ellipsized)
     }
   }
-  if (cardHasAddons(line, flags)) lines += 1; // addons row (only when it has content)
+  // Addons: one shared row on wide screens, one row per addon when stacked.
+  lines += stackAddons ? cardAddonCount(line, flags) : cardHasAddons(line, flags) ? 1 : 0;
   return lines;
 }
 
@@ -162,14 +166,31 @@ function computeLaneHeight(
   cards: CardLayout[],
   layout: "compact" | "stacked",
   flags: CardAddonFlags,
+  stackAddons: boolean,
 ): number {
   const maxLines = cards.reduce(
-    (m, c) => Math.max(m, cardContentLines(c.line, layout, flags)),
+    (m, c) => Math.max(m, cardContentLines(c.line, layout, flags, stackAddons)),
     1,
   );
   const content = maxLines * CARD_LINE_PX + (maxLines - 1) * CARD_LINE_GAP;
   const floor = layout === "stacked" ? 60 : 40;
   return Math.max(floor, content + CARD_V_CHROME);
+}
+
+/** True on mobile/tablet widths (≤900px), where day columns are too narrow to
+ *  fit crew + weather + $ on one row — so addons stack vertically. */
+function useStackedAddons(): boolean {
+  const query = "(max-width: 900px)";
+  const [stacked, setStacked] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setStacked(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return stacked;
 }
 
 // Last visible working-day column: Friday (4) when the employee doesn't work
@@ -363,6 +384,9 @@ export default function CalendarView({
   // Presentation ("TV") mode: drop everything above the grid (banner, week
   // summary, toolbar) so only the eyebrow/title + calendar show — see App.tsx.
   const presentationMode = useSettingsStore((s) => s.presentationMode);
+  // Narrow screens stack the crew/weather/$ addons vertically (they don't fit
+  // on one row in a mobile day column) — the lane grows to fit them.
+  const stackAddons = useStackedAddons();
 
   // --- Job Queue (Production + Installation) -------------------------------
   // Pick the per-board queue store (each board keeps its own queue). Selecting a
@@ -774,11 +798,12 @@ export default function CalendarView({
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!, !emp.worksWeekends);
               const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
-              const laneHeight = computeLaneHeight(cards, cardLayout, {
-                showInvoice,
-                showCrewBadge,
-                showWeather,
-              });
+              const laneHeight = computeLaneHeight(
+                cards,
+                cardLayout,
+                { showInvoice, showCrewBadge, showWeather },
+                stackAddons,
+              );
               const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
               return (
