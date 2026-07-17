@@ -2455,18 +2455,22 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
+  background: var(--surface-raised);
 }
 .my-schedule__day-head {
   display: flex;
   align-items: baseline;
   gap: 8px;
   padding: 6px 10px;
-  background: var(--lumineo-navy);
+  /* Subtle off-white band (matches the main screen bg) so the dept-colored
+     job cards below stand out instead of competing with a navy header. */
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
-  color: #fff;
+  color: var(--text-primary);
 }
 .my-schedule__day-head span {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-tertiary);
 }
 .my-schedule__empty {
   padding: 8px 10px;
