@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import type { EmployeeGroup } from "../services/current-user";
 import { GROUP_STORES } from "../services/employee-groups";
 import { printMarkup } from "../services/print";
+import JobCard from "./JobCard";
+import EditJobPanel from "./EditJobPanel";
 
 interface MyScheduleProps {
   group: EmployeeGroup;
@@ -19,10 +21,14 @@ interface MyScheduleProps {
 export default function MySchedule({ group, employeeId, lead }: MyScheduleProps) {
   const store = GROUP_STORES[group];
   const employees = store((s) => s.employees);
+  const departments = store((s) => s.departments);
   const schedule = store((s) => s.schedule);
+  const conflicts = store((s) => s.conflicts);
   const weekStart = store((s) => s.weekStart);
   const loadWeek = store((s) => s.loadWeek);
   const printRef = useRef<HTMLDivElement>(null);
+  // Which job's detail panel is open (click-to-view, same as the calendar).
+  const [editLineId, setEditLineId] = useState<string | null>(null);
 
   // Make sure this roster has been loaded at least once.
   useEffect(() => {
@@ -91,19 +97,43 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
               {dayTasks.length === 0 ? (
                 <div className="my-schedule__empty">—</div>
               ) : (
-                dayTasks.map((l) => (
-                  <div key={l.id} className="my-schedule__task">
-                    <div className="my-schedule__task-job">{l.customerName || l.jobNo}</div>
-                    {l.planningLineDescription && (
-                      <div className="my-schedule__task-desc">{l.planningLineDescription}</div>
-                    )}
-                  </div>
-                ))
+                <div className="my-schedule__tasks">
+                  {dayTasks.map((l) => (
+                    // Wrap the card the same way the calendar does: the card
+                    // owns hover + right-click; the wrapper owns click-to-view.
+                    <div
+                      key={l.id}
+                      className="my-schedule__card"
+                      onClick={() => setEditLineId(l.id)}
+                    >
+                      <JobCard
+                        line={l}
+                        department={departments.get(l.departmentId)}
+                        employee={emp}
+                        conflicts={conflicts}
+                        layout="stacked"
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {editLineId && (() => {
+        const editing = schedule.find((l) => l.id === editLineId);
+        if (!editing) return null;
+        return (
+          <EditJobPanel
+            line={editing}
+            onClose={() => setEditLineId(null)}
+            useStore={store}
+            readOnly
+          />
+        );
+      })()}
     </div>
   );
 }
