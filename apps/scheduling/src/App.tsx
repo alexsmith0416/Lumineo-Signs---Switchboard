@@ -36,16 +36,6 @@ const VIEW_TITLES: Record<View, string> = {
   settings: "Settings",
 };
 
-// The Project Scheduler's own views — shown as the sub-nav pill row (desktop)
-// and inside the hamburger drawer (mobile).
-const VIEW_NAV = [
-  { id: "production", label: "Production", group: "Schedules" },
-  { id: "installation", label: "Installation", group: "Schedules" },
-  { id: "shipping", label: "Shipping", group: "Schedules" },
-  { id: "monthly", label: "Monthly Plan", group: "Planning" },
-  { id: "scenario", label: "Scenarios", group: "Planning" },
-];
-
 export default function App() {
   const [view, setView] = useState<View | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -111,12 +101,6 @@ export default function App() {
     void hydrateInstallCardCache().catch(() => {});
   }, []);
 
-  // Monthly Gameplanning and Scenarios are Admin/Ops only — hide from both navs.
-  const navItems = VIEW_NAV.filter(
-    (v) =>
-      (v.id !== "monthly" || permissions.monthly) &&
-      (v.id !== "scenario" || permissions.scenarios),
-  );
   // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.
   const canEdit = permissions.editSchedule;
 
@@ -186,9 +170,11 @@ export default function App() {
       <NavDrawer
         open={drawerOpen}
         current={view}
-        items={navItems}
         onSelect={(id) => setView(id as View)}
         onClose={() => setDrawerOpen(false)}
+        myScheduleLabel={myScheduleLabel}
+        showMonthly={permissions.monthly}
+        showScenario={permissions.scenarios}
       />
     </div>
   );
