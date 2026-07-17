@@ -19,6 +19,7 @@ import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { useSettingsStore } from "../store/settings-store";
+import { useHistoryStore } from "../store/history-store";
 import { CcoBadge } from "./CcoBadge";
 import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
@@ -377,6 +378,44 @@ export default function CalendarView({
   const enterScenario = scenarioStore((s) => s.enter);
   const addScenarioChange = scenarioStore((s) => s.addChange);
   const getContext = useStore((s) => s.getContext);
+  // Undo/redo history for this board (move/resize/add/delete). Session-scoped,
+  // 20 steps, cleared on reload — see history-store.
+  const boardId = useStore((s) => s.boardId);
+  const boardHistory = useHistoryStore((s) => s.boards[boardId]);
+  const canUndo = !readOnly && !!boardHistory?.undo.length;
+  const canRedo = !readOnly && !!boardHistory?.redo.length;
+  const undoLabel = boardHistory?.undo[boardHistory.undo.length - 1]?.label;
+  const redoLabel = boardHistory?.redo[boardHistory.redo.length - 1]?.label;
+  const doUndo = () => void useHistoryStore.getState().undo(boardId);
+  const doRedo = () => void useHistoryStore.getState().redo(boardId);
+
+  // Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or Ctrl+Y = redo. Ignored while typing
+  // in a field or on read-only boards.
+  useEffect(() => {
+    if (readOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      )
+        return;
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        void useHistoryStore.getState().undo(boardId);
+      } else if ((key === "z" && e.shiftKey) || key === "y") {
+        e.preventDefault();
+        void useHistoryStore.getState().redo(boardId);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [boardId, readOnly]);
   // Cascade / conflict prompt on/off (Settings). When off, moves & resizes
   // apply as a full override (move only, no dialog, no auto-move of others).
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
@@ -643,6 +682,28 @@ export default function CalendarView({
       )}
       {!presentationMode && (
       <div className="calendar-toolbar">
+        {!readOnly && (
+          <>
+            <button
+              className="calendar-toolbar__history"
+              onClick={doUndo}
+              disabled={!canUndo}
+              title={canUndo ? `Undo ${undoLabel} (Ctrl+Z)` : "Nothing to undo"}
+              aria-label="Undo"
+            >
+              ↶
+            </button>
+            <button
+              className="calendar-toolbar__history"
+              onClick={doRedo}
+              disabled={!canRedo}
+              title={canRedo ? `Redo ${redoLabel} (Ctrl+Y)` : "Nothing to redo"}
+              aria-label="Redo"
+            >
+              ↷
+            </button>
+          </>
+        )}
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
           className="calendar-toolbar__today"

@@ -1113,6 +1113,23 @@ input, select, textarea {
   cursor: default;
 }
 
+/* Undo / redo — outline buttons, larger glyph, greyed when the stack is empty. */
+.calendar-toolbar__history {
+  background: var(--surface-raised) !important;
+  color: var(--lumineo-navy) !important;
+  border: 1px solid var(--lumineo-navy) !important;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 10px;
+}
+.calendar-toolbar__history:hover:not(:disabled) {
+  background: var(--bg-tertiary) !important;
+}
+.calendar-toolbar__history:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .calendar-toolbar__print {
   background: var(--surface-raised) !important;
   /* Icon fills via currentColor — matches the "Show all" trigger in both

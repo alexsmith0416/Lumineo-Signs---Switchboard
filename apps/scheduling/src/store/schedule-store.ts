@@ -17,6 +17,7 @@ import {
 import { shippingDataSource } from "../services/shipping-data";
 import { isLaneEmployeeId, laneDeptId, laneEmployeesFor } from "../services/department-lane";
 import { useSettingsStore } from "./settings-store";
+import { useHistoryStore } from "./history-store";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -34,6 +35,8 @@ import type {
 
 export interface ScheduleStoreState {
   dataSource: ScheduleDataSource;
+  /** Stable id for this board's undo/redo history (see history-store). */
+  boardId: string;
   weekStart: Date;
   loading: boolean;
   error: string | null;
@@ -113,9 +116,51 @@ export type UseScheduleStore = UseBoundStore<StoreApi<ScheduleStoreState>>;
 
 export function createScheduleStore(
   dataSource: ScheduleDataSource,
+  boardId: string,
 ): UseScheduleStore {
-  return create<ScheduleStoreState>((set, get) => ({
+  return create<ScheduleStoreState>((set, get) => {
+    /** Restore a full schedule snapshot locally + re-persist the affected lines
+     *  to Dataverse. Shared by every undo/redo thunk. */
+    const applyScheduleSnapshot = (
+      sched: ScheduleLine[],
+      persist: () => Promise<unknown>,
+    ) => {
+      const s = get();
+      const lanes = laneEmployeesFor(sched, s.departments);
+      const employees = lanes.size ? new Map([...s.employees, ...lanes]) : s.employees;
+      const ctx: ScheduleContext = {
+        employees,
+        departments: s.departments,
+        schedule: sched,
+        workHours: s.workHours,
+        overtime: s.overtime,
+      };
+      set({ schedule: sched, conflicts: detectConflicts(ctx) });
+      void persist().catch((e) => {
+        console.error("[schedule] undo/redo persist failed — resyncing", e);
+        void get().loadWeek();
+      });
+    };
+
+    /** Record one undoable edit: `before`/`after` are full-board snapshots for
+     *  local state; `undoPersist`/`redoPersist` write the affected lines back. */
+    const recordEdit = (
+      label: string,
+      before: ScheduleLine[],
+      after: ScheduleLine[],
+      undoPersist: () => Promise<unknown>,
+      redoPersist: () => Promise<unknown>,
+    ) => {
+      useHistoryStore.getState().record(boardId, {
+        label,
+        undo: () => applyScheduleSnapshot(before, undoPersist),
+        redo: () => applyScheduleSnapshot(after, redoPersist),
+      });
+    };
+
+    return {
     dataSource,
+    boardId,
     weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
     loading: false,
     error: null,
@@ -202,6 +247,8 @@ export function createScheduleStore(
           conflicts: detectConflicts(final),
           loading: false,
         });
+        // Fresh board — prior undo snapshots would replay against stale data.
+        useHistoryStore.getState().clear(boardId);
       } catch (err) {
         set({ loading: false, error: err instanceof Error ? err.message : String(err) });
       }
@@ -245,12 +292,42 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed]
         .filter((l): l is NonNullable<typeof l> => l != null)
         .map(applyConvert);
+      const beforeSchedule = state.schedule;
+      const afterSchedule = convert
+        ? diff.committed.schedule.map(applyConvert)
+        : diff.committed.schedule;
       // Optimistic: move the card on the board immediately, then persist the
       // affected lines to Dataverse in the background (resync on failure).
       set({
-        schedule: convert ? diff.committed.schedule.map(applyConvert) : diff.committed.schedule,
+        schedule: afterSchedule,
         conflicts: diff.conflicts,
       });
+      // Record undo/redo (skip boundary crossings — they reload the board,
+      // which clears history anyway). Undo re-writes the affected lines' old
+      // positions; redo re-writes the new ones.
+      if (!boundaryChanged) {
+        const beforeById = new Map(beforeSchedule.map((l) => [l.id, l]));
+        const shiftPayload = (l: ScheduleLine) => ({
+          startDateTime: l.startDateTime,
+          endDateTime: l.endDateTime,
+          employeeId: l.employeeId,
+          departmentId: l.departmentId,
+          departmentWide: l.departmentWide ?? false,
+        });
+        recordEdit(
+          "Move",
+          beforeSchedule,
+          afterSchedule,
+          () =>
+            Promise.all(
+              toPersist.map((l) => {
+                const b = beforeById.get(l.id);
+                return b ? ds.updateScheduleLine(b.id, shiftPayload(b)) : Promise.resolve();
+              }),
+            ),
+          () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, shiftPayload(l)))),
+        );
+      }
       void Promise.all(
         toPersist.map((line) =>
           ds.updateScheduleLine(line.id, {
@@ -282,8 +359,29 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,
       );
+      const beforeSchedule = state.schedule;
+      const afterSchedule = diff.committed.schedule;
       // Optimistic: resize on the board immediately, persist in the background.
-      set({ schedule: diff.committed.schedule, conflicts: diff.conflicts });
+      set({ schedule: afterSchedule, conflicts: diff.conflicts });
+      const beforeById = new Map(beforeSchedule.map((l) => [l.id, l]));
+      const resizePayload = (l: ScheduleLine) => ({
+        startDateTime: l.startDateTime,
+        endDateTime: l.endDateTime,
+        overrideHours: l.overrideHours,
+      });
+      recordEdit(
+        "Resize",
+        beforeSchedule,
+        afterSchedule,
+        () =>
+          Promise.all(
+            toPersist.map((l) => {
+              const b = beforeById.get(l.id);
+              return b ? ds.updateScheduleLine(b.id, resizePayload(b)) : Promise.resolve();
+            }),
+          ),
+        () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, resizePayload(l)))),
+      );
       void Promise.all(
         toPersist.map((line) =>
           ds.updateScheduleLine(line.id, {
@@ -302,9 +400,17 @@ export function createScheduleStore(
       const ds = get().dataSource;
       // Optimistic: show the new card immediately, persist in the background.
       // Live createScheduleLine returns the same line (id preserved).
-      const next = [...get().schedule, line];
+      const beforeSchedule = get().schedule;
+      const next = [...beforeSchedule, line];
       const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
       set({ schedule: next, conflicts: detectConflicts(ctx) });
+      recordEdit(
+        "Add job",
+        beforeSchedule,
+        next,
+        () => ds.deleteScheduleLine(line.id),
+        () => ds.createScheduleLine(line),
+      );
       void ds.createScheduleLine(line).catch((e) => {
         console.error("[schedule] create persist failed — resyncing", e);
         void get().loadWeek();
@@ -315,9 +421,20 @@ export function createScheduleStore(
       const ds = get().dataSource;
       // Optimistic: remove the card immediately, persist the delete in the
       // background (resync on failure so a failed delete reappears).
-      const next = get().schedule.filter((l) => l.id !== lineId);
+      const beforeSchedule = get().schedule;
+      const removed = beforeSchedule.find((l) => l.id === lineId);
+      const next = beforeSchedule.filter((l) => l.id !== lineId);
       const ctx: ScheduleContext = { ...buildContext(get()), schedule: next };
       set({ schedule: next, conflicts: detectConflicts(ctx) });
+      if (removed) {
+        recordEdit(
+          "Delete job",
+          beforeSchedule,
+          next,
+          () => ds.createScheduleLine(removed),
+          () => ds.deleteScheduleLine(removed.id),
+        );
+      }
       void ds.deleteScheduleLine(lineId).catch((e) => {
         console.error("[schedule] delete persist failed — resyncing", e);
         void get().loadWeek();
@@ -396,7 +513,8 @@ export function createScheduleStore(
       }
       set({ employees: next });
     },
-  }));
+    };
+  });
 }
 
 // Production store data source:
@@ -413,8 +531,8 @@ const productionSource = useLiveData ? liveProductionDataSource : productionData
 const wkInstallSource = useLiveData ? liveWkInstallDataSource : wkInstallDataSource;
 const nekInstallSource = useLiveData ? liveNekInstallDataSource : nekInstallDataSource;
 
-export const useScheduleStore = createScheduleStore(productionSource);
-export const useInstallationStore = createScheduleStore(wkInstallSource);
-export const useInstallationStoreWK = createScheduleStore(wkInstallSource);
-export const useInstallationStoreNEK = createScheduleStore(nekInstallSource);
-export const useShippingStore = createScheduleStore(shippingDataSource);
+export const useScheduleStore = createScheduleStore(productionSource, "production");
+export const useInstallationStore = createScheduleStore(wkInstallSource, "install-wk");
+export const useInstallationStoreWK = createScheduleStore(wkInstallSource, "install-wk");
+export const useInstallationStoreNEK = createScheduleStore(nekInstallSource, "install-nek");
+export const useShippingStore = createScheduleStore(shippingDataSource, "shipping");

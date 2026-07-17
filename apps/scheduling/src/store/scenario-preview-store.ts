@@ -36,7 +36,7 @@ const noopDataSource: ScheduleDataSource = {
   },
 };
 
-export const useScenarioPreviewStore = createScheduleStore(noopDataSource);
+export const useScenarioPreviewStore = createScheduleStore(noopDataSource, "scenario-preview");
 
 // CalendarView calls loadWeek on mount. For the preview store the state is
 // hydrated externally from the scenario result, so swallow the load instead
