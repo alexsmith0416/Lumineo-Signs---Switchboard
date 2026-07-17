@@ -665,45 +665,51 @@ export default function CalendarView({
           monthlyGoal={monthlyGoal}
           combinedBillingThisWeek={combinedBillingThisWeek}
           trailing={
-            enableJobQueue ? (
-              <button
-                type="button"
-                className={"wk-queue-toggle" + (queueOpen ? " wk-queue-toggle--on" : "")}
-                onClick={() => setQueueOpen((v) => !v)}
-                title="Toggle the Job Queue"
-                aria-pressed={queueOpen}
-              >
-                <QueueToggleIcon size={16} />
-                <span>Job Queue</span>
-              </button>
+            !readOnly || enableJobQueue ? (
+              <>
+                {!readOnly && (
+                  <div className="history-group">
+                    <button
+                      type="button"
+                      className="history-btn"
+                      onClick={doUndo}
+                      disabled={!canUndo}
+                      title={canUndo ? `Undo ${undoLabel} (Ctrl+Z)` : "Nothing to undo"}
+                      aria-label="Undo"
+                    >
+                      ↶
+                    </button>
+                    <button
+                      type="button"
+                      className="history-btn"
+                      onClick={doRedo}
+                      disabled={!canRedo}
+                      title={canRedo ? `Redo ${redoLabel} (Ctrl+Y)` : "Nothing to redo"}
+                      aria-label="Redo"
+                    >
+                      ↷
+                    </button>
+                  </div>
+                )}
+                {enableJobQueue && (
+                  <button
+                    type="button"
+                    className={"wk-queue-toggle" + (queueOpen ? " wk-queue-toggle--on" : "")}
+                    onClick={() => setQueueOpen((v) => !v)}
+                    title="Toggle the Job Queue"
+                    aria-pressed={queueOpen}
+                  >
+                    <QueueToggleIcon size={16} />
+                    <span>Job Queue</span>
+                  </button>
+                )}
+              </>
             ) : undefined
           }
         />
       )}
       {!presentationMode && (
       <div className="calendar-toolbar">
-        {!readOnly && (
-          <>
-            <button
-              className="calendar-toolbar__history"
-              onClick={doUndo}
-              disabled={!canUndo}
-              title={canUndo ? `Undo ${undoLabel} (Ctrl+Z)` : "Nothing to undo"}
-              aria-label="Undo"
-            >
-              ↶
-            </button>
-            <button
-              className="calendar-toolbar__history"
-              onClick={doRedo}
-              disabled={!canRedo}
-              title={canRedo ? `Redo ${redoLabel} (Ctrl+Y)` : "Nothing to redo"}
-              aria-label="Redo"
-            >
-              ↷
-            </button>
-          </>
-        )}
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
           className="calendar-toolbar__today"

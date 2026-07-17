@@ -1113,19 +1113,31 @@ input, select, textarea {
   cursor: default;
 }
 
-/* Undo / redo — outline buttons, larger glyph, greyed when the stack is empty. */
-.calendar-toolbar__history {
-  background: var(--surface-raised) !important;
-  color: var(--lumineo-navy) !important;
-  border: 1px solid var(--lumineo-navy) !important;
+/* Undo / redo — sit just left of the Job Queue button in the summary bar.
+   Outline buttons sized to match .wk-queue-toggle; greyed when the stack
+   is empty. Grouped tightly so the pair reads as one control. */
+.history-group {
+  display: inline-flex;
+  align-self: center;
+  gap: 4px;
+}
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lumineo-navy);
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  border-radius: 6px;
+  padding: 4px 9px;
   font-size: 15px;
   line-height: 1;
-  padding: 0 10px;
+  cursor: pointer;
 }
-.calendar-toolbar__history:hover:not(:disabled) {
-  background: var(--bg-tertiary) !important;
+.history-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
 }
-.calendar-toolbar__history:disabled {
+.history-btn:disabled {
   opacity: 0.35;
   cursor: default;
 }
