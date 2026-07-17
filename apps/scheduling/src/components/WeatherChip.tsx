@@ -4,6 +4,8 @@ interface WeatherChipProps {
   zip: string | null | undefined;
   forDate: Date;
   size?: "compact" | "expanded";
+  /** Extra class on the compact chip (used to pin it bottom-right on mobile). */
+  className?: string;
 }
 
 interface WeatherView {
@@ -71,7 +73,7 @@ function mockView(zip: string, forDate: Date): WeatherView {
   };
 }
 
-export default function WeatherChip({ zip, forDate, size = "compact" }: WeatherChipProps) {
+export default function WeatherChip({ zip, forDate, size = "compact", className }: WeatherChipProps) {
   const real = useWeather(zip, forDate);
   if (!zip) return null;
 
@@ -87,6 +89,7 @@ export default function WeatherChip({ zip, forDate, size = "compact" }: WeatherC
   if (size === "compact") {
     return (
       <span
+        className={className}
         style={{
           display: "inline-flex",
           alignItems: "center",

@@ -196,7 +196,13 @@ export default function JobCard({
         {cardHasAddons(line, { showInvoice, showCrewBadge, showWeather }) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
-            {showWeather && <WeatherChip zip={line.installZip} forDate={line.startDateTime} />}
+            {showWeather && (
+              <WeatherChip
+                zip={line.installZip}
+                forDate={line.startDateTime}
+                className="job-card__weather"
+              />
+            )}
             {showInvoice && cardMoneyValue(line) != null && (
               <span className="job-card__invoice" title="Remaining value (BC)">
                 {formatMoney(cardMoneyValue(line)!)}

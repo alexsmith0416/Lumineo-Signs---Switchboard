@@ -819,12 +819,21 @@ input, select, textarea {
   /* Job cards: a mobile day column is too narrow to fit crew + weather + $ on
      one row, so stack the addons — each gets its own line + a little breathing
      room. The lane height grows to match (see useStackedAddons in CalendarView),
-     and hiding an addon via the toolbar toggles shrinks the card back down. */
+     and hiding an addon via the toolbar toggles shrinks the card back down.
+     Crew + $ value are left-justified on their own lines; weather is pinned to
+     the bottom-right (last line, right-aligned) and always stays there. */
   .job-card__addons {
     flex-direction: column;
     align-items: flex-start;
     gap: 3px;
     margin-top: 1px;
+  }
+  .job-card__invoice {
+    order: 2;
+  }
+  .job-card__weather {
+    order: 3;
+    align-self: flex-end;
   }
 }
 
