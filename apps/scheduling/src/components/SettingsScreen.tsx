@@ -7,6 +7,7 @@ export default function SettingsScreen() {
   const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
   const hideHeader = useSettingsStore((s) => s.hideHeader);
   const setHideHeader = useSettingsStore((s) => s.setHideHeader);
+  const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
 
   const toggleHeader = () => {
     const next = !hideHeader;
@@ -50,6 +51,30 @@ export default function SettingsScreen() {
 
       <div className="settings-section">
         <div className="settings-section__title">Display</div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Full screen (TV / presentation mode)</div>
+            <div className="settings-row__desc">
+              Hides the top bar and side navigation and shows the current schedule
+              full size — ideal for putting a calendar up on a TV or monitor. Turning
+              this <strong>on</strong> switches to the last schedule you were viewing.
+              Press <strong>ESC</strong> to exit.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="settings-switch"
+            aria-label="Full screen presentation mode"
+            onClick={() => setPresentationMode(true)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          Displays the current schedule full size. Press <strong>ESC</strong> to exit.
+        </div>
 
         <div className="settings-row">
           <div className="settings-row__text">

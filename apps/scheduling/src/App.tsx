@@ -13,6 +13,7 @@ import SettingsScreen from "./components/SettingsScreen";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
 import { useCurrentUser } from "./services/current-user";
+import { useSettingsStore } from "./store/settings-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -48,6 +49,43 @@ const VIEW_NAV = [
 export default function App() {
   const [view, setView] = useState<View | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Presentation ("TV") mode: hide the app chrome and show the current screen
+  // full-bleed. Exits on ESC.
+  const presentationMode = useSettingsStore((s) => s.presentationMode);
+  const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
+
+  // The toggle lives on the Settings screen, so remember the last real screen
+  // (a calendar/board/plan) to show full-bleed instead of Settings itself.
+  const lastRealViewRef = useRef<View>("production");
+  useEffect(() => {
+    if (view && view !== "settings") lastRealViewRef.current = view;
+  }, [view]);
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    // Don't show Settings full-bleed — jump to the last real screen instead.
+    setView((v) => (v === "settings" ? lastRealViewRef.current : v));
+
+    // Best-effort real fullscreen — great on a TV/monitor, silently ignored
+    // when the Power Apps player iframe disallows it (we still hide the chrome).
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPresentationMode(false);
+    };
+    // If the user leaves native fullscreen (e.g. ESC), drop presentation mode too.
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setPresentationMode(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("fullscreenchange", onFsChange);
+      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    };
+  }, [presentationMode, setPresentationMode]);
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
@@ -104,21 +142,27 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar
-        current={view}
-        onSelect={(id) => setView(id as View)}
-        myScheduleLabel={myScheduleLabel}
-        showMonthly={permissions.monthly}
-        showScenario={permissions.scenarios}
-      />
+    <div className={"app-shell" + (presentationMode ? " app-shell--presentation" : "")}>
+      {!presentationMode && (
+        <Sidebar
+          current={view}
+          onSelect={(id) => setView(id as View)}
+          myScheduleLabel={myScheduleLabel}
+          showMonthly={permissions.monthly}
+          showScenario={permissions.scenarios}
+        />
+      )}
 
       <main className="app-main">
-        <Topbar
-          title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
-          onMenu={() => setDrawerOpen(true)}
-        />
-        <ImpersonationBanner />
+        {!presentationMode && (
+          <>
+            <Topbar
+              title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
+              onMenu={() => setDrawerOpen(true)}
+            />
+            <ImpersonationBanner />
+          </>
+        )}
         <div className="app-content">
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
@@ -142,6 +186,18 @@ export default function App() {
           {view === "settings" && <SettingsScreen />}
         </div>
       </main>
+
+      {presentationMode && (
+        <button
+          type="button"
+          className="presentation-exit"
+          aria-label="Exit full screen"
+          title="Exit full screen (ESC)"
+          onClick={() => setPresentationMode(false)}
+        >
+          ✕ Exit full screen
+        </button>
+      )}
 
       <NavDrawer
         open={drawerOpen}

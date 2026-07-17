@@ -39,6 +39,12 @@ interface SettingsState {
   setCascadeEnabled: (value: boolean) => void;
   hideHeader: boolean;
   setHideHeader: (value: boolean) => void;
+  // Presentation ("TV") mode hides the app's own top + side nav and shows the
+  // current screen full-bleed for display on a monitor. Transient by design —
+  // it's a mode you drop with ESC, not a saved preference — so it is NOT
+  // persisted to localStorage and always starts off on load.
+  presentationMode: boolean;
+  setPresentationMode: (value: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -52,4 +58,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     writeBool(HIDE_HEADER_KEY, value);
     set({ hideHeader: value });
   },
+  presentationMode: false,
+  setPresentationMode: (value) => set({ presentationMode: value }),
 }));

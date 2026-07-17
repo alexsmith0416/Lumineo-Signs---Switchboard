@@ -72,6 +72,11 @@ npm run build
 $env:NODE_OPTIONS="--use-system-ca"; pac code push
 ```
 
+> 🔴 **Always `git commit` + `git push` every time you deploy.** A `pac code push`
+> only ships the built files to the live app — it does **not** save your source
+> to git. Right after every successful deploy, commit the changed source and push
+> the branch so the repo matches what's live (see **Git workflow** below).
+
 - **Why the env var:** plain `pac code push` fails with
   `UNABLE_TO_VERIFY_LEAF_SIGNATURE` — bundled Node doesn't trust the local root
   CA. `--use-system-ca` fixes it. (Bash equivalent: `NODE_OPTIONS=--use-system-ca pac code push`.)

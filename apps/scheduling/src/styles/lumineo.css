@@ -162,6 +162,39 @@ input, select, textarea {
   background: var(--bg-page);
 }
 
+/* Presentation ("TV") mode: no sidebar column, current screen fills the page. */
+.app-shell--presentation {
+  grid-template-columns: 1fr;
+}
+
+/* Floating exit affordance for TVs driven by a remote (no keyboard for ESC).
+   Sits above the schedule, fades to subtle until hovered. */
+.presentation-exit {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--lumineo-navy, #141464);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.45;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.15s ease;
+}
+
+.presentation-exit:hover,
+.presentation-exit:focus-visible {
+  opacity: 1;
+}
+
 /* ---- Sidebar ---- */
 .switchboard-sidebar {
   background: var(--surface-sidebar);
