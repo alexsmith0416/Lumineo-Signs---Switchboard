@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 /** A small on/off pill used in calendar toolbars (e.g. the $ / weather toggles). */
 export default function ToggleChip({
   label,
@@ -10,21 +12,15 @@ export default function ToggleChip({
   onClick: () => void;
   accent?: string;
 }) {
-  const activeBg = accent ?? "var(--lumineo-navy)";
+  // Accent color flows through a CSS var so sizing lives in the stylesheet
+  // (keeps every toolbar control the same height — see .calendar-toolbar).
+  const style = accent ? ({ "--chip-accent": accent } as CSSProperties) : undefined;
   return (
     <button
+      type="button"
       onClick={onClick}
-      style={{
-        padding: "5px 9px",
-        fontSize: 12,
-        fontWeight: 600,
-        background: active ? activeBg : "#fff",
-        color: active ? "#fff" : activeBg,
-        border: `1px solid ${activeBg}`,
-        borderRadius: 5,
-        cursor: "pointer",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-      }}
+      className={"toggle-chip" + (active ? " toggle-chip--active" : "")}
+      style={style}
       title={`Toggle ${label}`}
     >
       {label}

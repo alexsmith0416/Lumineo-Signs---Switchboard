@@ -83,29 +83,17 @@ export default function InstallationCalendar({
     return [...jobs.values()].reduce((a, b) => a + b, 0);
   })();
 
+  // A fragment (not a wrapping div) so each control is a direct child of
+  // .calendar-toolbar — same as Production — and wraps uniformly on mobile.
   const toolbar = (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
-        style={{
-          display: "inline-flex",
-          borderRadius: 5,
-          overflow: "hidden",
-          border: "1px solid var(--lumineo-navy)",
-        }}
-      >
+    <>
+      <div className="region-toggle" role="group" aria-label="Region">
         {(["WK", "NEK"] as const).map((r) => (
           <button
             key={r}
+            type="button"
+            className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
             onClick={() => setRegion(r)}
-            style={{
-              padding: "5px 12px",
-              fontSize: 12,
-              fontWeight: 600,
-              background: region === r ? "var(--lumineo-navy)" : "#fff",
-              color: region === r ? "#fff" : "var(--lumineo-navy)",
-              border: "none",
-              cursor: "pointer",
-            }}
           >
             {r}
           </button>
@@ -144,7 +132,7 @@ export default function InstallationCalendar({
         resourceLabel="Employee"
         departmentLabel="Location"
       />
-    </div>
+    </>
   );
 
   return (

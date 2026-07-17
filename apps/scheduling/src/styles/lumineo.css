@@ -795,6 +795,26 @@ input, select, textarea {
   .app-content {
     padding: 12px 16px 16px;
   }
+
+  /* Toolbar (mobile + tablet): controls wrap onto their own line, the week
+     label stacks above them, and the never-used Print button is dropped. */
+  .calendar-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 4px;
+  }
+  .calendar-toolbar > .calendar-toolbar__label {
+    order: -1;
+    flex: 1 0 100%;
+    font-size: 13px;
+    text-align: left;
+  }
+  .calendar-toolbar > .calendar-toolbar__spacer {
+    display: none;
+  }
+  .calendar-toolbar__print {
+    display: none !important;
+  }
 }
 
 /* Legacy top-bar shell — only `.app-header__logo*` is still used (mobile nav
@@ -994,12 +1014,67 @@ input, select, textarea {
   padding: 0 13px;
 }
 
+/* Every interactive control in the toolbar shares one height + font size so
+   the row reads uniformly (Prev/Today/Next, $ / weather / crew chips, the
+   WK/NEK toggle, Show all, Print, Add Job). Sizing lives here — not in inline
+   styles — so it stays consistent across Production and Installation. */
 .calendar-toolbar button {
   background: var(--lumineo-navy);
   color: #fff;
   border: none;
-  padding: 6px 12px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
   border-radius: 4px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* $ / weather / crew pills — white when off, accent-filled when on. */
+.calendar-toolbar .toggle-chip {
+  --chip-accent: var(--lumineo-navy);
+  background: var(--surface-raised);
+  color: var(--chip-accent);
+  border: 1px solid var(--chip-accent);
+  border-radius: 5px;
+  padding: 0 10px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+.calendar-toolbar .toggle-chip--active {
+  background: var(--chip-accent);
+  color: #fff;
+}
+
+/* WK / NEK segmented toggle — never shrinks, so the labels can't clip. */
+.calendar-toolbar .region-toggle {
+  display: inline-flex;
+  height: 30px;
+  box-sizing: border-box;
+  border: 1px solid var(--lumineo-navy);
+  border-radius: 5px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.calendar-toolbar .region-toggle__btn {
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.calendar-toolbar .region-toggle__btn--active {
+  background: var(--lumineo-navy);
+  color: #fff;
 }
 
 .calendar-toolbar__label {
@@ -1823,21 +1898,8 @@ input, select, textarea {
   body { font-size: 12px; }
 
   /* The shell's 900px breakpoint already collapses the sidebar to the topbar
-     + drawer; these phone tweaks only refine the content density. */
-
-  /* Calendar toolbar wraps; the week label gets its own line. */
-  .calendar-toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: stretch;
-  }
-  .calendar-toolbar > .calendar-toolbar__label {
-    order: -1;
-    flex: 1 0 100%;
-    font-size: 13px;
-    text-align: left;
-  }
-  .calendar-toolbar > .calendar-toolbar__spacer { display: none; }
+     + drawer and applies the toolbar tweaks; these phone rules only refine the
+     content density. */
 
   /* Calendar grid scrolls horizontally on small screens. Resource
      column compacts but stays sticky-left so it remains visible while
