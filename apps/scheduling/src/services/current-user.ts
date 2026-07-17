@@ -51,6 +51,9 @@ export type AppView =
 export interface Permissions {
   /** May see $ values (the $ toggle + dollar figures / billing stats). */
   money: boolean;
+  /** May see crew/truck logistics on install cards (the Crew/Truck toggle +
+   *  crew badges). Admin/Ops only — basic users don't need this. */
+  crew: boolean;
   /** May see the Monthly Gameplanning view. */
   monthly: boolean;
   /** May see + use the Scenario Sandbox (Admin/Ops only). */
@@ -65,6 +68,8 @@ interface TypeConfig {
   /** Screen the app opens on for this type. */
   defaultView: AppView;
   money: boolean;
+  /** Crew/truck logistics visibility (Admin/Ops only). */
+  crew: boolean;
   monthly: boolean;
   /** Scenario Sandbox visibility. */
   scenarios: boolean;
@@ -75,13 +80,13 @@ interface TypeConfig {
 }
 
 export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
-  admin: { label: "Admin", defaultView: "production", money: true, monthly: true, scenarios: true, editSchedule: true },
-  ops: { label: "Ops", defaultView: "production", money: true, monthly: true, scenarios: true, editSchedule: true },
-  production: { label: "Production", defaultView: "production", money: false, monthly: false, scenarios: false, editSchedule: false },
-  "install-wk": { label: "WK Install", defaultView: "installation", money: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "WK" },
-  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
-  sales: { label: "Sales", defaultView: "my-schedule", money: false, monthly: false, scenarios: false, editSchedule: false },
-  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, monthly: false, scenarios: false, editSchedule: false },
+  admin: { label: "Admin", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  ops: { label: "Ops", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  production: { label: "Production", defaultView: "production", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
+  "install-wk": { label: "WK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "WK" },
+  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
+  sales: { label: "Sales", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
+  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
 };
 
 // Roster: login email (lower-case) → user type. Fill this from the provided list.
@@ -213,6 +218,7 @@ export function useCurrentUser(): CurrentUser {
     role,
     permissions: {
       money: cfg.money,
+      crew: cfg.crew,
       monthly: cfg.monthly,
       scenarios: cfg.scenarios,
       editSchedule: cfg.editSchedule,

@@ -21,6 +21,9 @@ interface InstallationCalendarProps {
   onNavigate?: (view: string) => void;
   /** $ values are Admin/Ops only; hides the $ toggle + billing figures. */
   canSeeMoney?: boolean;
+  /** Crew/truck logistics are Admin/Ops only; hides the Crew/Truck toggle +
+   *  crew badges for basic users. */
+  canSeeCrew?: boolean;
   /** Which region the board opens on (installer types default to theirs). */
   initialRegion?: Region;
   /** View-only (non-Admin/Ops): disables all editing affordances. */
@@ -32,6 +35,7 @@ export const MONTHLY_INSTALL_GOAL = 1_100_000;
 export default function InstallationCalendar({
   onNavigate,
   canSeeMoney = false,
+  canSeeCrew = false,
   initialRegion = "WK",
   readOnly = false,
 }: InstallationCalendarProps = {}) {
@@ -40,6 +44,8 @@ export default function InstallationCalendar({
   const showMoney = canSeeMoney && showInvoice;
   const [showWeather, setShowWeather] = useState(true);
   const [showCrew, setShowCrew] = useState(true);
+  // Crew/truck is Admin/Ops only; basic users never see the badge or its toggle.
+  const showCrewBadge = canSeeCrew && showCrew;
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
     employeeId?: string;
@@ -103,7 +109,9 @@ export default function InstallationCalendar({
         <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="var(--status-green)" />
       )}
       <ToggleChip label="🌤" active={showWeather} onClick={() => setShowWeather((v) => !v)} />
-      <ToggleChip label="Crew/Truck" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
+      {canSeeCrew && (
+        <ToggleChip label="Crew/Truck" active={showCrew} onClick={() => setShowCrew((v) => !v)} />
+      )}
       <VisibilityMenu
         departments={[...departments.values()]}
         employees={[...employees.values()]}
@@ -146,7 +154,7 @@ export default function InstallationCalendar({
         }}
         cardLayout="stacked"
         showInvoice={showMoney}
-        showCrewBadge={showCrew}
+        showCrewBadge={showCrewBadge}
         showWeather={showWeather}
         showBillingStats={showMoney}
         monthlyGoal={showMoney ? MONTHLY_INSTALL_GOAL : undefined}

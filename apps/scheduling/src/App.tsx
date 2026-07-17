@@ -144,6 +144,7 @@ export default function App() {
             <InstallationCalendar
               readOnly={!canEdit}
               canSeeMoney={permissions.money}
+              canSeeCrew={permissions.crew}
               initialRegion={installRegion}
               onNavigate={(v) => setView(v as View)}
             />
