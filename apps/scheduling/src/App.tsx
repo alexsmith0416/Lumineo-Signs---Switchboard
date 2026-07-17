@@ -67,24 +67,11 @@ export default function App() {
     // Don't show Settings full-bleed — jump to the last real screen instead.
     setView((v) => (v === "settings" ? lastRealViewRef.current : v));
 
-    // Best-effort real fullscreen — great on a TV/monitor, silently ignored
-    // when the Power Apps player iframe disallows it (we still hide the chrome).
-    void document.documentElement.requestFullscreen?.().catch(() => {});
-
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setPresentationMode(false);
     };
-    // If the user leaves native fullscreen (e.g. ESC), drop presentation mode too.
-    const onFsChange = () => {
-      if (!document.fullscreenElement) setPresentationMode(false);
-    };
     window.addEventListener("keydown", onKeyDown);
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("fullscreenchange", onFsChange);
-      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-    };
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [presentationMode, setPresentationMode]);
 
   // The signed-in user's type drives the landing screen, the sidebar item
@@ -154,15 +141,12 @@ export default function App() {
       )}
 
       <main className="app-main">
-        {!presentationMode && (
-          <>
-            <Topbar
-              title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
-              onMenu={() => setDrawerOpen(true)}
-            />
-            <ImpersonationBanner />
-          </>
-        )}
+        <Topbar
+          title={view === "my-schedule" ? myScheduleLabel : VIEW_TITLES[view]}
+          onMenu={() => setDrawerOpen(true)}
+          minimal={presentationMode}
+        />
+        {!presentationMode && <ImpersonationBanner />}
         <div className="app-content">
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (

@@ -4,12 +4,17 @@ interface TopbarProps {
   title: string;
   /** Mobile only — opens the nav drawer. The button is hidden ≥900px via CSS. */
   onMenu?: () => void;
+  /**
+   * Presentation ("TV") mode: show only the eyebrow + title. Drops the mobile
+   * menu button and the search + view-as cluster for a clean display header.
+   */
+  minimal?: boolean;
 }
 
-export default function Topbar({ title, onMenu }: TopbarProps) {
+export default function Topbar({ title, onMenu, minimal = false }: TopbarProps) {
   return (
     <header className="app-topbar">
-      {onMenu && (
+      {!minimal && onMenu && (
         <button
           type="button"
           className="app-topbar__menu"
@@ -27,13 +32,15 @@ export default function Topbar({ title, onMenu }: TopbarProps) {
         <span className="app-topbar__eyebrow">WEEKLY SCHEDULER</span>
         <span className="app-topbar__title">{title}</span>
       </div>
-      <div className="app-topbar__cluster">
-        <div className="app-topbar__search" aria-hidden="true">
-          <span>⌕</span>
-          <span>Search schedules…</span>
+      {!minimal && (
+        <div className="app-topbar__cluster">
+          <div className="app-topbar__search" aria-hidden="true">
+            <span>⌕</span>
+            <span>Search schedules…</span>
+          </div>
+          <ViewAsMenu />
         </div>
-        <ViewAsMenu />
-      </div>
+      )}
     </header>
   );
 }

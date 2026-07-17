@@ -360,6 +360,9 @@ export default function CalendarView({
   // apply as a full override (move only, no dialog, no auto-move of others).
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
   const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
+  // Presentation ("TV") mode: drop everything above the grid (banner, week
+  // summary, toolbar) so only the eyebrow/title + calendar show — see App.tsx.
+  const presentationMode = useSettingsStore((s) => s.presentationMode);
 
   // --- Job Queue (Production + Installation) -------------------------------
   // Pick the per-board queue store (each board keeps its own queue). Selecting a
@@ -588,30 +591,33 @@ export default function CalendarView({
 
   return (
     <div className="calendar-view">
-      {bannerSlot}
-      <WeekSummary
-        context={context}
-        weekStart={weekStart}
-        resourceLabelPlural={kindMeta.resourceLabelPlural}
-        showBillingStats={showBillingStats}
-        showTotalValue={showTotalValue}
-        monthlyGoal={monthlyGoal}
-        combinedBillingThisWeek={combinedBillingThisWeek}
-        trailing={
-          enableJobQueue ? (
-            <button
-              type="button"
-              className={"wk-queue-toggle" + (queueOpen ? " wk-queue-toggle--on" : "")}
-              onClick={() => setQueueOpen((v) => !v)}
-              title="Toggle the Job Queue"
-              aria-pressed={queueOpen}
-            >
-              <QueueToggleIcon size={16} />
-              <span>Job Queue</span>
-            </button>
-          ) : undefined
-        }
-      />
+      {!presentationMode && bannerSlot}
+      {!presentationMode && (
+        <WeekSummary
+          context={context}
+          weekStart={weekStart}
+          resourceLabelPlural={kindMeta.resourceLabelPlural}
+          showBillingStats={showBillingStats}
+          showTotalValue={showTotalValue}
+          monthlyGoal={monthlyGoal}
+          combinedBillingThisWeek={combinedBillingThisWeek}
+          trailing={
+            enableJobQueue ? (
+              <button
+                type="button"
+                className={"wk-queue-toggle" + (queueOpen ? " wk-queue-toggle--on" : "")}
+                onClick={() => setQueueOpen((v) => !v)}
+                title="Toggle the Job Queue"
+                aria-pressed={queueOpen}
+              >
+                <QueueToggleIcon size={16} />
+                <span>Job Queue</span>
+              </button>
+            ) : undefined
+          }
+        />
+      )}
+      {!presentationMode && (
       <div className="calendar-toolbar">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
@@ -651,6 +657,7 @@ export default function CalendarView({
         </button>
         {addAction}
       </div>
+      )}
 
       <div className="calendar-grid" ref={gridRef}>
         <div className="calendar-header-row">

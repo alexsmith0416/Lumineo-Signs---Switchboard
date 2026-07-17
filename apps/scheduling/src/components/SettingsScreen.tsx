@@ -56,10 +56,11 @@ export default function SettingsScreen() {
           <div className="settings-row__text">
             <div className="settings-row__title">Full screen (TV / presentation mode)</div>
             <div className="settings-row__desc">
-              Hides the top bar and side navigation and shows the current schedule
-              full size — ideal for putting a calendar up on a TV or monitor. Turning
-              this <strong>on</strong> switches to the last schedule you were viewing.
-              Press <strong>ESC</strong> to exit.
+              Hides the side navigation and everything above the calendar (search,
+              week controls, toggles) — keeping just the schedule title — and shows
+              the current schedule full size, ideal for a TV or monitor. Turning this
+              <strong> on</strong> switches to the last schedule you were viewing.
+              Press <strong>ESC</strong> or the corner button to exit.
             </div>
           </div>
           <button
