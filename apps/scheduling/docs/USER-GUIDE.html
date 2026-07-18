@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lumineo Project Scheduler — User Guide</title>
+<style>
+  :root{
+    --navy:#141464; --navy-soft:#e8eaf5; --red:#e8151b; --red-soft:#ffe4e5;
+    --green:#0f6e56; --green-soft:#d8efe7; --amber:#f2994a; --amber-soft:#fdf0d9;
+    --page:#f4f5f8; --card:#ffffff; --ink:#1f1f2e; --mid:#4a4f5e; --dim:#8b91a3;
+    --border:#e4e5ea; --grid:#cdd0da;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:0 24px 96px}
+
+  /* Header / cover */
+  .cover{
+    background:linear-gradient(135deg,#141464 0%,#20206e 55%,#2a2a80 100%);
+    color:#fff; padding:56px 24px; text-align:center;
+  }
+  .cover__inner{max-width:900px;margin:0 auto}
+  .brandmark{
+    width:74px;height:74px;border-radius:16px;background:#fff;display:inline-flex;
+    align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.25);margin-bottom:20px;
+  }
+  .cover h1{font-size:2.5rem;margin:.2em 0 .1em;letter-spacing:-.02em}
+  .cover .sub{font-size:1.1rem;opacity:.85;font-weight:400}
+  .cover .eyebrow{text-transform:uppercase;letter-spacing:.22em;font-size:.72rem;opacity:.7;font-weight:700}
+  .cover .meta{margin-top:22px;font-size:.82rem;opacity:.7}
+
+  h2{
+    color:var(--navy);font-size:1.6rem;margin:56px 0 8px;padding-bottom:8px;
+    border-bottom:3px solid var(--red);letter-spacing:-.01em;
+  }
+  h3{color:var(--navy);font-size:1.2rem;margin:32px 0 6px}
+  h4{color:var(--ink);font-size:1rem;margin:20px 0 4px}
+  p{margin:.5em 0}
+  a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--navy-soft)}
+  a:hover{border-color:var(--navy)}
+  code{background:var(--navy-soft);color:var(--navy);padding:.1em .4em;border-radius:4px;font-size:.88em;
+       font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
+  strong{color:var(--ink)}
+  ul,ol{padding-left:22px}
+  li{margin:.28em 0}
+  .lead{font-size:1.12rem;color:var(--mid)}
+  hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+
+  /* Table of contents */
+  .toc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-top:38px}
+  .toc h2{margin:0 0 12px;border:none;padding:0;font-size:1.15rem}
+  .toc ol{columns:2;column-gap:36px;margin:0;font-size:.95rem}
+  .toc a{border:none;color:var(--mid)}
+  .toc a:hover{color:var(--navy)}
+
+  /* Callouts */
+  .box{border-radius:10px;padding:14px 18px;margin:18px 0;border-left:4px solid}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box__label{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;display:block;margin-bottom:4px}
+  .tip{background:var(--green-soft);border-color:var(--green)} .tip .box__label{color:var(--green)}
+  .note{background:var(--navy-soft);border-color:var(--navy)} .note .box__label{color:var(--navy)}
+  .warn{background:var(--amber-soft);border-color:var(--amber)} .warn .box__label{color:#b9691a}
+  .danger{background:var(--red-soft);border-color:var(--red)} .danger .box__label{color:var(--red)}
+
+  /* Steps */
+  ol.steps{counter-reset:step;list-style:none;padding-left:0;margin:14px 0}
+  ol.steps>li{counter-increment:step;position:relative;padding:8px 8px 8px 46px;margin:6px 0;
+    background:var(--card);border:1px solid var(--border);border-radius:8px}
+  ol.steps>li::before{content:counter(step);position:absolute;left:10px;top:9px;width:26px;height:26px;
+    background:var(--navy);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.82rem;font-weight:700}
+
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.92rem;background:var(--card);
+    border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  th{background:var(--navy);color:#fff;text-align:left;padding:10px 12px;font-size:.82rem;
+    text-transform:uppercase;letter-spacing:.04em}
+  td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:top}
+  tr:nth-child(even) td{background:#fafbfc}
+
+  /* Feature cards grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+  .fcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .fcard h4{margin:0 0 4px;color:var(--navy)}
+  .fcard p{margin:0;font-size:.9rem;color:var(--mid)}
+
+  /* Legend chips */
+  .chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.78rem;font-weight:600;white-space:nowrap}
+  .kbd{display:inline-block;background:#fff;border:1px solid var(--grid);border-bottom-width:2px;border-radius:5px;
+    padding:1px 7px;font-size:.82rem;font-family:monospace;color:var(--ink)}
+
+  /* Mock UI: a small board sketch for the overview */
+  .sketch{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;font-size:.8rem}
+  .sketch__top{background:var(--navy);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .sketch__row{display:flex;border-top:1px solid var(--grid)}
+  .sketch__name{width:130px;padding:8px 10px;background:#fafbfc;border-right:1px solid var(--grid);font-weight:600}
+  .sketch__days{flex:1;display:flex;position:relative;background:
+    repeating-linear-gradient(90deg,#fff,#fff calc(100%/7 - 1px),var(--grid) calc(100%/7 - 1px),var(--grid) calc(100%/7))}
+  .sketch__bar{position:absolute;top:6px;height:26px;border-radius:4px;color:#fff;font-size:.72rem;
+    display:flex;align-items:center;padding:0 8px;font-weight:600}
+
+  .footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);color:var(--dim);font-size:.85rem}
+
+  @media (max-width:640px){
+    .toc ol{columns:1}.grid{grid-template-columns:1fr}.cover h1{font-size:1.8rem}
+  }
+  @media print{
+    body{background:#fff}
+    .cover{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .box,th,.sketch__top,ol.steps>li::before,.brandmark{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table{break-inside:avoid}
+    a{border:none;color:var(--navy)}
+    .noprint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="cover__inner">
+    <div class="brandmark">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 732 732" width="46" height="46" role="img" aria-label="Lumineo Signs">
+        <path d="M0,0 L732,0 L732,732 L0,732 Z M162,561 L735.9,455.1 L735.8,378.5 Z M162,561 L735.5,285.8 L735.2,189.3 Z M162,561 L734.8,64.7 L734.6,-3.5 Z M162,561 L734.6,-3.5 L737,-5 L666.3,-3.7 Z M162,561 L541.8,-4.1 L445.2,-4.5 Z M162,561 L352.6,-4.7 L276,-4.9 Z" fill="#E8151B" fill-rule="evenodd"/>
+      </svg>
+    </div>
+    <div class="eyebrow">Lumineo Signs</div>
+    <h1>Project Scheduler</h1>
+    <div class="sub">The complete user guide — scheduling Production, Installation &amp; Shipping in one place</div>
+    <div class="meta">Version 1.0 &nbsp;·&nbsp; Last updated July 17, 2026 &nbsp;·&nbsp; For all Lumineo team members</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>What's inside</h2>
+    <ol>
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#start">Getting Started</a></li>
+      <li><a href="#overview">Dashboard Overview</a></li>
+      <li><a href="#legend">Visual Aids &amp; Tooltips</a></li>
+      <li><a href="#features">Features &amp; How to Use Them</a></li>
+      <li><a href="#walkthroughs">Step-by-Step Walkthroughs</a></li>
+      <li><a href="#roles">Roles &amp; Permissions</a></li>
+      <li><a href="#shortcuts">Shortcuts &amp; Efficiency Tips</a></li>
+      <li><a href="#best">Best Practices</a></li>
+      <li><a href="#trouble">Troubleshooting</a></li>
+      <li><a href="#faq">FAQs &amp; Tips</a></li>
+      <li><a href="#support">Contact &amp; Support</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#changelog">What's New</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <h2 id="intro">1 &nbsp;Introduction</h2>
+  <p class="lead">The <strong>Lumineo Project Scheduler</strong> is the shop's single, shared home for planning
+  work — replacing the old Canvas scheduling app and the whiteboards, spreadsheets, and guesswork that came with it.</p>
+
+  <p>It brings three connected calendars together — <strong>Production</strong> (the shop floor),
+  <strong>Installation</strong> (the WK &amp; NEK field crews), and <strong>Shipping</strong> — all driven by the
+  same scheduling engine and fed live from Business Central (BC). Everyone sees the same board, updated in real time,
+  so the person in the office and the crew lead in the field are always looking at the same plan.</p>
+
+  <h3>What you can do with it</h3>
+  <div class="grid">
+    <div class="fcard"><h4>See the whole week at a glance</h4><p>Every job, every person, color-coded by department — with weather, crew size, and dollar value right on the card.</p></div>
+    <div class="fcard"><h4>Schedule by dragging</h4><p>Drop a job on a day, stretch it to change its length, and let the engine keep everything downstream in order.</p></div>
+    <div class="fcard"><h4>Plan "what-ifs" safely</h4><p>Try a change in the Scenario Sandbox before it touches the live board.</p></div>
+    <div class="fcard"><h4>Hit the monthly number</h4><p>Roll up installation billing against the goal and auto-fill the month from jobs that are ready.</p></div>
+  </div>
+
+  <div class="note box"><span class="box__label">Who this guide is for</span>
+  Every team member who touches the schedule — from admins who plan it to floor and field staff who read it.
+  Not every section applies to every role; jump to <a href="#roles">Roles &amp; Permissions</a> to see what your login can do.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="start">2 &nbsp;Getting Started</h2>
+
+  <h3>Opening the app</h3>
+  <ol class="steps">
+    <li>Open the scheduler link your admin shared with you (it opens in any browser — desktop, tablet, or phone). Bookmark it for one-tap access.</li>
+    <li>Sign in with your <strong>Microsoft / Lumineo account</strong> when prompted. That's the same login you use for email.</li>
+    <li>The app opens on the screen that fits your role — the office team lands on <strong>Production</strong>; installers land on their <strong>Installation</strong> region; sales &amp; PMs land on <strong>My Active Jobs</strong>.</li>
+  </ol>
+
+  <div class="tip box"><span class="box__label">Tip — add it to your home screen</span>
+  On a phone or tablet, use your browser's "Add to Home Screen" so the scheduler launches like an app. On a shop TV,
+  turn on <strong>Presentation mode</strong> (see Settings) for a clean, full-screen board.</div>
+
+  <h3>Finding your way around</h3>
+  <table>
+    <tr><th>Area</th><th>Where</th><th>What it's for</th></tr>
+    <tr><td><strong>Sidebar</strong></td><td>Left edge</td><td>Switch between Production, Installation, Shipping, My Schedule, Monthly Plan, Scenario Sandbox, and Settings.</td></tr>
+    <tr><td><strong>Top bar</strong></td><td>Top</td><td>Page title, your user chip (top-right), and — for admins — "View as user".</td></tr>
+    <tr><td><strong>Week toolbar</strong></td><td>Above the grid</td><td>Prev / Today / Next, the week label, Print, and the Add Job button.</td></tr>
+    <tr><td><strong>Week summary</strong></td><td>Above the toolbar</td><td>At-a-glance stats for the week (people scheduled, total value, weekly goal), plus Undo/Redo and the Job Queue toggle.</td></tr>
+    <tr><td><strong>The grid</strong></td><td>Center</td><td>People (or crews/locations) down the left, the seven days across the top, and job cards in between.</td></tr>
+  </table>
+
+  <div class="note box"><span class="box__label">Mobile</span>
+  On a narrow screen the sidebar collapses into a hamburger menu (top-left), and job cards stack their details so nothing clips.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="overview">3 &nbsp;Dashboard Overview</h2>
+  <p>Each calendar is a <strong>Gantt-style board</strong>: a row per person (Production), per crew grouped by location
+  (Installation), or per truck (Shipping), with job cards spanning the days they run.</p>
+
+  <div class="sketch" aria-hidden="true">
+    <div class="sketch__top"><span>Production · Week of Jul 13</span><span>‹ Prev · Today · Next ›</span></div>
+    <div class="sketch__row">
+      <div class="sketch__name">Metal Shop ▾</div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:0;width:42%;background:#141464">J36110 · First Bank</div></div>
+    </div>
+    <div class="sketch__row">
+      <div class="sketch__name">Chris Owen</div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:28%;width:28%;background:#0f6e56">J35887 · RTS</div></div>
+    </div>
+    <div class="sketch__row">
+      <div class="sketch__name">Paint ▾</div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:57%;width:28%;background:#f2994a">J36241 · Salina</div></div>
+    </div>
+  </div>
+
+  <h3>Reading the board</h3>
+  <ul>
+    <li><strong>Rows</strong> are grouped under a colored <strong>department / location banner</strong> (Metal Shop, Paint, Hutchinson, Wichita…). The banner color also tints that group's cards.</li>
+    <li><strong>Columns</strong> are the seven days (Mon–Sun). Weekends are shaded because we don't usually schedule them.</li>
+    <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend.</li>
+    <li><strong>Week navigation</strong> — use <span class="kbd">‹ Prev</span> / <span class="kbd">Next ›</span> to move a week at a time, or <span class="kbd">Today</span> to jump back to the current week.</li>
+  </ul>
+
+  <div class="tip box"><span class="box__label">Tip</span>
+  Hover almost anything — a badge, an icon, a button — and a tooltip explains what it does. When in doubt, hover first.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="legend">4 &nbsp;Visual Aids &amp; Tooltips (Card Legend)</h2>
+  <p>Job cards pack a lot of information into a small space. Here's how to read them:</p>
+  <table>
+    <tr><th>You see</th><th>It means</th></tr>
+    <tr><td><span class="chip" style="background:#141464;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
+    <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
+    <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments.</td></tr>
+    <tr><td>☀️ 72° (weather chip)</td><td>Installation cards show the <strong>forecast</strong> for the job's ZIP code on that day — so you can plan around weather.</td></tr>
+    <tr><td>👷 2 · 🚚 1 (crew badge)</td><td><strong>Crew size</strong> — men and trucks per trip. Auto-derived from BC or entered by hand. (Admin/Ops only.)</td></tr>
+    <tr><td>$ 12,500</td><td>The job's <strong>invoice / remaining value</strong>. Visible to Admin/Ops only; toggle it with the $ button.</td></tr>
+    <tr><td><span class="chip" style="background:#e8eaf5;color:#141464">CCO</span></td><td><strong>Certified Crane Operator</strong> — marks a crew member qualified to run the crane.</td></tr>
+    <tr><td>Diagonal stripes on a day cell</td><td>That person is <strong>lent to Installation</strong> that day (an "assist"). Full-cell = whole day; a half-tinted cell labeled <strong>Install AM/PM</strong> = half day (they're on Production the other half).</td></tr>
+    <tr><td>Highlighted / glowing cards</td><td>Cards the engine <strong>would move</strong> as part of a cascade you're about to confirm.</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="features">5 &nbsp;Features &amp; How to Use Them</h2>
+
+  <h3>5.1 &nbsp;Adding a job</h3>
+  <p>Click <strong>+ Add Job</strong> (top-right of the toolbar) or click an empty day cell for a person. You get two kinds of card:</p>
+  <h4>BC Job</h4>
+  <ol class="steps">
+    <li>Search by BC job number or customer name and pick the job.</li>
+    <li>Choose a mode: <strong>Single</strong> (one task), <strong>Multi</strong> (pick several tasks — they stack on one card), <strong>Auto</strong> (the engine places every task on the best person/day), or <strong>Custom task</strong> (type a task for a job that has no BC planning line).</li>
+    <li>Review the predicted placement, then <strong>Schedule</strong>.</li>
+  </ol>
+  <h4>Custom Card (blocking out time)</h4>
+  <p>For PTO, holidays, inventory, truck maintenance, certifications — anything that isn't a BC job.</p>
+  <ol class="steps">
+    <li>Switch to <strong>Custom Card</strong> and pick a <strong>saved card</strong> from the dropdown (built-in ones like PTO / Holiday, plus any your team saved), or build your own.</li>
+    <li>Set the title, color (use the <strong>Department / Location swatches</strong> to match the group), hours, and scope — <strong>One resource</strong>, <strong>Entire department</strong>, or <strong>All</strong> (e.g. a shop-wide Holiday).</li>
+    <li>Optionally tick <strong>Lock</strong> so cascade flows around it, then <strong>Schedule</strong>.</li>
+    <li>Reuse it next time by clicking <strong>＋ Save as reusable card</strong> — it's saved for this board (Production or Installation) and shared with the team.</li>
+  </ol>
+
+  <h3>5.2 &nbsp;Moving, resizing &amp; the cascade</h3>
+  <ul>
+    <li><strong>Move</strong> — drag a card to another day or person.</li>
+    <li><strong>Resize</strong> — drag the right edge of a card to change how long the job takes (hours snap to quarter-hours; a live "Nh" badge shows the new duration).</li>
+    <li><strong>Cascade</strong> — when a move/resize would push other jobs, a dialog previews exactly what moves and offers: <strong>Continue</strong> (cascade the others), <strong>Move only this</strong>, <strong>Try in Sandbox</strong>, or <strong>Turn cascade off</strong>.</li>
+  </ul>
+  <div class="note box"><span class="box__label">Cascade on vs. off</span>
+  With cascade <strong>on</strong> (default) the board keeps itself conflict-free by nudging downstream work. Turn it
+  <strong>off</strong> in Settings to move things freely as a full override — overlaps just show a ⚡ icon instead of auto-moving.</div>
+
+  <h3>5.3 &nbsp;Editing a job</h3>
+  <p>Click a card to open the <strong>Edit Job</strong> panel. From there you can change the job description and card text,
+  re-pick BC tasks, reassign the employee, set the <strong>Start</strong>, <strong>Hours</strong>, or <strong>End</strong>
+  (setting the end adjusts the duration to land on that date), lock the card, and — on Installation — set trips, men,
+  trucks, and the install ZIP. You can also <strong>Duplicate</strong> the card onto other people, or <strong>Delete</strong> it.</p>
+
+  <h3>5.4 &nbsp;Undo / Redo</h3>
+  <p>Made a mistake? Use the <span class="kbd">↶</span> / <span class="kbd">↷</span> buttons in the week summary, or
+  <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> / <span class="kbd">Ctrl</span>+<span class="kbd">Y</span>.
+  Up to 20 steps per board. History clears when the board reloads (e.g., changing weeks).</p>
+
+  <h3>5.5 &nbsp;The Job Queue</h3>
+  <p>A slide-out holding area (toggle it from the week summary) for jobs that need scheduling but don't have a slot yet.
+  Organize jobs into colored <strong>groups</strong> ("Needs Scheduled", "Ready to Schedule"…), then drag a card
+  straight onto the board — or drag a scheduled card back into the queue to un-schedule it.</p>
+
+  <h3>5.6 &nbsp;Roster management (crews &amp; departments)</h3>
+  <ul>
+    <li><strong>Add</strong> a person — right-click a department / location banner → <em>Add employee</em>.</li>
+    <li><strong>Edit / delete</strong> — right-click a person's name.</li>
+    <li><strong>Reorder / move</strong> — right-click the <em>resource column header</em> to unlock drag-reordering, then drag a name to a new spot or group. You'll be asked <strong>"just this week"</strong> or <strong>"permanent"</strong> (see Walkthrough 4).</li>
+  </ul>
+
+  <h3>5.7 &nbsp;Assist Installation (lending people across departments)</h3>
+  <p>Some days a Production person works with an install crew. Right-click their name → <strong>Assist Installation</strong>,
+  pick the region (WK / NEK) and the days — each day can be <strong>All</strong>, <strong>AM</strong>, or <strong>PM</strong>.
+  Their Production day is greyed for the lent half; the open half still takes a Production job. Come back anytime to
+  <strong>Edit days</strong> (drop a day or change AM/PM) or <strong>Remove assist</strong>.</p>
+
+  <h3>5.8 &nbsp;Scenario Sandbox</h3>
+  <p>A safe copy of the board for "what-if" planning. Make changes, see the impact, and only <strong>commit</strong> them
+  to the live schedule when you're happy — or discard them. Admin/Ops only.</p>
+
+  <h3>5.9 &nbsp;Monthly Plan &amp; AI auto-fill</h3>
+  <p>A month roll-up of installation billing across both regions, with per-week cards and a line for the monthly goal.
+  The <strong>AI auto-fill</strong> button greedily fills the month from the pool of jobs that are ready for install,
+  respecting promised dates and a per-week cap. Admin/Ops only.</p>
+
+  <h3>5.10 &nbsp;My Schedule / My Active Jobs</h3>
+  <p>Floor and field staff get a focused <strong>My Schedule</strong> — just their week. Sales &amp; PMs get
+  <strong>My Active Jobs</strong> — every job they own and where it currently sits across Production, Installation, and Shipping.</p>
+
+  <h3>5.11 &nbsp;Settings</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th></tr>
+    <tr><td>Auto-cascade &amp; conflict prompts</td><td>On = the board keeps itself in order with move/resize previews. Off = free-form override with ⚡ conflict icons.</td></tr>
+    <tr><td>Full screen (Presentation / TV mode)</td><td>Hides everything but the schedule for a shop TV. Press <span class="kbd">Esc</span> to exit.</td></tr>
+    <tr><td>Hide the Power Apps header</td><td>Reclaims the purple bar at the very top for more space (reloads the app; deployed app only).</td></tr>
+    <tr><td>Users <span class="chip" style="background:#e8eaf5;color:#141464">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="walkthroughs">6 &nbsp;Step-by-Step Walkthroughs</h2>
+
+  <h3>Walkthrough 1 — Schedule a new BC job, start to finish</h3>
+  <ol class="steps">
+    <li>Open the <strong>Production</strong> board and navigate to the target week.</li>
+    <li>Click <strong>+ Add Job</strong> → keep <strong>BC Job</strong> selected → search the job number.</li>
+    <li>Pick the job, choose <strong>Auto</strong> to let the engine place its tasks (or <strong>Single/Multi</strong> to place them yourself).</li>
+    <li>Review the predicted person/day under each task, then click <strong>Schedule</strong>.</li>
+    <li>Fine-tune by dragging the card to a different day/person or stretching its right edge; confirm any cascade prompt.</li>
+  </ol>
+
+  <h3>Walkthrough 2 — Block a day of PTO</h3>
+  <ol class="steps">
+    <li>Click <strong>+ Add Job</strong> → <strong>Custom Card</strong>.</li>
+    <li>Pick <strong>PTO</strong> from the saved-cards dropdown (it comes pre-locked).</li>
+    <li>Set scope to <strong>One resource</strong> and choose the person; confirm the day and hours.</li>
+    <li>Click <strong>Schedule</strong>. The engine now flows work around that block.</li>
+  </ol>
+
+  <h3>Walkthrough 3 — Lend someone to install for a half-day</h3>
+  <ol class="steps">
+    <li>On the Production board, right-click the person's name → <strong>Assist Installation</strong>.</li>
+    <li>Choose the region (<strong>WK</strong> or <strong>NEK</strong>), untick <strong>All week</strong>, and turn on the day(s).</li>
+    <li>For a half day, set that day to <strong>AM</strong> or <strong>PM</strong>.</li>
+    <li>Click <strong>Assign to Installation</strong>. To change it later, reopen and use <strong>Edit days</strong>.</li>
+  </ol>
+
+  <h3>Walkthrough 4 — Move a crew member for one week only</h3>
+  <ol class="steps">
+    <li>Right-click the <strong>resource column header</strong> to unlock drag-reordering (the lock icon opens).</li>
+    <li>Drag the person's name to the new department / location, or to a new position in the list.</li>
+    <li>In the prompt, choose <strong>This week only</strong> (just this week) or <strong>Permanent</strong> (every week).</li>
+  </ol>
+  <div class="tip box"><span class="box__label">Tip</span>
+  "This week only" is perfect for covering a short-handed crew without disturbing the standing roster. Other weeks are untouched.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="roles">7 &nbsp;Roles &amp; Permissions</h2>
+  <p>Your <strong>login</strong> determines which screen you land on and what you can see or do. Admins manage this in
+  <strong>Settings → Users → Manage users…</strong> (no developer needed).</p>
+  <table>
+    <tr><th>Role</th><th>Opens on</th><th>Sees $ / Monthly / Sandbox</th><th>Can edit</th></tr>
+    <tr><td>Admin / Ops</td><td>Production</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Production</td><td>Production</td><td>No</td><td>View-only</td></tr>
+    <tr><td>WK / NEK Install</td><td>Installation (their region)</td><td>No</td><td>View-only</td></tr>
+    <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td></tr>
+  </table>
+  <div class="note box"><span class="box__label">Two different things</span>
+  <strong>Who can open the app</strong> is controlled by sharing it in Power Apps. <strong>What a signed-in person sees</strong>
+  is the role set in Manage users. Setting a role does not, by itself, grant someone access to open the app.</div>
+  <p><strong>View as user</strong> (admins): the user chip top-right lets an admin preview the app exactly as any
+  person/role sees it — handy for support and for checking a rollout. Exit returns you to your own view.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="shortcuts">8 &nbsp;Shortcuts &amp; Efficiency Tips</h2>
+  <table>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>Undo the last board change</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Y</span> &nbsp;or&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span></td><td>Redo</td></tr>
+    <tr><td><span class="kbd">Esc</span></td><td>Exit Presentation / TV mode</td></tr>
+    <tr><td>Right-click</td><td>Context actions — banner (add), name (edit/assist), column header (unlock reorder), card (duplicate/delete)</td></tr>
+    <tr><td>Drag right edge</td><td>Resize a job's duration</td></tr>
+    <tr><td>Click empty cell</td><td>Add a job to that person on that day</td></tr>
+  </table>
+  <ul>
+    <li>Use the <strong>Job Queue</strong> as your "to-schedule" inbox so nothing falls through the cracks.</li>
+    <li>Save your common <strong>Custom Cards</strong> once and reuse them from the dropdown forever.</li>
+    <li>Turn cascade <strong>off</strong> for fast bulk rearranging, then back <strong>on</strong> to let the board settle.</li>
+    <li>Put the board on a shop TV in <strong>Presentation mode</strong> so the floor always sees the current plan.</li>
+  </ul>
+
+  <!-- ============================================================ -->
+  <h2 id="best">9 &nbsp;Best Practices</h2>
+  <ul>
+    <li><strong>Lock the fixed stuff.</strong> PTO, holidays, and hard commitments should be locked (🔒) so cascade never moves them.</li>
+    <li><strong>Let Auto do the first pass.</strong> Add jobs with Auto mode, then hand-tune — it's faster than placing every task.</li>
+    <li><strong>Prefer "This week only" for temporary coverage.</strong> Keep the standing roster stable; use week overrides for one-off shuffles.</li>
+    <li><strong>Use the Sandbox for big changes.</strong> Test a re-plan there before committing it live.</li>
+    <li><strong>Keep BC clean.</strong> Cards pull customer, value, ZIP, and crew from BC — accurate BC data means accurate cards.</li>
+    <li><strong>One board, one truth.</strong> Everyone works the live board; avoid side spreadsheets that drift out of sync.</li>
+  </ul>
+
+  <!-- ============================================================ -->
+  <h2 id="trouble">10 &nbsp;Troubleshooting — Common Errors &amp; Solutions</h2>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause</th><th>What to do</th></tr>
+    <tr><td>Blank white screen after opening</td><td>The app is still loading, or a stale cached version</td><td>Wait a few seconds, then refresh the page. If it persists, close the tab and reopen the link.</td></tr>
+    <tr><td>An edit "didn't take" / reverted</td><td>Brief network hiccup while saving</td><td>Just redo the change — saves are now serialized, so a second attempt sticks. If it keeps happening, refresh.</td></tr>
+    <tr><td>I can't edit anything (no drag, no Add)</td><td>Your role is view-only</td><td>Only Admin/Ops can edit. Ask an admin to adjust your role in Manage users if you need edit access.</td></tr>
+    <tr><td>I don't see $ amounts</td><td>By design — $ is Admin/Ops only</td><td>Nothing to fix; dollar values are hidden for non-admin roles.</td></tr>
+    <tr><td>Weather chip is blank</td><td>No ZIP on the card, or forecast not yet synced</td><td>Add the install ZIP in Edit Job; the forecast refreshes on a schedule.</td></tr>
+    <tr><td>A saved custom card / user edit didn't persist</td><td>Rare — the backing table was briefly unreachable</td><td>Retry the save. If it still won't stick, contact support so we can check the connection.</td></tr>
+    <tr><td>Next week looks empty</td><td>You've navigated past the loaded range</td><td>Use <span class="kbd">Today</span> to return; if a week truly looks wrong, refresh to reload it.</td></tr>
+    <tr><td>The purple bar is taking up space</td><td>Power Apps player header is showing</td><td>Settings → Display → <em>Hide the Power Apps header</em>.</td></tr>
+  </table>
+  <div class="warn box"><span class="box__label">When in doubt</span>
+  A simple <strong>page refresh</strong> resolves the large majority of display glitches — it reloads the latest data and the newest version of the app.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="faq">11 &nbsp;FAQs &amp; Tips</h2>
+  <h4>Do my changes save automatically?</h4>
+  <p>Yes. Every move, resize, add, edit, and delete saves to the shared database in the background — there's no "Save" button for the board.</p>
+  <h4>Will other people see my changes right away?</h4>
+  <p>Changes save immediately; teammates see them the next time their board loads or refreshes.</p>
+  <h4>What's the difference between locking a card and turning cascade off?</h4>
+  <p><strong>Locking</strong> protects one card. <strong>Cascade off</strong> is a board-wide mode that stops <em>all</em> auto-moving.</p>
+  <h4>Can I undo after I change weeks?</h4>
+  <p>Undo history is per-board and clears on reload (including week changes), so undo what you need before navigating away.</p>
+  <h4>How do the crew size and weather get on the card?</h4>
+  <p>Crew is derived from the job's BC planning lines (or entered by hand, which wins); weather comes from the install ZIP's forecast.</p>
+  <h4>I'm on my phone — is anything different?</h4>
+  <p>Everything works; the layout adapts. The sidebar becomes a hamburger menu and card details stack vertically.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="support">12 &nbsp;Contact &amp; Support</h2>
+  <p>Questions, access requests, or something not working right?</p>
+  <table>
+    <tr><th>Need</th><th>Who / how</th></tr>
+    <tr><td>Access to open the app, or a role change</td><td>Your scheduling admin — <a href="mailto:asmith@lumineosigns.com">asmith@lumineosigns.com</a></td></tr>
+    <tr><td>A bug, error, or "it's acting weird"</td><td>Note what you were doing + a screenshot, and send it to <a href="mailto:asmith@lumineosigns.com">asmith@lumineosigns.com</a></td></tr>
+    <tr><td>Feature ideas / training</td><td>Same address — feedback shapes the next release</td></tr>
+  </table>
+  <div class="note box"><span class="box__label">For maintainers</span>
+  Replace the addresses above with your official support channel (help desk email / phone / Teams) before wide distribution.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="glossary">13 &nbsp;Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>BC</td><td>Business Central — the ERP that feeds jobs, customers, values, and planning lines into the scheduler.</td></tr>
+    <tr><td>Cascade</td><td>The engine automatically shifting downstream jobs to keep the schedule conflict-free.</td></tr>
+    <tr><td>Planning line</td><td>A schedulable task on a BC job (labor with hours). Cards are built from these.</td></tr>
+    <tr><td>Assist</td><td>Temporarily lending a Production person to an Installation crew for a day or half-day.</td></tr>
+    <tr><td>Custom card</td><td>A non-BC block of time — PTO, Holiday, Inventory, etc.</td></tr>
+    <tr><td>Roster override</td><td>A "just this week" placement for a person, separate from their permanent spot.</td></tr>
+    <tr><td>CCO</td><td>Certified Crane Operator.</td></tr>
+    <tr><td>WK / NEK</td><td>The two Installation regions (Western KS / Northeast KS).</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="changelog">14 &nbsp;What's New</h2>
+  <p>This log tracks user-facing changes so the guide stays current. <em>Newest first.</em></p>
+  <table>
+    <tr><th>Date</th><th>Change</th></tr>
+    <tr><td>Jul 17, 2026</td><td>Roster moves now ask <strong>This week only vs Permanent</strong>.</td></tr>
+    <tr><td>Jul 17, 2026</td><td><strong>Edit users</strong> screen (Settings → Users) to manage logins &amp; roles without a deploy.</td></tr>
+    <tr><td>Jul 17, 2026</td><td>Install <strong>assist</strong> now supports <strong>AM/PM half-days</strong> and per-day editing.</td></tr>
+    <tr><td>Jul 17, 2026</td><td><strong>Save custom job cards</strong> and pick colors from the Department/Location palette.</td></tr>
+    <tr><td>Jul 17, 2026</td><td>More reliable saving — edits commit on the first try.</td></tr>
+  </table>
+
+  <div class="footer">
+    <p><strong>Lumineo Project Scheduler — User Guide v1.0.</strong> Built for the Lumineo Signs team.
+    This document is maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
+  </div>
+
+</div>
+</body>
+</html>

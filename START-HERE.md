@@ -31,6 +31,7 @@ and a per-user "My Schedule" view.
 | Deploy config (appId, env, buildPath) | `apps/scheduling/power.config.json` |
 | Dataverse admin one-off scripts | `apps/scheduling/scripts/*.ps1` |
 | Power Automate flows | `apps/scheduling/flows/` |
+| **User guide** (ship-to-users doc — keep updated every deploy) | `apps/scheduling/docs/USER-GUIDE.html` |
 
 > ⚠️ This working copy (`lumineo-scheduling-port`) is **not** the OneDrive
 > "Lumineo Signs — Switchboard" repo. All scheduling work happens here.
@@ -107,6 +108,25 @@ IDs are duplicated in `src/services/power-host.ts`; keep them in sync with
   `origin/HEAD`).
 - Remote: `origin` → `github.com/alexsmith0416/Lumineo-Signs---Switchboard`.
 - Commit and push only when asked. If on the main branch, branch first.
+
+### Keep the user guide current (do this on EVERY deploy)
+
+There is a customer-facing user guide at **`apps/scheduling/docs/USER-GUIDE.html`**
+— a self-contained, brand-styled HTML doc (Lumineo logo + colors) sent to users
+to teach them the app. It is the single place users learn what the app can do.
+
+🔴 **Whenever a deploy adds, changes, or removes a user-facing feature, update
+the user guide in the same change:**
+1. Add a dated row to the **"What's New"** table (§14, newest first).
+2. Update the relevant section(s) — Features, Walkthroughs, Legend, Shortcuts,
+   Troubleshooting, FAQ — so the guide matches the shipped behavior.
+3. Bump the version/date in the cover header and the footer when it's a
+   meaningful revision.
+
+Treat this like updating tests: a user-facing change isn't "done" until the
+guide reflects it. (Pure internal/refactor changes with no user impact don't
+need a guide edit.) Open the file in a browser to preview; it prints cleanly to
+PDF for distribution.
 
 ## 5. User roles & access (code, not data)
 
