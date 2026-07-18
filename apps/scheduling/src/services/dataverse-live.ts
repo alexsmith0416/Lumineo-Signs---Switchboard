@@ -38,6 +38,7 @@ import type {
 } from "../engine/types";
 import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/types";
 import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
+import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -1373,6 +1374,68 @@ export async function deleteQueueItem(id: string): Promise<void> {
   const { S, org } = await sdk();
   const res = await S.DeleteRecordWithOrganization(org, QUEUE.items, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteQueueItem(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// Custom card presets (crfdf_customcardpreset)
+// ---------------------------------------------------------------------------
+// Reusable "block out time" cards a user saves on Add Job → Custom Card, scoped
+// per board family by crfdf_kind ("production" / "installation"). The card label
+// is the primary name column.
+const CARD_PRESET_SET = "crfdf_customcardpresets";
+
+function mapCardPreset(r: Row): SavedCardPreset {
+  return {
+    id: s(r.crfdf_customcardpresetid),
+    kind: (s(r.crfdf_kind) || "production") as PresetKind,
+    label: s(r.crfdf_name, "Card"),
+    bgColor: s(r.crfdf_bgcolor) || "#cccccc",
+    textColor: s(r.crfdf_textcolor) || "#1a1d23",
+    defaultHours: n(r.crfdf_defaulthours, 8),
+    lockByDefault: n(r.crfdf_lockbydefault) === 1,
+    applyAllByDefault: n(r.crfdf_applyallbydefault) === 1,
+    sortOrder: n(r.crfdf_sortorder),
+  };
+}
+
+function cardPresetToRecord(p: Partial<SavedCardPreset>): Row {
+  const rec: Row = {};
+  if (p.label !== undefined) rec.crfdf_name = p.label || "Card";
+  if (p.kind !== undefined) rec.crfdf_kind = p.kind;
+  if (p.bgColor !== undefined) rec.crfdf_bgcolor = p.bgColor;
+  if (p.textColor !== undefined) rec.crfdf_textcolor = p.textColor;
+  if (p.defaultHours !== undefined) rec.crfdf_defaulthours = p.defaultHours;
+  if (p.lockByDefault !== undefined) rec.crfdf_lockbydefault = p.lockByDefault ? 1 : 0;
+  if (p.applyAllByDefault !== undefined) rec.crfdf_applyallbydefault = p.applyAllByDefault ? 1 : 0;
+  if (p.sortOrder !== undefined) rec.crfdf_sortorder = p.sortOrder;
+  return rec;
+}
+
+export async function fetchCardPresets(kind: PresetKind): Promise<SavedCardPreset[]> {
+  const rows = await list(CARD_PRESET_SET, {
+    filter: `crfdf_kind eq '${odataLit(kind)}'`,
+    orderby: "crfdf_sortorder asc",
+  });
+  return rows.map(mapCardPreset);
+}
+
+export async function createCardPreset(p: SavedCardPreset): Promise<void> {
+  const { S, org } = await sdk();
+  const rec = { crfdf_customcardpresetid: p.id, ...cardPresetToRecord(p) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, CARD_PRESET_SET, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "createCardPreset failed");
+}
+
+export async function updateCardPreset(id: string, changes: Partial<SavedCardPreset>): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, CARD_PRESET_SET, id, cardPresetToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateCardPreset(${id}) failed`);
+}
+
+export async function deleteCardPreset(id: string): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.DeleteRecordWithOrganization(org, CARD_PRESET_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteCardPreset(${id}) failed`);
 }
 
 /**

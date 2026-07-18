@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
 import {
@@ -11,7 +11,15 @@ import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store
 import { proposeSchedule } from "../services/auto-schedule";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
-import { CUSTOM_CARD_PRESETS, type CustomCardPreset } from "../data/custom-card-presets";
+import { type CustomCardPreset } from "../data/custom-card-presets";
+import {
+  builtInPresets,
+  newPresetId,
+  presetKindFor,
+  toApplyShape,
+  type SavedCardPreset,
+} from "../services/custom-card-data";
+import { useCardPresetsStore } from "../store/card-presets-store";
 import { makeLaneEmployee } from "../services/department-lane";
 import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentSummary } from "../shipping/types";
@@ -28,6 +36,18 @@ function safeDate(value: string | null | undefined): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return isNaN(d.getTime()) ? null : d;
+}
+
+/** Pick black or white text for a given background so a swatch-chosen color
+ *  stays legible (relative luminance threshold). */
+function readableText(hex: string): string {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return "#1a1d23";
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? "#1a1d23" : "#ffffff";
 }
 
 interface AddJobPanelProps {
@@ -82,6 +102,28 @@ export default function AddJobPanel({
   const loads = useLoadsStore((s) => s.loads);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
+
+  // Saved custom-card presets for this board family (production / installation).
+  const presetKind = presetKindFor(kind);
+  const savedPresets = useCardPresetsStore((s) => s.byKind[presetKind]);
+  const loadPresets = useCardPresetsStore((s) => s.load);
+  const savePreset = useCardPresetsStore((s) => s.save);
+  const removePreset = useCardPresetsStore((s) => s.remove);
+  // Dropdown selection, encoded as "saved:<id>" | "builtin:<id>" | "".
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string>("");
+  useEffect(() => {
+    void loadPresets(presetKind);
+  }, [loadPresets, presetKind]);
+
+  // Card-color palette = this board's Department (production) / Location
+  // (installation) colors, so a custom card can match the group it sits under.
+  const paletteSwatches = useMemo(
+    () =>
+      [...departments.values()]
+        .sort((a, b) => a.flowOrder - b.flowOrder)
+        .map((d) => ({ id: d.id, name: d.name, color: d.color })),
+    [departments],
+  );
 
   // Department-wide ("team") target: the job is scheduled to the whole
   // department's shared lane rather than one person. `laneEmp` is the synthetic
@@ -340,6 +382,43 @@ export default function AddJobPanel({
       setCustomScope("all");
       setCustomApplyAll(true);
     }
+  };
+
+  // Pick a saved/built-in preset from the dropdown ("saved:<id>" | "builtin:<id>").
+  const onPickPreset = (key: string) => {
+    setSelectedPresetKey(key);
+    if (!key) return;
+    const [src, id] = key.split(":");
+    const preset =
+      src === "saved"
+        ? savedPresets.find((p) => p.id === id)
+        : builtInPresets().find((p) => p.id === id);
+    if (preset) applyPreset(toApplyShape(preset));
+  };
+
+  // Save the current custom-card fields as a reusable preset for this board.
+  const onSaveCurrentPreset = () => {
+    const label = customTitle.trim();
+    if (!label) return;
+    const preset: SavedCardPreset = {
+      id: newPresetId(),
+      kind: presetKind,
+      label,
+      bgColor: customBg,
+      textColor: customFg,
+      defaultHours: customHours,
+      lockByDefault: customLocked,
+      applyAllByDefault: customScope === "all" || customApplyAll,
+      sortOrder: savedPresets.length,
+    };
+    void savePreset(preset);
+    setSelectedPresetKey(`saved:${preset.id}`);
+  };
+
+  const onDeleteSelectedPreset = () => {
+    if (!selectedPresetKey.startsWith("saved:")) return;
+    void removePreset(selectedPresetKey.slice("saved:".length), presetKind);
+    setSelectedPresetKey("");
   };
 
   const commitCustom = async () => {
@@ -665,39 +744,46 @@ export default function AddJobPanel({
                 marginBottom: 8,
               }}
             >
-              Quick pick
+              Saved cards
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 6,
-                marginBottom: 16,
-              }}
-            >
-              {CUSTOM_CARD_PRESETS.map((p) => {
-                const active = customTitle === p.label && customBg === p.bgColor;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => applyPreset(p)}
-                    style={{
-                      background: p.bgColor,
-                      color: p.textColor,
-                      padding: "10px 12px",
-                      border: active ? "2px solid var(--lumineo-navy)" : "2px solid transparent",
-                      borderRadius: 5,
-                      fontWeight: 600,
-                      fontSize: 12,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
+            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+              <select
+                className="form-field__select"
+                style={{ flex: 1 }}
+                value={selectedPresetKey}
+                onChange={(e) => onPickPreset(e.target.value)}
+              >
+                <option value="">Choose a saved or built-in card…</option>
+                {savedPresets.length > 0 && (
+                  <optgroup
+                    label={presetKind === "production" ? "Saved · Production" : "Saved · Installation"}
                   >
-                    {p.label}
-                  </button>
-                );
-              })}
+                    {savedPresets.map((p) => (
+                      <option key={p.id} value={`saved:${p.id}`}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Built-in">
+                  {builtInPresets().map((p) => (
+                    <option key={p.id} value={`builtin:${p.id}`}>
+                      {p.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              {selectedPresetKey.startsWith("saved:") && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  title="Delete this saved card"
+                  onClick={onDeleteSelectedPreset}
+                  style={{ padding: "0 12px" }}
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
             <div
@@ -793,6 +879,44 @@ export default function AddJobPanel({
                   title="Text color"
                 />
               </div>
+              {paletteSwatches.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text-tertiary)",
+                      marginTop: 6,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {presetKind === "production" ? "Department colors" : "Location colors"}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {paletteSwatches.map((sw) => (
+                      <button
+                        key={sw.id}
+                        type="button"
+                        title={sw.name}
+                        onClick={() => {
+                          setCustomBg(sw.color);
+                          setCustomFg(readableText(sw.color));
+                        }}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 4,
+                          cursor: "pointer",
+                          background: sw.color,
+                          border:
+                            customBg.toLowerCase() === sw.color.toLowerCase()
+                              ? "2px solid var(--lumineo-navy)"
+                              : "1px solid var(--border)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="form-field">
@@ -958,6 +1082,17 @@ export default function AddJobPanel({
                 onChange={(e) => setCustomNotes(e.target.value)}
               />
             </div>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ width: "100%", marginTop: 4 }}
+              disabled={!customTitle.trim()}
+              onClick={onSaveCurrentPreset}
+              title="Save these settings as a reusable card for this board"
+            >
+              ＋ Save as reusable card
+            </button>
 
             {initialStart && (
               <div style={{ marginTop: 8, color: "var(--text-tertiary)", fontSize: 11 }}>
