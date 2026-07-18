@@ -499,6 +499,29 @@ export async function createAssistRow(input: {
   if (!res.success) throw new Error(res.error?.message ?? "createAssistRow failed");
 }
 
+/** Edit an existing assist's days/halves (e.g. drop one day) without recreating
+ *  it. Callers delete the row instead when no days remain. */
+export async function updateAssistRow(
+  id: string,
+  input: { days: number[]; halves?: Record<number, "am" | "pm"> },
+): Promise<void> {
+  const { S, org } = await sdk();
+  const halfEntries = Object.entries(input.halves ?? {});
+  const withHalves: Row = {
+    crfdf_assistdays: input.days.join(","),
+    // Explicitly clear the half column when no half days remain.
+    crfdf_assisthalves: halfEntries.map(([d, h]) => `${d}:${h}`).join(","),
+  };
+  let res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, INSTALL_SET, id, withHalves);
+  if (!res.success) {
+    // Older orgs may not have crfdf_assisthalves provisioned — retry days only.
+    res = await S.UpdateRecordWithOrganization(
+      PREFER_WRITE, ACCEPT, org, INSTALL_SET, id, { crfdf_assistdays: input.days.join(",") },
+    );
+  }
+  if (!res.success) throw new Error(res.error?.message ?? `updateAssistRow(${id}) failed`);
+}
+
 export async function removeAssistRow(id: string): Promise<void> {
   const { S, org } = await sdk();
   const res = await S.DeleteRecordWithOrganization(org, INSTALL_SET, id);

@@ -8,7 +8,12 @@ import {
   type UseScheduleStore,
 } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
-import { createAssistRow, removeAssistRow, type AssistHalf } from "../services/dataverse-live";
+import {
+  createAssistRow,
+  removeAssistRow,
+  updateAssistRow,
+  type AssistHalf,
+} from "../services/dataverse-live";
 import { INSTALL_LOCATIONS, REGION_LOCATIONS } from "../services/install-meta";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -88,6 +93,16 @@ export default function EmployeeAdminPanel({
   // Selected assist days → which half (full / am / pm). A day absent from the
   // map is not an assist day; present means full unless set to am/pm.
   const [assistDayHalf, setAssistDayHalf] = useState<Map<number, AssistHalf>>(new Map());
+  // True while editing an EXISTING assist's days (vs. creating a new one).
+  const [editingAssist, setEditingAssist] = useState(false);
+
+  const setDayHalf = (day: number, half: AssistHalf | null) =>
+    setAssistDayHalf((prev) => {
+      const next = new Map(prev);
+      if (half === null) next.delete(day);
+      else next.set(day, half);
+      return next;
+    });
 
   const reloadAfterAssist = async () => {
     await useAssistStore.getState().refresh();
@@ -130,6 +145,42 @@ export default function EmployeeAdminPanel({
     setErr(null);
     try {
       await removeAssistRow(currentAssist.id);
+      await reloadAfterAssist();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Enter "edit days" mode on the current assist: pre-fill the day picker from
+  // its stored days (an all-week assist expands to all five so days can be
+  // dropped individually), each carrying its stored half.
+  const startEditAssist = () => {
+    if (!currentAssist) return;
+    const days = currentAssist.days.length ? currentAssist.days : [0, 1, 2, 3, 4];
+    const m = new Map<number, AssistHalf>();
+    for (const d of days) m.set(d, currentAssist.halves[d] ?? "full");
+    setAssistDayHalf(m);
+    setEditingAssist(true);
+  };
+
+  // Save edited days: no days left → remove the whole assist; otherwise update
+  // the existing row's days/halves in place.
+  const onSaveAssistEdit = async () => {
+    if (!currentAssist) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const days = [...assistDayHalf.keys()].sort((a, b) => a - b);
+      if (days.length === 0) {
+        await removeAssistRow(currentAssist.id);
+      } else {
+        const halves: Record<number, "am" | "pm"> = {};
+        for (const [d, h] of assistDayHalf) if (h === "am" || h === "pm") halves[d] = h;
+        await updateAssistRow(currentAssist.id, { days, halves });
+      }
       await reloadAfterAssist();
       onClose();
     } catch (e) {
@@ -345,9 +396,40 @@ export default function EmployeeAdminPanel({
                     : " · all week"}
                   . Their production days are greyed and they appear on that install board.
                 </div>
-                <button className="btn-secondary" disabled={busy} onClick={onRemoveAssist}>
-                  Remove assist
-                </button>
+                {editingAssist ? (
+                  <>
+                    <AssistDayGrid value={assistDayHalf} setDay={setDayHalf} />
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                      Turn a day off to stop lending it; set AM/PM for a half-day. Removing
+                      every day ends the assist.
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        className="btn-secondary"
+                        disabled={busy}
+                        onClick={() => setEditingAssist(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button className="btn-primary" disabled={busy} onClick={onSaveAssistEdit}>
+                        {busy
+                          ? "Saving…"
+                          : assistDayHalf.size === 0
+                            ? "Remove assist"
+                            : "Save changes"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn-secondary" disabled={busy} onClick={startEditAssist}>
+                      Edit days
+                    </button>
+                    <button className="btn-secondary" disabled={busy} onClick={onRemoveAssist}>
+                      Remove assist
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -385,78 +467,7 @@ export default function EmployeeAdminPanel({
                 </label>
                 {!assistAllWeek && (
                   <>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {WEEKDAYS.map((lbl, i) => {
-                        const half = assistDayHalf.get(i);
-                        const on = half !== undefined;
-                        const setHalf = (h: AssistHalf | null) =>
-                          setAssistDayHalf((prev) => {
-                            const next = new Map(prev);
-                            if (h === null) next.delete(i);
-                            else next.set(i, h);
-                            return next;
-                          });
-                        return (
-                          <div
-                            key={lbl}
-                            style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "stretch" }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => setHalf(on ? null : "full")}
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                borderRadius: 4,
-                                border: "1px solid var(--lumineo-navy)",
-                                background: on ? "var(--lumineo-navy)" : "#fff",
-                                color: on ? "#fff" : "var(--lumineo-navy)",
-                                cursor: "pointer",
-                              }}
-                            >
-                              {lbl}
-                            </button>
-                            {on && (
-                              <div
-                                style={{
-                                  display: "inline-flex",
-                                  borderRadius: 4,
-                                  overflow: "hidden",
-                                  border: "1px solid var(--border)",
-                                }}
-                              >
-                                {(
-                                  [
-                                    ["All", "full"],
-                                    ["AM", "am"],
-                                    ["PM", "pm"],
-                                  ] as const
-                                ).map(([t, val]) => (
-                                  <button
-                                    key={val}
-                                    type="button"
-                                    onClick={() => setHalf(val)}
-                                    style={{
-                                      flex: 1,
-                                      padding: "3px 6px",
-                                      fontSize: 10,
-                                      fontWeight: 600,
-                                      border: "none",
-                                      cursor: "pointer",
-                                      background: (half ?? "full") === val ? "var(--lumineo-navy)" : "#fff",
-                                      color: (half ?? "full") === val ? "#fff" : "var(--text-secondary)",
-                                    }}
-                                  >
-                                    {t}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <AssistDayGrid value={assistDayHalf} setDay={setDayHalf} />
                     <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
                       Pick AM or PM for a half-day — they stay on production the other half.
                     </div>
@@ -507,6 +518,85 @@ export default function EmployeeAdminPanel({
           onCancel={() => setConfirmDelete(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** Weekday picker for an assist assignment: each day toggles on/off (off =
+ *  removed) and, when on, carries an All / AM / PM half. Shared by the create
+ *  and edit-days flows. */
+function AssistDayGrid({
+  value,
+  setDay,
+}: {
+  value: Map<number, AssistHalf>;
+  setDay: (day: number, half: AssistHalf | null) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {WEEKDAYS.map((lbl, i) => {
+        const half = value.get(i);
+        const on = half !== undefined;
+        return (
+          <div
+            key={lbl}
+            style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "stretch" }}
+          >
+            <button
+              type="button"
+              onClick={() => setDay(i, on ? null : "full")}
+              style={{
+                padding: "5px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 4,
+                border: "1px solid var(--lumineo-navy)",
+                background: on ? "var(--lumineo-navy)" : "#fff",
+                color: on ? "#fff" : "var(--lumineo-navy)",
+                cursor: "pointer",
+              }}
+            >
+              {lbl}
+            </button>
+            {on && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {(
+                  [
+                    ["All", "full"],
+                    ["AM", "am"],
+                    ["PM", "pm"],
+                  ] as const
+                ).map(([t, val]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setDay(i, val)}
+                    style={{
+                      flex: 1,
+                      padding: "3px 6px",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      border: "none",
+                      cursor: "pointer",
+                      background: (half ?? "full") === val ? "var(--lumineo-navy)" : "#fff",
+                      color: (half ?? "full") === val ? "#fff" : "var(--text-secondary)",
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
