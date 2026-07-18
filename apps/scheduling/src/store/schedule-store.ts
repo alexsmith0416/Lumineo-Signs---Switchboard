@@ -1,5 +1,5 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
-import { addDays, startOfWeek, endOfWeek } from "date-fns";
+import { addDays, startOfWeek, endOfWeek, format } from "date-fns";
 import { settleSchedule, diffShift, diffResize } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
@@ -16,6 +16,11 @@ import {
 } from "../services/installation-data";
 import { shippingDataSource } from "../services/shipping-data";
 import { isLaneEmployeeId, laneDeptId, laneEmployeesFor } from "../services/department-lane";
+import {
+  applyRosterOverrides,
+  getRosterOverrideDataSource,
+  newOverrideId,
+} from "../services/roster-overrides";
 import { useSettingsStore } from "./settings-store";
 import { useHistoryStore } from "./history-store";
 import type {
@@ -71,7 +76,24 @@ export interface ScheduleStoreState {
   deleteResource: (id: string) => Promise<void>;
   /** Batch roster edit (drag-reorder): persist all changes, then refresh once. */
   updateResources: (edits: Array<{ id: string; input: ResourceAdminInput }>) => Promise<void>;
+  /** Roster drag committed as PERMANENT: persist to the employee records (and
+   *  clear any this-week override for those people), then refresh. */
+  moveRosterPermanent: (
+    edits: Array<{ id: string; input: ResourceAdminInput }>,
+    weekStart: Date,
+  ) => Promise<void>;
+  /** Roster drag committed for THIS WEEK ONLY: write week-scoped overrides
+   *  instead of touching the permanent records, then refresh. */
+  moveRosterWeek: (
+    edits: Array<{ id: string; input: ResourceAdminInput }>,
+    weekStart: Date,
+  ) => Promise<void>;
 }
+
+/** Boards that overlay week-scoped roster overrides (Production + Installation).
+ *  Shipping / scenario boards don't reorder people, so they skip the fetch. */
+const ROSTER_BOARDS = new Set(["production", "install-wk", "install-nek"]);
+const weekKey = (d: Date): string => format(startOfWeek(d, { weekStartsOn: 1 }), "yyyy-MM-dd");
 
 /** Apply an admin input to an in-memory Employee (mock/dev fallback only). For
  *  installation the location/position/truck/CCO fields map onto the Employee;
@@ -234,8 +256,17 @@ export function createScheduleStore(
           ds.loadWorkHours(start, end),
           ds.loadOvertimeOverrides(start, end),
         ]);
-        const empMap = new Map(employees.map((e) => [e.id, e]));
+        let empMap = new Map(employees.map((e) => [e.id, e]));
         const deptMap = new Map(departments.map((d) => [d.id, d]));
+        // Overlay this week's roster overrides (people reordered / moved to a
+        // different group "just this week") so they render in the override spot
+        // without touching their permanent record. Other weeks are unaffected.
+        if (ROSTER_BOARDS.has(boardId)) {
+          const overrides = await getRosterOverrideDataSource()
+            .load(boardId, weekKey(start))
+            .catch(() => []);
+          empMap = applyRosterOverrides(empMap, overrides);
+        }
         // Engine map also carries the synthetic department-lane resources so
         // team lines recompute their end times and cascade. state.employees
         // (set below) stays person-only.
@@ -564,6 +595,38 @@ export function createScheduleStore(
         if (cur) next.set(e.id, applyResourceInput(cur, e.input, ds.kind));
       }
       set({ employees: next });
+    },
+
+    moveRosterPermanent: async (edits, weekStart) => {
+      if (edits.length === 0) return;
+      const od = getRosterOverrideDataSource();
+      const wk = weekKey(weekStart);
+      // Permanent wins over any this-week override for these people — clear it
+      // first so the board doesn't keep showing the temporary spot this week.
+      await Promise.all(edits.map((e) => od.clearFor(boardId, wk, e.id).catch(() => {})));
+      await get().updateResources(edits);
+    },
+
+    moveRosterWeek: async (edits, weekStart) => {
+      if (edits.length === 0) return;
+      const od = getRosterOverrideDataSource();
+      const wk = weekKey(weekStart);
+      await Promise.all(
+        edits.map((e) =>
+          od
+            .upsert({
+              id: newOverrideId(),
+              employeeId: e.id,
+              weekStart: wk,
+              boardKind: boardId,
+              departmentId:
+                e.input.departmentId ?? (e.input.location != null ? String(e.input.location) : ""),
+              position: e.input.position != null ? String(e.input.position) : "",
+            })
+            .catch((err) => console.error("[roster] week override failed", err)),
+        ),
+      );
+      await get().loadWeek();
     },
     };
   });

@@ -5,7 +5,7 @@ import { calculateEndTime } from "../engine/time-walker";
 import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import type { AssistHalf } from "../services/dataverse-live";
-import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
+import type { ResourceAdminInput, ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
 import { isLaneEmployeeId, laneDeptId, laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
 import { printMarkup } from "../services/print";
@@ -286,7 +286,8 @@ export default function CalendarView({
     setWeekStart,
     shiftTaskAndCommit,
     updateTaskHours,
-    updateResources,
+    moveRosterPermanent,
+    moveRosterWeek,
     deleteScheduleLine,
     addScheduleLine,
   } = useStore();
@@ -301,6 +302,13 @@ export default function CalendarView({
     null,
   );
   const [pendingShift, setPendingShift] = useState<PendingShift | null>(null);
+  // A roster name was dropped to a new spot — ask "this week" vs "permanent"
+  // before committing (see the dialog near the bottom).
+  const [pendingRosterMove, setPendingRosterMove] = useState<{
+    edits: Array<{ id: string; input: ResourceAdminInput }>;
+    name: string;
+    targetLabel: string;
+  } | null>(null);
   // Right-click roster admin (add via header, edit/delete via name).
   const adminEditEnabled = enableResourceAdmin;
 
@@ -318,23 +326,37 @@ export default function CalendarView({
   const gridRef = useRef<HTMLDivElement>(null);
 
   const applyRosterDrop = (draggedId: string, drop: RosterDropTarget) => {
+    // Build the roster edits, then ask "this week vs permanent" before committing.
     // Installation rosters carry a numeric location + explicit position, so a
     // drop renumbers the region (computeRosterReorder). Production employees
     // group by department id (string) with no manual ordering, so a drop simply
     // reassigns the dragged employee to the target department.
+    const dragged = employees.get(draggedId);
+    if (!dragged) return;
+    let edits: Array<{ id: string; input: ResourceAdminInput }>;
+    let targetLabel: string;
     if (kindMeta.kind === "installation") {
       const moves = computeRosterReorder([...employees.values()], draggedId, drop);
       if (moves.length === 0) return;
-      void updateResources(
-        moves.map((m) => ({ id: m.id, input: { location: m.location, position: m.position } })),
-      );
-      return;
+      edits = moves.map((m) => ({ id: m.id, input: { location: m.location, position: m.position } }));
+      const loc = moves.find((m) => m.id === draggedId)?.location;
+      targetLabel =
+        loc != null ? departments.get(String(loc))?.name ?? `Location ${loc}` : "a new spot";
+    } else {
+      const targetDept = drop.groupId ?? employees.get(drop.beforeId ?? "")?.departmentId;
+      if (!targetDept || targetDept === dragged.departmentId) return;
+      edits = [{ id: draggedId, input: { departmentId: targetDept } }];
+      targetLabel = departments.get(targetDept)?.name ?? "another department";
     }
-    const dragged = employees.get(draggedId);
-    if (!dragged) return;
-    const targetDept = drop.groupId ?? employees.get(drop.beforeId ?? "")?.departmentId;
-    if (!targetDept || targetDept === dragged.departmentId) return;
-    void updateResources([{ id: draggedId, input: { departmentId: targetDept } }]);
+    setPendingRosterMove({ edits, name: dragged.name, targetLabel });
+  };
+
+  const commitRosterMove = (scope: "week" | "permanent") => {
+    if (!pendingRosterMove) return;
+    const { edits } = pendingRosterMove;
+    setPendingRosterMove(null);
+    if (scope === "week") void moveRosterWeek(edits, weekStart);
+    else void moveRosterPermanent(edits, weekStart);
   };
 
   // Right-click card actions. Delete removes the card; Duplicate drops an
@@ -1035,6 +1057,33 @@ export default function CalendarView({
           departments={[...departments.values()]}
           onCalendarCardDrop={handleCalendarCardToQueue}
         />
+      )}
+
+      {pendingRosterMove && (
+        <div className="modal-scrim" onClick={() => setPendingRosterMove(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 400 }}>
+            <div className="modal-card__title">Move {pendingRosterMove.name}</div>
+            <div className="modal-card__body">
+              Move <strong>{pendingRosterMove.name}</strong> to {pendingRosterMove.targetLabel} — just
+              for the week of {format(weekStart, "MMM d")}, or permanently?
+              <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-tertiary)" }}>
+                <strong>This week only</strong> changes just this week&apos;s schedule.{" "}
+                <strong>Permanent</strong> updates the roster for every week.
+              </div>
+            </div>
+            <div className="modal-card__actions">
+              <button className="btn-secondary" onClick={() => setPendingRosterMove(null)}>
+                Cancel
+              </button>
+              <button className="btn-secondary" onClick={() => commitRosterMove("week")}>
+                This week only
+              </button>
+              <button className="btn-primary" onClick={() => commitRosterMove("permanent")}>
+                Permanent
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

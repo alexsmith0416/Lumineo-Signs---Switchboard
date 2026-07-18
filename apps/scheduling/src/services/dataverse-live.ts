@@ -39,6 +39,7 @@ import type {
 import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/types";
 import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
+import type { RosterOverride } from "./roster-overrides";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -1544,6 +1545,74 @@ export async function deleteAppUser(id: string): Promise<void> {
   const { S, org } = await sdk();
   const res = await S.DeleteRecordWithOrganization(org, APPUSER_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteAppUser(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// Roster overrides (crfdf_rosteroverride) — "just this week" name moves
+// ---------------------------------------------------------------------------
+// One row per (employee, week, board): where that person sits for that week
+// only. The board overlays these on the permanent roster on load.
+const RO_SET = "crfdf_rosteroverrides";
+
+function mapRosterOverride(r: Row): RosterOverride {
+  return {
+    id: s(r.crfdf_rosteroverrideid),
+    employeeId: s(r.crfdf_employeeid),
+    weekStart: s(r.crfdf_weekstart).slice(0, 10),
+    boardKind: s(r.crfdf_boardkind),
+    departmentId: s(r.crfdf_departmentid),
+    position: s(r.crfdf_position),
+  };
+}
+
+function rosterOverrideToRecord(o: Partial<RosterOverride>): Row {
+  const rec: Row = {};
+  if (o.employeeId !== undefined) rec.crfdf_employeeid = o.employeeId;
+  if (o.weekStart !== undefined) rec.crfdf_weekstart = o.weekStart;
+  if (o.boardKind !== undefined) rec.crfdf_boardkind = o.boardKind;
+  if (o.departmentId !== undefined) rec.crfdf_departmentid = o.departmentId;
+  if (o.position !== undefined) rec.crfdf_position = o.position;
+  rec.crfdf_name = `${o.weekStart ?? ""} ${o.boardKind ?? ""} ${o.employeeId ?? ""}`.trim() || "Override";
+  return rec;
+}
+
+const roMatch = (o: { employeeId: string; boardKind: string; weekStart: string }) =>
+  `crfdf_employeeid eq '${odataLit(o.employeeId)}' and crfdf_boardkind eq '${odataLit(o.boardKind)}' and crfdf_weekstart eq '${odataLit(o.weekStart)}'`;
+
+export async function fetchRosterOverrides(boardKind: string, weekStart: string): Promise<RosterOverride[]> {
+  const rows = await list(RO_SET, {
+    filter: `crfdf_boardkind eq '${odataLit(boardKind)}' and crfdf_weekstart eq '${odataLit(weekStart)}'`,
+  });
+  return rows.map(mapRosterOverride).filter((o) => o.employeeId);
+}
+
+export async function upsertRosterOverride(o: RosterOverride): Promise<void> {
+  const { S, org } = await sdk();
+  // One row per (employee, week, board): update in place if present.
+  const existing = await list(RO_SET, { filter: roMatch(o) }).catch(() => [] as Row[]);
+  if (existing.length > 0) {
+    const id = s(existing[0]!.crfdf_rosteroverrideid);
+    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, RO_SET, id, rosterOverrideToRecord(o));
+    if (!res.success) throw new Error(res.error?.message ?? "upsertRosterOverride(update) failed");
+    return;
+  }
+  const rec = { crfdf_rosteroverrideid: o.id, ...rosterOverrideToRecord(o) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, RO_SET, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "upsertRosterOverride(create) failed");
+}
+
+export async function deleteRosterOverrideFor(
+  boardKind: string,
+  weekStart: string,
+  employeeId: string,
+): Promise<void> {
+  const { S, org } = await sdk();
+  const existing = await list(RO_SET, { filter: roMatch({ employeeId, boardKind, weekStart }) }).catch(
+    () => [] as Row[],
+  );
+  await Promise.all(
+    existing.map((r) => S.DeleteRecordWithOrganization(org, RO_SET, s(r.crfdf_rosteroverrideid))),
+  );
 }
 
 /**
