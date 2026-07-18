@@ -4,140 +4,197 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Lumineo Project Scheduler — User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ---- Lumineo brand tokens (sampled from lumineosigns.com) ---------------- */
   :root{
-    --navy:#141464; --navy-soft:#e8eaf5; --red:#e8151b; --red-soft:#ffe4e5;
-    --green:#0f6e56; --green-soft:#d8efe7; --amber:#f2994a; --amber-soft:#fdf0d9;
-    --page:#f4f5f8; --card:#ffffff; --ink:#1f1f2e; --mid:#4a4f5e; --dim:#8b91a3;
-    --border:#e4e5ea; --grid:#cdd0da;
+    --navy:#001238;        /* primary brand ink */
+    --navy-2:#001e61;      /* secondary deep blue */
+    --slate:#4d5974;
+    --red:#e10600;         /* Lumineo red — CTAs, accents */
+    --rust:#c02b0a;
+    --green:#479766;
+    --sage:#cedecc;        /* soft section accent */
+    --cream:#eeece9;       /* soft section background */
+    --taupe:#7a7664;       /* eyebrow / muted labels */
+    --amber:#f2994a;
+    --page:#ffffff;
+    --card:#ffffff;
+    --ink:#001238;
+    --body:#2b3149;
+    --mid:#4d5974;
+    --border:#e6e4e0;
+    --grid:#d7d4ce;
+    --display:'Archivo','Segoe UI',system-ui,sans-serif;
+    --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{
-    margin:0; background:var(--page); color:var(--ink);
-    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    margin:0;background:var(--page);color:var(--body);
+    font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:900px; margin:0 auto; padding:0 24px 96px}
+  .wrap{max-width:920px;margin:0 auto;padding:0 26px 110px}
 
-  /* Header / cover */
-  .cover{
-    background:linear-gradient(135deg,#141464 0%,#20206e 55%,#2a2a80 100%);
-    color:#fff; padding:56px 24px; text-align:center;
-  }
-  .cover__inner{max-width:900px;margin:0 auto}
-  .brandmark{
-    width:74px;height:74px;border-radius:16px;background:#fff;display:inline-flex;
-    align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.25);margin-bottom:20px;
-  }
-  .cover h1{font-size:2.5rem;margin:.2em 0 .1em;letter-spacing:-.02em}
-  .cover .sub{font-size:1.1rem;opacity:.85;font-weight:400}
-  .cover .eyebrow{text-transform:uppercase;letter-spacing:.22em;font-size:.72rem;opacity:.7;font-weight:700}
-  .cover .meta{margin-top:22px;font-size:.82rem;opacity:.7}
+  /* Eyebrow — the site's signature uppercase letter-spaced kicker */
+  .eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.22em;
+    font-size:.72rem;font-weight:700;color:var(--taupe)}
 
-  h2{
-    color:var(--navy);font-size:1.6rem;margin:56px 0 8px;padding-bottom:8px;
-    border-bottom:3px solid var(--red);letter-spacing:-.01em;
-  }
-  h3{color:var(--navy);font-size:1.2rem;margin:32px 0 6px}
-  h4{color:var(--ink);font-size:1rem;margin:20px 0 4px}
-  p{margin:.5em 0}
-  a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--navy-soft)}
-  a:hover{border-color:var(--navy)}
-  code{background:var(--navy-soft);color:var(--navy);padding:.1em .4em;border-radius:4px;font-size:.88em;
-       font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
+  /* ---- Cover ---- */
+  .cover{background:var(--navy);color:#fff;padding:0}
+  .cover__bar{display:flex;align-items:center;justify-content:space-between;
+    padding:22px 30px;border-bottom:1px solid rgba(255,255,255,.12)}
+  .wordmark{font-family:var(--display);font-weight:900;letter-spacing:.02em;line-height:.9;color:#fff}
+  .wordmark b{display:block;font-size:1.35rem}
+  .wordmark span{display:block;font-size:.6rem;letter-spacing:.42em;font-weight:600;opacity:.8;padding-left:2px}
+  .cover__bar .eyebrow{color:rgba(255,255,255,.6)}
+  .cover__hero{padding:64px 30px 30px;max-width:920px;margin:0 auto}
+  .cover__hero .eyebrow{color:var(--sage)}
+  .cover h1{font-family:var(--display);font-weight:900;font-size:3.4rem;line-height:.98;
+    letter-spacing:-.02em;margin:.18em 0 .12em}
+  .cover__tag{font-family:var(--display);font-weight:700;font-size:1.35rem;color:var(--sage);
+    line-height:1.15;margin:.2em 0 .6em}
+  .cover__lead{font-size:1.08rem;color:rgba(255,255,255,.8);max-width:640px}
+  .cover__meta{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px;padding:20px 30px;
+    background:var(--navy-2);font-size:.82rem;color:rgba(255,255,255,.72)}
+  .cover__meta b{color:#fff}
+  .heritage{color:var(--sage);font-family:var(--display);font-weight:700;letter-spacing:.02em}
+
+  /* ---- Headings ---- */
+  h2{font-family:var(--display);color:var(--ink);font-weight:800;font-size:1.85rem;
+    letter-spacing:-.015em;margin:60px 0 6px;line-height:1.05}
+  h2 .num{color:var(--red);font-weight:900;margin-right:.35em}
+  h2 + .rule{height:3px;width:64px;background:var(--red);border-radius:3px;margin:2px 0 14px}
+  h3{font-family:var(--display);color:var(--navy);font-weight:700;font-size:1.22rem;margin:34px 0 6px}
+  h4{font-family:var(--display);color:var(--ink);font-weight:700;font-size:1.02rem;margin:22px 0 4px}
+  p{margin:.55em 0}
+  .lead{font-size:1.14rem;color:var(--mid)}
+  a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--sage)}
+  a:hover{border-color:var(--red);color:var(--red)}
   strong{color:var(--ink)}
   ul,ol{padding-left:22px}
-  li{margin:.28em 0}
-  .lead{font-size:1.12rem;color:var(--mid)}
-  hr{border:none;border-top:1px solid var(--border);margin:40px 0}
+  li{margin:.3em 0}
+  code{background:var(--cream);color:var(--navy);padding:.12em .45em;border-radius:5px;font-size:.86em;
+    font-family:"SFMono-Regular",Consolas,Menlo,monospace}
+  .kbd{display:inline-block;background:#fff;border:1px solid var(--grid);border-bottom-width:2px;
+    border-radius:6px;padding:1px 8px;font-size:.82rem;font-family:monospace;color:var(--navy);white-space:nowrap}
 
-  /* Table of contents */
-  .toc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-top:38px}
-  .toc h2{margin:0 0 12px;border:none;padding:0;font-size:1.15rem}
-  .toc ol{columns:2;column-gap:36px;margin:0;font-size:.95rem}
-  .toc a{border:none;color:var(--mid)}
-  .toc a:hover{color:var(--navy)}
+  /* ---- Table of contents ---- */
+  .toc{background:var(--cream);border-radius:14px;padding:26px 30px;margin-top:40px}
+  .toc .eyebrow{display:block;margin-bottom:10px}
+  .toc h2{margin:0 0 14px;font-size:1.3rem}
+  .toc ol{columns:2;column-gap:40px;margin:0;font-size:.96rem;list-style:none;padding:0;counter-reset:t}
+  .toc li{counter-increment:t;margin:.36em 0}
+  .toc li::before{content:counter(t,decimal-leading-zero);color:var(--red);font-family:var(--display);
+    font-weight:800;font-size:.78rem;margin-right:.6em}
+  .toc a{border:none;color:var(--navy);font-weight:500}
+  .toc a:hover{color:var(--red)}
 
-  /* Callouts */
-  .box{border-radius:10px;padding:14px 18px;margin:18px 0;border-left:4px solid}
+  /* ---- Callouts ---- */
+  .box{border-radius:12px;padding:16px 20px;margin:20px 0;border-left:5px solid}
   .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
-  .box__label{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;display:block;margin-bottom:4px}
-  .tip{background:var(--green-soft);border-color:var(--green)} .tip .box__label{color:var(--green)}
-  .note{background:var(--navy-soft);border-color:var(--navy)} .note .box__label{color:var(--navy)}
-  .warn{background:var(--amber-soft);border-color:var(--amber)} .warn .box__label{color:#b9691a}
-  .danger{background:var(--red-soft);border-color:var(--red)} .danger .box__label{color:var(--red)}
+  .box__label{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+    font-size:.72rem;display:block;margin-bottom:5px}
+  .tip{background:#eef4ec;border-color:var(--green)} .tip .box__label{color:var(--green)}
+  .note{background:var(--cream);border-color:var(--navy)} .note .box__label{color:var(--navy)}
+  .warn{background:#fdf2e3;border-color:var(--amber)} .warn .box__label{color:#b9691a}
+  .danger{background:#ffe9e8;border-color:var(--red)} .danger .box__label{color:var(--red)}
 
-  /* Steps */
-  ol.steps{counter-reset:step;list-style:none;padding-left:0;margin:14px 0}
-  ol.steps>li{counter-increment:step;position:relative;padding:8px 8px 8px 46px;margin:6px 0;
-    background:var(--card);border:1px solid var(--border);border-radius:8px}
-  ol.steps>li::before{content:counter(step);position:absolute;left:10px;top:9px;width:26px;height:26px;
-    background:var(--navy);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:.82rem;font-weight:700}
+  /* ---- Steps ---- */
+  ol.steps{counter-reset:step;list-style:none;padding-left:0;margin:16px 0}
+  ol.steps>li{counter-increment:step;position:relative;padding:10px 10px 10px 50px;margin:8px 0;
+    background:var(--card);border:1px solid var(--border);border-radius:10px}
+  ol.steps>li::before{content:counter(step);position:absolute;left:11px;top:9px;width:28px;height:28px;
+    background:var(--navy);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-size:.85rem;font-weight:800}
 
-  /* Tables */
-  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.92rem;background:var(--card);
-    border:1px solid var(--border);border-radius:8px;overflow:hidden}
-  th{background:var(--navy);color:#fff;text-align:left;padding:10px 12px;font-size:.82rem;
-    text-transform:uppercase;letter-spacing:.04em}
-  td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:top}
-  tr:nth-child(even) td{background:#fafbfc}
+  /* ---- Tables ---- */
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.93rem;background:var(--card);
+    border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  th{background:var(--navy);color:#fff;text-align:left;padding:11px 13px;font-family:var(--display);
+    font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:10px 13px;border-top:1px solid var(--border);vertical-align:top}
+  tr:nth-child(even) td{background:#faf9f7}
 
-  /* Feature cards grid */
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
-  .fcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  /* ---- Feature cards ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+  .fcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;
+    border-top:4px solid var(--red)}
   .fcard h4{margin:0 0 4px;color:var(--navy)}
-  .fcard p{margin:0;font-size:.9rem;color:var(--mid)}
+  .fcard p{margin:0;font-size:.92rem;color:var(--mid)}
 
-  /* Legend chips */
-  .chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.78rem;font-weight:600;white-space:nowrap}
-  .kbd{display:inline-block;background:#fff;border:1px solid var(--grid);border-bottom-width:2px;border-radius:5px;
-    padding:1px 7px;font-size:.82rem;font-family:monospace;color:var(--ink)}
+  .chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:600;white-space:nowrap;font-family:var(--sans)}
 
-  /* Mock UI: a small board sketch for the overview */
-  .sketch{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;font-size:.8rem}
-  .sketch__top{background:var(--navy);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  /* ---- Board sketch ---- */
+  .sketch{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:18px 0;font-size:.8rem}
+  .sketch__top{background:var(--navy);color:#fff;padding:9px 13px;display:flex;gap:10px;align-items:center;
+    justify-content:space-between;font-family:var(--display);font-weight:600;font-size:.8rem}
   .sketch__row{display:flex;border-top:1px solid var(--grid)}
-  .sketch__name{width:130px;padding:8px 10px;background:#fafbfc;border-right:1px solid var(--grid);font-weight:600}
+  .sketch__name{width:132px;padding:9px 11px;background:#faf9f7;border-right:1px solid var(--grid);
+    font-weight:600;font-family:var(--display)}
   .sketch__days{flex:1;display:flex;position:relative;background:
     repeating-linear-gradient(90deg,#fff,#fff calc(100%/7 - 1px),var(--grid) calc(100%/7 - 1px),var(--grid) calc(100%/7))}
-  .sketch__bar{position:absolute;top:6px;height:26px;border-radius:4px;color:#fff;font-size:.72rem;
-    display:flex;align-items:center;padding:0 8px;font-weight:600}
+  .sketch__bar{position:absolute;top:7px;height:28px;border-radius:5px;color:#fff;font-size:.72rem;
+    display:flex;align-items:center;padding:0 9px;font-weight:600}
 
-  .footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);color:var(--dim);font-size:.85rem}
+  /* ---- Red CTA band (site's signature) ---- */
+  .cta{background:var(--red);color:#fff;border-radius:16px;padding:34px 36px;margin:44px 0 0;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .cta .eyebrow{color:rgba(255,255,255,.75)}
+  .cta h3{color:#fff;font-size:1.7rem;margin:6px 0 4px}
+  .cta p{margin:0;color:rgba(255,255,255,.9)}
+  .cta a{background:#fff;color:var(--red);border:none;font-family:var(--display);font-weight:700;
+    text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;padding:12px 20px;border-radius:8px;white-space:nowrap}
+  .cta a:hover{background:var(--navy);color:#fff}
+
+  .footer{margin-top:56px;padding:26px 0 0;border-top:2px solid var(--red);color:var(--taupe);font-size:.85rem}
+  .footer .wordmark b{font-size:1rem;color:var(--navy)}
+  .footer .wordmark span{color:var(--taupe)}
 
   @media (max-width:640px){
-    .toc ol{columns:1}.grid{grid-template-columns:1fr}.cover h1{font-size:1.8rem}
+    .toc ol{columns:1}.grid{grid-template-columns:1fr}
+    .cover h1{font-size:2.2rem}.cover__hero{padding:44px 22px 22px}
+    .cta{flex-direction:column;align-items:flex-start}
   }
   @media print{
-    body{background:#fff}
-    .cover{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .box,th,.sketch__top,ol.steps>li::before,.brandmark{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table{break-inside:avoid}
+    body{font-size:12.5px}
+    .cover,.cover__meta,.cover__bar{background:var(--navy)!important}
+    .cover,.cover__meta,.cover__bar,.box,th,.sketch__top,ol.steps>li::before,.cta,.toc,.fcard,.footer,
+    .heritage,h2 .num,.toc li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table,.cta,.box{break-inside:avoid}
     a{border:none;color:var(--navy)}
-    .noprint{display:none}
+    .cta a{border:1px solid #fff}
   }
 </style>
 </head>
 <body>
 
 <header class="cover">
-  <div class="cover__inner">
-    <div class="brandmark">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 732 732" width="46" height="46" role="img" aria-label="Lumineo Signs">
-        <path d="M0,0 L732,0 L732,732 L0,732 Z M162,561 L735.9,455.1 L735.8,378.5 Z M162,561 L735.5,285.8 L735.2,189.3 Z M162,561 L734.8,64.7 L734.6,-3.5 Z M162,561 L734.6,-3.5 L737,-5 L666.3,-3.7 Z M162,561 L541.8,-4.1 L445.2,-4.5 Z M162,561 L352.6,-4.7 L276,-4.9 Z" fill="#E8151B" fill-rule="evenodd"/>
-      </svg>
-    </div>
-    <div class="eyebrow">Lumineo Signs</div>
-    <h1>Project Scheduler</h1>
-    <div class="sub">The complete user guide — scheduling Production, Installation &amp; Shipping in one place</div>
-    <div class="meta">Version 1.0 &nbsp;·&nbsp; Last updated July 17, 2026 &nbsp;·&nbsp; For all Lumineo team members</div>
+  <div class="cover__bar">
+    <div class="wordmark"><b>LUMINEO</b><span>SIGNS</span></div>
+    <div class="eyebrow">User Guide</div>
+  </div>
+  <div class="cover__hero">
+    <div class="eyebrow">Lumineo Project Scheduler</div>
+    <h1>Scheduling,<br>illuminated.</h1>
+    <div class="cover__tag">Lumens for brightness. Lumineo for brilliance.</div>
+    <p class="cover__lead">One shared home for planning Production, Installation &amp; Shipping — this guide shows
+    every team member how to read the board, schedule with confidence, and make the scheduler an everyday tool.</p>
+  </div>
+  <div class="cover__meta">
+    <span class="heritage">Since 1928 · 100,000+ projects</span>
+    <span>Version&nbsp;<b>1.0</b></span>
+    <span>Updated&nbsp;<b>July 17, 2026</b></span>
+    <span>Kansas · Missouri · Oklahoma</span>
   </div>
 </header>
 
 <div class="wrap">
 
   <nav class="toc">
+    <span class="eyebrow">Contents</span>
     <h2>What's inside</h2>
     <ol>
       <li><a href="#intro">Introduction</a></li>
@@ -158,7 +215,7 @@
   </nav>
 
   <!-- ============================================================ -->
-  <h2 id="intro">1 &nbsp;Introduction</h2>
+  <h2 id="intro"><span class="num">01</span>Introduction</h2><div class="rule"></div>
   <p class="lead">The <strong>Lumineo Project Scheduler</strong> is the shop's single, shared home for planning
   work — replacing the old Canvas scheduling app and the whiteboards, spreadsheets, and guesswork that came with it.</p>
 
@@ -167,7 +224,6 @@
   same scheduling engine and fed live from Business Central (BC). Everyone sees the same board, updated in real time,
   so the person in the office and the crew lead in the field are always looking at the same plan.</p>
 
-  <h3>What you can do with it</h3>
   <div class="grid">
     <div class="fcard"><h4>See the whole week at a glance</h4><p>Every job, every person, color-coded by department — with weather, crew size, and dollar value right on the card.</p></div>
     <div class="fcard"><h4>Schedule by dragging</h4><p>Drop a job on a day, stretch it to change its length, and let the engine keep everything downstream in order.</p></div>
@@ -180,7 +236,7 @@
   Not every section applies to every role; jump to <a href="#roles">Roles &amp; Permissions</a> to see what your login can do.</div>
 
   <!-- ============================================================ -->
-  <h2 id="start">2 &nbsp;Getting Started</h2>
+  <h2 id="start"><span class="num">02</span>Getting Started</h2><div class="rule"></div>
 
   <h3>Opening the app</h3>
   <ol class="steps">
@@ -207,7 +263,7 @@
   On a narrow screen the sidebar collapses into a hamburger menu (top-left), and job cards stack their details so nothing clips.</div>
 
   <!-- ============================================================ -->
-  <h2 id="overview">3 &nbsp;Dashboard Overview</h2>
+  <h2 id="overview"><span class="num">03</span>Dashboard Overview</h2><div class="rule"></div>
   <p>Each calendar is a <strong>Gantt-style board</strong>: a row per person (Production), per crew grouped by location
   (Installation), or per truck (Shipping), with job cards spanning the days they run.</p>
 
@@ -215,15 +271,15 @@
     <div class="sketch__top"><span>Production · Week of Jul 13</span><span>‹ Prev · Today · Next ›</span></div>
     <div class="sketch__row">
       <div class="sketch__name">Metal Shop ▾</div>
-      <div class="sketch__days"><div class="sketch__bar" style="left:0;width:42%;background:#141464">J36110 · First Bank</div></div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:0;width:42%;background:#001238">J36110 · First Bank</div></div>
     </div>
     <div class="sketch__row">
       <div class="sketch__name">Chris Owen</div>
-      <div class="sketch__days"><div class="sketch__bar" style="left:28%;width:28%;background:#0f6e56">J35887 · RTS</div></div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:28%;width:28%;background:#479766">J35887 · RTS</div></div>
     </div>
     <div class="sketch__row">
       <div class="sketch__name">Paint ▾</div>
-      <div class="sketch__days"><div class="sketch__bar" style="left:57%;width:28%;background:#f2994a">J36241 · Salina</div></div>
+      <div class="sketch__days"><div class="sketch__bar" style="left:57%;width:28%;background:#e10600">J36241 · Salina</div></div>
     </div>
   </div>
 
@@ -239,23 +295,23 @@
   Hover almost anything — a badge, an icon, a button — and a tooltip explains what it does. When in doubt, hover first.</div>
 
   <!-- ============================================================ -->
-  <h2 id="legend">4 &nbsp;Visual Aids &amp; Tooltips (Card Legend)</h2>
+  <h2 id="legend"><span class="num">04</span>Visual Aids &amp; Tooltips <span style="font-weight:600;font-size:1rem;color:var(--taupe)">(Card Legend)</span></h2><div class="rule"></div>
   <p>Job cards pack a lot of information into a small space. Here's how to read them:</p>
   <table>
     <tr><th>You see</th><th>It means</th></tr>
-    <tr><td><span class="chip" style="background:#141464;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
+    <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments.</td></tr>
     <tr><td>☀️ 72° (weather chip)</td><td>Installation cards show the <strong>forecast</strong> for the job's ZIP code on that day — so you can plan around weather.</td></tr>
     <tr><td>👷 2 · 🚚 1 (crew badge)</td><td><strong>Crew size</strong> — men and trucks per trip. Auto-derived from BC or entered by hand. (Admin/Ops only.)</td></tr>
     <tr><td>$ 12,500</td><td>The job's <strong>invoice / remaining value</strong>. Visible to Admin/Ops only; toggle it with the $ button.</td></tr>
-    <tr><td><span class="chip" style="background:#e8eaf5;color:#141464">CCO</span></td><td><strong>Certified Crane Operator</strong> — marks a crew member qualified to run the crane.</td></tr>
+    <tr><td><span class="chip" style="background:var(--sage);color:#001238">CCO</span></td><td><strong>Certified Crane Operator</strong> — marks a crew member qualified to run the crane.</td></tr>
     <tr><td>Diagonal stripes on a day cell</td><td>That person is <strong>lent to Installation</strong> that day (an "assist"). Full-cell = whole day; a half-tinted cell labeled <strong>Install AM/PM</strong> = half day (they're on Production the other half).</td></tr>
     <tr><td>Highlighted / glowing cards</td><td>Cards the engine <strong>would move</strong> as part of a cascade you're about to confirm.</td></tr>
   </table>
 
   <!-- ============================================================ -->
-  <h2 id="features">5 &nbsp;Features &amp; How to Use Them</h2>
+  <h2 id="features"><span class="num">05</span>Features &amp; How to Use Them</h2><div class="rule"></div>
 
   <h3>5.1 &nbsp;Adding a job</h3>
   <p>Click <strong>+ Add Job</strong> (top-right of the toolbar) or click an empty day cell for a person. You get two kinds of card:</p>
@@ -332,11 +388,11 @@
     <tr><td>Auto-cascade &amp; conflict prompts</td><td>On = the board keeps itself in order with move/resize previews. Off = free-form override with ⚡ conflict icons.</td></tr>
     <tr><td>Full screen (Presentation / TV mode)</td><td>Hides everything but the schedule for a shop TV. Press <span class="kbd">Esc</span> to exit.</td></tr>
     <tr><td>Hide the Power Apps header</td><td>Reclaims the purple bar at the very top for more space (reloads the app; deployed app only).</td></tr>
-    <tr><td>Users <span class="chip" style="background:#e8eaf5;color:#141464">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
+    <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
   </table>
 
   <!-- ============================================================ -->
-  <h2 id="walkthroughs">6 &nbsp;Step-by-Step Walkthroughs</h2>
+  <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
   <h3>Walkthrough 1 — Schedule a new BC job, start to finish</h3>
   <ol class="steps">
@@ -373,7 +429,7 @@
   "This week only" is perfect for covering a short-handed crew without disturbing the standing roster. Other weeks are untouched.</div>
 
   <!-- ============================================================ -->
-  <h2 id="roles">7 &nbsp;Roles &amp; Permissions</h2>
+  <h2 id="roles"><span class="num">07</span>Roles &amp; Permissions</h2><div class="rule"></div>
   <p>Your <strong>login</strong> determines which screen you land on and what you can see or do. Admins manage this in
   <strong>Settings → Users → Manage users…</strong> (no developer needed).</p>
   <table>
@@ -390,7 +446,7 @@
   person/role sees it — handy for support and for checking a rollout. Exit returns you to your own view.</p>
 
   <!-- ============================================================ -->
-  <h2 id="shortcuts">8 &nbsp;Shortcuts &amp; Efficiency Tips</h2>
+  <h2 id="shortcuts"><span class="num">08</span>Shortcuts &amp; Efficiency Tips</h2><div class="rule"></div>
   <table>
     <tr><th>Shortcut</th><th>Action</th></tr>
     <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>Undo the last board change</td></tr>
@@ -408,7 +464,7 @@
   </ul>
 
   <!-- ============================================================ -->
-  <h2 id="best">9 &nbsp;Best Practices</h2>
+  <h2 id="best"><span class="num">09</span>Best Practices</h2><div class="rule"></div>
   <ul>
     <li><strong>Lock the fixed stuff.</strong> PTO, holidays, and hard commitments should be locked (🔒) so cascade never moves them.</li>
     <li><strong>Let Auto do the first pass.</strong> Add jobs with Auto mode, then hand-tune — it's faster than placing every task.</li>
@@ -419,7 +475,7 @@
   </ul>
 
   <!-- ============================================================ -->
-  <h2 id="trouble">10 &nbsp;Troubleshooting — Common Errors &amp; Solutions</h2>
+  <h2 id="trouble"><span class="num">10</span>Troubleshooting</h2><div class="rule"></div>
   <table>
     <tr><th>Symptom</th><th>Likely cause</th><th>What to do</th></tr>
     <tr><td>Blank white screen after opening</td><td>The app is still loading, or a stale cached version</td><td>Wait a few seconds, then refresh the page. If it persists, close the tab and reopen the link.</td></tr>
@@ -435,7 +491,7 @@
   A simple <strong>page refresh</strong> resolves the large majority of display glitches — it reloads the latest data and the newest version of the app.</div>
 
   <!-- ============================================================ -->
-  <h2 id="faq">11 &nbsp;FAQs &amp; Tips</h2>
+  <h2 id="faq"><span class="num">11</span>FAQs &amp; Tips</h2><div class="rule"></div>
   <h4>Do my changes save automatically?</h4>
   <p>Yes. Every move, resize, add, edit, and delete saves to the shared database in the background — there's no "Save" button for the board.</p>
   <h4>Will other people see my changes right away?</h4>
@@ -450,7 +506,7 @@
   <p>Everything works; the layout adapts. The sidebar becomes a hamburger menu and card details stack vertically.</p>
 
   <!-- ============================================================ -->
-  <h2 id="support">12 &nbsp;Contact &amp; Support</h2>
+  <h2 id="support"><span class="num">12</span>Contact &amp; Support</h2><div class="rule"></div>
   <p>Questions, access requests, or something not working right?</p>
   <table>
     <tr><th>Need</th><th>Who / how</th></tr>
@@ -461,8 +517,17 @@
   <div class="note box"><span class="box__label">For maintainers</span>
   Replace the addresses above with your official support channel (help desk email / phone / Teams) before wide distribution.</div>
 
+  <div class="cta">
+    <div>
+      <span class="eyebrow">Get scheduling</span>
+      <h3>Let's illuminate the week ahead.</h3>
+      <p>Open the board, drop in your first job, and let the engine do the heavy lifting.</p>
+    </div>
+    <a href="#start">Start here ↗</a>
+  </div>
+
   <!-- ============================================================ -->
-  <h2 id="glossary">13 &nbsp;Glossary</h2>
+  <h2 id="glossary"><span class="num">13</span>Glossary</h2><div class="rule"></div>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
     <tr><td>BC</td><td>Business Central — the ERP that feeds jobs, customers, values, and planning lines into the scheduler.</td></tr>
@@ -476,7 +541,7 @@
   </table>
 
   <!-- ============================================================ -->
-  <h2 id="changelog">14 &nbsp;What's New</h2>
+  <h2 id="changelog"><span class="num">14</span>What's New</h2><div class="rule"></div>
   <p>This log tracks user-facing changes so the guide stays current. <em>Newest first.</em></p>
   <table>
     <tr><th>Date</th><th>Change</th></tr>
@@ -488,8 +553,10 @@
   </table>
 
   <div class="footer">
-    <p><strong>Lumineo Project Scheduler — User Guide v1.0.</strong> Built for the Lumineo Signs team.
-    This document is maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
+    <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
+    <p><strong>Lumineo Project Scheduler — User Guide v1.0.</strong> Built for the Lumineo Signs team ·
+    <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
+    Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
 
 </div>
