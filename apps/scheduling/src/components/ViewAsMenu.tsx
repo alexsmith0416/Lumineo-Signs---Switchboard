@@ -16,6 +16,7 @@ import {
   useImpersonationStore,
   type Impersonation,
 } from "../store/impersonation-store";
+import UsersAdminPanel from "./UsersAdminPanel";
 
 interface PickPerson {
   key: string;
@@ -48,6 +49,7 @@ export default function ViewAsMenu() {
 
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<UserType | null>(null);
+  const [showUsers, setShowUsers] = useState(false);
 
   // Floor rosters (people come from each store's employee map).
   const prod = useScheduleStore((s) => s.employees);
@@ -150,6 +152,17 @@ export default function ViewAsMenu() {
                 ← Exit — back to {fullName ?? "Admin"}
               </button>
             )}
+            <button
+              type="button"
+              className="viewas__type"
+              onClick={() => {
+                setShowUsers(true);
+                setOpen(false);
+                setExpanded(null);
+              }}
+            >
+              ⚙ Edit users…
+            </button>
             <div className="viewas__head">View as user</div>
             {groups.map((g) => {
               const isOpen = expanded === g.type;
@@ -189,6 +202,8 @@ export default function ViewAsMenu() {
           </div>
         </>
       )}
+
+      {showUsers && <UsersAdminPanel onClose={() => setShowUsers(false)} />}
     </div>
   );
 }

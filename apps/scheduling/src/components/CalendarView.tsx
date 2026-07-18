@@ -4,6 +4,7 @@ import { effectiveHours, isWeekend } from "../engine/capacity";
 import { calculateEndTime } from "../engine/time-walker";
 import { diffShift, diffResize } from "../engine/cascade";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
+import type { AssistHalf } from "../services/dataverse-live";
 import type { ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
 import { isLaneEmployeeId, laneDeptId, laneEmployeeId, makeLaneEmployee } from "../services/department-lane";
@@ -89,9 +90,11 @@ interface CalendarViewProps {
    *  The unlock state itself is toggled by right-clicking the resource column
    *  header (no visible button). */
   rosterUnlockable?: boolean;
-  /** Production only: employee id → weekday indices (0=Mon) the person is lent
-   *  to Installation. Those day cells render greyed + labelled "Installation". */
-  assistDaysByEmployee?: Map<string, Set<number>>;
+  /** Production only: employee id → (weekday index 0=Mon → which half). A "full"
+   *  day renders greyed + labelled "Installation" and blocks scheduling; an
+   *  "am"/"pm" half tints half the cell, labels "Install AM/PM", and still lets
+   *  a production job land the other half. */
+  assistDaysByEmployee?: Map<string, Map<number, AssistHalf>>;
   /** Enables the right-hand Job Queue slide-out (Production + Installation). */
   enableJobQueue?: boolean;
 }
@@ -1051,8 +1054,8 @@ interface EmployeeRowProps {
   onRosterDrop?: (e: React.DragEvent) => void;
   days: Date[];
   cards: CardLayout[];
-  /** Weekday indices this employee is lent to Installation (greyed + labelled). */
-  assistDays?: Set<number>;
+  /** Weekday index → which half this employee is lent to Installation. */
+  assistDays?: Map<number, AssistHalf>;
   departments: Map<string, Department>;
   conflicts: Conflict[];
   rowMinHeight: number;
@@ -1193,18 +1196,34 @@ function EmployeeRow({
             (c) => i >= c.startIdx && i < c.startIdx + c.spanDays,
           );
           const weekend = isWeekend(day);
-          const assist = assistDays?.has(i) ?? false;
+          // Assist: "full" blocks the whole day (greyed, no drop); "am"/"pm"
+          // tints half the cell but still lets a production job land the other
+          // half, so those days aren't blocked.
+          const assistHalf = assistDays?.get(i);
+          const assistFull = assistHalf === "full";
+          const assistPartial = assistHalf === "am" || assistHalf === "pm";
           return (
             <div
               key={i}
-              className={`day-cell${weekend ? " day-cell--weekend" : ""}${!occupiedHere && !assist ? " day-cell--empty" : ""}${dropHoverIdx === i ? " day-cell--drop-target" : ""}${assist ? " day-cell--assist" : ""}`}
-              onDragOver={assist ? undefined : handleStripDragOver}
-              onDrop={assist ? undefined : handleStripDrop}
+              className={
+                `day-cell${weekend ? " day-cell--weekend" : ""}` +
+                `${!occupiedHere && !assistFull ? " day-cell--empty" : ""}` +
+                `${dropHoverIdx === i ? " day-cell--drop-target" : ""}` +
+                `${assistFull ? " day-cell--assist" : ""}` +
+                `${assistPartial ? ` day-cell--assist-${assistHalf}` : ""}`
+              }
+              onDragOver={assistFull ? undefined : handleStripDragOver}
+              onDrop={assistFull ? undefined : handleStripDrop}
               onClick={() => {
-                if (!occupiedHere && !assist) onCellClick(day);
+                if (!occupiedHere && !assistFull) onCellClick(day);
               }}
             >
-              {assist && <span className="day-cell__assist">Installation</span>}
+              {assistFull && <span className="day-cell__assist">Installation</span>}
+              {assistPartial && (
+                <span className="day-cell__assist day-cell__assist--half">
+                  Install {assistHalf === "am" ? "AM" : "PM"}
+                </span>
+              )}
             </div>
           );
         })}

@@ -8,7 +8,7 @@ import {
   type UseScheduleStore,
 } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
-import { createAssistRow, removeAssistRow } from "../services/dataverse-live";
+import { createAssistRow, removeAssistRow, type AssistHalf } from "../services/dataverse-live";
 import { INSTALL_LOCATIONS, REGION_LOCATIONS } from "../services/install-meta";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -85,7 +85,9 @@ export default function EmployeeAdminPanel({
       : undefined;
   const [assistRegionNek, setAssistRegionNek] = useState(false);
   const [assistAllWeek, setAssistAllWeek] = useState(true);
-  const [assistDaySet, setAssistDaySet] = useState<Set<number>>(new Set());
+  // Selected assist days → which half (full / am / pm). A day absent from the
+  // map is not an assist day; present means full unless set to am/pm.
+  const [assistDayHalf, setAssistDayHalf] = useState<Map<number, AssistHalf>>(new Map());
 
   const reloadAfterAssist = async () => {
     await useAssistStore.getState().refresh();
@@ -100,13 +102,18 @@ export default function EmployeeAdminPanel({
     setBusy(true);
     setErr(null);
     try {
-      const days = assistAllWeek ? [] : [...assistDaySet].sort((a, b) => a - b);
+      const days = assistAllWeek ? [] : [...assistDayHalf.keys()].sort((a, b) => a - b);
+      const halves: Record<number, "am" | "pm"> = {};
+      if (!assistAllWeek) {
+        for (const [d, h] of assistDayHalf) if (h === "am" || h === "pm") halves[d] = h;
+      }
       await createAssistRow({
         sourceEmpId: emp.id,
         name: emp.name,
         regionIsNek: assistRegionNek,
         weekStart: assistMonday,
         days,
+        halves,
       });
       await reloadAfterAssist();
       onClose();
@@ -329,7 +336,12 @@ export default function EmployeeAdminPanel({
                 <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                   Lent to <strong>{currentAssist.regionIsNek ? "NEK" : "WK"}</strong> this week
                   {currentAssist.days.length
-                    ? ` · ${currentAssist.days.map((d) => WEEKDAYS[d]).join(", ")}`
+                    ? ` · ${currentAssist.days
+                        .map((d) => {
+                          const h = currentAssist.halves[d];
+                          return h ? `${WEEKDAYS[d]} ${h.toUpperCase()}` : WEEKDAYS[d];
+                        })
+                        .join(", ")}`
                     : " · all week"}
                   . Their production days are greyed and they appear on that install board.
                 </div>
@@ -372,41 +384,87 @@ export default function EmployeeAdminPanel({
                   All week
                 </label>
                 {!assistAllWeek && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {WEEKDAYS.map((lbl, i) => {
-                      const on = assistDaySet.has(i);
-                      return (
-                        <button
-                          key={lbl}
-                          type="button"
-                          onClick={() =>
-                            setAssistDaySet((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(i)) next.delete(i);
-                              else next.add(i);
-                              return next;
-                            })
-                          }
-                          style={{
-                            padding: "5px 10px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            borderRadius: 4,
-                            border: "1px solid var(--lumineo-navy)",
-                            background: on ? "var(--lumineo-navy)" : "#fff",
-                            color: on ? "#fff" : "var(--lumineo-navy)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {lbl}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {WEEKDAYS.map((lbl, i) => {
+                        const half = assistDayHalf.get(i);
+                        const on = half !== undefined;
+                        const setHalf = (h: AssistHalf | null) =>
+                          setAssistDayHalf((prev) => {
+                            const next = new Map(prev);
+                            if (h === null) next.delete(i);
+                            else next.set(i, h);
+                            return next;
+                          });
+                        return (
+                          <div
+                            key={lbl}
+                            style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "stretch" }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setHalf(on ? null : "full")}
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                borderRadius: 4,
+                                border: "1px solid var(--lumineo-navy)",
+                                background: on ? "var(--lumineo-navy)" : "#fff",
+                                color: on ? "#fff" : "var(--lumineo-navy)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {lbl}
+                            </button>
+                            {on && (
+                              <div
+                                style={{
+                                  display: "inline-flex",
+                                  borderRadius: 4,
+                                  overflow: "hidden",
+                                  border: "1px solid var(--border)",
+                                }}
+                              >
+                                {(
+                                  [
+                                    ["All", "full"],
+                                    ["AM", "am"],
+                                    ["PM", "pm"],
+                                  ] as const
+                                ).map(([t, val]) => (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setHalf(val)}
+                                    style={{
+                                      flex: 1,
+                                      padding: "3px 6px",
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      border: "none",
+                                      cursor: "pointer",
+                                      background: (half ?? "full") === val ? "var(--lumineo-navy)" : "#fff",
+                                      color: (half ?? "full") === val ? "#fff" : "var(--text-secondary)",
+                                    }}
+                                  >
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                      Pick AM or PM for a half-day — they stay on production the other half.
+                    </div>
+                  </>
                 )}
                 <button
                   className="btn-primary"
-                  disabled={busy || (!assistAllWeek && assistDaySet.size === 0)}
+                  disabled={busy || (!assistAllWeek && assistDayHalf.size === 0)}
                   onClick={onAssign}
                 >
                   {busy ? "Assigning…" : "Assign to Installation"}

@@ -1483,6 +1483,50 @@ input, select, textarea {
   pointer-events: none;
 }
 
+/* Half-day assist: tint only the morning (top) or afternoon (bottom) half —
+   the other half stays open so a production job can still land there. */
+.day-cell--assist-am,
+.day-cell--assist-pm {
+  position: relative;
+}
+.day-cell--assist-am::before,
+.day-cell--assist-pm::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg-tertiary),
+    var(--bg-tertiary) 6px,
+    var(--bg-secondary) 6px,
+    var(--bg-secondary) 12px
+  );
+  pointer-events: none;
+}
+.day-cell--assist-am::before {
+  top: 0;
+}
+.day-cell--assist-pm::before {
+  bottom: 0;
+}
+.day-cell__assist--half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: none;
+  font-size: 9px;
+  z-index: 1;
+}
+.day-cell--assist-am .day-cell__assist--half {
+  top: 2px;
+}
+.day-cell--assist-pm .day-cell__assist--half {
+  bottom: 2px;
+}
+
 .day-cell--empty:hover {
   background: var(--bg-tertiary);
   cursor: pointer;

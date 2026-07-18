@@ -420,6 +420,10 @@ function mapInstallEmployee(r: Row): Employee {
 // Stored as a crfdf_installationemployees row with crfdf_assistsourceemp set
 // (the production employee id). It shows as a crew row on that region's board;
 // the production board greys the source employee's assigned days.
+/** Which half of an assist day the person is on the install board: a full day,
+ *  or just the morning / afternoon (the other half they stay on production). */
+export type AssistHalf = "full" | "am" | "pm";
+
 export interface AssistAssignment {
   id: string;
   name: string;
@@ -427,6 +431,20 @@ export interface AssistAssignment {
   sourceEmpId: string;
   weekStart: string; // yyyy-mm-dd
   days: number[]; // weekday indices 0=Mon..4=Fri; [] = all week
+  /** Per-partial-day half (am/pm). Days absent here are full days. */
+  halves: Record<number, "am" | "pm">;
+}
+
+/** Parse "1:am,3:pm" → { 1: "am", 3: "pm" }. Blank/legacy → {}. */
+function parseAssistHalves(raw: string): Record<number, "am" | "pm"> {
+  const out: Record<number, "am" | "pm"> = {};
+  for (const part of raw.split(",")) {
+    const [d, h] = part.split(":");
+    const di = Number((d ?? "").trim());
+    const half = (h ?? "").trim().toLowerCase();
+    if (!Number.isNaN(di) && (half === "am" || half === "pm")) out[di] = half;
+  }
+  return out;
 }
 
 export async function fetchAssistRows(): Promise<AssistAssignment[]> {
@@ -447,6 +465,7 @@ export async function fetchAssistRows(): Promise<AssistAssignment[]> {
             .map((x) => Number(x.trim()))
             .filter((x) => !Number.isNaN(x))
         : [],
+      halves: s(r.crfdf_assisthalves).trim() ? parseAssistHalves(s(r.crfdf_assisthalves)) : {},
     }));
 }
 
@@ -456,6 +475,7 @@ export async function createAssistRow(input: {
   regionIsNek: boolean;
   weekStart: string;
   days: number[];
+  halves?: Record<number, "am" | "pm">;
 }): Promise<void> {
   const { S, org } = await sdk();
   const rec: Row = {
@@ -469,6 +489,12 @@ export async function createAssistRow(input: {
     crfdf_assistweekstart: input.weekStart,
     crfdf_assistdays: input.days.join(","),
   };
+  // Only send the newer half-day column when there's an AM/PM to record, so a
+  // whole-day assist still saves even if crfdf_assisthalves isn't provisioned.
+  const halfEntries = Object.entries(input.halves ?? {});
+  if (halfEntries.length > 0) {
+    rec.crfdf_assisthalves = halfEntries.map(([d, h]) => `${d}:${h}`).join(",");
+  }
   const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, INSTALL_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createAssistRow failed");
 }
@@ -1436,6 +1462,65 @@ export async function deleteCardPreset(id: string): Promise<void> {
   const { S, org } = await sdk();
   const res = await S.DeleteRecordWithOrganization(org, CARD_PRESET_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteCardPreset(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// App users (crfdf_appuser) — the editable login-role directory
+// ---------------------------------------------------------------------------
+// One row per login: email + user type. The app merges this over the hardcoded
+// USER_DIRECTORY (table wins) so roles can change without a code deploy.
+const APPUSER_SET = "crfdf_appusers";
+
+export interface AppUserRow {
+  id: string;
+  email: string;
+  userType: string;
+  displayName: string;
+}
+
+function mapAppUser(r: Row): AppUserRow {
+  return {
+    id: s(r.crfdf_appuserid),
+    email: s(r.crfdf_email).trim().toLowerCase(),
+    userType: s(r.crfdf_usertype).trim() || "admin",
+    displayName: s(r.crfdf_displayname),
+  };
+}
+
+function appUserToRecord(u: Partial<AppUserRow>): Row {
+  const rec: Row = {};
+  if (u.email !== undefined) {
+    const email = u.email.trim().toLowerCase();
+    rec.crfdf_email = email;
+    rec.crfdf_name = email; // primary name = email, so rows are identifiable
+  }
+  if (u.userType !== undefined) rec.crfdf_usertype = u.userType;
+  if (u.displayName !== undefined) rec.crfdf_displayname = u.displayName;
+  return rec;
+}
+
+export async function fetchAppUsers(): Promise<AppUserRow[]> {
+  const rows = await list(APPUSER_SET, { orderby: "crfdf_email asc" });
+  return rows.map(mapAppUser).filter((u) => u.email);
+}
+
+export async function createAppUser(u: AppUserRow): Promise<void> {
+  const { S, org } = await sdk();
+  const rec = { crfdf_appuserid: u.id, ...appUserToRecord(u) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, APPUSER_SET, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "createAppUser failed");
+}
+
+export async function updateAppUser(id: string, changes: Partial<AppUserRow>): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, APPUSER_SET, id, appUserToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateAppUser(${id}) failed`);
+}
+
+export async function deleteAppUser(id: string): Promise<void> {
+  const { S, org } = await sdk();
+  const res = await S.DeleteRecordWithOrganization(org, APPUSER_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteAppUser(${id}) failed`);
 }
 
 /**

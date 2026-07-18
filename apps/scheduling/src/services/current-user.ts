@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { personByCode } from "./sales-pm";
 import { useImpersonationStore } from "../store/impersonation-store";
+import { useUserDirectoryStore } from "../store/user-directory-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -96,10 +97,15 @@ export const USER_DIRECTORY: Record<string, UserType> = {
   "jontjes@lumineosigns.com": "admin", // Joe Ontjes
 };
 
-/** Resolve a login's user type: the directory wins, else derive a sensible one. */
-export function resolveUserType(upn: string | undefined): UserType {
+/** Resolve a login's user type: the directory wins, else derive a sensible one.
+ *  `directory` defaults to the hardcoded map; useCurrentUser passes the merged
+ *  (Dataverse-over-code) directory so table edits take effect without a deploy. */
+export function resolveUserType(
+  upn: string | undefined,
+  directory: Record<string, UserType> = USER_DIRECTORY,
+): UserType {
   const email = upn?.trim().toLowerCase();
-  if (email && USER_DIRECTORY[email]) return USER_DIRECTORY[email];
+  if (email && directory[email]) return directory[email];
   // Fallbacks until the directory is filled:
   const group = email ? SHARED_FLOOR_ACCOUNTS[email] : undefined;
   if (group === "production") return "production";
@@ -196,7 +202,18 @@ export function useCurrentUser(): CurrentUser {
       alive = false;
     };
   }, []);
-  const realType = resolveUserType(state.upn);
+
+  // Editable Dataverse directory (crfdf_appuser), loaded once and merged OVER the
+  // hardcoded map so a role change in the admin screen takes effect without a
+  // deploy. Gate loading on it (live) so we don't flash the wrong landing view.
+  const dirByEmail = useUserDirectoryStore((s) => s.byEmail);
+  const dirLoaded = useUserDirectoryStore((s) => s.loaded);
+  useEffect(() => {
+    void useUserDirectoryStore.getState().load();
+  }, []);
+  const directory: Record<string, UserType> = { ...USER_DIRECTORY, ...dirByEmail };
+
+  const realType = resolveUserType(state.upn, directory);
   // Only real admins may "view as" another user — a non-admin can never escalate.
   const canImpersonate = realType === "admin";
   const imp = useImpersonationStore((s) => s.active);
@@ -214,6 +231,9 @@ export function useCurrentUser(): CurrentUser {
 
   return {
     ...state,
+    // Hold "loading" until the editable directory has resolved (live only), so
+    // the app opens on the correct role's landing view rather than the fallback.
+    loading: state.loading || (LIVE && !dirLoaded),
     type,
     role,
     permissions: {

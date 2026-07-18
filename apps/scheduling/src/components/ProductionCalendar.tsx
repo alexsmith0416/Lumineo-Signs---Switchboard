@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { addDays, format, startOfWeek } from "date-fns";
 import { useScheduleStore } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
+import type { AssistHalf } from "../services/dataverse-live";
 import { KIND_META } from "../services/data-source";
 import { isLaneEmployeeId, laneDeptId } from "../services/department-lane";
 import CalendarView from "./CalendarView";
@@ -39,10 +40,14 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
   }, [refreshAssist]);
   const weekMonday = format(startOfWeek(weekStart, { weekStartsOn: 1 }), "yyyy-MM-dd");
   const assistDaysByEmployee = useMemo(() => {
-    const m = new Map<string, Set<number>>();
+    const m = new Map<string, Map<number, AssistHalf>>();
     for (const a of assistRows) {
       if (a.weekStart !== weekMonday) continue;
-      m.set(a.sourceEmpId, new Set(a.days.length ? a.days : [0, 1, 2, 3, 4]));
+      const days = a.days.length ? a.days : [0, 1, 2, 3, 4];
+      const byDay = new Map<number, AssistHalf>();
+      // All-week / unspecified days are full; specific days carry their am/pm.
+      for (const d of days) byDay.set(d, a.halves[d] ?? "full");
+      m.set(a.sourceEmpId, byDay);
     }
     return m;
   }, [assistRows, weekMonday]);
