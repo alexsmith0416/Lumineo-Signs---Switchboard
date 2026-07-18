@@ -1,13 +1,20 @@
+import { useState } from "react";
 import { useSettingsStore } from "../store/settings-store";
 import { applyHeaderVisibility, isInPowerPlayer } from "../services/power-host";
+import { useCurrentUser } from "../services/current-user";
+import UsersAdminPanel from "./UsersAdminPanel";
 
-/** App settings. Cascade/conflict behavior + Power Apps header visibility. */
+/** App settings. Cascade/conflict behavior + Power Apps header visibility, plus
+ *  the admin-only Users manager (tucked away here). */
 export default function SettingsScreen() {
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
   const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
   const hideHeader = useSettingsStore((s) => s.hideHeader);
   const setHideHeader = useSettingsStore((s) => s.setHideHeader);
   const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
+  // Only real admins see + open the Users manager.
+  const { realType } = useCurrentUser();
+  const [showUsers, setShowUsers] = useState(false);
 
   const toggleHeader = () => {
     const next = !hideHeader;
@@ -104,6 +111,28 @@ export default function SettingsScreen() {
           {!isInPowerPlayer() && " (Preview mode — this applies only in the deployed app.)"}
         </div>
       </div>
+
+      {realType === "admin" && (
+        <div className="settings-section">
+          <div className="settings-section__title">Users</div>
+
+          <div className="settings-row">
+            <div className="settings-row__text">
+              <div className="settings-row__title">Edit users</div>
+              <div className="settings-row__desc">
+                Manage who signs in and the role they get (Admin, Ops, Production, Install,
+                Sales, PM). This controls what a signed-in user <strong>sees</strong> — not who
+                can open the app, which is set by sharing it in Power Apps.
+              </div>
+            </div>
+            <button type="button" className="btn-primary" onClick={() => setShowUsers(true)}>
+              Manage users…
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showUsers && <UsersAdminPanel onClose={() => setShowUsers(false)} />}
     </div>
   );
 }

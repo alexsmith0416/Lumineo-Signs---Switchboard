@@ -2143,6 +2143,102 @@ input, select, textarea {
 /* ---- Load editor slide-over ---- */
 .slide-over__panel--wide { width: 600px; overflow-y: auto; }
 
+/* --- Edit users admin panel ------------------------------------------------ */
+.users-admin {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.users-admin__note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.users-admin__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.users-admin__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+.users-admin__email {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+.users-admin__addrow {
+  display: flex;
+  gap: 8px;
+}
+.users-admin__grow {
+  flex: 1;
+  min-width: 0;
+  border-radius: 4px;
+}
+.users-admin__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.users-admin__row--muted {
+  opacity: 0.72;
+}
+.users-admin__row-email {
+  flex: 1;
+  min-width: 0; /* allow the long email to ellipsize instead of forcing overflow */
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.users-admin__role {
+  flex: 0 0 128px;
+  min-width: 0;
+  border-radius: 4px;
+}
+.users-admin__row-type {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.users-admin__remove {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.users-admin__remove:hover {
+  border-color: var(--lumineo-red);
+  color: var(--lumineo-red);
+}
+.users-admin__override {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.users-admin__empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.users-admin__footer {
+  flex-shrink: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
 .load-day-picker { display: flex; gap: 4px; }
 .load-day-picker__day {
   flex: 1;
