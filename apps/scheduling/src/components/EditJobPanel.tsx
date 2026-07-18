@@ -5,6 +5,7 @@ import type { ScheduleContext, ScheduleLine } from "../engine/types";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
+import { useSettingsStore } from "../store/settings-store";
 import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
 
@@ -31,6 +32,9 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
 
   // Trips/crew and Install ZIP are install-only widgets.
   const isInstall = dataSource.kind === "installation";
+  // Respect the global cascade setting on save (matches drag/resize behavior);
+  // cascade off = move/resize this task only, no downstream push.
+  const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
 
   const [duplicating, setDuplicating] = useState(false);
   const [dupEmployeeIds, setDupEmployeeIds] = useState<Set<string>>(new Set());
@@ -105,17 +109,23 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     setBusy(true);
     try {
       const newHours = Number(overrideHours);
+      // Only write hours when they actually changed. Compare against the line's
+      // CURRENT effective hours (override if set, else the BC estimate) — not
+      // line.overrideHours, which is usually null, so the old check fired an
+      // hours write on every save. That spurious write carried the OLD start and
+      // raced the shift below, which is why a manual date change often reverted.
+      const curHours = line.overrideHours ?? line.estimatedHours;
       // When tasks were re-picked, the hours change is applied below as the new
       // base estimatedHours (override cleared) — so skip the override path here.
-      if (!repick && !Number.isNaN(newHours) && newHours !== line.overrideHours) {
-        await updateTaskHours(line.id, newHours);
+      if (!repick && !Number.isNaN(newHours) && newHours !== curHours) {
+        await updateTaskHours(line.id, newHours, cascadeEnabled);
       }
       const newStart = new Date(startDate);
       if (
         newStart.getTime() !== line.startDateTime.getTime() ||
         employeeId !== line.employeeId
       ) {
-        await shiftTaskAndCommit(line.id, newStart, employeeId, true);
+        await shiftTaskAndCommit(line.id, newStart, employeeId, cascadeEnabled);
       }
       const numOrNull = (v: string): number | null => {
         const t = v.trim();

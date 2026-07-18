@@ -119,6 +119,49 @@ export function createScheduleStore(
   boardId: string,
 ): UseScheduleStore {
   return create<ScheduleStoreState>((set, get) => {
+    // --- Write pipeline ----------------------------------------------------
+    // Every Dataverse mutation goes through here so that:
+    //  (a) writes to the SAME line apply in submission order — a later intended
+    //      edit never loses the race to an earlier in-flight one (this is what
+    //      made a manual start/end date change fail ~half the time: a resize
+    //      write carrying the OLD start could land after the shift write with
+    //      the NEW start), and
+    //  (b) loadWeek() can wait for all in-flight writes before it re-reads —
+    //      otherwise a "quick reload" races the optimistic write and reads
+    //      stale data, silently reverting the edit (so it only "took" on the
+    //      2nd try).
+    // Optimism is unchanged: callers still set() the board immediately; only the
+    // background persistence is coordinated here.
+    const inFlight = new Set<Promise<unknown>>();
+    const writeTails = new Map<string, Promise<unknown>>();
+
+    /** Register a persist promise so settleWrites() can await it. */
+    const track = <T>(p: Promise<T>): Promise<T> => {
+      inFlight.add(p);
+      const clear = () => inFlight.delete(p);
+      p.then(clear, clear);
+      return p;
+    };
+
+    /** Queue a persist keyed by line id: same-id writes run in order (each
+     *  starts only once the previous one settles); different ids run
+     *  concurrently. The returned promise rejects if `op` rejects, so callers
+     *  can resync on failure. */
+    const queueWrite = (key: string, op: () => Promise<unknown>): Promise<unknown> => {
+      const prev = writeTails.get(key) ?? Promise.resolve();
+      const run = prev.then(op, op); // run op after prev settles, either way
+      writeTails.set(key, run);
+      const clear = () => {
+        if (writeTails.get(key) === run) writeTails.delete(key);
+      };
+      run.then(clear, clear);
+      return track(run);
+    };
+
+    /** Resolve once every in-flight write has settled (success or failure).
+     *  loadWeek awaits this so a reload never reads mid-write. */
+    const settleWrites = () => Promise.allSettled([...inFlight]);
+
     /** Restore a full schedule snapshot locally + re-persist the affected lines
      *  to Dataverse. Shared by every undo/redo thunk. */
     const applyScheduleSnapshot = (
@@ -136,7 +179,7 @@ export function createScheduleStore(
         overtime: s.overtime,
       };
       set({ schedule: sched, conflicts: detectConflicts(ctx) });
-      void persist().catch((e) => {
+      void track(persist()).catch((e) => {
         console.error("[schedule] undo/redo persist failed — resyncing", e);
         void get().loadWeek();
       });
@@ -179,6 +222,9 @@ export function createScheduleStore(
       const start = startOfWeek(weekStart ?? get().weekStart, { weekStartsOn: 1 });
       const end = endOfWeek(addDays(start, 6), { weekStartsOn: 1 });
       set({ loading: true, error: null, weekStart: start });
+      // Never read mid-write: wait for any optimistic edits still persisting so
+      // the reload can't overwrite them with stale server data.
+      await settleWrites();
       try {
         const ds = get().dataSource;
         const [departments, employees, schedule, workHours, overtime] = await Promise.all([
@@ -328,15 +374,17 @@ export function createScheduleStore(
           () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, shiftPayload(l)))),
         );
       }
-      void Promise.all(
+      await Promise.all(
         toPersist.map((line) =>
-          ds.updateScheduleLine(line.id, {
-            startDateTime: line.startDateTime,
-            endDateTime: line.endDateTime,
-            employeeId: line.employeeId,
-            departmentId: line.departmentId,
-            departmentWide: line.departmentWide ?? false,
-          }),
+          queueWrite(line.id, () =>
+            ds.updateScheduleLine(line.id, {
+              startDateTime: line.startDateTime,
+              endDateTime: line.endDateTime,
+              employeeId: line.employeeId,
+              departmentId: line.departmentId,
+              departmentWide: line.departmentWide ?? false,
+            }),
+          ),
         ),
       )
         .then(() => {
@@ -384,13 +432,15 @@ export function createScheduleStore(
           ),
         () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, resizePayload(l)))),
       );
-      void Promise.all(
+      await Promise.all(
         toPersist.map((line) =>
-          ds.updateScheduleLine(line.id, {
-            startDateTime: line.startDateTime,
-            endDateTime: line.endDateTime,
-            overrideHours: line.overrideHours,
-          }),
+          queueWrite(line.id, () =>
+            ds.updateScheduleLine(line.id, {
+              startDateTime: line.startDateTime,
+              endDateTime: line.endDateTime,
+              overrideHours: line.overrideHours,
+            }),
+          ),
         ),
       ).catch((e) => {
         console.error("[schedule] resize persist failed — resyncing", e);
@@ -413,7 +463,7 @@ export function createScheduleStore(
         () => ds.deleteScheduleLine(line.id),
         () => ds.createScheduleLine(line),
       );
-      void ds.createScheduleLine(line).catch((e) => {
+      await queueWrite(line.id, () => ds.createScheduleLine(line)).catch((e) => {
         console.error("[schedule] create persist failed — resyncing", e);
         void get().loadWeek();
       });
@@ -437,7 +487,7 @@ export function createScheduleStore(
           () => ds.deleteScheduleLine(removed.id),
         );
       }
-      void ds.deleteScheduleLine(lineId).catch((e) => {
+      await queueWrite(lineId, () => ds.deleteScheduleLine(lineId)).catch((e) => {
         console.error("[schedule] delete persist failed — resyncing", e);
         void get().loadWeek();
       });
