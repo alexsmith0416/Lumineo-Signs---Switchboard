@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, startOfDay } from "date-fns";
 import { fetchActiveJobs, type ActiveJob } from "../services/dataverse-live";
+import JobCardPanel from "./JobCardPanel";
 import {
   PROJECT_MANAGERS,
   SALESPEOPLE,
@@ -45,13 +46,27 @@ function ActiveJobsList({
   showSalesperson?: boolean;
   emptyLabel?: string;
 }) {
+  const [openJob, setOpenJob] = useState<ActiveJob | null>(null);
   if (loading) return <div className="loading">Loading jobs…</div>;
   if (jobs.length === 0)
     return <div className="active-jobs__empty">{emptyLabel ?? "No scheduled jobs right now."}</div>;
   return (
     <div className="active-jobs__list">
       {jobs.map((j) => (
-        <div key={j.jobNo} className="active-job">
+        <div
+          key={j.jobNo}
+          className="active-job active-job--clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenJob(j)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpenJob(j);
+            }
+          }}
+          title="View job card"
+        >
           <div className="active-job__head">
             <span className="active-job__no">{j.jobNo}</span>
             <span className="active-job__cust">{j.customerName}</span>
@@ -68,6 +83,7 @@ function ActiveJobsList({
           </div>
         </div>
       ))}
+      {openJob && <JobCardPanel job={openJob} onClose={() => setOpenJob(null)} />}
     </div>
   );
 }

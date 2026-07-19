@@ -11,6 +11,25 @@ import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
 import ProductionStepperSection from "./ProductionStepperSection";
 
+// Start/End are edited as dates only, but the engine schedules with times, so we
+// keep the time-of-day on the underlying datetime-local string and only swap the
+// date part when the user picks a new day.
+const datePart = (dt: string): string => dt.slice(0, 10);
+const timePart = (dt: string): string => dt.slice(11, 16) || "08:00";
+
+function LockIcon({ locked }: { locked: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      {locked ? (
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      ) : (
+        <path d="M8 11V7a4 4 0 0 1 7.5-2" />
+      )}
+    </svg>
+  );
+}
+
 interface EditJobPanelProps {
   line: ScheduleLine;
   onClose: () => void;
@@ -62,8 +81,6 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   // BC estimated hours replace the card's text and re-link the base hours
   // (clearing any manual override) on save.
   const [repick, setRepick] = useState<{ descriptions: string[]; hours: number } | null>(null);
-
-  const employee = employees.get(line.employeeId);
 
   // Live end preview shared by the End field + the Predicted pane.
   const startObj = startDate ? new Date(startDate) : null;
@@ -212,8 +229,21 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
-          {line.jobNo} · {line.customerName}
-          {readOnly && <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>· View only</span>}
+          <span>
+            {line.jobNo} · {line.customerName}
+            {readOnly && <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>· View only</span>}
+          </span>
+          {!readOnly && (
+            <button
+              type="button"
+              className={"section-title__lock" + (isLocked ? " section-title__lock--on" : "")}
+              onClick={() => setIsLocked((v) => !v)}
+              title="Pin task — cascade flows around it"
+              aria-pressed={isLocked}
+            >
+              <LockIcon locked={isLocked} />
+            </button>
+          )}
         </div>
 
         <div className="form-field">
@@ -229,7 +259,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           />
         </div>
         {line.jobNo && !line.isCustom && (
-          <div className="form-field">
+          <div className="form-field form-field--block">
             <JobTaskPicker
               jobNo={line.jobNo}
               kind={isInstall ? "installation" : "production"}
@@ -276,14 +306,16 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           <div className="form-field__label">Start</div>
           <input
             className="form-field__input"
-            type="datetime-local"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            type="date"
+            value={datePart(startDate)}
+            onChange={(e) => {
+              if (e.target.value) setStartDate(e.target.value + "T" + timePart(startDate));
+            }}
             disabled={readOnly}
           />
         </div>
         <div className="form-field">
-          <div className="form-field__label">Hours</div>
+          <div className="form-field__label">Estimated hours</div>
           <input
             className="form-field__input"
             type="number"
@@ -299,38 +331,21 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           <div className="form-field__label">End</div>
           <input
             className="form-field__input"
-            type="datetime-local"
-            value={endInput}
+            type="date"
+            value={datePart(endInput)}
             onChange={(e) => {
-              setEndInput(e.target.value);
-              onEndChange(e.target.value);
+              if (!e.target.value) return;
+              const dt = e.target.value + "T" + timePart(endInput);
+              setEndInput(dt);
+              onEndChange(dt);
             }}
-            onBlur={(e) => onEndChange(e.target.value)}
+            onBlur={(e) => {
+              if (e.target.value) onEndChange(e.target.value + "T" + timePart(endInput));
+            }}
             title="Set the end date — adjusts the hours to land here"
             disabled={readOnly}
           />
         </div>
-        <div className="form-field">
-          <div className="form-field__label">Locked</div>
-          <label
-            style={{
-              background: "var(--input-bg)",
-              padding: "8px 10px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={isLocked}
-              onChange={(e) => setIsLocked(e.target.checked)}
-              disabled={readOnly}
-            />
-            <span style={{ fontSize: 12 }}>Pin task — cascade flows around it</span>
-          </label>
-        </div>
-
         {line.jobNo && !line.isCustom && (
           <JobSchedulePanel jobNo={line.jobNo} readOnly={readOnly} />
         )}
@@ -418,18 +433,6 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           currentEnd={line.endDateTime}
           ignoreLineId={line.id}
         />
-        {employee && (
-          <div
-            style={{
-              padding: "0 12px 12px",
-              fontSize: 11,
-              color: "var(--text-tertiary)",
-            }}
-          >
-            {Math.round(employee.productivityRate * 100)}% productivity ·
-            standard {employee.standardHoursPerDay}h/day
-          </div>
-        )}
 
         <div style={{ flex: 1 }} />
 

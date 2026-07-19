@@ -1820,7 +1820,24 @@ input, select, textarea {
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.section-title__lock {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+.section-title__lock:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.section-title__lock--on { color: #fff; }
 
 .form-field {
   display: grid;
@@ -1828,6 +1845,11 @@ input, select, textarea {
   align-items: center;
   margin: 0;
   border-bottom: 1px solid var(--border);
+}
+/* Full-width field (no 110px label column) — e.g. the Job tasks dropdown. */
+.form-field--block {
+  display: block;
+  padding: 8px 10px;
 }
 
 .form-field__label {
@@ -3046,6 +3068,27 @@ input, select, textarea {
   border-radius: 6px;
   padding: 10px 12px;
   background: var(--surface);
+}
+.active-job--clickable {
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s;
+}
+.active-job--clickable:hover {
+  border-color: var(--lumineo-navy);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+.active-job--clickable:focus-visible {
+  outline: 2px solid var(--lumineo-navy);
+  outline-offset: 1px;
+}
+/* Section label inside the read-only Job Card panel. */
+.jobcard__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 .active-job__head {
   display: flex;
