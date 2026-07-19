@@ -739,6 +739,7 @@ function mapCardRecord(r: Row): ScheduleLine {
     isCustom: Boolean(r.crfdf_iscustom),
     customColor: s(r.crfdf_customcolor) || null,
     customTextColor: s(r.crfdf_customtextcolor) || null,
+    finalInstall: Boolean(r.crfdf_finalinstall),
     shipmentLoadId: r["_crfdf_shipmentload_value"] == null ? null : s(r["_crfdf_shipmentload_value"]),
   };
 }
@@ -768,6 +769,7 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
     if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
     if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
     if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
+    if (line.finalInstall !== undefined) rec.crfdf_finalinstall = line.finalInstall;
   }
   if (forCreate) rec.crfdf_region = isNek;
   if (line.employeeId) rec["crfdf_employee@odata.bind"] = `/${INSTALL_SET}(${line.employeeId})`;

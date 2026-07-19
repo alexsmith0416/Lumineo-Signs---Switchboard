@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { addDays } from "date-fns";
+import { addDays, isSameDay, startOfDay } from "date-fns";
 import {
   useInstallationStoreNEK,
   useInstallationStoreWK,
 } from "../store/schedule-store";
+import { useJobScheduleStore } from "../store/job-schedule-store";
 import {
   useInstallationScenarioStoreNEK,
   useInstallationScenarioStoreWK,
@@ -88,6 +89,27 @@ export default function InstallationCalendar({
     }
     return [...jobs.values()].reduce((a, b) => a + b, 0);
   })();
+
+  // "Final install" cards set the job's scheduled install date to their day.
+  // A Red date locks the scheduled date, so it wins. If a job has more than one
+  // final card, the latest day is used. Idempotent (only writes on a change).
+  const jobSchedByJob = useJobScheduleStore((s) => s.byJob);
+  const updateJobSched = useJobScheduleStore((s) => s.update);
+  useEffect(() => {
+    const finalByJob = new Map<string, Date>();
+    for (const line of [...wkSchedule, ...nekSchedule]) {
+      if (!line.finalInstall || !line.jobNo || line.isCustom) continue;
+      const day = startOfDay(line.startDateTime);
+      const existing = finalByJob.get(line.jobNo);
+      if (!existing || day > existing) finalByJob.set(line.jobNo, day);
+    }
+    for (const [jobNo, day] of finalByJob) {
+      const js = jobSchedByJob[jobNo];
+      if (js?.redDate) continue; // red date locks the scheduled date
+      const cur = js?.scheduledInstallDate ?? null;
+      if (!cur || !isSameDay(cur, day)) void updateJobSched(jobNo, { scheduledInstallDate: day });
+    }
+  }, [wkSchedule, nekSchedule, jobSchedByJob, updateJobSched]);
 
   // A fragment (not a wrapping div) so each control is a direct child of
   // .calendar-toolbar — same as Production — and wraps uniformly on mobile.

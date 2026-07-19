@@ -97,6 +97,9 @@ export default function AddJobPanel({
   const [customScope, setCustomScope] = useState<"resource" | "department" | "all">("resource");
   const [customDeptId, setCustomDeptId] = useState<string>("");
   const [customShipmentLoadId, setCustomShipmentLoadId] = useState<string>("");
+  // Installation only: mark this card as the job's FINAL install — its day sets
+  // the job's scheduled install date.
+  const [finalInstall, setFinalInstall] = useState(false);
 
   const kind = useStore((s) => s.dataSource.kind);
   const loads = useLoadsStore((s) => s.loads);
@@ -264,6 +267,7 @@ export default function AddJobPanel({
         isLocked: false,
         jobSequence: first.lineNo,
         installZip: selected.job.shipToZip || null,
+        ...(kind === "installation" && finalInstall ? { finalInstall: true } : {}),
       };
       const end = calculateEndTime(cursor, effectiveHours(mergedLine, emp), emp, ctxForEngine);
       await addScheduleLine({
@@ -309,6 +313,7 @@ export default function AddJobPanel({
         isLocked: false,
         jobSequence: first.lineNo,
         installZip: selected.job.shipToZip || null,
+        ...(kind === "installation" && finalInstall ? { finalInstall: true } : {}),
       };
       const end = emp
         ? calculateEndTime(first.start, effectiveHours(mergedLine, emp), emp, ctxForEngine)
@@ -362,6 +367,7 @@ export default function AddJobPanel({
       isLocked: false,
       jobSequence: 0,
       installZip: selected.job.shipToZip || null,
+      ...(kind === "installation" && finalInstall ? { finalInstall: true } : {}),
     };
     const end = calculateEndTime(cursor, effectiveHours(base, emp), emp, ctxForEngine);
     await addScheduleLine({
@@ -1103,6 +1109,30 @@ export default function AddJobPanel({
         )}
 
         </div>
+
+        {kind === "installation" && cardKind === "bc" && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 12px",
+              borderTop: "1px solid var(--border)",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+            title="This card's day sets the job's scheduled install date"
+          >
+            <input
+              type="checkbox"
+              checked={finalInstall}
+              onChange={(e) => setFinalInstall(e.target.checked)}
+            />
+            <span>
+              <strong>Final install</strong> — this card&apos;s day sets the job&apos;s scheduled install date
+            </span>
+          </label>
+        )}
 
         <div
           className="slide-over__footer"

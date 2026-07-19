@@ -49,6 +49,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [crewPersons, setCrewPersons] = useState(line.crewPersons?.toString() ?? "");
   const [crewTrucks, setCrewTrucks] = useState(line.crewTrucks?.toString() ?? "");
   const [installZip, setInstallZip] = useState(line.installZip ?? "");
+  const [finalInstall, setFinalInstall] = useState(!!line.finalInstall);
   const [employeeId, setEmployeeId] = useState(line.employeeId);
   const [startDate, setStartDate] = useState(
     format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
@@ -158,6 +159,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
         changes.crewTrucks = numOrNull(crewTrucks);
       if ((installZip.trim() || null) !== (line.installZip ?? null))
         changes.installZip = installZip.trim() || null;
+      if (finalInstall !== !!line.finalInstall) changes.finalInstall = finalInstall;
       if (Object.keys(changes).length > 0) {
         await dataSource.updateScheduleLine(line.id, changes);
         await loadWeek();
@@ -379,6 +381,28 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             placeholder="e.g. 67501"
             disabled={readOnly}
           />
+        </div>
+        <div className="form-field">
+          <div className="form-field__label">Final install</div>
+          <label
+            style={{
+              background: "var(--input-bg)",
+              padding: "8px 10px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={finalInstall}
+              onChange={(e) => setFinalInstall(e.target.checked)}
+              disabled={readOnly}
+            />
+            <span style={{ fontSize: 12 }}>
+              This card&apos;s day sets the job&apos;s scheduled install date
+            </span>
+          </label>
         </div>
         </>
         )}

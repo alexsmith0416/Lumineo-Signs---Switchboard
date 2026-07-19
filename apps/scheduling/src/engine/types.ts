@@ -77,6 +77,9 @@ export interface ScheduleLine {
   crewBuckets?: number | null;
   installZip?: string | null;
   region?: string | null;
+  /** Installation only: this card is the job's FINAL install. Its day sets the
+   *  job's scheduled install date (unless a Red date locks it). */
+  finalInstall?: boolean;
   /** BC salesperson code for this job (crfdf_bcjobs.crfdf_salespersoncode),
    *  overlaid by job number at read time. Drives the card's PM line and the
    *  Sales/PM "Active Jobs" views. */

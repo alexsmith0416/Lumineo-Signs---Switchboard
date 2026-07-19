@@ -21,6 +21,7 @@ import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { useSettingsStore } from "../store/settings-store";
 import { useHistoryStore } from "../store/history-store";
+import { useJobScheduleStore } from "../store/job-schedule-store";
 import { CcoBadge } from "./CcoBadge";
 import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
@@ -1359,6 +1360,10 @@ function GanttCard({
 }: GanttCardProps) {
   const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
 
+  // A job with a Red (drop-dead install) date gets a pulsing red outline on
+  // every schedule. Keyed by job number, so it shows on all of the job's cards.
+  const hasRedDate = useJobScheduleStore((s) => !!(line.jobNo && s.byJob[line.jobNo]?.redDate));
+
   const [resizePreview, setResizePreview] = useState<{
     deltaPx: number;
     newHours: number;
@@ -1413,7 +1418,7 @@ function GanttCard({
 
   return (
     <div
-      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}`}
+      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}${hasRedDate ? " gantt-card--reddate" : ""}`}
       style={{
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,
