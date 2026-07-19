@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSettingsStore } from "../store/settings-store";
 import { applyHeaderVisibility, isInPowerPlayer } from "../services/power-host";
-import { useCurrentUser } from "../services/current-user";
+import { isAdminLevel, useCurrentUser } from "../services/current-user";
 import UsersAdminPanel from "./UsersAdminPanel";
 
 /** App settings. Cascade/conflict behavior + Power Apps header visibility, plus
@@ -112,7 +112,7 @@ export default function SettingsScreen() {
         </div>
       </div>
 
-      {realType === "admin" && (
+      {isAdminLevel(realType) && (
         <div className="settings-section">
           <div className="settings-section__title">Users</div>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Employee } from "../engine/types";
 import {
   TYPE_CONFIG,
+  isAdminLevel,
   useCurrentUser,
   type EmployeeGroup,
   type UserType,
@@ -44,7 +45,7 @@ export default function ViewAsMenu() {
   const { fullName, type, realType, isImpersonating, viewingAsName } = useCurrentUser();
   const setActive = useImpersonationStore((s) => s.setActive);
   const clear = useImpersonationStore((s) => s.clear);
-  const canImpersonate = realType === "admin";
+  const canImpersonate = isAdminLevel(realType);
 
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<UserType | null>(null);

@@ -34,6 +34,7 @@ export type Role =
 // derived type (shared floor account, Sales/PM code, else admin).
 export type UserType =
   | "admin"
+  | "developer"
   | "ops"
   | "production"
   | "install-wk"
@@ -82,7 +83,11 @@ interface TypeConfig {
 
 export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
   admin: { label: "Admin", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
-  ops: { label: "Ops", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  // Developer mirrors Admin (full access + may "view as" any user). The type
+  // slug is "developer"; only the label differs.
+  developer: { label: "Developer", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  // Label is "Operations" but the type slug stays "ops" (Dataverse crfdf_usertype).
+  ops: { label: "Operations", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
   production: { label: "Production", defaultView: "production", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
   "install-wk": { label: "WK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "WK" },
   "install-nek": { label: "NEK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
@@ -104,6 +109,11 @@ export const USER_DIRECTORY: Record<string, UserType> = {
 export function isUserType(v: string | undefined | null): v is UserType {
   return v != null && Object.prototype.hasOwnProperty.call(TYPE_CONFIG, v);
 }
+
+/** Admin-level types — full access, and may "view as" any user + manage users.
+ *  Developer mirrors Admin. */
+export const isAdminLevel = (t: UserType | undefined): boolean =>
+  t === "admin" || t === "developer";
 
 /** Resolve a login's user type: the directory wins (when it's a valid type),
  *  else derive a sensible one. `directory` defaults to the hardcoded map;
@@ -225,7 +235,7 @@ export function useCurrentUser(): CurrentUser {
 
   const realType = resolveUserType(state.upn, directory);
   // Only real admins may "view as" another user — a non-admin can never escalate.
-  const canImpersonate = realType === "admin";
+  const canImpersonate = isAdminLevel(realType);
   const imp = useImpersonationStore((s) => s.active);
   const active = canImpersonate ? imp : null;
 
