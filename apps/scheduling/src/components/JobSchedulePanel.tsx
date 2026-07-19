@@ -5,6 +5,12 @@ import { computeJobTargets } from "../services/job-schedule-data";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
+// Release date + computed targets are hidden until we can source a real BC
+// release date (the "status Open" date isn't stored in BC; it's likely a custom
+// field). Flip this back to `true` once the flow maps the real field — the code
+// and the crfdf_jobschedule.releaseddate column stay in place, just hidden.
+const SHOW_TARGETS = false;
+
 /** Parse an <input type="date"> value ("yyyy-MM-dd") as a LOCAL date (no tz shift). */
 function parseDateInput(v: string): Date | null {
   if (!v) return null;
@@ -25,10 +31,10 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 /**
- * Job-level scheduling: release anchor + computed targets (Phase 1), plus the
- * scheduled install date and drop-dead Red date (Phase 2). All keyed by jobNo,
- * so it's the same on every card for a job. Setting a Red date auto-fills and
- * locks the scheduled date, and drives the pulsing red outline on the card.
+ * Job-level scheduling dates (keyed by jobNo). Scheduled install + drop-dead Red
+ * date are live; the release-anchored targets are hidden (SHOW_TARGETS) until a
+ * real BC release date is available. Setting a Red date auto-fills and locks the
+ * scheduled date and drives the pulsing red outline on the card.
  */
 export default function JobSchedulePanel({
   jobNo,
@@ -44,14 +50,12 @@ export default function JobSchedulePanel({
     void load();
   }, [load]);
 
-  // Scheduled / Red pickers are tucked behind an eye toggle. Auto-open when a
-  // date is already set so it's visible, otherwise hidden by default.
   const [revealed, setRevealed] = useState(false);
 
-  // Vinyl/graphics-only jobs get a 4-week production target instead of 7.
+  // Vinyl/graphics-only → shorter production target. Only needed while targets show.
   const [vinylOnly, setVinylOnly] = useState(false);
   useEffect(() => {
-    if (!LIVE || !jobNo) return;
+    if (!SHOW_TARGETS || !LIVE || !jobNo) return;
     let alive = true;
     void import("../services/dataverse-live")
       .then((m) => m.jobProductionDepartments(jobNo))
@@ -71,8 +75,6 @@ export default function JobSchedulePanel({
 
   const onRedChange = (v: string) => {
     const d = parseDateInput(v);
-    // A Red date is a fixed install due date — auto-fill + lock the scheduled
-    // install date to it. Clearing the Red date leaves the scheduled date as-is.
     if (d) void update(jobNo, { redDate: d, scheduledInstallDate: d });
     else void update(jobNo, { redDate: null });
   };
@@ -80,7 +82,7 @@ export default function JobSchedulePanel({
   return (
     <div className="job-sched">
       <div className="job-sched__head">
-        <span className="job-sched__title">Targets &amp; Dates</span>
+        <span className="job-sched__title">Install Dates</span>
         {red && <span className="job-sched__reddot" title="Fixed drop-dead install date">🔴 Red date</span>}
         <button
           type="button"
@@ -93,42 +95,46 @@ export default function JobSchedulePanel({
         </button>
       </div>
 
-      <div className="job-sched__row">
-        <span className="job-sched__label">Release date</span>
-        <input
-          type="date"
-          className="form-field__input job-sched__date"
-          value={toDateInput(released)}
-          disabled={readOnly}
-          onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
-          title="The day this job was released to production (BC status Open). Anchors the targets below."
-        />
-      </div>
-
-      {released ? (
-        <div className="job-sched__targets">
-          <div>
-            Target production complete: <strong>{fmtLong(targets.targetProductionComplete)}</strong>
-            {vinylOnly && <span className="job-sched__note"> · vinyl/graphics (4 wk)</span>}
+      {SHOW_TARGETS && (
+        <>
+          <div className="job-sched__row">
+            <span className="job-sched__label">Release date</span>
+            <input
+              type="date"
+              className="form-field__input job-sched__date"
+              value={toDateInput(released)}
+              disabled={readOnly}
+              onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
+              title="The day this job was released to production. Anchors the targets below."
+            />
           </div>
-          {/* Once a scheduled install date exists, it supersedes the estimate. */}
-          {scheduled ? (
-            <div>
-              Scheduled install:{" "}
-              <strong className={red ? "job-sched__red" : undefined}>{fmtLong(scheduled)}</strong>
-              {red && <span className="job-sched__note"> · locked by red date</span>}
-            </div>
-          ) : (
-            <div>
-              Est. install window:{" "}
-              <strong>
-                {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
-              </strong>
+          {released && (
+            <div className="job-sched__targets">
+              <div>
+                Target production complete: <strong>{fmtLong(targets.targetProductionComplete)}</strong>
+                {vinylOnly && <span className="job-sched__note"> · vinyl/graphics (4 wk)</span>}
+              </div>
+              {!scheduled && (
+                <div>
+                  Est. install window:{" "}
+                  <strong>
+                    {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
+                  </strong>
+                </div>
+              )}
             </div>
           )}
+        </>
+      )}
+
+      {scheduled && (
+        <div className="job-sched__targets">
+          <div>
+            Scheduled install:{" "}
+            <strong className={red ? "job-sched__red" : undefined}>{fmtLong(scheduled)}</strong>
+            {red && <span className="job-sched__note"> · locked by red date</span>}
+          </div>
         </div>
-      ) : (
-        <div className="job-sched__hint">Set the release date to compute the production &amp; install targets.</div>
       )}
 
       {revealed && (
