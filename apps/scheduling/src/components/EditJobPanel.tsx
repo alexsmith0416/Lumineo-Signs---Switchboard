@@ -228,13 +228,13 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             disabled={readOnly}
           />
         </div>
-        {!readOnly && line.jobNo && !line.isCustom && (
+        {line.jobNo && !line.isCustom && (
           <div className="form-field">
-            <div className="form-field__label">Job tasks (from BC)</div>
             <JobTaskPicker
               jobNo={line.jobNo}
               kind={isInstall ? "installation" : "production"}
               currentDescriptions={taskDescription.split("\n")}
+              disabled={readOnly}
               onChange={(descriptions, totalHours) => {
                 setTaskDescription(descriptions.join("\n"));
                 const h = totalHours || line.estimatedHours;

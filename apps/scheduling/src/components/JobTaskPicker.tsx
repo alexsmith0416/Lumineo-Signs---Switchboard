@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { bcService } from "../services/bc";
 import {
+  departmentNameForLine,
   isInstallResource,
   isProductionResource,
   mapPlanningLines,
   type MappedPlanningLine,
 } from "../services/planning-line-mapping";
+import { cardStepKey } from "../services/production-steps";
+import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 
 const norm = (s: string): string => s.toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -21,10 +24,29 @@ interface JobTaskPickerProps {
   disabled?: boolean;
 }
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="3" aria-hidden="true"
+      style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}
+    >
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  );
+}
+
 /**
- * Re-pick which of a BC job's planning lines (tasks) are scheduled on a card.
- * Selecting tasks re-links the card's text AND its estimated labor hours (the
- * sum), so you no longer have to delete + re-add a job to change its tasks.
+ * A job's BC planning lines (tasks) as a collapsible checklist. Each row carries
+ * two independent states:
+ *  - **on card** (the checkbox) — whether this task's text is scheduled on the
+ *    card. Toggling re-links the card's text AND summed estimated hours, so you
+ *    no longer have to delete + re-add a job to change its tasks. Checked rows
+ *    are highlighted; pre-checked by matching the card's (editable) task text.
+ *  - **done** — derived, read-only: the task's department has been marked
+ *    complete on the production stepper, so completing a department node greys
+ *    out all of that department's tasks here. Install-kind tasks grey when the
+ *    Install step completes.
  */
 export default function JobTaskPicker({
   jobNo,
@@ -36,6 +58,15 @@ export default function JobTaskPicker({
   const [lines, setLines] = useState<MappedPlanningLine[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [error, setError] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  // Department completions drive the derived "done" grey-out.
+  const load = useJobDeptCompletionStore((s) => s.load);
+  const jobCompletions = useJobDeptCompletionStore((s) => s.byJob[jobNo]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const completed = new Set(Object.keys(jobCompletions ?? {}));
 
   useEffect(() => {
     let alive = true;
@@ -84,24 +115,81 @@ export default function JobTaskPicker({
     );
   };
 
-  if (error) return <div className="jtp__note">Couldn't load job tasks from BC.</div>;
-  if (lines === null) return <div className="jtp__note">Loading job tasks…</div>;
-  if (lines.length === 0) return <div className="jtp__note">No BC tasks found for this job.</div>;
+  // A task is "done" when its department (via resource code / description) has
+  // been completed on the stepper; install-kind tasks key off the Install step.
+  const isDone = (l: MappedPlanningLine): boolean => {
+    const key = cardStepKey(kind, departmentNameForLine(l.resourceNo, l.description));
+    return !!key && completed.has(key);
+  };
 
-  const selectedHours = lines.filter((_, i) => selected.has(i)).reduce((s, l) => s + l.estimatedHours, 0);
+  const onCard = selected.size;
+  const doneCount = lines ? lines.filter(isDone).length : 0;
 
   return (
     <div className="jtp">
-      {lines.map((l, i) => (
-        <label key={`${l.lineNo}-${i}`} className={"jtp__row" + (selected.has(i) ? " jtp__row--on" : "")}>
-          <input type="checkbox" checked={selected.has(i)} disabled={disabled} onChange={() => toggle(i)} />
-          <span className="jtp__desc">{l.description}</span>
-          <span className="jtp__hours">{l.estimatedHours}h</span>
-        </label>
-      ))}
-      <div className="jtp__total">
-        {selected.size} task{selected.size === 1 ? "" : "s"} · {selectedHours}h estimated
-      </div>
+      <button
+        type="button"
+        className="jtp__header"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <Chevron open={open} />
+        <span className="jtp__header-title">Job tasks</span>
+        <span className="jtp__summary">
+          {lines === null
+            ? "…"
+            : `${lines.length} task${lines.length === 1 ? "" : "s"}`}
+          {lines && lines.length > 0 && (
+            <>
+              {" · "}
+              <span className="jtp__summary-on">{onCard} on card</span>
+              {doneCount > 0 && <span className="jtp__summary-done"> · {doneCount} done</span>}
+            </>
+          )}
+        </span>
+      </button>
+
+      {open && (
+        <div className="jtp__body">
+          {error ? (
+            <div className="jtp__note">Couldn&apos;t load job tasks from BC.</div>
+          ) : lines === null ? (
+            <div className="jtp__note">Loading job tasks…</div>
+          ) : lines.length === 0 ? (
+            <div className="jtp__note">No BC tasks found for this job.</div>
+          ) : (
+            <>
+              {lines.map((l, i) => {
+                const done = isDone(l);
+                return (
+                  <label
+                    key={`${l.lineNo}-${i}`}
+                    className={
+                      "jtp__row" +
+                      (selected.has(i) ? " jtp__row--on" : "") +
+                      (done ? " jtp__row--done" : "")
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(i)}
+                      disabled={disabled}
+                      onChange={() => toggle(i)}
+                    />
+                    <span className="jtp__desc">{l.description}</span>
+                    {done && <span className="jtp__done">✓ done</span>}
+                    <span className="jtp__hours">{l.estimatedHours}h</span>
+                  </label>
+                );
+              })}
+              <div className="jtp__total">
+                {onCard} on card · {doneCount} done ·{" "}
+                {lines.filter((_, i) => selected.has(i)).reduce((s, l) => s + l.estimatedHours, 0)}h estimated
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

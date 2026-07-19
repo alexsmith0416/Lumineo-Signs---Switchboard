@@ -71,13 +71,16 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
       </div>
       <DepartmentStepper steps={steps} onNodeClick={canEditSteps ? onNodeClick : undefined} />
       {doneStamps.length > 0 && (
-        <div className="job-stepper__log">
-          {doneStamps.map((d) => (
-            <div key={d.key}>
-              <strong>{d.label}</strong> · {d.stamp?.by || "—"}
-              {d.stamp?.date ? ` · ${format(d.stamp.date, "MMM d")}` : ""}
-            </div>
-          ))}
+        <div>
+          <div className="job-stepper__log-title">Completed</div>
+          <div className="job-stepper__log">
+            {doneStamps.map((d) => (
+              <div key={d.key}>
+                <strong>{d.label}</strong> · {d.stamp?.by || "—"}
+                {d.stamp?.date ? ` · ${format(d.stamp.date, "MMM d")}` : ""}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

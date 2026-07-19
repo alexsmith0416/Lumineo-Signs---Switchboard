@@ -2253,6 +2253,14 @@ input, select, textarea {
   pointer-events: none;
 }
 .job-stepper__hint { font-weight: 400; color: var(--text-tertiary); text-transform: none; letter-spacing: 0; }
+.job-stepper__log-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
 .job-stepper__log {
   font-size: 11px;
   color: var(--text-secondary);
@@ -3427,13 +3435,48 @@ input, select, textarea {
 .jtp {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  overflow: hidden;
+}
+.jtp__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+  text-align: left;
+  width: 100%;
+}
+.jtp__header:hover { background: var(--bg-tertiary); }
+.jtp__header-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+.jtp__summary {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.jtp__summary-on { color: var(--lumineo-navy); font-weight: 600; }
+.jtp__summary-done { color: #0f6e56; font-weight: 600; }
+.jtp__body {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   max-height: 200px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 4px;
-  background: var(--input-bg);
+  border-top: 1px solid var(--border);
 }
 .jtp__row {
   display: flex;
@@ -3443,12 +3486,27 @@ input, select, textarea {
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
+  border-left: 3px solid transparent;
 }
 .jtp__row:hover {
   background: var(--bg-tertiary);
 }
 .jtp__row--on {
   background: var(--bg-tertiary);
+  border-left-color: var(--lumineo-navy);
+}
+.jtp__row--done .jtp__desc {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+.jtp__row--done { opacity: 0.7; }
+.jtp__done {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f6e56;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 .jtp__desc {
   flex: 1;
