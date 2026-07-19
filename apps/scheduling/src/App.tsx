@@ -15,6 +15,7 @@ import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
 import { useCurrentUser } from "./services/current-user";
 import { useSettingsStore } from "./store/settings-store";
+import { useJobScheduleStore } from "./store/job-schedule-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -102,6 +103,11 @@ export default function App() {
     if (!LIVE) return;
     void useLoadsStore.getState().hydrate();
     void hydrateInstallCardCache().catch(() => {});
+  }, []);
+
+  // Per-job schedule dates (release/target/red) — loaded once, overlaid by jobNo.
+  useEffect(() => {
+    void useJobScheduleStore.getState().load();
   }, []);
 
   // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.

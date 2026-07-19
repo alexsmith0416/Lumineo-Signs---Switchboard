@@ -8,6 +8,7 @@ import { useLivePreview } from "../hooks/useLivePreview";
 import { useSettingsStore } from "../store/settings-store";
 import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
+import JobSchedulePanel from "./JobSchedulePanel";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
@@ -324,6 +325,10 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             <span style={{ fontSize: 12 }}>Pin task — cascade flows around it</span>
           </label>
         </div>
+
+        {line.jobNo && !line.isCustom && (
+          <JobSchedulePanel jobNo={line.jobNo} readOnly={readOnly} />
+        )}
 
         {isInstall && (
         <>

@@ -40,6 +40,8 @@ import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/typ
 import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
+import type { JobSchedule } from "./job-schedule-data";
+import { departmentNameForLine, isProductionResource } from "./planning-line-mapping";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -1614,6 +1616,82 @@ export async function deleteRosterOverrideFor(
   await Promise.all(
     existing.map((r) => S.DeleteRecordWithOrganization(org, RO_SET, s(r.crfdf_rosteroverrideid))),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Job schedule (crfdf_jobschedule) — per-job release/target/red dates
+// ---------------------------------------------------------------------------
+const JOBSCHED_SET = "crfdf_jobschedules";
+
+// DateOnly columns: parse/format as a LOCAL calendar date (no tz shift) so a
+// date entered as Jul 19 never displays as Jul 18 in a negative-offset zone.
+const parseDateOnly = (v: unknown): Date | null => {
+  if (v == null || v === "") return null;
+  const [y, mo, d] = String(v).slice(0, 10).split("-").map(Number);
+  return y ? new Date(y, (mo || 1) - 1, d || 1) : null;
+};
+const fmtDateOnly = (d: Date | null): string | null => {
+  if (!d) return null;
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+};
+
+function mapJobSchedule(r: Row): JobSchedule {
+  return {
+    jobNo: s(r.crfdf_jobno),
+    releasedDate: parseDateOnly(r.crfdf_releaseddate),
+    scheduledInstallDate: parseDateOnly(r.crfdf_scheduledinstalldate),
+    redDate: parseDateOnly(r.crfdf_reddate),
+  };
+}
+
+function jobScheduleToRecord(sch: Partial<JobSchedule>): Row {
+  const rec: Row = {};
+  if (sch.jobNo !== undefined) {
+    rec.crfdf_jobno = sch.jobNo;
+    rec.crfdf_name = sch.jobNo || "Job";
+  }
+  if (sch.releasedDate !== undefined) rec.crfdf_releaseddate = fmtDateOnly(sch.releasedDate);
+  if (sch.scheduledInstallDate !== undefined)
+    rec.crfdf_scheduledinstalldate = fmtDateOnly(sch.scheduledInstallDate);
+  if (sch.redDate !== undefined) rec.crfdf_reddate = fmtDateOnly(sch.redDate);
+  return rec;
+}
+
+export async function fetchJobSchedules(): Promise<JobSchedule[]> {
+  const rows = await list(JOBSCHED_SET, {});
+  return rows.map(mapJobSchedule).filter((sch) => sch.jobNo);
+}
+
+/** One row per job (keyed by crfdf_jobno): update in place, else create. */
+export async function upsertJobSchedule(sch: JobSchedule): Promise<void> {
+  const { S, org } = await sdk();
+  const existing = await list(JOBSCHED_SET, {
+    filter: `crfdf_jobno eq '${odataLit(sch.jobNo)}'`,
+  }).catch(() => [] as Row[]);
+  if (existing.length > 0) {
+    const id = s(existing[0]!.crfdf_jobscheduleid);
+    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, id, jobScheduleToRecord(sch));
+    if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule(update) failed");
+    return;
+  }
+  const rec = { crfdf_jobscheduleid: uuid(), ...jobScheduleToRecord(sch) };
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule(create) failed");
+}
+
+/** Distinct PRODUCTION department names a job needs, from its BC planning lines.
+ *  Used to detect vinyl/graphics-only jobs (shorter production target) and to
+ *  build the production stepper. */
+export async function jobProductionDepartments(jobNo: string): Promise<string[]> {
+  const lines = await planningLinesFor(jobNo).catch(() => []);
+  const names = new Set<string>();
+  for (const l of lines) {
+    if (!isProductionResource(l.resourceNo)) continue;
+    const name = departmentNameForLine(l.resourceNo, l.description);
+    if (name) names.add(name);
+  }
+  return [...names];
 }
 
 /**

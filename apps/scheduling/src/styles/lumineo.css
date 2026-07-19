@@ -2146,6 +2146,50 @@ input, select, textarea {
 /* ---- Load editor slide-over ---- */
 .slide-over__panel--wide { width: 600px; overflow-y: auto; }
 
+/* --- Job schedule / targets (edit panel) ----------------------------------- */
+.job-sched {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.job-sched__title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+.job-sched__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.job-sched__label {
+  flex: 0 0 100px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.job-sched__date {
+  flex: 1;
+  min-width: 0;
+  border-radius: 4px;
+}
+.job-sched__targets {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.job-sched__note {
+  color: var(--text-tertiary);
+}
+.job-sched__hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
 /* --- Help screen (embedded user guide) ------------------------------------- */
 .help-screen {
   display: flex;
