@@ -283,7 +283,6 @@ export default function CalendarView({
     workHours,
     overtime,
     loadWeek,
-    setWeekStart,
     shiftTaskAndCommit,
     updateTaskHours,
     moveRosterPermanent,
@@ -712,10 +711,13 @@ export default function CalendarView({
       )}
       {!presentationMode && (
       <div className="calendar-toolbar">
-        <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
+        {/* Navigate via loadWeek (not setWeekStart) so the target week's data is
+            actually fetched — live schedule lines are queried per week, so a
+            state-only week change would show an empty/stale week. */}
+        <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
           className="calendar-toolbar__today"
-          onClick={() => setWeekStart(new Date())}
+          onClick={() => void loadWeek(new Date())}
           disabled={
             startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
             startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
@@ -724,7 +726,7 @@ export default function CalendarView({
         >
           Today
         </button>
-        <button onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
+        <button onClick={() => void loadWeek(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
         <div className="calendar-toolbar__spacer" />
         {toolbarExtras}
@@ -923,6 +925,7 @@ export default function CalendarView({
                       : null
                   }
                   onCellDrop={onCellDrop}
+                  canAddJob={!!onEmptyCellClick}
                   onCellClick={(day) => {
                     if (!onEmptyCellClick) return;
                     const start = new Date(day);
@@ -1116,6 +1119,8 @@ interface EmployeeRowProps {
   showWeather: boolean;
   highlightedLineIds: Set<string> | null;
   onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
+  /** Whether clicking a day cell adds a job (false on read-only boards). */
+  canAddJob: boolean;
   onCellClick: (day: Date) => void;
   onJobClick: (line: ScheduleLine) => void;
   onResize: (line: ScheduleLine, newHours: number) => Promise<void>;
@@ -1148,6 +1153,7 @@ function EmployeeRow({
   showWeather,
   highlightedLineIds,
   onCellDrop,
+  canAddJob,
   onCellClick,
   onJobClick,
   onResize,
@@ -1241,9 +1247,6 @@ function EmployeeRow({
         }}
       >
         {days.map((day, i) => {
-          const occupiedHere = cards.some(
-            (c) => i >= c.startIdx && i < c.startIdx + c.spanDays,
-          );
           const weekend = isWeekend(day);
           // Assist: "full" blocks the whole day (greyed, no drop); "am"/"pm"
           // tints half the cell but still lets a production job land the other
@@ -1251,12 +1254,17 @@ function EmployeeRow({
           const assistHalf = assistDays?.get(i);
           const assistFull = assistHalf === "full";
           const assistPartial = assistHalf === "am" || assistHalf === "pm";
+          // A day cell is addable whether or not it already has cards — clicking
+          // the empty space under/around a card adds another job to that day
+          // (clicks that land ON a card stop propagation and open the editor
+          // instead). Blocked only on read-only boards and full-day assist.
+          const addable = canAddJob && !assistFull;
           return (
             <div
               key={i}
               className={
                 `day-cell${weekend ? " day-cell--weekend" : ""}` +
-                `${!occupiedHere && !assistFull ? " day-cell--empty" : ""}` +
+                `${addable ? " day-cell--addable" : ""}` +
                 `${dropHoverIdx === i ? " day-cell--drop-target" : ""}` +
                 `${assistFull ? " day-cell--assist" : ""}` +
                 `${assistPartial ? ` day-cell--assist-${assistHalf}` : ""}`
@@ -1264,7 +1272,7 @@ function EmployeeRow({
               onDragOver={assistFull ? undefined : handleStripDragOver}
               onDrop={assistFull ? undefined : handleStripDrop}
               onClick={() => {
-                if (!occupiedHere && !assistFull) onCellClick(day);
+                if (addable) onCellClick(day);
               }}
             >
               {assistFull && <span className="day-cell__assist">Installation</span>}

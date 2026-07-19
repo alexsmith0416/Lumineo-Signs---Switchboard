@@ -1527,7 +1527,10 @@ input, select, textarea {
   bottom: 2px;
 }
 
-.day-cell--empty:hover {
+/* Addable day cell (any day where a click adds a job — occupied or empty).
+   The subtle hover + pointer signals you can click the open space under a card
+   to add another job on that day. */
+.day-cell--addable:hover {
   background: var(--bg-tertiary);
   cursor: pointer;
 }
