@@ -162,6 +162,80 @@
                 "from": "@outputs('Customers')?['body/value']",
                 "where": "@equals(item()?['crfdf_customerno'],items('Apply_to_each')?['billToCustomerNo'])"
               }
+            },
+            "List_JobSchedule": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_jobschedules",
+                  "$filter": "crfdf_jobno eq '@{items('Apply_to_each')?['no']}'",
+                  "$select": "crfdf_jobscheduleid,crfdf_releaseddate",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {}
+            },
+            "Stamp_release_date_if_missing": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@empty(coalesce(first(outputs('List_JobSchedule')?['body/value'])?['crfdf_releaseddate'], ''))",
+                      true
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Update_JobSchedule_release": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_jobschedules",
+                      "recordId": "@first(outputs('List_JobSchedule')?['body/value'])?['crfdf_jobscheduleid']",
+                      "item/crfdf_releaseddate": "@formatDateTime(convertFromUtc(utcNow(),'Central Standard Time'),'yyyy-MM-dd')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {}
+                },
+                "Add_JobSchedule_release": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_jobschedules",
+                      "item/crfdf_jobno": "@items('Apply_to_each')?['no']",
+                      "item/crfdf_name": "@items('Apply_to_each')?['no']",
+                      "item/crfdf_releaseddate": "@formatDateTime(convertFromUtc(utcNow(),'Central Standard Time'),'yyyy-MM-dd')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_JobSchedule_release": [
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "List_JobSchedule": [
+                  "Succeeded"
+                ]
+              }
             }
           },
           "runAfter": {
@@ -195,7 +269,7 @@
           }
         }
       },
-      "description": "Nightly sync of BC analytics jobs into crfdf_bcjobs (upsert by job number; bill-to customer name + ship-to joined from crfdf_bccustomers; promised date from endingDate). Built by agent. #flowstudio-mcp"
+      "description": "Nightly sync of BC analytics jobs into crfdf_bcjobs (upsert by job number; bill-to customer name + ship-to joined from crfdf_bccustomers; promised date from endingDate). Also stamps crfdf_jobschedule.releaseddate write-once when a job is first seen at status Open (the release anchor for scheduling targets). Built by agent. #flowstudio-mcp"
     },
     "templateName": null
   },
