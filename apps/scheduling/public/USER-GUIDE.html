@@ -123,6 +123,12 @@
   td{padding:10px 13px;border-top:1px solid var(--border);vertical-align:top}
   tr:nth-child(even) td{background:#faf9f7}
 
+  /* Scrollable "What's New" log — fixed height, scroll through all entries.
+     The header row stays pinned while the list scrolls. */
+  .changelog{max-height:264px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin:18px 0}
+  .changelog table{margin:0;border:none;border-radius:0;overflow:visible}
+  .changelog th{position:sticky;top:0;z-index:1}
+
   /* ---- Feature cards ---- */
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
   .fcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;
@@ -182,6 +188,8 @@
     a{border:none;color:var(--navy)}
     .cta a{border:1px solid #fff}
     .dl{display:none!important}
+    /* Print the whole log, not just the on-screen scroll window. */
+    .changelog{max-height:none!important;overflow:visible!important;border:none}
   }
 </style>
 </head>
@@ -565,17 +573,22 @@
 
   <!-- ============================================================ -->
   <h2 id="changelog"><span class="num">14</span>What's New</h2><div class="rule"></div>
-  <p>This log tracks user-facing changes so the guide stays current. <em>Newest first.</em></p>
-  <table>
-    <tr><th>Date</th><th>Change</th></tr>
-    <tr><td>Jul 19, 2026</td><td>Added a <strong>Developer</strong> role (full access + View-as, like Admin); the Ops role now shows as <strong>Operations</strong>.</td></tr>
-    <tr><td>Jul 18, 2026</td><td>Settings → the Power Apps header now defaults to <strong>shown</strong>, so hiding it is a single toggle.</td></tr>
-    <tr><td>Jul 17, 2026</td><td>Roster moves now ask <strong>This week only vs Permanent</strong>.</td></tr>
-    <tr><td>Jul 17, 2026</td><td><strong>Edit users</strong> screen (Settings → Users) to manage logins &amp; roles without a deploy.</td></tr>
-    <tr><td>Jul 17, 2026</td><td>Install <strong>assist</strong> now supports <strong>AM/PM half-days</strong> and per-day editing.</td></tr>
-    <tr><td>Jul 17, 2026</td><td><strong>Save custom job cards</strong> and pick colors from the Department/Location palette.</td></tr>
-    <tr><td>Jul 17, 2026</td><td>More reliable saving — edits commit on the first try.</td></tr>
-  </table>
+  <p>This log tracks user-facing changes so the guide stays current. <em>Newest first — scroll for the full history.</em></p>
+  <div class="changelog">
+    <table>
+      <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 19, 2026</td><td><strong>View as user</strong> now lists every role — Admin, Developer, Operations, Production, WK/NEK Install, Sales, and PM.</td></tr>
+      <tr><td>Jul 19, 2026</td><td>Added a <strong>Developer</strong> role (full access + View-as, like Admin); the Ops role now shows as <strong>Operations</strong>.</td></tr>
+      <tr><td>Jul 19, 2026</td><td><strong>Stability:</strong> a mistyped user role no longer breaks the app — unknown roles fall back safely.</td></tr>
+      <tr><td>Jul 18, 2026</td><td>Settings → the Power Apps header now defaults to <strong>shown</strong>, so hiding it is a single toggle.</td></tr>
+      <tr><td>Jul 17, 2026</td><td>Roster moves now ask <strong>This week only vs Permanent</strong>.</td></tr>
+      <tr><td>Jul 17, 2026</td><td><strong>Edit users</strong> screen (Settings → Users) to manage logins &amp; roles without a deploy.</td></tr>
+      <tr><td>Jul 17, 2026</td><td><strong>In-app Help</strong> — the full user guide, embedded, with one-click <strong>Download PDF</strong>.</td></tr>
+      <tr><td>Jul 17, 2026</td><td>Install <strong>assist</strong> now supports <strong>AM/PM half-days</strong>, and you can edit specific days after the fact.</td></tr>
+      <tr><td>Jul 17, 2026</td><td><strong>Save your own custom job cards</strong>, and pick card colors from the Department/Location palette.</td></tr>
+      <tr><td>Jul 17, 2026</td><td><strong>More reliable saving</strong> — edits commit on the first try.</td></tr>
+    </table>
+  </div>
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
