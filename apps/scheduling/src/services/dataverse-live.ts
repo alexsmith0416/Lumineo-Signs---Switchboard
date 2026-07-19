@@ -1506,7 +1506,8 @@ function mapAppUser(r: Row): AppUserRow {
   return {
     id: s(r.crfdf_appuserid),
     email: s(r.crfdf_email).trim().toLowerCase(),
-    userType: s(r.crfdf_usertype).trim() || "admin",
+    // Normalize casing/whitespace so "Admin" / "Install-WK" match the slugs.
+    userType: s(r.crfdf_usertype).trim().toLowerCase() || "admin",
     displayName: s(r.crfdf_displayname),
   };
 }

@@ -97,15 +97,25 @@ export const USER_DIRECTORY: Record<string, UserType> = {
   "jontjes@lumineosigns.com": "admin", // Joe Ontjes
 };
 
-/** Resolve a login's user type: the directory wins, else derive a sensible one.
- *  `directory` defaults to the hardcoded map; useCurrentUser passes the merged
- *  (Dataverse-over-code) directory so table edits take effect without a deploy. */
+/** True when a value is one of the known user types (a real TYPE_CONFIG key).
+ *  Guards against a mistyped crfdf_usertype in the Dataverse users table — an
+ *  unknown value must never reach TYPE_CONFIG (it would render as undefined and
+ *  crash on `.money`). */
+export function isUserType(v: string | undefined | null): v is UserType {
+  return v != null && Object.prototype.hasOwnProperty.call(TYPE_CONFIG, v);
+}
+
+/** Resolve a login's user type: the directory wins (when it's a valid type),
+ *  else derive a sensible one. `directory` defaults to the hardcoded map;
+ *  useCurrentUser passes the merged (Dataverse-over-code) directory so table
+ *  edits take effect without a deploy. A directory value that isn't a known
+ *  type is ignored (falls through to the derived fallback) rather than crashing. */
 export function resolveUserType(
   upn: string | undefined,
   directory: Record<string, UserType> = USER_DIRECTORY,
 ): UserType {
   const email = upn?.trim().toLowerCase();
-  if (email && directory[email]) return directory[email];
+  if (email && isUserType(directory[email])) return directory[email];
   // Fallbacks until the directory is filled:
   const group = email ? SHARED_FLOOR_ACCOUNTS[email] : undefined;
   if (group === "production") return "production";
@@ -220,7 +230,9 @@ export function useCurrentUser(): CurrentUser {
   const active = canImpersonate ? imp : null;
 
   const type = active ? active.type : realType;
-  const cfg = TYPE_CONFIG[type];
+  // Never let an unknown type (bad table data / stale impersonation) crash the
+  // app — fall back to a valid profile.
+  const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG.admin;
   // Impersonated role: a floor/sales/pm person adopts that identity so their
   // My Schedule / Active Jobs resolve to the right person.
   const role: Role = active
