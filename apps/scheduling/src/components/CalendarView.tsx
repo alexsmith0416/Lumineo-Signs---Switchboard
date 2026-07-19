@@ -22,6 +22,8 @@ import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store
 import { useSettingsStore } from "../store/settings-store";
 import { useHistoryStore } from "../store/history-store";
 import { useJobScheduleStore } from "../store/job-schedule-store";
+import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
+import { cardStepKey } from "../services/production-steps";
 import { CcoBadge } from "./CcoBadge";
 import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
@@ -1290,6 +1292,7 @@ function EmployeeRow({
           <GanttCard
             key={card.line.id}
             card={card}
+            kind={kind}
             department={departments.get(card.line.departmentId)}
             employee={emp}
             conflicts={conflicts}
@@ -1319,6 +1322,7 @@ function EmployeeRow({
 
 interface GanttCardProps {
   card: CardLayout;
+  kind: ScheduleKind;
   department: Department | undefined;
   employee: Employee;
   conflicts: Conflict[];
@@ -1340,6 +1344,7 @@ interface GanttCardProps {
 
 function GanttCard({
   card,
+  kind,
   department,
   employee,
   conflicts,
@@ -1363,6 +1368,14 @@ function GanttCard({
   // A job with a Red (drop-dead install) date gets a pulsing red outline on
   // every schedule. Keyed by job number, so it shows on all of the job's cards.
   const hasRedDate = useJobScheduleStore((s) => !!(line.jobNo && s.byJob[line.jobNo]?.redDate));
+
+  // A completed step recedes its card (muted + check) so the board reads as
+  // progress. The card's step = its production dept, or Install on the install board.
+  const stepDone = useJobDeptCompletionStore((s) => {
+    if (!line.jobNo || line.isCustom) return false;
+    const k = cardStepKey(kind, department?.name);
+    return !!(k && s.byJob[line.jobNo]?.[k]);
+  });
 
   const [resizePreview, setResizePreview] = useState<{
     deltaPx: number;
@@ -1418,7 +1431,7 @@ function GanttCard({
 
   return (
     <div
-      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}${hasRedDate ? " gantt-card--reddate" : ""}`}
+      className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}${hasRedDate ? " gantt-card--reddate" : ""}${stepDone ? " gantt-card--done" : ""}`}
       style={{
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,

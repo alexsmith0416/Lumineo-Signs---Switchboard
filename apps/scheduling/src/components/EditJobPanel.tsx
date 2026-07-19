@@ -6,6 +6,9 @@ import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
 import { useSettingsStore } from "../store/settings-store";
+import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
+import { useCurrentUser } from "../services/current-user";
+import { cardStepKey, stepLabel } from "../services/production-steps";
 import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
@@ -37,6 +40,23 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   // Respect the global cascade setting on save (matches drag/resize behavior);
   // cascade off = move/resize this task only, no downstream push.
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
+
+  // Completion: the stepper step this card belongs to (its production department,
+  // or the Install step on the install board). Any signed-in user can toggle it.
+  const { fullName, upn } = useCurrentUser();
+  const me = fullName || upn || "Unknown";
+  const setStepComplete = useJobDeptCompletionStore((s) => s.setComplete);
+  const jobCompletions = useJobDeptCompletionStore((s) =>
+    line.jobNo ? s.byJob[line.jobNo] : undefined,
+  );
+  const stepKey =
+    line.jobNo && !line.isCustom
+      ? cardStepKey(dataSource.kind, departments.get(line.departmentId)?.name)
+      : null;
+  const stepDone = !!(stepKey && jobCompletions?.[stepKey]);
+  const toggleStepDone = () => {
+    if (line.jobNo && stepKey) void setStepComplete(line.jobNo, stepKey, me, !stepDone);
+  };
 
   const [duplicating, setDuplicating] = useState(false);
   const [dupEmployeeIds, setDupEmployeeIds] = useState<Set<string>>(new Set());
@@ -258,6 +278,26 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
         </div>
 
         {line.jobNo && !line.isCustom && <ProductionStepperSection jobNo={line.jobNo} />}
+
+        {stepKey && (
+          <div style={{ padding: "0 12px 12px" }}>
+            <button
+              type="button"
+              className={stepDone ? "btn-secondary" : "btn-primary"}
+              style={{ width: "100%" }}
+              onClick={toggleStepDone}
+              title={
+                stepDone
+                  ? "Mark this step not complete"
+                  : "Mark this card's step complete — advances the production stepper"
+              }
+            >
+              {stepDone
+                ? `✓ ${stepLabel(stepKey)} completed — reopen`
+                : `Mark ${stepLabel(stepKey)} completed`}
+            </button>
+          </div>
+        )}
 
         <div className="form-field">
           <div className="form-field__label">Employee</div>

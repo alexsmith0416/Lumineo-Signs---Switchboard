@@ -15,13 +15,23 @@ export const DEPT_FLOW: ReadonlyArray<{ match: RegExp; key: string; label: strin
   { match: /assembl/i, key: "A", label: "Assembly" },
 ];
 
-/** Build ordered stepper steps from a job's production department names and the
- *  set of completed department keys. `active` = the first needed department that
- *  isn't completed; everything after it is `included`. */
-export function buildDepartmentSteps(deptNames: string[], completed: Set<string>): DepartmentStep[] {
+/** The final "Install" step, appended when a job has installation labor. */
+export const INSTALL_STEP = { key: "I", label: "Install" } as const;
+
+/** Build ordered stepper steps from a job's production department names + whether
+ *  it has install work, plus the set of completed step keys. `active` = the first
+ *  needed step that isn't completed; everything after it is `included`. */
+export function buildDepartmentSteps(
+  deptNames: string[],
+  completed: Set<string>,
+  hasInstall = false,
+): DepartmentStep[] {
   const needed = DEPT_FLOW.filter((d) => deptNames.some((n) => d.match.test(n)));
+  const defs = hasInstall
+    ? [...needed.map((d) => ({ key: d.key, label: d.label })), { key: INSTALL_STEP.key, label: INSTALL_STEP.label }]
+    : needed.map((d) => ({ key: d.key, label: d.label }));
   let activeAssigned = false;
-  return needed.map((d) => {
+  return defs.map((d) => {
     let state: DepartmentStep["state"] = "included";
     if (completed.has(d.key)) {
       state = "completed";
@@ -37,4 +47,20 @@ export function buildDepartmentSteps(deptNames: string[], completed: Set<string>
 export function deptKeyForName(name: string | null | undefined): string | null {
   if (!name) return null;
   return DEPT_FLOW.find((d) => d.match.test(name))?.key ?? null;
+}
+
+/** The stepper step a card completes: install cards complete the Install step;
+ *  production cards complete their department. */
+export function cardStepKey(
+  boardKind: string,
+  deptName: string | null | undefined,
+): string | null {
+  if (boardKind === "installation") return INSTALL_STEP.key;
+  return deptKeyForName(deptName);
+}
+
+/** Label for a step key (for the card "Completed" button + who/when line). */
+export function stepLabel(key: string): string {
+  if (key === INSTALL_STEP.key) return INSTALL_STEP.label;
+  return DEPT_FLOW.find((d) => d.key === key)?.label ?? key;
 }

@@ -41,7 +41,7 @@ import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
-import { departmentNameForLine, isProductionResource } from "./planning-line-mapping";
+import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -1752,6 +1752,23 @@ export async function jobProductionDepartments(jobNo: string): Promise<string[]>
     if (name) names.add(name);
   }
   return [...names];
+}
+
+/** Production departments a job needs + whether it has installation labor —
+ *  drives the production stepper (a final "Install" step when hasInstall). */
+export async function jobStepInfo(jobNo: string): Promise<{ production: string[]; hasInstall: boolean }> {
+  const lines = await planningLinesFor(jobNo).catch(() => []);
+  const production = new Set<string>();
+  let hasInstall = false;
+  for (const l of lines) {
+    if (isProductionResource(l.resourceNo)) {
+      const name = departmentNameForLine(l.resourceNo, l.description);
+      if (name) production.add(name);
+    } else if (isInstallResource(l.resourceNo)) {
+      hasInstall = true;
+    }
+  }
+  return { production: [...production], hasInstall };
 }
 
 /**
