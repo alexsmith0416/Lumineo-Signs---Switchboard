@@ -10,6 +10,7 @@ import ScenarioSandbox from "./components/ScenarioSandbox";
 import MonthlyPlanView from "./components/MonthlyPlanView";
 import MyScheduleScreen from "./components/MyScheduleScreen";
 import SettingsScreen from "./components/SettingsScreen";
+import HelpScreen from "./components/HelpScreen";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
 import { useCurrentUser } from "./services/current-user";
@@ -24,7 +25,8 @@ type View =
   | "shipping"
   | "scenario"
   | "monthly"
-  | "settings";
+  | "settings"
+  | "help";
 
 const VIEW_TITLES: Record<View, string> = {
   "my-schedule": "My Schedule",
@@ -34,6 +36,7 @@ const VIEW_TITLES: Record<View, string> = {
   scenario: "Scenario Schedule",
   monthly: "Monthly Install Plan",
   settings: "Settings",
+  help: "Help & User Guide",
 };
 
 export default function App() {
@@ -49,7 +52,7 @@ export default function App() {
   // (a calendar/board/plan) to show full-bleed instead of Settings itself.
   const lastRealViewRef = useRef<View>("production");
   useEffect(() => {
-    if (view && view !== "settings") lastRealViewRef.current = view;
+    if (view && view !== "settings" && view !== "help") lastRealViewRef.current = view;
   }, [view]);
 
   useEffect(() => {
@@ -153,6 +156,7 @@ export default function App() {
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
           {view === "settings" && <SettingsScreen />}
+          {view === "help" && <HelpScreen />}
         </div>
       </main>
 

@@ -121,7 +121,7 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
             key={i.id}
             item={i}
             active={current === i.id}
-            onClick={i.id === "settings" ? () => onSelect?.(i.id) : undefined}
+            onClick={() => onSelect?.(i.id)}
           />
         ))}
       </nav>

@@ -31,7 +31,7 @@ and a per-user "My Schedule" view.
 | Deploy config (appId, env, buildPath) | `apps/scheduling/power.config.json` |
 | Dataverse admin one-off scripts | `apps/scheduling/scripts/*.ps1` |
 | Power Automate flows | `apps/scheduling/flows/` |
-| **User guide** (ship-to-users doc — keep updated every deploy) | `apps/scheduling/docs/USER-GUIDE.html` |
+| **User guide** (ship-to-users doc + in-app Help — keep updated every deploy) | `apps/scheduling/public/USER-GUIDE.html` |
 
 > ⚠️ This working copy (`lumineo-scheduling-port`) is **not** the OneDrive
 > "Lumineo Signs — Switchboard" repo. All scheduling work happens here.
@@ -111,9 +111,11 @@ IDs are duplicated in `src/services/power-host.ts`; keep them in sync with
 
 ### Keep the user guide current (do this on EVERY deploy)
 
-There is a customer-facing user guide at **`apps/scheduling/docs/USER-GUIDE.html`**
-— a self-contained, brand-styled HTML doc (Lumineo logo + colors) sent to users
-to teach them the app. It is the single place users learn what the app can do.
+There is a customer-facing user guide at **`apps/scheduling/public/USER-GUIDE.html`**
+— a self-contained, brand-styled HTML doc (Lumineo logo + colors). It ships in
+the app bundle (Vite `public/`) and is surfaced in-app under **Help** (sidebar →
+Help → embedded guide + Download PDF), and is also sent to users directly. It is
+the single place users learn what the app can do.
 
 🔴 **Whenever a deploy adds, changes, or removes a user-facing feature, update
 the user guide in the same change:**

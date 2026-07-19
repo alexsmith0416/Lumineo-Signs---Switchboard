@@ -2143,6 +2143,64 @@ input, select, textarea {
 /* ---- Load editor slide-over ---- */
 .slide-over__panel--wide { width: 600px; overflow-y: auto; }
 
+/* --- Help screen (embedded user guide) ------------------------------------- */
+.help-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.help-screen__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+.help-screen__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+.help-screen__sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.help-screen__actions {
+  display: flex;
+  gap: 8px;
+}
+.help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.help-btn--primary { background: var(--lumineo-red); color: #fff; }
+.help-btn--primary:hover { filter: brightness(0.94); }
+.help-btn--secondary {
+  background: var(--input-bg);
+  color: var(--lumineo-navy);
+  border: 1px solid var(--border);
+}
+.help-btn--secondary:hover { border-color: var(--lumineo-navy); }
+.help-screen__frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: none;
+  background: #fff;
+}
+
 /* --- Edit users admin panel ------------------------------------------------ */
 .users-admin {
   padding: 14px;

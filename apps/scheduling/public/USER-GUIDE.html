@@ -154,6 +154,14 @@
     text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;padding:12px 20px;border-radius:8px;white-space:nowrap}
   .cta a:hover{background:var(--navy);color:#fff}
 
+  /* Floating "Download PDF" button (hidden when embedded in the app + in print) */
+  .dl{position:fixed;right:22px;bottom:22px;z-index:50;background:var(--red);color:#fff;border:none;
+    font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;
+    padding:13px 20px;border-radius:10px;cursor:pointer;box-shadow:0 8px 22px rgba(225,6,0,.35);
+    display:inline-flex;align-items:center;gap:8px}
+  .dl:hover{background:var(--hero)}
+  .embedded .dl{display:none}
+
   .footer{margin-top:56px;padding:26px 0 0;border-top:2px solid var(--red);color:var(--taupe);font-size:.85rem}
   .footer .wordmark b{font-size:1rem;color:var(--navy)}
   .footer .wordmark span{color:var(--taupe)}
@@ -173,6 +181,7 @@
     h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table,.cta,.box{break-inside:avoid}
     a{border:none;color:var(--navy)}
     .cta a{border:1px solid #fff}
+    .dl{display:none!important}
   }
 </style>
 </head>
@@ -574,5 +583,15 @@
   </div>
 
 </div>
+
+<button class="dl" type="button" onclick="window.print()" title="Save as PDF via your browser's print dialog">⬇ Download PDF</button>
+<script>
+  // Hide the floating button when embedded in the app (the Help screen has its own controls).
+  if (window.self !== window.top) document.documentElement.classList.add('embedded');
+  // Auto-open the print dialog when opened with ?print=1 (the Help screen's Download button).
+  if (/[?&]print=1/.test(location.search)) {
+    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 450); });
+  }
+</script>
 </body>
 </html>
