@@ -1682,6 +1682,64 @@ export async function upsertJobSchedule(sch: JobSchedule): Promise<void> {
   if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule(create) failed");
 }
 
+// ---------------------------------------------------------------------------
+// Job department completions (crfdf_jobdeptcompletion) — production stepper
+// ---------------------------------------------------------------------------
+const JOBDEPT_SET = "crfdf_jobdeptcompletions";
+
+export interface JobDeptCompletion {
+  jobNo: string;
+  deptKey: string;
+  completedBy: string;
+  completedDate: Date | null;
+}
+
+function mapJobDeptCompletion(r: Row): JobDeptCompletion {
+  return {
+    jobNo: s(r.crfdf_jobno),
+    deptKey: s(r.crfdf_deptid),
+    completedBy: s(r.crfdf_completedby),
+    completedDate: parseDateOnly(r.crfdf_completeddate),
+  };
+}
+
+export async function fetchJobDeptCompletions(): Promise<JobDeptCompletion[]> {
+  const rows = await list(JOBDEPT_SET, {});
+  return rows.map(mapJobDeptCompletion).filter((c) => c.jobNo && c.deptKey);
+}
+
+/** Mark a job's department complete (upsert by job + dept), stamping who + when. */
+export async function addJobDeptCompletion(jobNo: string, deptKey: string, completedBy: string): Promise<void> {
+  const { S, org } = await sdk();
+  const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
+  const existing = await list(JOBDEPT_SET, { filter: match }).catch(() => [] as Row[]);
+  const rec: Row = {
+    crfdf_jobno: jobNo,
+    crfdf_deptid: deptKey,
+    crfdf_completedby: completedBy,
+    crfdf_completeddate: fmtDateOnly(new Date()),
+    crfdf_name: `${jobNo} ${deptKey}`.trim(),
+  };
+  if (existing.length > 0) {
+    const id = s(existing[0]!.crfdf_jobdeptcompletionid);
+    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, id, rec);
+    if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(update) failed");
+    return;
+  }
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, { crfdf_jobdeptcompletionid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(create) failed");
+}
+
+/** Un-complete a job's department (delete the completion row(s)). */
+export async function removeJobDeptCompletion(jobNo: string, deptKey: string): Promise<void> {
+  const { S, org } = await sdk();
+  const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
+  const existing = await list(JOBDEPT_SET, { filter: match }).catch(() => [] as Row[]);
+  await Promise.all(
+    existing.map((r) => S.DeleteRecordWithOrganization(org, JOBDEPT_SET, s(r.crfdf_jobdeptcompletionid))),
+  );
+}
+
 /** Distinct PRODUCTION department names a job needs, from its BC planning lines.
  *  Used to detect vinyl/graphics-only jobs (shorter production target) and to
  *  build the production stepper. */

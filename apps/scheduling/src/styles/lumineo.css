@@ -2239,6 +2239,80 @@ input, select, textarea {
   .gantt-card--reddate { animation: none; box-shadow: 0 0 0 2px #e8151b; }
 }
 
+/* --- Production department stepper (ported from the design package) --------- */
+.job-stepper {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.job-stepper__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+.lum-stepper {
+  --lum-navy: var(--lumineo-navy);
+  --lum-red: var(--lumineo-red);
+  --lum-faint: var(--grid-line);
+  --lum-node: 26px;
+  --lum-node-active: 32px;
+  --lum-bar-w: 22px;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.lum-stepper--sm { --lum-node: 22px; --lum-node-active: 28px; --lum-bar-w: 16px; }
+.lum-stepper__node {
+  width: var(--lum-node);
+  height: var(--lum-node);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: default;
+  background: var(--lum-navy);
+  color: #fff;
+  border: 2px solid var(--lum-navy);
+  transition: width 0.18s ease, height 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.lum-stepper__node--btn { cursor: pointer; font-family: inherit; padding: 0; }
+.lum-stepper__node.is-completed {
+  background: var(--bg-primary);
+  color: var(--lum-faint);
+  border-color: var(--lum-faint);
+}
+.lum-stepper__node.is-active {
+  width: var(--lum-node-active);
+  height: var(--lum-node-active);
+  font-size: 11px;
+  background: var(--lum-red);
+  color: #fff;
+  border-color: var(--lum-red);
+  box-shadow: 0 0 0 4px rgba(232, 21, 27, 0.15);
+  animation: lum-stepper-glow 1.9s ease-in-out infinite;
+}
+@keyframes lum-stepper-glow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(232, 21, 27, 0.15); }
+  50%      { box-shadow: 0 0 0 7px rgba(232, 21, 27, 0.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lum-stepper__node.is-active { animation: none; }
+}
+.lum-stepper__bar { height: 2px; width: var(--lum-bar-w); flex: none; background: var(--lum-faint); }
+.lum-stepper__bar.is-filled { background: var(--lum-navy); }
+.lum-stepper-empty { color: var(--grid-line); }
+
 /* --- Help screen (embedded user guide) ------------------------------------- */
 .help-screen {
   display: flex;

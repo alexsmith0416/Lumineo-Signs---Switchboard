@@ -9,6 +9,7 @@ import { useSettingsStore } from "../store/settings-store";
 import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
+import ProductionStepperSection from "./ProductionStepperSection";
 
 interface EditJobPanelProps {
   line: ScheduleLine;
@@ -255,6 +256,8 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             disabled={readOnly}
           />
         </div>
+
+        {line.jobNo && !line.isCustom && <ProductionStepperSection jobNo={line.jobNo} />}
 
         <div className="form-field">
           <div className="form-field__label">Employee</div>
