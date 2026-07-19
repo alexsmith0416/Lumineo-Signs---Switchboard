@@ -12,6 +12,7 @@
   :root{
     --navy:#001238;        /* primary brand ink */
     --navy-2:#001e61;      /* secondary deep blue */
+    --hero:#171a63;        /* indigo hero band — matches the logo lettering */
     --slate:#4d5974;
     --red:#e10600;         /* Lumineo red — CTAs, accents */
     --rust:#c02b0a;
@@ -42,25 +43,29 @@
   .eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.22em;
     font-size:.72rem;font-weight:700;color:var(--taupe)}
 
-  /* ---- Cover ---- */
-  .cover{background:var(--navy);color:#fff;padding:0}
-  .cover__bar{display:flex;align-items:center;justify-content:space-between;
-    padding:22px 30px;border-bottom:1px solid rgba(255,255,255,.12)}
-  .wordmark{font-family:var(--display);font-weight:900;letter-spacing:.02em;line-height:.9;color:#fff}
-  .wordmark b{display:block;font-size:1.35rem}
-  .wordmark span{display:block;font-size:.6rem;letter-spacing:.42em;font-weight:600;opacity:.8;padding-left:2px}
-  .cover__bar .eyebrow{color:rgba(255,255,255,.6)}
-  .cover__hero{padding:64px 30px 30px;max-width:920px;margin:0 auto}
-  .cover__hero .eyebrow{color:var(--sage)}
-  .cover h1{font-family:var(--display);font-weight:900;font-size:3.4rem;line-height:.98;
-    letter-spacing:-.02em;margin:.18em 0 .12em}
-  .cover__tag{font-family:var(--display);font-weight:700;font-size:1.35rem;color:var(--sage);
-    line-height:1.15;margin:.2em 0 .6em}
-  .cover__lead{font-size:1.08rem;color:rgba(255,255,255,.8);max-width:640px}
-  .cover__meta{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px;padding:20px 30px;
-    background:var(--navy-2);font-size:.82rem;color:rgba(255,255,255,.72)}
-  .cover__meta b{color:#fff}
-  .heritage{color:var(--sage);font-family:var(--display);font-weight:700;letter-spacing:.02em}
+  /* ---- Cover: white topbar + indigo hero band ---- */
+  .cover{background:#fff}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    max-width:1120px;margin:0 auto;padding:22px 34px}
+  .brand-logo{height:34px;width:auto;display:block}
+  .topbar__right{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+  .topbar__eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.16em;
+    font-size:.66rem;font-weight:700;color:var(--hero)}
+  .topbar__badge{background:var(--red);color:#fff;font-family:var(--display);font-weight:700;
+    text-transform:uppercase;letter-spacing:.12em;font-size:.66rem;padding:6px 13px;border-radius:4px}
+  .hero{background:var(--hero);color:#fff}
+  .hero__inner{max-width:920px;margin:0 auto;padding:60px 30px 66px}
+  .hero .eyebrow{color:#9aa2e6}
+  .hero h1{font-family:var(--display);font-weight:900;font-size:3.3rem;line-height:.98;
+    letter-spacing:-.02em;margin:.16em 0 .16em;color:#fff}
+  .hero__tag{font-family:var(--display);font-weight:700;font-size:1.3rem;color:#a9b0ec;
+    line-height:1.15;margin:.1em 0 .7em}
+  .hero__lead{font-size:1.06rem;color:rgba(255,255,255,.82);max-width:660px}
+  /* Wordmark (footer) */
+  .wordmark{font-family:var(--display);font-weight:900;letter-spacing:.02em;line-height:.9}
+  .wordmark b{display:block;font-size:1rem;color:var(--hero)}
+  .wordmark span{display:block;font-size:.55rem;letter-spacing:.42em;font-weight:600;color:var(--taupe);padding-left:2px}
+  .heritage{color:var(--taupe);font-family:var(--display);font-weight:700;letter-spacing:.02em}
 
   /* ---- Headings ---- */
   h2{font-family:var(--display);color:var(--ink);font-weight:800;font-size:1.85rem;
@@ -155,13 +160,15 @@
 
   @media (max-width:640px){
     .toc ol{columns:1}.grid{grid-template-columns:1fr}
-    .cover h1{font-size:2.2rem}.cover__hero{padding:44px 22px 22px}
+    .hero h1{font-size:2.2rem}.hero__inner{padding:44px 22px 48px}
+    .topbar{flex-direction:column;align-items:flex-start;gap:14px}
+    .topbar__right{align-items:flex-start}
     .cta{flex-direction:column;align-items:flex-start}
   }
   @media print{
     body{font-size:12.5px}
-    .cover,.cover__meta,.cover__bar{background:var(--navy)!important}
-    .cover,.cover__meta,.cover__bar,.box,th,.sketch__top,ol.steps>li::before,.cta,.toc,.fcard,.footer,
+    .hero{background:var(--hero)!important}
+    .hero,.topbar__badge,.box,th,.sketch__top,ol.steps>li::before,.cta,.toc,.fcard,.footer,
     .heritage,h2 .num,.toc li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table,.cta,.box{break-inside:avoid}
     a{border:none;color:var(--navy)}
@@ -172,22 +179,29 @@
 <body>
 
 <header class="cover">
-  <div class="cover__bar">
-    <div class="wordmark"><b>LUMINEO</b><span>SIGNS</span></div>
-    <div class="eyebrow">User Guide</div>
+  <div class="topbar">
+    <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7028.23 1463.38" role="img" aria-label="Lumineo Signs">
+      <path fill="#EE0800" fill-rule="nonzero" d="M1463.38 577.87l-1143.99 566.09 1143.99 -386.57 0 -179.52zm0 -439.94l-1143.99 1006.03 1143.99 -762.1 0 -243.93zm-1143.99 1006.03l229.18 -1143.96 -548.56 0 0 1463.38 1463.38 0 0 -548.6 -1143.99 229.18zm386.57 -1143.96l-386.57 1143.96 566.12 -1143.96 -179.55 0zm619.46 0l-1006.03 1143.96 762.13 -1143.96 243.9 0z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M6847.49 509.58c0,-114.71 -82.56,-179.87 -216.34,-179.87 -132.96,0 -216.37,65.16 -216.37,179.87 0,114.71 82.55,179.84 216.37,179.84 133.78,0 216.34,-65.13 216.34,-179.84zm-612.54 0c0,-205.93 155.52,-324.1 396.21,-324.1 240.65,0 397.07,118.16 397.07,324.1 0,205.94 -156.42,324.1 -397.07,324.1 -240.69,0 -396.21,-118.16 -396.21,-324.1zm-40.9 168.58l0 135.52 -649.05 0 0 -608.19 639.5 0 0 135.52 -464.87 0 0 99.93 383.21 0 0 129.47 -383.21 0 0 107.76 474.42 0zm-1786.47 -472.67l177.23 0 0 608.19 -177.23 0 0 -608.19zm-125.16 0l0 608.19 -176.37 0 0 -388.4 -242.4 297.19 -8.7 0 -242.43 -297.19 0 388.4 -171.18 0 0 -608.19 193.77 0 228.53 291.94 230.24 -291.94 188.53 0zm1134.81 608.19l0 -321.49c0,-185.03 -126.01,-306.7 -352.75,-306.7 -226.78,0 -353.64,121.67 -353.64,306.7l0 109.31 0 87.72 0 124.47 176.94 0 0 -482.22 176.7 0c117.28,0 175.49,68.67 175.49,174.64l0 307.58 177.26 0zm-2796.97 -608.19l0 321.49c0,185.03 125.97,306.7 352.77,306.7 226.78,0 353.61,-121.67 353.61,-306.7l0 -109.3 0 -87.72 0 -124.47 -176.95 0 0 482.23 -176.66 0c-117.33,0 -175.53,-68.67 -175.53,-174.64l0 -307.59 -177.24 0zm-57.4 465.72l0 142.47 -574.69 0 0 -608.19 177.23 0 0 465.72 397.47 0z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M2357.64 1239.06c0,64.26 -59.36,108 -172.68,108 -80.32,0 -147.72,-21.87 -196.79,-61.14l47.73 -56.22c37.02,31.23 88.36,48.63 150.84,48.63 53.54,0 80.33,-9.8 80.33,-30.33 0,-20.09 -25.01,-26.79 -89.27,-32.16 -92.8,-8.01 -177.15,-28.53 -177.15,-98.16 0,-66.91 72.27,-103.53 171.34,-103.53 66.95,0 128.52,16.1 171.38,46.41l-45.97 56.67c-34.8,-24.55 -76.76,-34.35 -125.41,-34.8 -36.58,0 -80.74,5.82 -80.74,28.13 0,20.98 36.15,23.62 91.92,28.09 102.18,8.49 174.46,28.57 174.46,100.41z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M3861.9 1239.06c0,64.26 -59.35,108 -172.68,108 -80.32,0 -147.72,-21.87 -196.78,-61.14l47.73 -56.22c37.03,31.23 88.36,48.63 150.84,48.63 53.54,0 80.32,-9.8 80.32,-30.33 0,-20.09 -24.99,-26.79 -89.26,-32.16 -92.8,-8.01 -177.15,-28.53 -177.15,-98.16 0,-66.91 72.28,-103.53 171.34,-103.53 66.95,0 128.53,16.1 171.38,46.41l-45.98 56.67c-34.79,-24.55 -76.74,-34.35 -125.4,-34.8 -36.59,0 -80.73,5.82 -80.73,28.13 0,20.98 36.14,23.62 91.91,28.09 102.19,8.49 174.46,28.57 174.46,100.41z"/>
+      <polygon fill="#171A63" fill-rule="nonzero" points="2426.8,1024.43 2517.81,1024.43 2517.81,1336.79 2426.8,1336.79 "/>
+      <path fill="#171A63" fill-rule="nonzero" d="M2977.44 1277.88c-33.45,41.51 -95.04,69.18 -178.49,69.18 -128.05,0 -207.48,-60.69 -207.48,-166.46 0,-105.78 79.43,-166.45 207.48,-166.45 77.2,0 132.96,27.23 165.57,57.59l-66.51 49.06c-26.79,-24.11 -54.87,-34.79 -96.83,-34.79 -75.85,0 -117.35,33.45 -117.35,94.59 0,61.58 42.85,95.04 118.69,95.04 38.38,0 68.7,-7.56 90.57,-27.64l0 -28.13 -103.49 0 0 -63.82 187.83 0 0 121.83z"/>
+      <polygon fill="#171A63" fill-rule="nonzero" points="3422.78,1024.43 3422.78,1336.77 3342.91,1336.77 3141.2,1131.54 3141.2,1336.77 3053.32,1336.77 3053.32,1024.43 3149.71,1024.43 3334.86,1215.4 3334.86,1024.43 "/>
+    </svg>
+    <div class="topbar__right">
+      <div class="topbar__eyebrow">Lumineo Project Scheduler</div>
+      <span class="topbar__badge">User Guide</span>
+    </div>
   </div>
-  <div class="cover__hero">
-    <div class="eyebrow">Lumineo Project Scheduler</div>
-    <h1>Scheduling,<br>illuminated.</h1>
-    <div class="cover__tag">Lumens for brightness. Lumineo for brilliance.</div>
-    <p class="cover__lead">One shared home for planning Production, Installation &amp; Shipping — this guide shows
-    every team member how to read the board, schedule with confidence, and make the scheduler an everyday tool.</p>
-  </div>
-  <div class="cover__meta">
-    <span class="heritage">Since 1928 · 100,000+ projects</span>
-    <span>Version&nbsp;<b>1.0</b></span>
-    <span>Updated&nbsp;<b>July 17, 2026</b></span>
-    <span>Kansas · Missouri · Oklahoma</span>
+  <div class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Lumineo Project Scheduler</div>
+      <h1>Scheduling,<br>illuminated.</h1>
+      <div class="hero__tag">Lumens for brightness. Lumineo for brilliance.</div>
+      <p class="hero__lead">One shared home for planning Production, Installation &amp; Shipping — this guide shows
+      every team member how to read the board, schedule with confidence, and make the scheduler an everyday tool.</p>
+    </div>
   </div>
 </header>
 
