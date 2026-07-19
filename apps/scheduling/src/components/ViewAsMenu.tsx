@@ -80,7 +80,20 @@ export default function ViewAsMenu() {
           imp: { type: t, name: e.name, employeeId: e.id, group: g },
         }));
 
+    // Office roles have no employee roster — offer a single "role preview" that
+    // shows the app exactly as that type sees it.
+    const rolePreview = (t: UserType): PickPerson[] => [
+      {
+        key: `role:${t}`,
+        name: `Preview as ${TYPE_CONFIG[t].label}`,
+        imp: { type: t, name: `${TYPE_CONFIG[t].label} (preview)` },
+      },
+    ];
+
     return [
+      { type: "admin", label: TYPE_CONFIG.admin.label, people: rolePreview("admin") },
+      { type: "developer", label: TYPE_CONFIG.developer.label, people: rolePreview("developer") },
+      { type: "ops", label: TYPE_CONFIG.ops.label, people: rolePreview("ops") },
       { type: "production", label: TYPE_CONFIG.production.label, people: floor("production", "production", prod) },
       { type: "install-wk", label: TYPE_CONFIG["install-wk"].label, people: floor("install-wk", "install-wk", wk) },
       { type: "install-nek", label: TYPE_CONFIG["install-nek"].label, people: floor("install-nek", "install-nek", nek) },
