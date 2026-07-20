@@ -1472,6 +1472,7 @@ function GanttCard({
         showInvoice={showInvoice}
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}
+        multiDay={spanDays > 1}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
       />

@@ -838,9 +838,9 @@ input, select, textarea {
     display: none !important;
   }
 
-  /* Job cards: a mobile day column is too narrow to fit crew + weather + $ on
-     one row, so stack the addons — each gets its own line. Crew/Truck, weather,
-     and $ value are all left-justified, sharing the card's text padding. */
+  /* Job cards: a single-day mobile column is too narrow to fit crew + weather +
+     $ on one row, so stack the addons — each on its own line, all left-justified
+     and sharing the card's text padding. */
   .job-card__addons {
     flex-direction: column;
     align-items: flex-start;
@@ -849,6 +849,18 @@ input, select, textarea {
   }
   .job-card__weather {
     align-self: flex-start;
+  }
+  /* Multi-day cards are wider, so lay the addons on ONE line, left-justified;
+     the last one wraps to a new line only if there isn't room (no clipping). */
+  .job-card--multiday .job-card__addons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3px 8px;
+  }
+  .job-card--multiday .job-card__weather {
+    align-self: center;
   }
 }
 

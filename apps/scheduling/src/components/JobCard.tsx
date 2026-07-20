@@ -20,6 +20,9 @@ interface JobCardProps {
   showCrewBadge?: boolean;
   showWeather?: boolean;
   layout?: "compact" | "stacked";
+  /** The card spans more than one day (wider). On mobile its addons lay out on
+   *  one line (wrapping only if too long) instead of stacking. */
+  multiDay?: boolean;
   /** Right-click menu action: duplicate this card (omitted on read-only boards). */
   onDuplicate?: () => void;
   /** Right-click menu action: delete this card (omitted on read-only boards). */
@@ -108,6 +111,7 @@ export default function JobCard({
   showCrewBadge = false,
   showWeather = false,
   layout = "compact",
+  multiDay = false,
   onDuplicate,
   onDelete,
 }: JobCardProps) {
@@ -163,7 +167,7 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${multiDay ? " job-card--multiday" : ""}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={open}
         onMouseLeave={close}
