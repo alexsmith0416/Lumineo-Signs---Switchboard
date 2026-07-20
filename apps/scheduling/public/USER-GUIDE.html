@@ -332,7 +332,9 @@
     <tr><th>You see</th><th>It means</th></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
-    <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments.</td></tr>
+    <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
+    <tr><td>Pulsing red outline</td><td>The job has a <strong>Red date</strong> — a fixed, drop-dead install date. The outline shows on every board the job appears on so the deadline is never missed.</td></tr>
+    <tr><td>Faded / receded card</td><td>The card's <strong>production step is complete</strong> — finished work steps back visually so attention stays on what's still active.</td></tr>
     <tr><td>☀️ 72° (weather chip)</td><td>Installation cards show the <strong>forecast</strong> for the job's ZIP code on that day — so you can plan around weather.</td></tr>
     <tr><td>👷 2 · 🚚 1 (crew badge)</td><td><strong>Crew size</strong> — men and trucks per trip. Auto-derived from BC or entered by hand. (Admin/Ops only.)</td></tr>
     <tr><td>$ 12,500</td><td>The job's <strong>invoice / remaining value</strong>. Visible to Admin/Ops only; toggle it with the $ button.</td></tr>
@@ -372,48 +374,89 @@
   <strong>off</strong> in Settings to move things freely as a full override — overlaps just show a ⚡ icon instead of auto-moving.</div>
 
   <h3>5.3 &nbsp;Editing a job</h3>
-  <p>Click a card to open the <strong>Edit Job</strong> panel. From there you can change the job description and card text,
-  re-pick BC tasks, reassign the employee, set the <strong>Start</strong>, <strong>Hours</strong>, or <strong>End</strong>
-  (setting the end adjusts the duration to land on that date), lock the card, and — on Installation — set trips, men,
-  trucks, and the install ZIP. You can also <strong>Duplicate</strong> the card onto other people, or <strong>Delete</strong> it.</p>
+  <p>Click a card to open the <strong>Edit Job</strong> panel. There you can edit the job description and card text,
+  re-pick which BC tasks the card covers (see <strong>5.6</strong>), reassign the employee, and set the
+  <strong>Start</strong> and <strong>End</strong> dates and <strong>Estimated hours</strong> (setting the End date
+  adjusts the hours to land there). Use the <strong>lock icon</strong> in the panel header to pin the card so cascade
+  flows around it. On Installation you also set <strong>trips, men, trucks</strong>, the <strong>install ZIP</strong>,
+  and the <strong>Final install</strong> flag (5.5). You can <strong>Duplicate</strong> the card onto other people, or
+  <strong>Delete</strong> it.</p>
+  <p>The panel also shows the job's <strong>production stage</strong> (5.4), the <strong>Job tasks</strong> checklist
+  (5.6), and — for editors — the <strong>Install Dates</strong> (5.5). View-only roles see a read-only version of the card.</p>
 
-  <h3>5.4 &nbsp;Undo / Redo</h3>
+  <h3>5.4 &nbsp;Production stage &amp; marking steps complete</h3>
+  <p>Every BC job card shows a <strong>production stepper</strong> — the departments the job needs (Steel, Routing,
+  Metal Fab, Paint, Vinyl / Graphics, Assembly), in flow order, plus a final <strong>Install</strong> step when the job
+  has install work. Each node shows its standing: <strong>completed</strong>, <strong>active</strong> (the current step),
+  or still to come.</p>
+  <ul>
+    <li><strong>Mark a step done</strong> — Admin / Ops / Developer click a node to complete it (click again to re-open).
+    Each completion is stamped with <strong>who</strong> and <strong>when</strong>, listed under <strong>Completed</strong> below the stepper.</li>
+    <li>When a step completes, that card <strong>recedes</strong> on the board, and the department's tasks in the
+    Job tasks list (5.6) grey out as done.</li>
+  </ul>
+
+  <h3>5.5 &nbsp;Install dates &amp; the Red date</h3>
+  <p>Editors open <strong>Install Dates</strong> in the Edit Job panel with the <strong>eye icon</strong> (it shows/hides
+  the fields; the whole section is hidden for view-only roles):</p>
+  <ul>
+    <li><strong>Scheduled install</strong> — the job's committed install day.</li>
+    <li><strong>Red date</strong> — a fixed, <em>drop-dead</em> install date. Setting it <strong>locks</strong> the
+    scheduled date to match and gives the job a <strong>pulsing red outline</strong> on every board it appears on.</li>
+  </ul>
+  <p>On an Installation card, tick <strong>Final install</strong> to make <em>that card's day</em> set the job's scheduled
+  install date automatically — so the schedule and the install date stay in sync as you move the final card.</p>
+
+  <h3>5.6 &nbsp;Job tasks checklist</h3>
+  <p>The Edit Job panel includes a collapsible <strong>Job tasks</strong> list — the job's BC planning-line tasks, with a
+  summary of how many are on the card and how many are done. In the list:</p>
+  <ul>
+    <li><strong>Highlighted</strong> rows are the tasks currently <strong>on this card</strong>. Ticking / unticking a task
+    re-links the card's text and hours (editors).</li>
+    <li><strong>Greyed, struck-through</strong> rows with a <strong>✓ done</strong> tag are complete — a task greys
+    automatically once its department is marked done on the production stepper (5.4).</li>
+  </ul>
+
+  <h3>5.7 &nbsp;Undo / Redo</h3>
   <p>Made a mistake? Use the <span class="kbd">↶</span> / <span class="kbd">↷</span> buttons in the week summary, or
   <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> / <span class="kbd">Ctrl</span>+<span class="kbd">Y</span>.
   Up to 20 steps per board. History clears when the board reloads (e.g., changing weeks).</p>
 
-  <h3>5.5 &nbsp;The Job Queue</h3>
-  <p>A slide-out holding area (toggle it from the week summary) for jobs that need scheduling but don't have a slot yet.
-  Organize jobs into colored <strong>groups</strong> ("Needs Scheduled", "Ready to Schedule"…), then drag a card
-  straight onto the board — or drag a scheduled card back into the queue to un-schedule it.</p>
+  <h3>5.8 &nbsp;The Job Queue</h3>
+  <p>A slide-out holding area (toggle it from the week summary — <strong>editors only</strong>) for jobs that need
+  scheduling but don't have a slot yet. Organize jobs into colored <strong>groups</strong> ("Needs Scheduled",
+  "Ready to Schedule"…), then drag a card straight onto the board — or drag a scheduled card back into the queue to
+  un-schedule it.</p>
 
-  <h3>5.6 &nbsp;Roster management (crews &amp; departments)</h3>
+  <h3>5.9 &nbsp;Roster management (crews &amp; departments)</h3>
   <ul>
     <li><strong>Add</strong> a person — right-click a department / location banner → <em>Add employee</em>.</li>
     <li><strong>Edit / delete</strong> — right-click a person's name.</li>
     <li><strong>Reorder / move</strong> — right-click the <em>resource column header</em> to unlock drag-reordering, then drag a name to a new spot or group. You'll be asked <strong>"just this week"</strong> or <strong>"permanent"</strong> (see Walkthrough 4).</li>
   </ul>
 
-  <h3>5.7 &nbsp;Assist Installation (lending people across departments)</h3>
+  <h3>5.10 &nbsp;Assist Installation (lending people across departments)</h3>
   <p>Some days a Production person works with an install crew. Right-click their name → <strong>Assist Installation</strong>,
   pick the region (WK / NEK) and the days — each day can be <strong>All</strong>, <strong>AM</strong>, or <strong>PM</strong>.
   Their Production day is greyed for the lent half; the open half still takes a Production job. Come back anytime to
   <strong>Edit days</strong> (drop a day or change AM/PM) or <strong>Remove assist</strong>.</p>
 
-  <h3>5.8 &nbsp;Scenario Sandbox</h3>
+  <h3>5.11 &nbsp;Scenario Sandbox</h3>
   <p>A safe copy of the board for "what-if" planning. Make changes, see the impact, and only <strong>commit</strong> them
   to the live schedule when you're happy — or discard them. Admin/Ops only.</p>
 
-  <h3>5.9 &nbsp;Monthly Plan &amp; AI auto-fill</h3>
+  <h3>5.12 &nbsp;Monthly Plan &amp; AI auto-fill</h3>
   <p>A month roll-up of installation billing across both regions, with per-week cards and a line for the monthly goal.
   The <strong>AI auto-fill</strong> button greedily fills the month from the pool of jobs that are ready for install,
   respecting promised dates and a per-week cap. Admin/Ops only.</p>
 
-  <h3>5.10 &nbsp;My Schedule / My Active Jobs</h3>
-  <p>Floor and field staff get a focused <strong>My Schedule</strong> — just their week. Sales &amp; PMs get
-  <strong>My Active Jobs</strong> — every job they own and where it currently sits across Production, Installation, and Shipping.</p>
+  <h3>5.13 &nbsp;My Schedule / My Active Jobs</h3>
+  <p>Floor and field staff get a focused <strong>My Schedule</strong> — just their week, day by day. A job that spans
+  several days appears on <strong>each</strong> day it runs. Sales &amp; PMs get <strong>My Active Jobs</strong> — every
+  job they own and where it currently sits across Production, Installation, and Shipping; <strong>click a job</strong> to
+  open its read-only job card (production stage, tasks, and schedule).</p>
 
-  <h3>5.11 &nbsp;Settings</h3>
+  <h3>5.14 &nbsp;Settings</h3>
   <table>
     <tr><th>Setting</th><th>What it does</th></tr>
     <tr><td>Auto-cascade &amp; conflict prompts</td><td>On = the board keeps itself in order with move/resize previews. Off = free-form override with ⚡ conflict icons.</td></tr>
@@ -470,6 +513,9 @@
     <tr><td>WK / NEK Install</td><td>Installation (their region)</td><td>No</td><td>View-only</td></tr>
     <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td></tr>
   </table>
+  <p>View-only roles can still <strong>open a job's card</strong> to read its details — production stage, tasks, and
+  dates — they just can't change anything. Editor-only tools (the Job Queue, roster editing, the Install Dates fields,
+  and the lock toggle) don't appear for them.</p>
   <div class="note box"><span class="box__label">Two different things</span>
   <strong>Who can open the app</strong> is controlled by sharing it in Power Apps. <strong>What a signed-in person sees</strong>
   is the role set in Manage users. Setting a role does not, by itself, grant someone access to open the app.</div>
@@ -564,6 +610,10 @@
     <tr><td>BC</td><td>Business Central — the ERP that feeds jobs, customers, values, and planning lines into the scheduler.</td></tr>
     <tr><td>Cascade</td><td>The engine automatically shifting downstream jobs to keep the schedule conflict-free.</td></tr>
     <tr><td>Planning line</td><td>A schedulable task on a BC job (labor with hours). Cards are built from these.</td></tr>
+    <tr><td>Production stepper</td><td>The ordered departments a job passes through (Steel → … → Assembly, then Install), shown on the card with each step's completed / active state.</td></tr>
+    <tr><td>Red date</td><td>A fixed, drop-dead install date. It locks the scheduled install date and marks the job with a pulsing red outline everywhere it appears.</td></tr>
+    <tr><td>Final install</td><td>The install card whose day sets the job's scheduled install date.</td></tr>
+    <tr><td>Job tasks</td><td>The job's BC planning-line tasks, shown as a checklist on the card — highlighted when on the card, greyed when their department is done.</td></tr>
     <tr><td>Assist</td><td>Temporarily lending a Production person to an Installation crew for a day or half-day.</td></tr>
     <tr><td>Custom card</td><td>A non-BC block of time — PTO, Holiday, Inventory, etc.</td></tr>
     <tr><td>Roster override</td><td>A "just this week" placement for a person, separate from their permanent spot.</td></tr>
@@ -577,6 +627,11 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 19, 2026</td><td><strong>Job tasks checklist</strong> on the job card — a collapsible list of the job&apos;s BC tasks; tasks on the card are highlighted, and tasks grey out as <strong>done</strong> when their department is completed on the stepper.</td></tr>
+      <tr><td>Jul 19, 2026</td><td>Sales &amp; PM can now <strong>click a job in My Active Jobs</strong> to open its read-only job card (production stage, tasks, and schedule).</td></tr>
+      <tr><td>Jul 19, 2026</td><td><strong>My Schedule</strong> shows a multi-day job on <strong>every</strong> day it spans, not just its start day.</td></tr>
+      <tr><td>Jul 19, 2026</td><td>Edit Job cleanup: <strong>Start / End are dates</strong> (times removed), "Hours" is now <strong>Estimated hours</strong>, and <strong>Lock</strong> moved to a lock/unlock icon in the panel header.</td></tr>
+      <tr><td>Jul 19, 2026</td><td>Editor-only tools tidied up: the <strong>Job Queue</strong> and the <strong>Install Dates</strong> section now show only for Admin / Ops / Developer.</td></tr>
       <tr><td>Jul 19, 2026</td><td>Mark steps <strong>completed</strong> — staff complete their card&apos;s step (Admin/Ops/Developer can complete any via the stepper). Completions are stamped with who + when, and completed cards recede on the board.</td></tr>
       <tr><td>Jul 19, 2026</td><td>Job card details show a <strong>production stepper</strong> — the departments a job needs, in flow order, showing what&apos;s done and what&apos;s active.</td></tr>
       <tr><td>Jul 19, 2026</td><td>Install cards have a <strong>Final install</strong> checkbox; that card&apos;s day sets the job&apos;s scheduled install date.</td></tr>
@@ -596,7 +651,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v1.0.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v1.1.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

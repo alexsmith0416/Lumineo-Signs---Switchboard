@@ -109,7 +109,7 @@ IDs are duplicated in `src/services/power-host.ts`; keep them in sync with
 - Remote: `origin` → `github.com/alexsmith0416/Lumineo-Signs---Switchboard`.
 - Commit and push only when asked. If on the main branch, branch first.
 
-### Keep the user guide current (do this on EVERY deploy)
+### Keep the user guide current (audit at session START + on EVERY deploy)
 
 There is a customer-facing user guide at **`apps/scheduling/public/USER-GUIDE.html`**
 — a self-contained, brand-styled HTML doc (Lumineo logo + colors). It ships in
@@ -117,18 +117,28 @@ the app bundle (Vite `public/`) and is surfaced in-app under **Help** (sidebar �
 Help → embedded guide + Download PDF), and is also sent to users directly. It is
 the single place users learn what the app can do.
 
-🔴 **Whenever a deploy adds, changes, or removes a user-facing feature, update
-the user guide in the same change:**
-1. Add a dated row to the **"What's New"** table (§14, newest first).
-2. Update the relevant section(s) — Features, Walkthroughs, Legend, Shortcuts,
-   Troubleshooting, FAQ — so the guide matches the shipped behavior.
-3. Bump the version/date in the cover header and the footer when it's a
-   meaningful revision.
+🔴 **At the START of every development session** — before doing new work — audit
+the guide against the app so it never drifts:
+1. `git log --oneline -25` and skim what shipped recently.
+2. Compare it to the guide **body** (§4 Legend, §5 Features, §6 Walkthroughs,
+   §7 Roles, §13 Glossary). If a shipped feature, a change to the job process /
+   flow, a role/permission change, or any user-facing behavior is missing or
+   wrong in the body, fix it this session — don't wait for the user to notice.
+
+🔴 **Whenever a change adds, changes, or removes a user-facing feature** (a new
+feature, a change to the job process/flow, a role/permission change, or any UI
+affordance) update the guide in the SAME change, in this order of importance:
+1. **Update the relevant BODY section(s)** — Features, Walkthroughs, Legend,
+   Roles, Shortcuts, Troubleshooting, Glossary, FAQ — so the guide *describes*
+   the feature. ⚠️ This is the step that gets skipped: a "What's New" row is
+   **not** enough on its own — the body must actually teach the feature.
+2. Add a dated row to the **"What's New"** table (§14, newest first).
+3. Bump the version/date in the footer on a meaningful revision.
 
 Treat this like updating tests: a user-facing change isn't "done" until the
-guide reflects it. (Pure internal/refactor changes with no user impact don't
-need a guide edit.) Open the file in a browser to preview; it prints cleanly to
-PDF for distribution.
+guide **body** reflects it. (Pure internal/refactor changes with no user impact
+don't need a guide edit.) Open the file in a browser to preview; it prints
+cleanly to PDF for distribution.
 
 ## 5. User roles & access (code, not data)
 
