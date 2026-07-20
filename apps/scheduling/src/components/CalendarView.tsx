@@ -100,6 +100,13 @@ interface CalendarViewProps {
   assistDaysByEmployee?: Map<string, Map<number, AssistHalf>>;
   /** Enables the right-hand Job Queue slide-out (Production + Installation). */
   enableJobQueue?: boolean;
+  /** Rendered on the LEFT of the week-summary controls row (e.g. the Installation
+   *  WK/NEK region toggle), under the utilization stats. */
+  summaryLeading?: React.ReactNode;
+  /** Use the 3-row Installation toolbar layout (week label alone on row 1,
+   *  Prev/Today/Next + Add Job on row 2, toggles on row 3). Default = the 2-row
+   *  Production layout (label + Add Job on row 1, Prev/Today/Next + toggles on row 2). */
+  installLayout?: boolean;
 }
 
 interface PendingShift {
@@ -274,6 +281,8 @@ export default function CalendarView({
   rosterUnlockable = false,
   assistDaysByEmployee,
   enableJobQueue = false,
+  summaryLeading,
+  installLayout = false,
 }: CalendarViewProps) {
   const {
     weekStart,
@@ -663,11 +672,12 @@ export default function CalendarView({
         <WeekSummary
           context={context}
           weekStart={weekStart}
-          resourceLabelPlural={kindMeta.resourceLabelPlural}
           showBillingStats={showBillingStats}
           showTotalValue={showTotalValue}
           monthlyGoal={monthlyGoal}
           combinedBillingThisWeek={combinedBillingThisWeek}
+          showStats={!readOnly}
+          leading={summaryLeading}
           trailing={
             !readOnly || enableJobQueue ? (
               <>
@@ -713,47 +723,50 @@ export default function CalendarView({
         />
       )}
       {!presentationMode && (
-      <div className="calendar-toolbar">
+      <div className={"calendar-toolbar " + (installLayout ? "calendar-toolbar--install" : "calendar-toolbar--prod")}>
         {/* Navigate via loadWeek (not setWeekStart) so the target week's data is
             actually fetched — live schedule lines are queried per week, so a
             state-only week change would show an empty/stale week. */}
-        <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
-        <button
-          className="calendar-toolbar__today"
-          onClick={() => void loadWeek(new Date())}
-          disabled={
-            startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
-            startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
-          }
-          title="Jump back to this week"
-        >
-          Today
-        </button>
-        <button onClick={() => void loadWeek(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
-        <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
-        <div className="calendar-toolbar__spacer" />
-        {toolbarExtras}
-        <button
-          className="calendar-toolbar__print"
-          onClick={() => {
-            const grid = gridRef.current;
-            const heading = `${kindMeta.title} — Week of ${format(weekStart, "MMM d, yyyy")}`;
-            if (!grid) {
-              window.print();
-              return;
+        <div className="calendar-toolbar__nav">
+          <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
+          <button
+            className="calendar-toolbar__today"
+            onClick={() => void loadWeek(new Date())}
+            disabled={
+              startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
+              startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
             }
-            printMarkup(
-              heading,
-              `<div class="print-doc__title">${heading}</div>` +
-                `<div class="calendar-view">${grid.outerHTML}</div>`,
-            );
-          }}
-          title="Print this week"
-          aria-label="Print this week"
-        >
-          <PrintIcon />
-        </button>
-        {addAction}
+            title="Jump back to this week"
+          >
+            Today
+          </button>
+          <button onClick={() => void loadWeek(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
+        </div>
+        <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
+        <div className="calendar-toolbar__tools">
+          <button
+            className="calendar-toolbar__print"
+            onClick={() => {
+              const grid = gridRef.current;
+              const heading = `${kindMeta.title} — Week of ${format(weekStart, "MMM d, yyyy")}`;
+              if (!grid) {
+                window.print();
+                return;
+              }
+              printMarkup(
+                heading,
+                `<div class="print-doc__title">${heading}</div>` +
+                  `<div class="calendar-view">${grid.outerHTML}</div>`,
+              );
+            }}
+            title="Print this week"
+            aria-label="Print this week"
+          >
+            <PrintIcon />
+          </button>
+          {toolbarExtras}
+        </div>
+        {addAction && <div className="calendar-toolbar__add">{addAction}</div>}
       </div>
       )}
 

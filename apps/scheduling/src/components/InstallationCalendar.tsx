@@ -111,22 +111,27 @@ export default function InstallationCalendar({
     }
   }, [wkSchedule, nekSchedule, jobSchedByJob, updateJobSched]);
 
-  // A fragment (not a wrapping div) so each control is a direct child of
-  // .calendar-toolbar — same as Production — and wraps uniformly on mobile.
+  // The WK/NEK region toggle lives on the LEFT of the week-summary controls row
+  // (under the utilization stats), not in the toolbar.
+  const regionToggle = (
+    <div className="region-toggle" role="group" aria-label="Region">
+      {(["WK", "NEK"] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
+          onClick={() => setRegion(r)}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+
+  // A fragment (not a wrapping div) so each control is a direct child of the
+  // toolbar tools row — same as Production — and wraps uniformly on mobile.
   const toolbar = (
     <>
-      <div className="region-toggle" role="group" aria-label="Region">
-        {(["WK", "NEK"] as const).map((r) => (
-          <button
-            key={r}
-            type="button"
-            className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
-            onClick={() => setRegion(r)}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
       {canSeeMoney && (
         <ToggleChip label="$" active={showInvoice} onClick={() => setShowInvoice((v) => !v)} accent="var(--status-green)" />
       )}
@@ -182,6 +187,8 @@ export default function InstallationCalendar({
         monthlyGoal={showMoney ? MONTHLY_INSTALL_GOAL : undefined}
         combinedBillingThisWeek={showMoney ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
+        summaryLeading={regionToggle}
+        installLayout
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}
         enableJobQueue={!readOnly}

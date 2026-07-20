@@ -796,44 +796,31 @@ input, select, textarea {
     padding: 12px 16px 16px;
   }
 
-  /* Toolbar (mobile + tablet): controls wrap onto their own line, the week
-     label stacks above them, and the never-used Print button is dropped. */
+  /* Toolbar (mobile + tablet): the grid rows already stack the controls; just
+     tighten the gutters, size the label, and drop the never-used Print button. */
   .calendar-toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
+    gap: 6px 8px;
     padding: 0 4px;
   }
-  .calendar-toolbar > .calendar-toolbar__label {
-    order: -1;
-    flex: 1 0 100%;
+  .calendar-toolbar__label {
     font-size: 13px;
     text-align: left;
-  }
-  .calendar-toolbar > .calendar-toolbar__spacer {
-    display: none;
   }
   .calendar-toolbar__print {
     display: none !important;
   }
 
   /* Job cards: a mobile day column is too narrow to fit crew + weather + $ on
-     one row, so stack the addons — each gets its own line + a little breathing
-     room. The lane height grows to match (see useStackedAddons in CalendarView),
-     and hiding an addon via the toolbar toggles shrinks the card back down.
-     Crew + $ value are left-justified on their own lines; weather is pinned to
-     the bottom-right (last line, right-aligned) and always stays there. */
+     one row, so stack the addons — each gets its own line. Crew/Truck, weather,
+     and $ value are all left-justified, sharing the card's text padding. */
   .job-card__addons {
     flex-direction: column;
     align-items: flex-start;
     gap: 3px;
     margin-top: 1px;
   }
-  .job-card__invoice {
-    order: 2;
-  }
   .job-card__weather {
-    order: 3;
-    align-self: flex-end;
+    align-self: flex-start;
   }
 }
 
@@ -1023,16 +1010,70 @@ input, select, textarea {
 
 /* ============ Calendar ============ */
 
-.calendar-toolbar {
+/* Week summary — a stats row (editor-only) plus a controls row: region toggle
+   left, undo/redo + Job Queue right, so the two never crowd each other. */
+.week-summary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.week-summary__stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.week-summary__controls {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.week-summary__leading { display: inline-flex; align-items: center; }
+.week-summary__spring { flex: 1; }
+.week-summary__trailing { display: inline-flex; align-items: center; gap: 8px; }
+
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
   margin-bottom: 12px;
   /* Inset the row so the outer buttons (Prev … Add Job) line up with the stat
      text in the WeekSummary container above — which sits 12px padding + 1px
      border = 13px in from its outer edge. */
   padding: 0 13px;
 }
+/* Production: week label + Add Job on row 1; Prev/Today/Next + toggles on row 2.
+   Add Job pins top-right; the toggles (Show all last → rightmost) sit under it. */
+.calendar-toolbar--prod {
+  grid-template-areas:
+    "label add"
+    "nav   tools";
+}
+/* Installation: week label alone on row 1; Prev/Today/Next + Add Job on row 2;
+   the (larger) toggle set on its own row 3, still right-justified under Add Job. */
+.calendar-toolbar--install {
+  grid-template-areas:
+    "label label"
+    "nav   add"
+    "tools tools";
+}
+.calendar-toolbar__nav { grid-area: nav; display: inline-flex; align-items: center; gap: 8px; }
+.calendar-toolbar__tools {
+  grid-area: tools;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.calendar-toolbar__add { grid-area: add; justify-self: end; display: inline-flex; }
 
 /* Every interactive control in the toolbar shares one height + font size so
    the row reads uniformly (Prev/Today/Next, $ / weather / crew chips, the
@@ -1070,8 +1111,9 @@ input, select, textarea {
   color: #fff;
 }
 
-/* WK / NEK segmented toggle — never shrinks, so the labels can't clip. */
-.calendar-toolbar .region-toggle {
+/* WK / NEK segmented toggle — never shrinks, so the labels can't clip. Lives in
+   the week-summary controls row (left), so it's not scoped to the toolbar. */
+.region-toggle {
   display: inline-flex;
   height: 30px;
   box-sizing: border-box;
@@ -1080,7 +1122,7 @@ input, select, textarea {
   overflow: hidden;
   flex-shrink: 0;
 }
-.calendar-toolbar .region-toggle__btn {
+.region-toggle__btn {
   height: 100%;
   padding: 0 12px;
   border: none;
@@ -1091,17 +1133,17 @@ input, select, textarea {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: pointer;
 }
-.calendar-toolbar .region-toggle__btn--active {
+.region-toggle__btn--active {
   background: var(--lumineo-navy);
   color: #fff;
 }
 
 .calendar-toolbar__label {
+  grid-area: label;
   font-weight: 500;
 }
-
-.calendar-toolbar__spacer { flex: 1; }
 
 .calendar-toolbar__today {
   background: var(--surface-raised) !important;

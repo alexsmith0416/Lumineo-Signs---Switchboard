@@ -7,13 +7,18 @@ import { cardMoneyValue } from "./JobCard";
 interface WeekSummaryProps {
   context: ScheduleContext;
   weekStart: Date;
-  resourceLabelPlural: string;
   showBillingStats?: boolean;
   monthlyGoal?: number;
   combinedBillingThisWeek?: number;
   /** Show a "Total Value" stat — sum of each current job's remaining value. */
   showTotalValue?: boolean;
-  /** Replaces the "N resources this week" note (e.g. the Job Queue toggle). */
+  /** Show the utilization stats block. Hidden for view-only users (the stats are
+   *  an editor tool). Default true. */
+  showStats?: boolean;
+  /** Left-justified control on the controls row, under the stats (e.g. the
+   *  Installation WK/NEK region toggle). */
+  leading?: React.ReactNode;
+  /** Right-justified controls on the controls row (undo/redo + Job Queue). */
   trailing?: React.ReactNode;
 }
 
@@ -26,11 +31,12 @@ function formatMoney(amount: number): string {
 export default function WeekSummary({
   context,
   weekStart,
-  resourceLabelPlural,
   showBillingStats = false,
   monthlyGoal,
   combinedBillingThisWeek,
   showTotalValue = false,
+  showStats = true,
+  leading,
   trailing,
 }: WeekSummaryProps) {
   const stats = useMemo(() => {
@@ -97,68 +103,53 @@ export default function WeekSummary({
     monthlyGoal && monthlyGoal > 0 ? stats.monthBilling / monthlyGoal : null;
   const combinedNoteWeek = combinedBillingThisWeek;
 
+  // Nothing to show — e.g. a view-only Production user (stats hidden, no region
+  // toggle, no editor controls). Render nothing rather than an empty bar.
+  if (!showStats && !leading && !trailing) return null;
+
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        padding: "8px 12px",
-        background: "var(--bg-secondary)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        marginBottom: 12,
-        fontSize: 12,
-        flexWrap: "wrap",
-      }}
-    >
-      <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} highlight />
-      <Stat label="Scheduled" value={`${stats.totalScheduled.toFixed(1)}h`} />
-      <Stat label="Capacity" value={`${stats.totalCapacity.toFixed(0)}h`} />
-      <Stat label="Jobs" value={String(stats.jobs)} />
-      <Stat label="Lines" value={String(stats.lines)} />
+    <div className="week-summary">
+      {showStats && (
+        <div className="week-summary__stats">
+          <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} highlight />
+          <Stat label="Scheduled" value={`${stats.totalScheduled.toFixed(1)}h`} />
+          <Stat label="Capacity" value={`${stats.totalCapacity.toFixed(0)}h`} />
+          <Stat label="Jobs" value={String(stats.jobs)} />
+          <Stat label="Lines" value={String(stats.lines)} />
 
-      {showTotalValue && (
-        <>
-          <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
-          <Stat label="Total Value" value={formatMoney(stats.totalValue)} money />
-        </>
+          {showTotalValue && (
+            <>
+              <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+              <Stat label="Total Value" value={formatMoney(stats.totalValue)} money />
+            </>
+          )}
+
+          {showBillingStats && (
+            <>
+              <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
+              <Stat label="Billing · week" value={formatMoney(stats.weekBilling)} money />
+              {typeof combinedNoteWeek === "number" && combinedNoteWeek !== stats.weekBilling && (
+                <Stat label="Both regions · week" value={formatMoney(combinedNoteWeek)} money />
+              )}
+              <Stat label="Billing · month" value={formatMoney(stats.monthBilling)} money />
+              {monthlyGoal && monthlyGoal > 0 && goalProgress !== null && (
+                <Stat
+                  label="Monthly goal"
+                  value={`${Math.round(goalProgress * 100)}% of ${formatMoney(monthlyGoal)}`}
+                  money={goalProgress >= 1}
+                  warning={goalProgress < 0.9}
+                />
+              )}
+            </>
+          )}
+        </div>
       )}
 
-      {showBillingStats && (
-        <>
-          <div style={{ width: 1, background: "var(--border)", alignSelf: "stretch" }} />
-          <Stat
-            label="Billing · week"
-            value={formatMoney(stats.weekBilling)}
-            money
-          />
-          {typeof combinedNoteWeek === "number" && combinedNoteWeek !== stats.weekBilling && (
-            <Stat
-              label="Both regions · week"
-              value={formatMoney(combinedNoteWeek)}
-              money
-            />
-          )}
-          <Stat
-            label="Billing · month"
-            value={formatMoney(stats.monthBilling)}
-            money
-          />
-          {monthlyGoal && monthlyGoal > 0 && goalProgress !== null && (
-            <Stat
-              label="Monthly goal"
-              value={`${Math.round(goalProgress * 100)}% of ${formatMoney(monthlyGoal)}`}
-              money={goalProgress >= 1}
-              warning={goalProgress < 0.9}
-            />
-          )}
-        </>
-      )}
-
-      <div style={{ flex: 1 }} />
-      {trailing ?? (
-        <div style={{ color: "var(--text-tertiary)", alignSelf: "center" }}>
-          {context.employees.size} {resourceLabelPlural.toLowerCase()} this week
+      {(leading || trailing) && (
+        <div className="week-summary__controls">
+          {leading && <div className="week-summary__leading">{leading}</div>}
+          <div className="week-summary__spring" />
+          {trailing && <div className="week-summary__trailing">{trailing}</div>}
         </div>
       )}
     </div>
