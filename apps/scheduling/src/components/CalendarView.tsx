@@ -16,6 +16,7 @@ import {
 } from "../store/job-queue-store";
 import { lineFromQueueItem, queueItemFromLine } from "../services/job-queue-data";
 import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
+import { DepartmentFillerRow, FillerJobsPanel, fillerItemsForDept } from "./FillerJobs";
 import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
@@ -469,6 +470,15 @@ export default function CalendarView({
         : useInstallQueueStoreWK
       : useProductionQueueStore;
   const [queueOpen, setQueueOpen] = useState(false);
+
+  // Filler ("Fill-in Jobs") — a per-department holding list rendered as a card in
+  // each department's bottom row (editors only). Reuses the board's queue store.
+  const queueGroups = queueStore((s) => s.groups);
+  const loadQueue = queueStore((s) => s.load);
+  useEffect(() => {
+    if (enableJobQueue) void loadQueue();
+  }, [enableJobQueue, loadQueue]);
+  const [fillerDeptId, setFillerDeptId] = useState<string | null>(null);
 
   // Drop a queue card onto a cell → create a schedule line from it (instant
   // placement with the job's stored hours/dept), then remove it from the queue.
@@ -955,6 +965,12 @@ export default function CalendarView({
                 />
               );
             })}
+            {enableJobQueue && (
+              <DepartmentFillerRow
+                items={fillerItemsForDept(queueGroups, dept.id)}
+                onOpen={() => setFillerDeptId(dept.id)}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -1032,9 +1048,29 @@ export default function CalendarView({
                 Add team job…
               </button>
             )}
+            {enableJobQueue && (
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  setFillerDeptId(bannerMenu.deptId);
+                  setBannerMenu(null);
+                }}
+              >
+                Add filler jobs…
+              </button>
+            )}
           </div>
         </>
       )}
+
+      {fillerDeptId && (() => {
+        const d = departments.get(fillerDeptId);
+        if (!d) return null;
+        return (
+          <FillerJobsPanel dept={d} useQueueStore={queueStore} onClose={() => setFillerDeptId(null)} />
+        );
+      })()}
 
       {pendingShift && (() => {
         const targetLine = schedule.find((l) => l.id === pendingShift.lineId);

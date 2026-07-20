@@ -21,6 +21,11 @@ export interface JobQueueState {
   toggleCollapsed: (id: string) => void;
   reorderGroups: (orderedIds: string[]) => void;
 
+  /** Find the board's "Fill-in Jobs" group (creating it if missing) and return
+   *  its id. Filler jobs are QueueItems in this group, scoped per department via
+   *  the item's departmentId. */
+  ensureFillInGroup: () => string;
+
   /** Add a fully-built item (id/groupId/sortOrder already set). */
   addItem: (item: QueueItem) => void;
   updateItem: (id: string, changes: Partial<QueueItem>) => void;
@@ -120,6 +125,27 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
           );
         }
       });
+    },
+
+    ensureFillInGroup: () => {
+      const existing = get().groups.find((g) => /fill.?in/i.test(g.name));
+      if (existing) return existing.id;
+      const group: QueueGroup = {
+        id: newId(),
+        kind,
+        name: "Fill-in Jobs",
+        color: "#E4E7EC",
+        textColor: "#2A2F3A",
+        collapsed: false,
+        sortOrder: get().groups.length,
+        items: [],
+      };
+      set({ groups: [...get().groups, group] });
+      void ds.createGroup(group).catch((e) => {
+        console.error("[queue] ensureFillInGroup createGroup failed — resyncing", e);
+        void get().load(true);
+      });
+      return group.id;
     },
 
     addItem: (item) => {
