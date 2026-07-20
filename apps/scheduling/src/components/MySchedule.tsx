@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, format, isSameDay, startOfWeek } from "date-fns";
+import { addDays, format, startOfDay, startOfWeek } from "date-fns";
 import type { EmployeeGroup } from "../services/current-user";
 import { GROUP_STORES } from "../services/employee-groups";
 import { printMarkup } from "../services/print";
@@ -87,7 +87,15 @@ export default function MySchedule({ group, employeeId, lead }: MyScheduleProps)
 
       <div className="my-schedule__days" ref={printRef}>
         {days.map((day) => {
-          const dayTasks = mine.filter((l) => isSameDay(l.startDateTime, day));
+          // A task shows on every day its span covers (start day → end day,
+          // inclusive), so multi-day jobs appear on each day like the board's
+          // spanning bar — not only their start day.
+          const d = day.getTime();
+          const dayTasks = mine.filter((l) => {
+            const s = startOfDay(l.startDateTime).getTime();
+            const e = startOfDay(l.endDateTime).getTime();
+            return d >= s && d <= e;
+          });
           return (
             <div key={day.toISOString()} className="my-schedule__day">
               <div className="my-schedule__day-head">

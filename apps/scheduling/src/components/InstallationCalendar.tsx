@@ -184,7 +184,7 @@ export default function InstallationCalendar({
         toolbarExtras={toolbar}
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}
-        enableJobQueue
+        enableJobQueue={!readOnly}
         scenarioStore={scenarioStore}
         hiddenDeptIds={hiddenDeptIds}
         hiddenEmployeeIds={hiddenEmployeeIds}
