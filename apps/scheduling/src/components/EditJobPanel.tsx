@@ -254,7 +254,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
             placeholder="BC job summary (shown under the job name)"
-            style={{ resize: "vertical", fontFamily: "inherit" }}
+            style={{ resize: "vertical", fontFamily: "inherit", alignContent: "center" }}
             disabled={readOnly}
           />
         </div>
@@ -282,7 +282,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             value={taskDescription}
             onChange={(e) => setTaskDescription(e.target.value)}
             placeholder="Task description shown on the card"
-            style={{ resize: "vertical", fontFamily: "inherit" }}
+            style={{ resize: "vertical", fontFamily: "inherit", alignContent: "center" }}
             disabled={readOnly}
           />
         </div>

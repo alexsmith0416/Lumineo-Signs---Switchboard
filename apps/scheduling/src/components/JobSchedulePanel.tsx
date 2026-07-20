@@ -20,11 +20,24 @@ function parseDateInput(v: string): Date | null {
 const toDateInput = (d: Date | null): string => (d ? format(d, "yyyy-MM-dd") : "");
 const fmtLong = (d: Date | null): string => (d ? format(d, "EEE MMM d, yyyy") : "—");
 
+function EyeIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+      <circle cx="12" cy="12" r="3" />
+      {!open && <line x1="3" y1="3" x2="21" y2="21" />}
+    </svg>
+  );
+}
+
 /**
- * Job-level scheduling dates (keyed by jobNo). Scheduled install + drop-dead Red
- * date are always shown; the release-anchored targets are hidden (SHOW_TARGETS)
- * until a real BC release date is available. Setting a Red date auto-fills and
- * locks the scheduled date and drives the pulsing red outline on the card.
+ * Job-level scheduling dates (keyed by jobNo) — the Install Dates section. These
+ * are situational "unused" fields, so the whole section is editor-only: view-only
+ * users (readOnly) never see the section or its eye toggle. For an editor the eye
+ * shows/hides the Scheduled install + drop-dead Red date fields (collapsed by
+ * default). Setting a Red date auto-fills and locks the scheduled date and drives
+ * the pulsing red outline on the card. The release-anchored targets stay hidden
+ * (SHOW_TARGETS) until a real BC release date is available.
  */
 export default function JobSchedulePanel({
   jobNo,
@@ -39,6 +52,8 @@ export default function JobSchedulePanel({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const [revealed, setRevealed] = useState(false);
 
   // Vinyl/graphics-only → shorter production target. Only needed while targets show.
   const [vinylOnly, setVinylOnly] = useState(false);
@@ -67,73 +82,87 @@ export default function JobSchedulePanel({
     else void update(jobNo, { redDate: null });
   };
 
+  // Editor-only section: view-only users never see it (nor the eye toggle).
+  if (readOnly) return null;
+
   return (
     <div className="job-sched">
       <div className="job-sched__head">
         <span className="job-sched__title">Install Dates</span>
         {red && <span className="job-sched__reddot" title="Fixed drop-dead install date">🔴 Red date</span>}
+        <button
+          type="button"
+          className="job-sched__eye"
+          onClick={() => setRevealed((v) => !v)}
+          title={revealed ? "Hide install date fields" : "Show install date fields"}
+          aria-pressed={revealed}
+        >
+          <EyeIcon open={revealed} />
+        </button>
       </div>
 
-      {SHOW_TARGETS && (
+      {revealed && (
         <>
-          <div className="job-sched__row">
-            <span className="job-sched__label">Release date</span>
-            <input
-              type="date"
-              className="form-field__input job-sched__date"
-              value={toDateInput(released)}
-              disabled={readOnly}
-              onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
-              title="The day this job was released to production. Anchors the targets below."
-            />
-          </div>
-          {released && (
-            <div className="job-sched__targets">
-              <div>
-                Target production complete: <strong>{fmtLong(targets.targetProductionComplete)}</strong>
-                {vinylOnly && <span className="job-sched__note"> · vinyl/graphics (4 wk)</span>}
+          {SHOW_TARGETS && (
+            <>
+              <div className="job-sched__row">
+                <span className="job-sched__label">Release date</span>
+                <input
+                  type="date"
+                  className="form-field__input job-sched__date"
+                  value={toDateInput(released)}
+                  onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
+                  title="The day this job was released to production. Anchors the targets below."
+                />
               </div>
-              {!scheduled && (
-                <div>
-                  Est. install window:{" "}
-                  <strong>
-                    {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
-                  </strong>
+              {released && (
+                <div className="job-sched__targets">
+                  <div>
+                    Target production complete: <strong>{fmtLong(targets.targetProductionComplete)}</strong>
+                    {vinylOnly && <span className="job-sched__note"> · vinyl/graphics (4 wk)</span>}
+                  </div>
+                  {!scheduled && (
+                    <div>
+                      Est. install window:{" "}
+                      <strong>
+                        {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
+                      </strong>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
+
+          <div className="job-sched__reveal">
+            <div className="job-sched__row">
+              <span className="job-sched__label">Scheduled install</span>
+              <input
+                type="date"
+                className="form-field__input job-sched__date"
+                value={toDateInput(scheduled)}
+                disabled={!!red}
+                onChange={(e) => void update(jobNo, { scheduledInstallDate: parseDateInput(e.target.value) })}
+                title={red ? "Locked to the red date — clear the red date to change" : "Committed installation date"}
+              />
+            </div>
+            <div className="job-sched__row">
+              <span className="job-sched__label job-sched__label--red">Red date</span>
+              <input
+                type="date"
+                className="form-field__input job-sched__date job-sched__date--red"
+                value={toDateInput(red)}
+                onChange={(e) => onRedChange(e.target.value)}
+                title="Fixed, drop-dead install date. Locks the scheduled date and flags the job everywhere."
+              />
+            </div>
+            <div className="job-sched__hint">
+              A red date is a fixed drop-dead install date — it locks the scheduled date and adds a pulsing
+              red outline to this job&apos;s card on every schedule.
+            </div>
+          </div>
         </>
       )}
-
-      <div className="job-sched__reveal">
-        <div className="job-sched__row">
-          <span className="job-sched__label">Scheduled install</span>
-          <input
-            type="date"
-            className="form-field__input job-sched__date"
-            value={toDateInput(scheduled)}
-            disabled={readOnly || !!red}
-            onChange={(e) => void update(jobNo, { scheduledInstallDate: parseDateInput(e.target.value) })}
-            title={red ? "Locked to the red date — clear the red date to change" : "Committed installation date"}
-          />
-        </div>
-        <div className="job-sched__row">
-          <span className="job-sched__label job-sched__label--red">Red date</span>
-          <input
-            type="date"
-            className="form-field__input job-sched__date job-sched__date--red"
-            value={toDateInput(red)}
-            disabled={readOnly}
-            onChange={(e) => onRedChange(e.target.value)}
-            title="Fixed, drop-dead install date. Locks the scheduled date and flags the job everywhere."
-          />
-        </div>
-        <div className="job-sched__hint">
-          A red date is a fixed drop-dead install date — it locks the scheduled date and adds a pulsing
-          red outline to this job&apos;s card on every schedule.
-        </div>
-      </div>
     </div>
   );
 }
