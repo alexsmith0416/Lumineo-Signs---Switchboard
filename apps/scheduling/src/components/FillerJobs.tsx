@@ -1,7 +1,6 @@
 import type { Department } from "../engine/types";
 import type { UseJobQueueStore } from "../store/job-queue-store";
-import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
-import { newId, type QueueItem } from "../services/job-queue-data";
+import type { QueueItem } from "../services/job-queue-data";
 
 /** The filler QueueItems for a department (items in the board's "Fill-in Jobs"
  *  group scoped to that department). */
@@ -45,53 +44,25 @@ export function DepartmentFillerRow({
 }
 
 /**
- * Slide-over listing a department's filler jobs (like the Job Queue), with a BC
- * job search to add and per-row remove.
+ * Slide-over listing a department's filler jobs (like the Job Queue), with a
+ * per-row remove and an "Add filler job" button that opens the Add-Job flow.
  */
 export function FillerJobsPanel({
   dept,
   useQueueStore,
+  onAdd,
   onClose,
 }: {
   dept: Department;
   useQueueStore: UseJobQueueStore;
+  onAdd: () => void;
   onClose: () => void;
 }) {
   const groups = useQueueStore((s) => s.groups);
-  const ensureFillInGroup = useQueueStore((s) => s.ensureFillInGroup);
-  const addItem = useQueueStore((s) => s.addItem);
   const removeItem = useQueueStore((s) => s.removeItem);
-  const { query, setQuery, results, loading } = useJobSearch();
 
   const fillGroup = groups.find((g) => /fill.?in/i.test(g.name));
-  const items = (fillGroup?.items ?? []).filter((it) => it.departmentId === dept.id);
-  const already = new Set(items.map((it) => it.jobNo));
-
-  const add = (r: JobSearchResult) => {
-    const groupId = ensureFillInGroup();
-    const hours = r.mappedLines.reduce((s, l) => s + l.estimatedHours, 0);
-    const item: QueueItem = {
-      id: newId(),
-      groupId,
-      jobNo: r.job.jobNo,
-      customerName: r.job.customerName,
-      jobDescription: "",
-      planningLineDescription: r.mappedLines.map((l) => l.description).join("\n"),
-      estimatedHours: hours,
-      departmentId: dept.id,
-      crewPersons: null,
-      crewTrucks: null,
-      crewTrips: null,
-      installZip: null,
-      invoiceAmount: null,
-      isCustom: false,
-      customColor: null,
-      customTextColor: null,
-      sortOrder: fillGroup?.items.length ?? 0,
-    };
-    addItem(item);
-    setQuery("");
-  };
+  const items: QueueItem[] = (fillGroup?.items ?? []).filter((it) => it.departmentId === dept.id);
 
   return (
     <div className="slide-over" onClick={onClose}>
@@ -104,9 +75,14 @@ export function FillerJobsPanel({
         </div>
 
         <div className="slide-over__body">
+          <div style={{ padding: 10 }}>
+            <button type="button" className="btn-primary" style={{ width: "100%" }} onClick={onAdd}>
+              ＋ Add filler job
+            </button>
+          </div>
           <div className="filler-list">
             {items.length === 0 ? (
-              <div className="jtp__note">No filler jobs yet. Search below to add.</div>
+              <div className="jtp__note">No filler jobs yet. Use “Add filler job” above.</div>
             ) : (
               items.map((it) => (
                 <div key={it.id} className="filler-list__item">
@@ -131,40 +107,6 @@ export function FillerJobsPanel({
                 </div>
               ))
             )}
-          </div>
-
-          <div className="filler-add">
-            <div className="form-field__label" style={{ background: "none", padding: "10px 12px 4px" }}>
-              Add a BC job
-            </div>
-            <div style={{ padding: "0 12px 8px" }}>
-              <input
-                className="form-field__input"
-                style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 6 }}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search job number or customer…"
-              />
-            </div>
-            {loading && <div className="jtp__note">Searching…</div>}
-            {!loading && query.trim() && results.length === 0 && (
-              <div className="jtp__note">No matching BC jobs.</div>
-            )}
-            <div className="filler-results">
-              {results.map((r) => (
-                <button
-                  key={r.job.jobNo}
-                  type="button"
-                  className="filler-results__row"
-                  disabled={already.has(r.job.jobNo)}
-                  onClick={() => add(r)}
-                >
-                  <span className="filler-list__no">{r.job.jobNo}</span>
-                  <span className="filler-list__cust">{r.job.customerName}</span>
-                  <span className="filler-results__add">{already.has(r.job.jobNo) ? "added" : "+ add"}</span>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 

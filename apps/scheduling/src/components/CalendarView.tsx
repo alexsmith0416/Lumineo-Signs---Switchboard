@@ -17,6 +17,8 @@ import {
 import { lineFromQueueItem, queueItemFromLine } from "../services/job-queue-data";
 import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
 import { DepartmentFillerRow, FillerJobsPanel, fillerItemsForDept } from "./FillerJobs";
+import AddJobPanel, { type FillerDraft } from "./AddJobPanel";
+import { newId } from "../services/job-queue-data";
 import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
@@ -478,7 +480,33 @@ export default function CalendarView({
   useEffect(() => {
     if (enableJobQueue) void loadQueue();
   }, [enableJobQueue, loadQueue]);
-  const [fillerDeptId, setFillerDeptId] = useState<string | null>(null);
+  // Which department's filler LIST is open (view), and which department's filler
+  // ADD flow is open (the Add-Job panel in filler mode).
+  const [fillerListDeptId, setFillerListDeptId] = useState<string | null>(null);
+  const [fillerAddDeptId, setFillerAddDeptId] = useState<string | null>(null);
+  const addFillerJob = (draft: FillerDraft) => {
+    const st = queueStore.getState();
+    const groupId = st.ensureFillInGroup();
+    st.addItem({
+      id: newId(),
+      groupId,
+      jobNo: draft.jobNo,
+      customerName: draft.customerName,
+      jobDescription: draft.jobDescription,
+      planningLineDescription: draft.planningLineDescription,
+      estimatedHours: draft.estimatedHours,
+      departmentId: draft.departmentId,
+      crewPersons: null,
+      crewTrucks: null,
+      crewTrips: null,
+      installZip: null,
+      invoiceAmount: null,
+      isCustom: false,
+      customColor: null,
+      customTextColor: null,
+      sortOrder: 0,
+    });
+  };
 
   // Drop a queue card onto a cell → create a schedule line from it (instant
   // placement with the job's stored hours/dept), then remove it from the queue.
@@ -826,14 +854,10 @@ export default function CalendarView({
                 adminEditEnabled
                   ? (e) => {
                       e.preventDefault();
-                      // Department lane enabled (production): show a small menu
-                      // with Add employee / Add team job. Otherwise (install)
-                      // right-click adds an employee directly, as before.
-                      if (enableDepartmentLane) {
-                        setBannerMenu({ deptId: dept.id, x: e.clientX, y: e.clientY });
-                      } else {
-                        setAddGroupId(dept.id);
-                      }
+                      // Both boards open the banner menu (Add employee / Add team
+                      // job on production / Add filler jobs). Team job is gated to
+                      // production; Add employee covers the old install shortcut.
+                      setBannerMenu({ deptId: dept.id, x: e.clientX, y: e.clientY });
                     }
                   : undefined
               }
@@ -965,10 +989,10 @@ export default function CalendarView({
                 />
               );
             })}
-            {enableJobQueue && (
+            {enableJobQueue && fillerItemsForDept(queueGroups, dept.id).length > 0 && (
               <DepartmentFillerRow
                 items={fillerItemsForDept(queueGroups, dept.id)}
-                onOpen={() => setFillerDeptId(dept.id)}
+                onOpen={() => setFillerListDeptId(dept.id)}
               />
             )}
           </div>
@@ -1034,7 +1058,7 @@ export default function CalendarView({
             >
               Add employee…
             </button>
-            {!readOnly && onEmptyCellClick && (
+            {!readOnly && onEmptyCellClick && enableDepartmentLane && (
               <button
                 type="button"
                 className="context-menu__item"
@@ -1053,7 +1077,7 @@ export default function CalendarView({
                 type="button"
                 className="context-menu__item"
                 onClick={() => {
-                  setFillerDeptId(bannerMenu.deptId);
+                  setFillerAddDeptId(bannerMenu.deptId);
                   setBannerMenu(null);
                 }}
               >
@@ -1064,11 +1088,31 @@ export default function CalendarView({
         </>
       )}
 
-      {fillerDeptId && (() => {
-        const d = departments.get(fillerDeptId);
+      {fillerListDeptId && (() => {
+        const d = departments.get(fillerListDeptId);
         if (!d) return null;
         return (
-          <FillerJobsPanel dept={d} useQueueStore={queueStore} onClose={() => setFillerDeptId(null)} />
+          <FillerJobsPanel
+            dept={d}
+            useQueueStore={queueStore}
+            onAdd={() => {
+              setFillerListDeptId(null);
+              setFillerAddDeptId(d.id);
+            }}
+            onClose={() => setFillerListDeptId(null)}
+          />
+        );
+      })()}
+
+      {fillerAddDeptId && (() => {
+        const d = departments.get(fillerAddDeptId);
+        if (!d) return null;
+        return (
+          <AddJobPanel
+            useStore={useStore}
+            fillerAdd={{ departmentId: d.id, onAdd: addFillerJob }}
+            onClose={() => setFillerAddDeptId(null)}
+          />
         );
       })()}
 

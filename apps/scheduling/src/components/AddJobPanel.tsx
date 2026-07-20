@@ -50,6 +50,17 @@ function readableText(hex: string): string {
   return lum > 0.6 ? "#1a1d23" : "#ffffff";
 }
 
+/** The data a filler add produces — a BC job (+ chosen tasks) to park in a
+ *  department's Fill-in Jobs list, with no placement. */
+export interface FillerDraft {
+  jobNo: string;
+  customerName: string;
+  jobDescription: string;
+  planningLineDescription: string;
+  estimatedHours: number;
+  departmentId: string;
+}
+
 interface AddJobPanelProps {
   onClose: () => void;
   initialStart?: Date;
@@ -58,6 +69,10 @@ interface AddJobPanelProps {
    *  than one employee — creates department-wide lines. Production only. */
   initialDepartmentId?: string;
   useStore?: UseScheduleStore;
+  /** Filler mode: instead of scheduling, add the picked job (+ tasks) to a
+   *  department's Fill-in Jobs list. Reuses the exact BC search + task-list flow,
+   *  minus Auto (and minus the Custom Card tab / scheduling extras). */
+  fillerAdd?: { departmentId: string; onAdd: (draft: FillerDraft) => void };
 }
 
 type Mode = "single" | "multi" | "auto" | "custom-task";
@@ -69,7 +84,9 @@ export default function AddJobPanel({
   initialEmployeeId,
   initialDepartmentId,
   useStore = useScheduleStore,
+  fillerAdd,
 }: AddJobPanelProps) {
+  const filler = !!fillerAdd;
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
   const [mode, setMode] = useState<Mode>("single");
@@ -225,6 +242,20 @@ export default function AddJobPanel({
 
     if (targets.length === 0) return;
 
+    // Filler mode: park the job (+ chosen tasks) on the department's Fill-in list.
+    if (filler) {
+      fillerAdd!.onAdd({
+        jobNo: selected.job.jobNo,
+        customerName: selected.job.customerName,
+        jobDescription: selected.job.description ?? "",
+        planningLineDescription: targets.map((t) => t.description).join("\n"),
+        estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
+        departmentId: fillerAdd!.departmentId,
+      });
+      onClose();
+      return;
+    }
+
     const ctxForEngine = {
       employees: ctxEmployees,
       departments,
@@ -332,6 +363,23 @@ export default function AddJobPanel({
   // with no BC planning line still be put on the board.
   const commitCustomTask = async () => {
     if (!selected) return;
+
+    // Filler mode: a manual task on the selected BC job → one filler entry.
+    if (filler) {
+      const h = Number(customTaskHours);
+      if (!customTaskDesc.trim() || Number.isNaN(h) || h <= 0) return;
+      fillerAdd!.onAdd({
+        jobNo: selected.job.jobNo,
+        customerName: selected.job.customerName,
+        jobDescription: selected.job.description ?? "",
+        planningLineDescription: customTaskDesc.trim(),
+        estimatedHours: h,
+        departmentId: fillerAdd!.departmentId,
+      });
+      onClose();
+      return;
+    }
+
     const emp = isTeam
       ? laneEmp!
       : customTaskEmployeeId
@@ -492,7 +540,7 @@ export default function AddJobPanel({
   return (
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
-        <div className="section-title">{isTeam ? "Add Team Job" : "Add Job"}</div>
+        <div className="section-title">{filler ? "Add Filler Job" : isTeam ? "Add Team Job" : "Add Job"}</div>
         {isTeam && (
           <div style={{ padding: "0 12px 8px", fontSize: 11, color: "var(--text-secondary)" }}>
             Scheduling to the whole{" "}
@@ -502,8 +550,8 @@ export default function AddJobPanel({
         )}
 
         {/* Kind toggle: BC Job (search) vs Custom Card (block out time). Team
-            jobs are BC-only for now. */}
-        {!isTeam && (
+            and filler adds are BC-only. */}
+        {!isTeam && !filler && (
         <div
           style={{
             display: "flex",
@@ -594,7 +642,7 @@ export default function AddJobPanel({
                 >
                   Multi
                 </button>
-                {!isTeam && (
+                {!isTeam && !filler && (
                   <button
                     className={mode === "auto" ? "btn-primary" : "btn-secondary"}
                     style={{ flex: 1 }}
@@ -642,6 +690,7 @@ export default function AddJobPanel({
                         style={{ width: "100%" }}
                       />
                     </div>
+                    {!filler && (
                     <div style={{ flex: 2 }}>
                       <div className="form-field__label">
                         {isTeam ? "Assigned to" : "Employee"}
@@ -667,6 +716,7 @@ export default function AddJobPanel({
                         </select>
                       )}
                     </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -708,7 +758,7 @@ export default function AddJobPanel({
                       <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                         {line.estimatedHours}h · {dept?.name ?? "unmapped"}
                       </div>
-                      {isTeam ? (
+                      {!filler && (isTeam ? (
                         <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
                           → Whole department
                           {initialStart ? ` on ${format(initialStart, "EEE MMM d")}` : ""}
@@ -726,7 +776,7 @@ export default function AddJobPanel({
                             {format(proposedSlot.start, "HH:mm")}
                           </div>
                         )
-                      )}
+                      ))}
                     </li>
                   );
                 })}
@@ -1110,7 +1160,7 @@ export default function AddJobPanel({
 
         </div>
 
-        {kind === "installation" && cardKind === "bc" && (
+        {kind === "installation" && cardKind === "bc" && !filler && (
           <label
             style={{
               display: "flex",
@@ -1149,7 +1199,7 @@ export default function AddJobPanel({
                 ? mode === "custom-task"
                   ? !selected ||
                     !customTaskDesc.trim() ||
-                    (!isTeam && !customTaskEmployeeId) ||
+                    (!isTeam && !filler && !customTaskEmployeeId) ||
                     Number(customTaskHours) <= 0
                   : !selected ||
                     (mode === "single" && singleIdx === null) ||
@@ -1167,7 +1217,7 @@ export default function AddJobPanel({
                 : commitCustom
             }
           >
-            Schedule
+            {filler ? "Add to Fill-in" : "Schedule"}
           </button>
         </div>
       </div>
