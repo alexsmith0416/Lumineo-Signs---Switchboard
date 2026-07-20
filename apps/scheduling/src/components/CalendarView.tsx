@@ -19,6 +19,8 @@ import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
 import { DepartmentFillerRow, FillerJobsPanel, fillerItemsForDept } from "./FillerJobs";
 import AddJobPanel, { type FillerDraft } from "./AddJobPanel";
 import { newId } from "../services/job-queue-data";
+import ShipmentItemsPanel from "./ShipmentItemsPanel";
+import { useLoadsStore } from "../shipping/loads-store";
 import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
@@ -508,6 +510,11 @@ export default function CalendarView({
     });
   };
 
+  // A grouped shipment card opens a read-only "view all jobs" list of its load's
+  // items (left-click), instead of the card editor.
+  const loads = useLoadsStore((s) => s.loads);
+  const [shipmentLine, setShipmentLine] = useState<ScheduleLine | null>(null);
+
   // Drop a queue card onto a cell → create a schedule line from it (instant
   // placement with the job's stored hours/dept), then remove it from the queue.
   const placeQueueItem = (itemId: string, employeeId: string, day: Date) => {
@@ -979,6 +986,8 @@ export default function CalendarView({
                   }}
                   onJobClick={(line) => {
                     if (onJobClick) onJobClick(line);
+                    else if (line.shipmentLoadId && loads.some((l) => l.id === line.shipmentLoadId))
+                      setShipmentLine(line);
                     else setEditLineId(line.id);
                   }}
                   onResize={async (line, newHours) => {
@@ -1112,6 +1121,26 @@ export default function CalendarView({
             useStore={useStore}
             fillerAdd={{ departmentId: d.id, onAdd: addFillerJob }}
             onClose={() => setFillerAddDeptId(null)}
+          />
+        );
+      })()}
+
+      {shipmentLine && (() => {
+        const load = loads.find((l) => l.id === shipmentLine.shipmentLoadId);
+        if (!load) return null;
+        return (
+          <ShipmentItemsPanel
+            load={load}
+            onEdit={
+              readOnly
+                ? undefined
+                : () => {
+                    const id = shipmentLine.id;
+                    setShipmentLine(null);
+                    setEditLineId(id);
+                  }
+            }
+            onClose={() => setShipmentLine(null)}
           />
         );
       })()}
