@@ -12,13 +12,10 @@ interface WeekSummaryProps {
   combinedBillingThisWeek?: number;
   /** Show a "Total Value" stat — sum of each current job's remaining value. */
   showTotalValue?: boolean;
-  /** Show the utilization stats block. Hidden for view-only users (the stats are
-   *  an editor tool). Default true. */
+  /** Show the utilization stats. Hidden for view-only users (the stats are an
+   *  editor tool). Default true. */
   showStats?: boolean;
-  /** Left-justified control on the controls row, under the stats (e.g. the
-   *  Installation WK/NEK region toggle). */
-  leading?: React.ReactNode;
-  /** Right-justified controls on the controls row (undo/redo + Job Queue). */
+  /** Right-justified controls — undo/redo + Job Queue (tucked to the top-right). */
   trailing?: React.ReactNode;
 }
 
@@ -36,7 +33,6 @@ export default function WeekSummary({
   combinedBillingThisWeek,
   showTotalValue = false,
   showStats = true,
-  leading,
   trailing,
 }: WeekSummaryProps) {
   const stats = useMemo(() => {
@@ -103,14 +99,14 @@ export default function WeekSummary({
     monthlyGoal && monthlyGoal > 0 ? stats.monthBilling / monthlyGoal : null;
   const combinedNoteWeek = combinedBillingThisWeek;
 
-  // Nothing to show — e.g. a view-only Production user (stats hidden, no region
-  // toggle, no editor controls). Render nothing rather than an empty bar.
-  if (!showStats && !leading && !trailing) return null;
+  // Nothing to show — e.g. a view-only user (stats hidden, no editor controls).
+  // Render nothing rather than an empty bar.
+  if (!showStats && !trailing) return null;
 
   return (
     <div className="week-summary">
       {showStats && (
-        <div className="week-summary__stats">
+        <>
           <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} highlight />
           <Stat label="Scheduled" value={`${stats.totalScheduled.toFixed(1)}h`} />
           <Stat label="Capacity" value={`${stats.totalCapacity.toFixed(0)}h`} />
@@ -142,16 +138,11 @@ export default function WeekSummary({
               )}
             </>
           )}
-        </div>
+        </>
       )}
 
-      {(leading || trailing) && (
-        <div className="week-summary__controls">
-          {leading && <div className="week-summary__leading">{leading}</div>}
-          <div className="week-summary__spring" />
-          {trailing && <div className="week-summary__trailing">{trailing}</div>}
-        </div>
-      )}
+      <div className="week-summary__spring" />
+      {trailing && <div className="week-summary__trailing">{trailing}</div>}
     </div>
   );
 }

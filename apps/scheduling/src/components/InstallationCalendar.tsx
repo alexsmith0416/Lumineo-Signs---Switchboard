@@ -111,20 +111,22 @@ export default function InstallationCalendar({
     }
   }, [wkSchedule, nekSchedule, jobSchedByJob, updateJobSched]);
 
-  // The WK/NEK region toggle lives on the LEFT of the week-summary controls row
-  // (under the utilization stats), not in the toolbar.
+  // The WK/NEK region toggle sits directly under the page header, left-justified
+  // (a banner above the board), on both desktop and mobile.
   const regionToggle = (
-    <div className="region-toggle" role="group" aria-label="Region">
-      {(["WK", "NEK"] as const).map((r) => (
-        <button
-          key={r}
-          type="button"
-          className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
-          onClick={() => setRegion(r)}
-        >
-          {r}
-        </button>
-      ))}
+    <div className="region-banner">
+      <div className="region-toggle" role="group" aria-label="Region">
+        {(["WK", "NEK"] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
+            onClick={() => setRegion(r)}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -187,7 +189,7 @@ export default function InstallationCalendar({
         monthlyGoal={showMoney ? MONTHLY_INSTALL_GOAL : undefined}
         combinedBillingThisWeek={showMoney ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
-        summaryLeading={regionToggle}
+        bannerSlot={regionToggle}
         installLayout
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}

@@ -796,16 +796,44 @@ input, select, textarea {
     padding: 12px 16px 16px;
   }
 
-  /* Toolbar (mobile + tablet): the grid rows already stack the controls; just
-     tighten the gutters, size the label, and drop the never-used Print button. */
+  /* Toolbar (mobile + tablet ≤900px): stack the controls into a grid. Production
+     is 2 rows (label + Add Job; then Prev/Today/Next + toggles right-justified
+     under Add Job); Installation is 3 rows (label; Prev/Today/Next + Add Job;
+     then the larger toggle set on its own row, left-justified under Prev). */
   .calendar-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 6px 8px;
     padding: 0 4px;
   }
+  .calendar-toolbar--prod {
+    grid-template-areas:
+      "label add"
+      "nav   tools";
+  }
+  .calendar-toolbar--install {
+    grid-template-areas:
+      "label label"
+      "nav   add"
+      "tools tools";
+  }
+  .calendar-toolbar__nav { grid-area: nav; }
   .calendar-toolbar__label {
+    grid-area: label;
     font-size: 13px;
     text-align: left;
   }
+  .calendar-toolbar__tools {
+    grid-area: tools;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+  /* Installation's toggle row reads oddly pinned right — left-justify it under
+     the Prev button instead. */
+  .calendar-toolbar--install .calendar-toolbar__tools {
+    justify-content: flex-start;
+  }
+  .calendar-toolbar__add { grid-area: add; justify-self: end; }
   .calendar-toolbar__print {
     display: none !important;
   }
@@ -1010,8 +1038,8 @@ input, select, textarea {
 
 /* ============ Calendar ============ */
 
-/* Week summary — a stats row (editor-only) plus a controls row: region toggle
-   left, undo/redo + Job Queue right, so the two never crowd each other. */
+/* Week summary — stats (editor-only) with undo/redo + Job Queue tucked to the
+   top-right. Wraps on small screens. Multi-row toolbar layout is mobile-only. */
 .week-summary {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -1020,60 +1048,43 @@ input, select, textarea {
   padding: 8px 12px;
   font-size: 12px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.week-summary__stats {
-  display: flex;
-  gap: 12px;
   flex-wrap: wrap;
   align-items: center;
-}
-.week-summary__controls {
-  display: flex;
-  align-items: center;
   gap: 12px;
 }
-.week-summary__leading { display: inline-flex; align-items: center; }
 .week-summary__spring { flex: 1; }
 .week-summary__trailing { display: inline-flex; align-items: center; gap: 8px; }
 
+/* WK/NEK region toggle banner — sits under the page header, left-justified. */
+.region-banner {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 13px;
+  margin-bottom: 10px;
+}
+
+/* Desktop: one row — Prev/Today/Next + label on the left, toggles + Add Job on
+   the right. On ≤900px this becomes a multi-row grid (see the media query). */
 .calendar-toolbar {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 12px;
   margin-bottom: 12px;
   /* Inset the row so the outer buttons (Prev … Add Job) line up with the stat
      text in the WeekSummary container above — which sits 12px padding + 1px
      border = 13px in from its outer edge. */
   padding: 0 13px;
 }
-/* Production: week label + Add Job on row 1; Prev/Today/Next + toggles on row 2.
-   Add Job pins top-right; the toggles (Show all last → rightmost) sit under it. */
-.calendar-toolbar--prod {
-  grid-template-areas:
-    "label add"
-    "nav   tools";
-}
-/* Installation: week label alone on row 1; Prev/Today/Next + Add Job on row 2;
-   the (larger) toggle set on its own row 3, still right-justified under Add Job. */
-.calendar-toolbar--install {
-  grid-template-areas:
-    "label label"
-    "nav   add"
-    "tools tools";
-}
-.calendar-toolbar__nav { grid-area: nav; display: inline-flex; align-items: center; gap: 8px; }
+.calendar-toolbar__nav { display: inline-flex; align-items: center; gap: 8px; }
 .calendar-toolbar__tools {
-  grid-area: tools;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;
+  margin-left: auto;
 }
-.calendar-toolbar__add { grid-area: add; justify-self: end; display: inline-flex; }
+.calendar-toolbar__add { display: inline-flex; }
 
 /* Every interactive control in the toolbar shares one height + font size so
    the row reads uniformly (Prev/Today/Next, $ / weather / crew chips, the
@@ -1141,7 +1152,6 @@ input, select, textarea {
 }
 
 .calendar-toolbar__label {
-  grid-area: label;
   font-weight: 500;
 }
 

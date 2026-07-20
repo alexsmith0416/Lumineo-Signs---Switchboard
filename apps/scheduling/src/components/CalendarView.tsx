@@ -100,9 +100,6 @@ interface CalendarViewProps {
   assistDaysByEmployee?: Map<string, Map<number, AssistHalf>>;
   /** Enables the right-hand Job Queue slide-out (Production + Installation). */
   enableJobQueue?: boolean;
-  /** Rendered on the LEFT of the week-summary controls row (e.g. the Installation
-   *  WK/NEK region toggle), under the utilization stats. */
-  summaryLeading?: React.ReactNode;
   /** Use the 3-row Installation toolbar layout (week label alone on row 1,
    *  Prev/Today/Next + Add Job on row 2, toggles on row 3). Default = the 2-row
    *  Production layout (label + Add Job on row 1, Prev/Today/Next + toggles on row 2). */
@@ -281,7 +278,6 @@ export default function CalendarView({
   rosterUnlockable = false,
   assistDaysByEmployee,
   enableJobQueue = false,
-  summaryLeading,
   installLayout = false,
 }: CalendarViewProps) {
   const {
@@ -677,7 +673,6 @@ export default function CalendarView({
           monthlyGoal={monthlyGoal}
           combinedBillingThisWeek={combinedBillingThisWeek}
           showStats={!readOnly}
-          leading={summaryLeading}
           trailing={
             !readOnly || enableJobQueue ? (
               <>
@@ -744,6 +739,7 @@ export default function CalendarView({
         </div>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
         <div className="calendar-toolbar__tools">
+          {toolbarExtras}
           <button
             className="calendar-toolbar__print"
             onClick={() => {
@@ -764,7 +760,6 @@ export default function CalendarView({
           >
             <PrintIcon />
           </button>
-          {toolbarExtras}
         </div>
         {addAction && <div className="calendar-toolbar__add">{addAction}</div>}
       </div>
