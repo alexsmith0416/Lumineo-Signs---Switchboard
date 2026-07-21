@@ -994,7 +994,9 @@ export default function CalendarView({
             })().map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
               const cards = computeRowCards(empLines, days[0]!, !emp.worksWeekends);
-              const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
+              // laneHeight is a first-pass ESTIMATE; EmployeeRow measures the real
+              // card heights on mount and tightens the row to fit (so an un-stacked
+              // card's row doesn't reserve blank space below it).
               const laneHeight = computeLaneHeight(
                 cards,
                 cardLayout,
@@ -1002,7 +1004,6 @@ export default function CalendarView({
                 stackAddons,
                 dayColWidth,
               );
-              const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
               return (
                 <EmployeeRow
@@ -1039,7 +1040,6 @@ export default function CalendarView({
                   assistDays={assistDaysByEmployee?.get(emp.id)}
                   departments={departments}
                   conflicts={conflicts}
-                  rowMinHeight={rowMinHeight}
                   laneHeight={laneHeight}
                   readOnly={readOnly}
                   cardLayout={cardLayout}
@@ -1305,7 +1305,6 @@ interface EmployeeRowProps {
   assistDays?: Map<number, AssistHalf>;
   departments: Map<string, Department>;
   conflicts: Conflict[];
-  rowMinHeight: number;
   laneHeight: number;
   readOnly: boolean;
   cardLayout: "compact" | "stacked";
@@ -1339,7 +1338,6 @@ function EmployeeRow({
   assistDays,
   departments,
   conflicts,
-  rowMinHeight,
   laneHeight,
   readOnly,
   cardLayout,
@@ -1359,6 +1357,43 @@ function EmployeeRow({
   // Day index currently under a drag, for the drop-target highlight. Null when
   // nothing is being dragged over this row.
   const [dropHoverIdx, setDropHoverIdx] = useState<number | null>(null);
+
+  // Un-stacked cards are auto-height (hug their content), but the passed
+  // laneHeight comes from a deliberately-generous wrap ESTIMATE — so a row whose
+  // tallest card is un-stacked would reserve too much height, leaving blank
+  // space under the card. Once mounted, measure the real card heights and tighten
+  // the lane to fit. Fixed-height (stacked) cards keep their estimated height, so
+  // the lane never shrinks below what a stacked card needs (no clipping).
+  const [measuredLaneHeight, setMeasuredLaneHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const strip = daysRef.current;
+    if (!strip) return;
+    const measure = () => {
+      const els = strip.querySelectorAll<HTMLElement>(":scope > .gantt-card");
+      if (!els.length) {
+        setMeasuredLaneHeight(null);
+        return;
+      }
+      let maxH = 0;
+      els.forEach((el) => {
+        // Auto-height (un-stacked) cards: their box IS their content. Fixed cards:
+        // trust the estimate (laneHeight − 8), so the lane always fits them.
+        const auto = !!el.querySelector(".job-card--unstacked");
+        const h = auto ? el.getBoundingClientRect().height : laneHeight - 8;
+        if (h > maxH) maxH = h;
+      });
+      setMeasuredLaneHeight(Math.ceil(maxH) + 8);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(strip);
+    return () => ro.disconnect();
+  }, [cards, laneHeight, showInvoice, showCrewBadge, showWeather]);
+
+  const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
+  const laneFloor = cardLayout === "stacked" ? 60 : 40;
+  const effLaneHeight = Math.max(laneFloor, measuredLaneHeight ?? laneHeight);
+  const effRowMinHeight = (maxLane + 1) * effLaneHeight + 8;
 
   // Map a pointer x-coordinate to a 0–6 day index within the row's day strip.
   // This is what lets a drop ONTO an existing card resolve to the right day
@@ -1388,7 +1423,7 @@ function EmployeeRow({
   return (
     <div
       className={"employee-row" + (emp.isDepartmentLane ? " employee-row--lane" : "")}
-      style={{ minHeight: rowMinHeight }}
+      style={{ minHeight: effRowMinHeight }}
     >
       <div
         className={
@@ -1434,7 +1469,7 @@ function EmployeeRow({
       <div
         className="employee-row__days"
         ref={daysRef}
-        style={{ minHeight: rowMinHeight }}
+        style={{ minHeight: effRowMinHeight }}
         onDragLeave={(e) => {
           // Only clear when the drag actually leaves the strip, not when it
           // crosses between child cells/cards inside it.
@@ -1489,7 +1524,7 @@ function EmployeeRow({
             employee={emp}
             conflicts={conflicts}
             readOnly={readOnly}
-            laneHeight={laneHeight}
+            laneHeight={effLaneHeight}
             cardLayout={cardLayout}
             showInvoice={showInvoice}
             showCrewBadge={showCrewBadge}
