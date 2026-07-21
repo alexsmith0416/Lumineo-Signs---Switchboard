@@ -1768,62 +1768,102 @@ input, select, textarea {
   font-size: 11px;
 }
 
-/* --- Fill-in Jobs: bottom-of-department holding card + its list panel ------- */
-.filler-row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  align-items: center;
-  border-top: 1px dashed var(--border);
-  background: var(--bg-secondary);
-  min-height: 42px;
+/* --- Grouped job card (on-board container of BC jobs) ----------------------- */
+/* Auto-colored to its department/location (bg/text set inline). A dashed inner
+   frame + member chips read as a "holder" rather than a scheduled job. */
+.job-card--group {
+  gap: 3px;
+  white-space: normal;
 }
-.filler-row__name {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  padding: 8px 11px;
+.job-card__group-title {
+  font-weight: 700;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-card__group-desc {
+  font-size: 10px;
+  opacity: 0.82;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-card__group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 1px;
+}
+.group-chip {
+  font: inherit;
   font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--grid-line);
-}
-.filler-row__strip { padding: 6px 8px; }
-.filler-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px dashed var(--lumineo-navy);
-  background: var(--surface-raised);
-  color: var(--lumineo-navy);
-  border-radius: 6px;
-  padding: 6px 12px;
+  line-height: 1.2;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
   cursor: pointer;
+  white-space: nowrap;
+}
+.group-chip:hover { background: rgba(255, 255, 255, 0.85); }
+.group-chip--empty {
+  font-weight: 500;
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+  opacity: 0.75;
+}
+
+/* Member detail popover (click a chip) */
+.group-member-popover {
+  width: 260px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
   font-size: 12px;
 }
-.filler-card:hover { background: var(--bg-tertiary); }
-.filler-card__label { font-weight: 700; }
-.filler-card__count { font-weight: 600; }
-.filler-card__hint { color: var(--text-tertiary); font-size: 11px; }
+.group-member-popover__head { font-size: 13px; margin-bottom: 4px; }
+.group-member-popover__task {
+  color: var(--text-secondary);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.group-member-popover__meta {
+  margin-top: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
 
-.filler-list { display: flex; flex-direction: column; }
-.filler-list__item {
+/* Group editor body — member list (in AddJobPanel / GroupPanel) */
+.group-members__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.group-members__row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
 }
-.filler-list__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.filler-list__no { font-weight: 700; font-size: 12px; }
-.filler-list__cust { font-size: 12px; color: var(--text-secondary); }
-.filler-list__desc { font-size: 11px; color: var(--text-tertiary); white-space: pre-line; }
-.filler-list__side { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.filler-list__hours { font-weight: 700; font-size: 11px; color: var(--text-secondary); }
-.filler-list__remove {
+.group-members__row:last-child { border-bottom: none; }
+.group-members__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.group-members__no { font-weight: 700; font-size: 12px; }
+.group-members__cust { font-size: 12px; color: var(--text-secondary); }
+.group-members__task { font-size: 11px; color: var(--text-tertiary); }
+.group-members__side { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.group-members__hours { font-weight: 700; font-size: 11px; color: var(--text-secondary); }
+.group-members__remove {
   border: none;
   background: none;
   color: var(--lumineo-red);
@@ -1832,9 +1872,8 @@ input, select, textarea {
   padding: 2px 6px;
   border-radius: 4px;
 }
-.filler-list__remove:hover { background: var(--bg-tertiary); }
-
-.filler-add { border-top: 1px solid var(--border); }
+.group-members__remove:hover { background: var(--bg-tertiary); }
+.group-members__added { font-size: 11px; color: var(--status-green); margin-top: 6px; font-weight: 600; }
 .filler-results { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
 .filler-results__row {
   display: flex;

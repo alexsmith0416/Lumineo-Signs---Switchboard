@@ -24,6 +24,8 @@ import { makeLaneEmployee } from "../services/department-lane";
 import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentSummary } from "../shipping/types";
 import type { ScheduleLine } from "../engine/types";
+import GroupCardBody from "./GroupCardBody";
+import { encodeGroup, groupColorFor, type GroupMember } from "../services/group-card";
 
 const SHIPMENT_CARD_BG = "#2D6CDF";
 const SHIPMENT_CARD_FG = "#ffffff";
@@ -50,17 +52,6 @@ function readableText(hex: string): string {
   return lum > 0.6 ? "#1a1d23" : "#ffffff";
 }
 
-/** The data a filler add produces — a BC job (+ chosen tasks) to park in a
- *  department's Fill-in Jobs list, with no placement. */
-export interface FillerDraft {
-  jobNo: string;
-  customerName: string;
-  jobDescription: string;
-  planningLineDescription: string;
-  estimatedHours: number;
-  departmentId: string;
-}
-
 interface AddJobPanelProps {
   onClose: () => void;
   initialStart?: Date;
@@ -69,14 +60,12 @@ interface AddJobPanelProps {
    *  than one employee — creates department-wide lines. Production only. */
   initialDepartmentId?: string;
   useStore?: UseScheduleStore;
-  /** Filler mode: instead of scheduling, add the picked job (+ tasks) to a
-   *  department's Fill-in Jobs list. Reuses the exact BC search + task-list flow,
-   *  minus Auto (and minus the Custom Card tab / scheduling extras). */
-  fillerAdd?: { departmentId: string; onAdd: (draft: FillerDraft) => void };
+  /** Open directly on a card kind (e.g. "group" for the "Add group card" flow). */
+  initialKind?: CardKind;
 }
 
 type Mode = "single" | "multi" | "auto" | "custom-task";
-type CardKind = "bc" | "custom";
+type CardKind = "bc" | "custom" | "group";
 
 export default function AddJobPanel({
   onClose,
@@ -84,9 +73,8 @@ export default function AddJobPanel({
   initialEmployeeId,
   initialDepartmentId,
   useStore = useScheduleStore,
-  fillerAdd,
+  initialKind = "bc",
 }: AddJobPanelProps) {
-  const filler = !!fillerAdd;
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
   const [mode, setMode] = useState<Mode>("single");
@@ -102,7 +90,7 @@ export default function AddJobPanel({
   const [customTaskEmployeeId, setCustomTaskEmployeeId] = useState<string>(initialEmployeeId ?? "");
 
   // Custom card state
-  const [cardKind, setCardKind] = useState<CardKind>("bc");
+  const [cardKind, setCardKind] = useState<CardKind>(initialKind);
   const [customTitle, setCustomTitle] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [customBg, setCustomBg] = useState("#CCCCCC");
@@ -117,6 +105,11 @@ export default function AddJobPanel({
   // Installation only: mark this card as the job's FINAL install — its day sets
   // the job's scheduled install date.
   const [finalInstall, setFinalInstall] = useState(false);
+
+  // Group card state (a container card holding member BC jobs).
+  const [groupTitle, setGroupTitle] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
 
   const kind = useStore((s) => s.dataSource.kind);
   const loads = useLoadsStore((s) => s.loads);
@@ -242,20 +235,6 @@ export default function AddJobPanel({
 
     if (targets.length === 0) return;
 
-    // Filler mode: park the job (+ chosen tasks) on the department's Fill-in list.
-    if (filler) {
-      fillerAdd!.onAdd({
-        jobNo: selected.job.jobNo,
-        customerName: selected.job.customerName,
-        jobDescription: selected.job.description ?? "",
-        planningLineDescription: targets.map((t) => t.description).join("\n"),
-        estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
-        departmentId: fillerAdd!.departmentId,
-      });
-      onClose();
-      return;
-    }
-
     const ctxForEngine = {
       employees: ctxEmployees,
       departments,
@@ -363,22 +342,6 @@ export default function AddJobPanel({
   // with no BC planning line still be put on the board.
   const commitCustomTask = async () => {
     if (!selected) return;
-
-    // Filler mode: a manual task on the selected BC job → one filler entry.
-    if (filler) {
-      const h = Number(customTaskHours);
-      if (!customTaskDesc.trim() || Number.isNaN(h) || h <= 0) return;
-      fillerAdd!.onAdd({
-        jobNo: selected.job.jobNo,
-        customerName: selected.job.customerName,
-        jobDescription: selected.job.description ?? "",
-        planningLineDescription: customTaskDesc.trim(),
-        estimatedHours: h,
-        departmentId: fillerAdd!.departmentId,
-      });
-      onClose();
-      return;
-    }
 
     const emp = isTeam
       ? laneEmp!
@@ -537,10 +500,66 @@ export default function AddJobPanel({
     onClose();
   };
 
+  // Create a grouped job card — a container line on the board (one employee's day
+  // or a whole department) holding member BC jobs. Auto-colors to its
+  // department/location; resizable + movable like any card.
+  const commitGroup = async () => {
+    const t = groupTitle.trim();
+    if (!t) return;
+    const emp = isTeam ? laneEmp! : initialEmployeeId ? employees.get(initialEmployeeId) : undefined;
+    const target = emp ?? [...employees.values()][0];
+    if (!target) return;
+    const deptId = isTeam ? initialDepartmentId! : target.departmentId;
+    const color = groupColorFor(departments.get(deptId));
+
+    let start = initialStart ? new Date(initialStart) : new Date();
+    if (start.getHours() < 8) start.setHours(8, 0, 0, 0);
+
+    const ctxForEngine = {
+      employees: ctxEmployees,
+      departments,
+      schedule: scheduleState,
+      workHours: workHoursState,
+      overtime: overtimeState,
+    };
+    const tempLine: ScheduleLine = {
+      id: "tmp",
+      jobNo: t,
+      customerName: t,
+      planningLineDescription: encodeGroup({
+        title: t,
+        description: groupDescription.trim(),
+        members: groupMembers,
+      }),
+      startDateTime: start,
+      endDateTime: start,
+      estimatedHours: 8, // one-day default width; resizable on the board
+      overrideHours: null,
+      employeeId: target.id,
+      departmentId: deptId,
+      departmentWide: isTeam || undefined,
+      customerDueDate: null,
+      isLocked: false,
+      jobSequence: 0,
+      isCustom: true,
+      customColor: color.bg,
+      customTextColor: color.text,
+    };
+    const end = calculateEndTime(start, effectiveHours(tempLine, target), target, ctxForEngine);
+    await addScheduleLine({
+      ...tempLine,
+      id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      endDateTime: end,
+    });
+    onClose();
+  };
+
   return (
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
-        <div className="section-title">{filler ? "Add Filler Job" : isTeam ? "Add Team Job" : "Add Job"}</div>
+        <div className="section-title">
+          {cardKind === "group" ? "Add Group Card" : isTeam ? "Add Team Job" : "Add Job"}
+        </div>
         {isTeam && (
           <div style={{ padding: "0 12px 8px", fontSize: 11, color: "var(--text-secondary)" }}>
             Scheduling to the whole{" "}
@@ -549,9 +568,10 @@ export default function AddJobPanel({
           </div>
         )}
 
-        {/* Kind toggle: BC Job (search) vs Custom Card (block out time). Team
-            and filler adds are BC-only. */}
-        {!isTeam && !filler && (
+        {/* Kind toggle: BC Job (search) · Custom Card (block out time) · Group
+            card (container of jobs). Team adds are BC-only; a group added via the
+            banner opens straight in group mode (no toggle needed). */}
+        {!isTeam && (
         <div
           style={{
             display: "flex",
@@ -576,6 +596,14 @@ export default function AddJobPanel({
             onClick={() => setCardKind("custom")}
           >
             Custom Card
+          </button>
+          <button
+            type="button"
+            className={cardKind === "group" ? "btn-primary" : "btn-secondary"}
+            style={{ flex: 1, padding: "8px 12px" }}
+            onClick={() => setCardKind("group")}
+          >
+            Group Card
           </button>
         </div>
         )}
@@ -642,7 +670,7 @@ export default function AddJobPanel({
                 >
                   Multi
                 </button>
-                {!isTeam && !filler && (
+                {!isTeam && (
                   <button
                     className={mode === "auto" ? "btn-primary" : "btn-secondary"}
                     style={{ flex: 1 }}
@@ -690,7 +718,6 @@ export default function AddJobPanel({
                         style={{ width: "100%" }}
                       />
                     </div>
-                    {!filler && (
                     <div style={{ flex: 2 }}>
                       <div className="form-field__label">
                         {isTeam ? "Assigned to" : "Employee"}
@@ -716,7 +743,6 @@ export default function AddJobPanel({
                         </select>
                       )}
                     </div>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -758,7 +784,7 @@ export default function AddJobPanel({
                       <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                         {line.estimatedHours}h · {dept?.name ?? "unmapped"}
                       </div>
-                      {!filler && (isTeam ? (
+                      {isTeam ? (
                         <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
                           → Whole department
                           {initialStart ? ` on ${format(initialStart, "EEE MMM d")}` : ""}
@@ -776,7 +802,7 @@ export default function AddJobPanel({
                             {format(proposedSlot.start, "HH:mm")}
                           </div>
                         )
-                      ))}
+                      )}
                     </li>
                   );
                 })}
@@ -1158,9 +1184,35 @@ export default function AddJobPanel({
           </div>
         )}
 
+        {cardKind === "group" && (
+          <>
+            <div style={{ padding: "0 12px", fontSize: 11, color: "var(--text-secondary)" }}>
+              A container card that holds a list of BC jobs. It sits on{" "}
+              {isTeam ? (
+                <>
+                  the whole <strong>{departments.get(initialDepartmentId!)?.name ?? "department"}</strong>
+                </>
+              ) : (
+                "this day"
+              )}
+              , auto-colors to its department/location, and can be moved &amp; resized.
+            </div>
+            <GroupCardBody
+              title={groupTitle}
+              setTitle={setGroupTitle}
+              description={groupDescription}
+              setDescription={setGroupDescription}
+              members={groupMembers}
+              onAddMember={(m) => setGroupMembers((prev) => [...prev, m])}
+              onRemoveMember={(id) => setGroupMembers((prev) => prev.filter((x) => x.id !== id))}
+              useStore={useStore}
+            />
+          </>
+        )}
+
         </div>
 
-        {kind === "installation" && cardKind === "bc" && !filler && (
+        {kind === "installation" && cardKind === "bc" && (
           <label
             style={{
               display: "flex",
@@ -1199,25 +1251,29 @@ export default function AddJobPanel({
                 ? mode === "custom-task"
                   ? !selected ||
                     !customTaskDesc.trim() ||
-                    (!isTeam && !filler && !customTaskEmployeeId) ||
+                    (!isTeam && !customTaskEmployeeId) ||
                     Number(customTaskHours) <= 0
                   : !selected ||
                     (mode === "single" && singleIdx === null) ||
                     (mode === "multi" && checkedIdx.size === 0)
-                : !customTitle ||
-                  (customScope === "resource" && !customEmployeeId) ||
-                  (customScope === "department" && !customDeptId) ||
-                  customHours <= 0
+                : cardKind === "group"
+                  ? !groupTitle.trim()
+                  : !customTitle ||
+                    (customScope === "resource" && !customEmployeeId) ||
+                    (customScope === "department" && !customDeptId) ||
+                    customHours <= 0
             }
             onClick={
               cardKind === "bc"
                 ? mode === "custom-task"
                   ? commitCustomTask
                   : commit
-                : commitCustom
+                : cardKind === "group"
+                  ? commitGroup
+                  : commitCustom
             }
           >
-            {filler ? "Add to Fill-in" : "Schedule"}
+            {cardKind === "group" ? "Create group card" : "Schedule"}
           </button>
         </div>
       </div>

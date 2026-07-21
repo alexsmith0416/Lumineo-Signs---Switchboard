@@ -429,13 +429,23 @@
   scheduling but don't have a slot yet. Organize jobs into colored <strong>groups</strong> ("Needs Scheduled",
   "Ready to Schedule"…), then drag a card straight onto the board — or drag a scheduled card back into the queue to
   un-schedule it.</p>
-  <h4>Fill-in Jobs (per department)</h4>
-  <p>A department can keep a <strong>Fill-in Jobs</strong> list — BC jobs the crew can pick up as filler between or after
-  their scheduled work. <strong>Right-click the department banner → <em>Add filler jobs…</em></strong> to add one: it opens
-  the <strong>same flow as Add Job</strong> — search the BC job, then pick its tasks with <strong>Single / Multi / Custom
-  task</strong> (no Auto, since these aren't being placed on a day). Once a department has filler jobs, a
-  <strong>Fill-in Jobs</strong> card appears in its <strong>bottom row</strong>: <strong>hover</strong> it to preview the
-  jobs, or <strong>click</strong> it to open the list (add more, or remove). Editors only.</p>
+  <h4>Grouped job cards</h4>
+  <p>A <strong>group card</strong> is a container you drop on the board to hold a list of BC jobs — handy for
+  "waiting on parts", a punch-list, or any set of jobs a crew can pick up together. It has a <strong>title</strong>,
+  an optional <strong>description</strong> (hidden from non-editors when left blank), and shows each member job as a
+  <strong>pill</strong> inside the card. It <strong>auto-colors</strong> to the department / location it sits on, and
+  you can <strong>move</strong> it (dragging sets its start day) and <strong>resize</strong> it like any card.</p>
+  <ul>
+    <li><strong>Add one</strong> — click <strong>+ Add Job</strong> (or an empty day cell), switch to the
+    <strong>Group Card</strong> tab, give it a title, and search-add the BC jobs that belong in it. To place it on a
+    <strong>whole department</strong> instead of one person, right-click the department banner → <em>Add group card…</em></li>
+    <li><strong>View a job</strong> in the group — <strong>hover</strong> a pill for a quick preview, or
+    <strong>click</strong> it to open that job's details (with a link into BC).</li>
+    <li><strong>Edit the group</strong> — <strong>click the card's background</strong> to open its list, where editors can
+    rename it, edit the description, add / remove jobs, or delete the whole group.</li>
+  </ul>
+  <p style="font-size:.86rem;color:var(--taupe)">Group cards replaced the old per-department "Fill-in Jobs" list — same idea,
+  now a real card you can place, color, and move anywhere on the board.</p>
 
   <h3>5.9 &nbsp;Roster management (crews &amp; departments)</h3>
   <ul>
@@ -623,7 +633,7 @@
     <tr><td>Red date</td><td>A fixed, drop-dead install date. It locks the scheduled install date and marks the job with a pulsing red outline everywhere it appears.</td></tr>
     <tr><td>Final install</td><td>The install card whose day sets the job's scheduled install date.</td></tr>
     <tr><td>Job tasks</td><td>The job's BC planning-line tasks, shown as a checklist on the card — highlighted when on the card, greyed when their department is done.</td></tr>
-    <tr><td>Fill-in Jobs</td><td>A per-department holding list of BC jobs to pick up as filler between/after scheduled work, shown as a card in the department's bottom row.</td></tr>
+    <tr><td>Group card</td><td>A container card placed on the board that holds a list of BC jobs (shown as pills). Has a title + optional description, auto-colors to its department/location, and is movable/resizable. Replaced the old "Fill-in Jobs" list.</td></tr>
     <tr><td>Assist</td><td>Temporarily lending a Production person to an Installation crew for a day or half-day.</td></tr>
     <tr><td>Custom card</td><td>A non-BC block of time — PTO, Holiday, Inventory, etc.</td></tr>
     <tr><td>Roster override</td><td>A "just this week" placement for a person, separate from their permanent spot.</td></tr>
@@ -637,6 +647,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 21, 2026</td><td><strong>Grouped job cards</strong> — a new card type that holds a list of BC jobs (shown as pills) with a title + optional description. Add via <em>+ Add Job → Group Card</em> (or a department banner → <em>Add group card…</em>); hover/click a pill to view a job, click the card background to edit the list. It auto-colors to its department/location and can be moved &amp; resized. Replaces the old per-department "Fill-in Jobs" list.</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Multi-day cards auto-resize</strong> — a job card stretched across several days now un-stacks to stay short: the job #, customer, and description share the top line (with " | " between the customer and the description) and the task list runs together with " • " separators instead of one task per row. The card hugs its content height and long text wraps rather than clipping.</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Shipment cards — click to view all jobs</strong> — clicking a grouped shipment card on the Installation board opens the full list of the load's stops and items (with an <em>Edit card…</em> button).</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Fill-in Jobs per department</strong> — right-click a department banner → <em>Add filler jobs…</em> to park BC jobs (added via the same job → Single/Multi/Custom task flow as Add Job). A bottom-row card then holds them; hover to preview, click to view/add/remove.</td></tr>

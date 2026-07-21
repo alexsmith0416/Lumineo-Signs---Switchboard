@@ -10,6 +10,7 @@ import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { bcJobUrl, sharepointJobUrl } from "../services/job-links";
+import { parseGroup, type GroupMember } from "../services/group-card";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -115,7 +116,13 @@ export default function JobCard({
   onDuplicate,
   onDelete,
 }: JobCardProps) {
-  const style = cardStyle(line, department);
+  // A grouped job card renders its own layout (title + optional description +
+  // member job chips) and auto-colors to its department/location (so it recolors
+  // when moved). Everything else falls back to the normal card style.
+  const group = parseGroup(line);
+  const style = group ? deptStyle(department) : cardStyle(line, department);
+  // The member whose detail popover is open (click a chip to view a held job).
+  const [memberView, setMemberView] = useState<{ m: GroupMember; rect: DOMRect } | null>(null);
   // Shipment cards are a LIVE reference to the load — title + summary derive
   // from the current load so edits in the Shipping schedule update the install
   // card automatically. Falls back to the stored snapshot if the load is gone.
@@ -183,10 +190,10 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}`}
         style={{ background: style.bg, color: style.text }}
-        onMouseEnter={open}
-        onMouseLeave={close}
+        onMouseEnter={group ? undefined : open}
+        onMouseLeave={group ? undefined : close}
         onContextMenu={
           hasMenu
             ? (e) => {
@@ -198,7 +205,34 @@ export default function JobCard({
             : undefined
         }
       >
-        {line.isCustom ? (
+        {group ? (
+          <>
+            <div className="job-card__group-title">{group.title || "Group"}</div>
+            {group.description && (
+              <div className="job-card__group-desc">{group.description}</div>
+            )}
+            <div className="job-card__group-members">
+              {group.members.length === 0 ? (
+                <span className="group-chip group-chip--empty">No jobs — click to add</span>
+              ) : (
+                group.members.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="group-chip"
+                    title={`${m.jobNo} · ${m.customerName}${m.task ? "\n" + m.task : ""}${m.estimatedHours ? `\n${m.estimatedHours}h` : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMemberView({ m, rect: e.currentTarget.getBoundingClientRect() });
+                    }}
+                  >
+                    {m.jobNo}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        ) : line.isCustom ? (
           <div className="job-card__custom-title">
             {line.shipmentLoadId ? "🚚 " : ""}
             {cardTitle}
@@ -225,10 +259,10 @@ export default function JobCard({
             <span className="job-card__customer">{line.customerName}</span>
           </div>
         )}
-        {!unstacked && line.jobDescription && (
+        {!group && !unstacked && line.jobDescription && (
           <div className="job-card__job-desc">{line.jobDescription}</div>
         )}
-        {cardDesc && <div className="job-card__desc">{bulletDesc}</div>}
+        {!group && cardDesc && <div className="job-card__desc">{bulletDesc}</div>}
         {cardHasAddons(line, { showInvoice, showCrewBadge, showWeather }) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}
@@ -252,7 +286,7 @@ export default function JobCard({
           {overlap && <span title="Conflict">⚡</span>}
         </div>
       </div>
-      {tooltipRect &&
+      {!group && tooltipRect &&
         createPortal(
           <JobTooltip
             line={displayLine}
@@ -263,6 +297,54 @@ export default function JobCard({
             deptStyle={style}
             showWeather={showWeather}
           />,
+          document.body,
+        )}
+      {memberView &&
+        createPortal(
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 300 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMemberView(null);
+              }}
+            />
+            <div
+              className="group-member-popover"
+              style={{
+                position: "fixed",
+                top: Math.min(memberView.rect.bottom + 6, window.innerHeight - 180),
+                left: Math.min(memberView.rect.left, window.innerWidth - 280),
+                zIndex: 301,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="group-member-popover__head">
+                <strong>{memberView.m.jobNo}</strong> · {memberView.m.customerName}
+              </div>
+              {memberView.m.task && (
+                <div className="group-member-popover__task">
+                  {memberView.m.task.split("\n").map((t, i) => (
+                    <div key={i}>{t}</div>
+                  ))}
+                </div>
+              )}
+              <div className="group-member-popover__meta">
+                {memberView.m.estimatedHours > 0 ? `${memberView.m.estimatedHours}h` : "—"}
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: "100%", marginTop: 8 }}
+                onClick={() => {
+                  window.open(bcJobUrl(memberView.m.jobNo), "_blank", "noopener");
+                  setMemberView(null);
+                }}
+              >
+                Open in BC
+              </button>
+            </div>
+          </>,
           document.body,
         )}
       {menu &&

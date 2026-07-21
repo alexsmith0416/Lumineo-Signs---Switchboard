@@ -16,9 +16,9 @@ import {
 } from "../store/job-queue-store";
 import { lineFromQueueItem, queueItemFromLine } from "../services/job-queue-data";
 import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
-import { DepartmentFillerRow, FillerJobsPanel, fillerItemsForDept } from "./FillerJobs";
-import AddJobPanel, { type FillerDraft } from "./AddJobPanel";
-import { newId } from "../services/job-queue-data";
+import AddJobPanel from "./AddJobPanel";
+import GroupPanel from "./GroupPanel";
+import { isGroupCard } from "../services/group-card";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
 import { useLoadsStore } from "../shipping/loads-store";
 import { QueueToggleIcon } from "./QueueIcons";
@@ -549,40 +549,17 @@ export default function CalendarView({
       : useProductionQueueStore;
   const [queueOpen, setQueueOpen] = useState(false);
 
-  // Filler ("Fill-in Jobs") — a per-department holding list rendered as a card in
-  // each department's bottom row (editors only). Reuses the board's queue store.
-  const queueGroups = queueStore((s) => s.groups);
+  // The Job Queue store still backs the slide-out queue (below); load it when on.
   const loadQueue = queueStore((s) => s.load);
   useEffect(() => {
     if (enableJobQueue) void loadQueue();
   }, [enableJobQueue, loadQueue]);
-  // Which department's filler LIST is open (view), and which department's filler
-  // ADD flow is open (the Add-Job panel in filler mode).
-  const [fillerListDeptId, setFillerListDeptId] = useState<string | null>(null);
-  const [fillerAddDeptId, setFillerAddDeptId] = useState<string | null>(null);
-  const addFillerJob = (draft: FillerDraft) => {
-    const st = queueStore.getState();
-    const groupId = st.ensureFillInGroup();
-    st.addItem({
-      id: newId(),
-      groupId,
-      jobNo: draft.jobNo,
-      customerName: draft.customerName,
-      jobDescription: draft.jobDescription,
-      planningLineDescription: draft.planningLineDescription,
-      estimatedHours: draft.estimatedHours,
-      departmentId: draft.departmentId,
-      crewPersons: null,
-      crewTrucks: null,
-      crewTrips: null,
-      installZip: null,
-      invoiceAmount: null,
-      isCustom: false,
-      customColor: null,
-      customTextColor: null,
-      sortOrder: 0,
-    });
-  };
+
+  // Grouped job cards are normal (custom) schedule lines on the board, so they
+  // need no holding store. Track only which department a new group card is being
+  // added to (department-wide add) and which group card's list panel is open.
+  const [groupAddDeptId, setGroupAddDeptId] = useState<string | null>(null);
+  const [groupPanelLineId, setGroupPanelLineId] = useState<string | null>(null);
 
   // A grouped shipment card opens a read-only "view all jobs" list of its load's
   // items (left-click), instead of the card editor.
@@ -1063,6 +1040,7 @@ export default function CalendarView({
                     if (onJobClick) onJobClick(line);
                     else if (line.shipmentLoadId && loads.some((l) => l.id === line.shipmentLoadId))
                       setShipmentLine(line);
+                    else if (isGroupCard(line)) setGroupPanelLineId(line.id);
                     else setEditLineId(line.id);
                   }}
                   onResize={async (line, newHours) => {
@@ -1073,12 +1051,6 @@ export default function CalendarView({
                 />
               );
             })}
-            {enableJobQueue && fillerItemsForDept(queueGroups, dept.id).length > 0 && (
-              <DepartmentFillerRow
-                items={fillerItemsForDept(queueGroups, dept.id)}
-                onOpen={() => setFillerListDeptId(dept.id)}
-              />
-            )}
           </div>
         ))}
       </div>
@@ -1156,46 +1128,49 @@ export default function CalendarView({
                 Add team job…
               </button>
             )}
-            {enableJobQueue && (
+            {!readOnly && enableJobQueue && (
               <button
                 type="button"
                 className="context-menu__item"
                 onClick={() => {
-                  setFillerAddDeptId(bannerMenu.deptId);
+                  setGroupAddDeptId(bannerMenu.deptId);
                   setBannerMenu(null);
                 }}
               >
-                Add filler jobs…
+                Add group card…
               </button>
             )}
           </div>
         </>
       )}
 
-      {fillerListDeptId && (() => {
-        const d = departments.get(fillerListDeptId);
-        if (!d) return null;
+      {groupPanelLineId && (() => {
+        const gl = schedule.find((l) => l.id === groupPanelLineId);
+        if (!gl || !isGroupCard(gl)) return null;
         return (
-          <FillerJobsPanel
-            dept={d}
-            useQueueStore={queueStore}
-            onAdd={() => {
-              setFillerListDeptId(null);
-              setFillerAddDeptId(d.id);
-            }}
-            onClose={() => setFillerListDeptId(null)}
+          <GroupPanel
+            line={gl}
+            useStore={useStore}
+            readOnly={readOnly}
+            onClose={() => setGroupPanelLineId(null)}
           />
         );
       })()}
 
-      {fillerAddDeptId && (() => {
-        const d = departments.get(fillerAddDeptId);
+      {groupAddDeptId && (() => {
+        const d = departments.get(groupAddDeptId);
         if (!d) return null;
         return (
           <AddJobPanel
             useStore={useStore}
-            fillerAdd={{ departmentId: d.id, onAdd: addFillerJob }}
-            onClose={() => setFillerAddDeptId(null)}
+            initialKind="group"
+            initialDepartmentId={d.id}
+            initialStart={(() => {
+              const s = new Date(days[0]!);
+              s.setHours(8, 0, 0, 0);
+              return s;
+            })()}
+            onClose={() => setGroupAddDeptId(null)}
           />
         );
       })()}
@@ -1376,9 +1351,9 @@ function EmployeeRow({
       }
       let maxH = 0;
       els.forEach((el) => {
-        // Auto-height (un-stacked) cards: their box IS their content. Fixed cards:
-        // trust the estimate (laneHeight − 8), so the lane always fits them.
-        const auto = !!el.querySelector(".job-card--unstacked");
+        // Auto-height (un-stacked / group) cards: their box IS their content.
+        // Fixed cards: trust the estimate (laneHeight − 8), so the lane fits them.
+        const auto = !!el.querySelector(".job-card--unstacked, .job-card--group");
         const h = auto ? el.getBoundingClientRect().height : laneHeight - 8;
         if (h > maxH) maxH = h;
       });
@@ -1598,6 +1573,9 @@ function GanttCard({
   // Safe because the lane is sized to fit each card's content, so auto height ≤
   // laneHeight and never overlaps a lower lane.
   const unstacked = spanDays > 1 && cardLayout === "stacked" && !line.isCustom;
+  // Group cards render a variable-height body (title + description + chips), so
+  // like un-stacked cards they hug their content instead of a fixed lane height.
+  const autoHeight = unstacked || isGroupCard(line);
 
   // A job with a Red (drop-dead install) date gets a pulsing red outline on
   // every schedule. Keyed by job number, so it shows on all of the job's cards.
@@ -1670,7 +1648,7 @@ function GanttCard({
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,
         top,
-        height: unstacked ? "auto" : laneHeight - 8,
+        height: autoHeight ? "auto" : laneHeight - 8,
         bottom: "auto",
       }}
       draggable={!readOnly && !line.isLocked && !resizePreview}

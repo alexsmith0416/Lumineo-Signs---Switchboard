@@ -129,7 +129,6 @@ export function lineFromQueueItem(
 export const DEFAULT_GROUP_TEMPLATES: Array<Pick<QueueGroup, "name" | "color" | "textColor">> = [
   { name: "Needs Scheduled", color: "#F6A623", textColor: "#5B3A00" },
   { name: "Ready to Schedule", color: "#4A90D9", textColor: "#08243F" },
-  { name: "Fill-in Jobs", color: "#E4E7EC", textColor: "#2A2F3A" },
 ];
 
 // --- Live source (Dataverse) -------------------------------------------------
