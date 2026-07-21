@@ -166,6 +166,21 @@ Then check the **Milestone status** and **Known gaps** sections at the bottom of
 `apps/scheduling/CLAUDE.md` for what's done vs. still stubbed (notably: Power SDK
 and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid).
 
+### 🔖 Next up (keep this current — it's the "where we left off" note)
+
+> ⚠️ **Claude: update this block at the END of each session** so the next
+> terminal knows exactly where to resume. Replace it with the current thread —
+> what's done, what's next, any half-finished work.
+
+- **Last shipped (Jul 20, 2026):** Automatic job card resizing — multi-day
+  install cards "un-stack" (job # | customer | description on one line; tasks
+  joined with " • "; wraps, never clips). Height estimate is viewport-aware via
+  a `ResizeObserver` (`useDayColumnWidth` in `CalendarView.tsx`). Committed +
+  pushed + deployed.
+- **Next:** _(nothing queued — ask the user what to pick up)._ Possible follow-up
+  if requested: extend un-stacking to Production/Shipping (compact) cards, which
+  are currently single-row and were intentionally left out of scope.
+
 ---
 
 *Keep this file current when the deploy flow, paths, or app identity change.*
