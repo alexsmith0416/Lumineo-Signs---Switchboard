@@ -172,14 +172,21 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 20, 2026):** Automatic job card resizing — multi-day
-  install cards "un-stack" (job # | customer | description on one line; tasks
-  joined with " • "; wraps, never clips). Height estimate is viewport-aware via
-  a `ResizeObserver` (`useDayColumnWidth` in `CalendarView.tsx`). Committed +
-  pushed + deployed.
-- **Next:** _(nothing queued — ask the user what to pick up)._ Possible follow-up
-  if requested: extend un-stacking to Production/Shipping (compact) cards, which
-  are currently single-row and were intentionally left out of scope.
+- **Last shipped (Jul 21, 2026):** Grouped job cards — an on-board container card
+  holding a list of BC jobs as pills, with a title + optional description,
+  auto-coloring to its department, and move/resize. Replaced the old Fill-in Jobs
+  feature. Model: a custom ScheduleLine whose `planningLineDescription` holds a
+  JSON payload behind the `grp:v1:` sentinel (`services/group-card.ts`); UI in
+  `GroupCardBody.tsx` / `GroupPanel.tsx`, AddJobPanel "Group Card" kind, JobCard
+  `isGroup` branch. Committed + pushed + deployed.
+  - ⚠️ **Live persistence is untested end-to-end.** The JSON round-trips through
+    the mock source and *should* survive the live `crfdf_notes` encoding
+    (`encodeDesc`/`decodeDesc` in `dataverse-live.ts`), but I verified only in dev
+    (mock). Confirm a group card survives a reload on the deployed app; if members
+    vanish, the live install source needs the payload mapped explicitly.
+- **Earlier (Jul 20):** Automatic multi-day card un-stacking + content-hugging
+  height (`useDayColumnWidth` / lane measurer in `CalendarView.tsx`).
+- **Next:** _(nothing queued — ask the user what to pick up.)_
 
 ---
 
