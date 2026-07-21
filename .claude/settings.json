@@ -6,5 +6,11 @@
     "linear@claude-plugins-official": true,
     "code-apps-preview@power-platform-skills": true,
     "model-apps@power-platform-skills": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pac code push:*)",
+      "Bash(NODE_OPTIONS=--use-system-ca pac code push:*)"
+    ]
   }
 }
