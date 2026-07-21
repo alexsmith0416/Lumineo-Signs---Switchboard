@@ -124,6 +124,22 @@ export default function JobCard({
   );
   const cardTitle = shipmentLoad ? shipmentLoad.name : line.customerName || line.jobNo;
   const cardDesc = shipmentLoad ? shipmentCardDesc(shipmentLoad) : line.planningLineDescription;
+  // Auto-resize: a stretched (multi-day) install card has width to spare, so
+  // "un-stack" its detail rows to shrink its height. The job #, customer, and
+  // job description share one wrapping row (separated by " | "), and the task
+  // lines collapse from one-per-row to a single " • "-joined row that wraps
+  // (never clips) instead of stacking. Only for real jobs on the stacked
+  // (installation) layout — compact cards are single-row already and custom /
+  // shipment cards use their own title.
+  const unstacked = multiDay && layout === "stacked" && !line.isCustom;
+  const bulletDesc =
+    unstacked && cardDesc
+      ? cardDesc
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(" • ")
+      : cardDesc;
   // Display-overridden line for the hover tooltip so it shows the live load
   // (name + full stop/item summary), not the creation-time snapshot.
   const displayLine: ScheduleLine = shipmentLoad
@@ -167,7 +183,7 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${multiDay ? " job-card--multiday" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={open}
         onMouseLeave={close}
@@ -187,16 +203,35 @@ export default function JobCard({
             {line.shipmentLoadId ? "🚚 " : ""}
             {cardTitle}
           </div>
+        ) : unstacked ? (
+          // Un-stacked header: job #, customer, and job description on one
+          // wrapping row separated by " | " (the separators are dimmed spans;
+          // flex gap supplies the surrounding space).
+          <div className="job-card__header job-card__header--inline">
+            <span className="job-card__job-no">{line.jobNo}</span>
+            {line.customerName && (
+              <>
+                <span className="job-card__sep">|</span>
+                <span className="job-card__customer">{line.customerName}</span>
+              </>
+            )}
+            {line.jobDescription && (
+              <>
+                <span className="job-card__sep">|</span>
+                <span className="job-card__job-desc">{line.jobDescription}</span>
+              </>
+            )}
+          </div>
         ) : (
           <div className="job-card__header">
             <span className="job-card__job-no">{line.jobNo}</span>
             <span className="job-card__customer">{line.customerName}</span>
           </div>
         )}
-        {line.jobDescription && (
+        {!unstacked && line.jobDescription && (
           <div className="job-card__job-desc">{line.jobDescription}</div>
         )}
-        {cardDesc && <div className="job-card__desc">{cardDesc}</div>}
+        {cardDesc && <div className="job-card__desc">{bulletDesc}</div>}
         {cardHasAddons(line, { showInvoice, showCrewBadge, showWeather }) && (
           <div className="job-card__addons">
             {showCrewBadge && <CrewBadge line={line} />}

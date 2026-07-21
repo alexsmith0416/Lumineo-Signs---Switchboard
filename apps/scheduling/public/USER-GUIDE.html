@@ -318,7 +318,7 @@
   <ul>
     <li><strong>Rows</strong> are grouped under a colored <strong>department / location banner</strong> (Metal Shop, Paint, Hutchinson, Wichita…). The banner color also tints that group's cards.</li>
     <li><strong>Columns</strong> are the seven days (Mon–Sun). Weekends are shaded because we don't usually schedule them.</li>
-    <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend.</li>
+    <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend. A card that spans several days <strong>un-stacks automatically</strong> to stay short — the job #, customer, and description move onto one line (separated by " | ") and its task list runs together with " • " separators instead of one task per row.</li>
     <li><strong>Week navigation</strong> — use <span class="kbd">‹ Prev</span> / <span class="kbd">Next ›</span> to move a week at a time, or <span class="kbd">Today</span> to jump back to the current week.</li>
   </ul>
 
@@ -342,6 +342,7 @@
     <tr><td><span class="chip" style="background:var(--sage);color:#001238">CCO</span></td><td><strong>Certified Crane Operator</strong> — marks a crew member qualified to run the crane.</td></tr>
     <tr><td>Diagonal stripes on a day cell</td><td>That person is <strong>lent to Installation</strong> that day (an "assist"). Full-cell = whole day; a half-tinted cell labeled <strong>Install AM/PM</strong> = half day (they're on Production the other half).</td></tr>
     <tr><td>Highlighted / glowing cards</td><td>Cards the engine <strong>would move</strong> as part of a cascade you're about to confirm.</td></tr>
+    <tr><td>Wide multi-day card on one line</td><td>A card stretched across several days <strong>auto-resizes</strong> to use the extra width: job #, customer, and description share the top line (" | " between them) and the tasks run together with " • " separators — so a long job stays a short card instead of a tall stack. Nothing is hidden; if the text can't fit one line it wraps.</td></tr>
   </table>
 
   <!-- ============================================================ -->
@@ -636,6 +637,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 20, 2026</td><td><strong>Multi-day cards auto-resize</strong> — a job card stretched across several days now un-stacks to stay short: the job #, customer, and description share the top line (" | " between them) and the task list runs together with " • " separators instead of one task per row. Long text wraps rather than clipping.</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Shipment cards — click to view all jobs</strong> — clicking a grouped shipment card on the Installation board opens the full list of the load's stops and items (with an <em>Edit card…</em> button).</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Fill-in Jobs per department</strong> — right-click a department banner → <em>Add filler jobs…</em> to park BC jobs (added via the same job → Single/Multi/Custom task flow as Add Job). A bottom-row card then holds them; hover to preview, click to view/add/remove.</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Install cards on mobile</strong> — Crew/Truck, weather, and $ are left-justified; single-day cards stack them, and multi-day cards lay them on one line (wrapping only if needed).</td></tr>

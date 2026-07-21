@@ -1864,6 +1864,38 @@ input, select, textarea {
   text-overflow: clip;
 }
 
+/* Auto-resized (un-stacked) install cards. A card stretched across multiple
+   days has width to spare, so its details collapse onto fewer, wider rows to
+   shrink the card's height:
+     • job # | customer | job description  → one wrapping header row
+     • task lines                          → one " • "-joined row that wraps
+   Everything WRAPS instead of clipping, so no text is lost. Placed after the
+   .job-card--stacked rule above (equal specificity) so it wins for a card that
+   is both stacked and un-stacked. */
+.job-card--unstacked .job-card__header--inline {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+.job-card--unstacked .job-card__customer,
+.job-card--unstacked .job-card__job-desc {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.job-card--unstacked .job-card__job-desc {
+  font-weight: 500; /* inline with the customer, not its own bolder row */
+}
+.job-card__sep {
+  opacity: 0.4;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+.job-card--unstacked .job-card__desc {
+  white-space: normal; /* wrap the bullet-joined task list; never clip */
+  text-overflow: clip;
+  overflow: visible;
+}
+
 .job-context-menu {
   min-width: 200px;
   background: var(--surface-raised);

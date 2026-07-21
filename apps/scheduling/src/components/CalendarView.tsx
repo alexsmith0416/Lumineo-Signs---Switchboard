@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
 import { effectiveHours, isWeekend } from "../engine/capacity";
 import { calculateEndTime } from "../engine/time-walker";
@@ -142,6 +142,27 @@ const CARD_LINE_PX = 15; // per text row (matches .job-card line-height: 1.3)
 const CARD_LINE_GAP = 2; // .job-card gap between rows
 const CARD_V_CHROME = 16; // .job-card padding (8) + .gantt-card top/bottom inset (8)
 
+// Un-stacked (multi-day) cards collapse their detail rows onto fewer, wider
+// rows that WRAP. We can't measure the wrapped height at layout time, so we
+// estimate the row count from text length vs. the card's available pixel width
+// (spanDays × measured day-column width). AVG_CHAR_PX is deliberately a touch
+// wider than real glyphs so we round UP to a slightly taller lane — a bit of
+// empty space is fine, a clipped card is not.
+const CARD_H_PADDING_PX = 32; // .job-card left pad (8) + right pad for icons (24)
+const UNSTACK_AVG_CHAR_PX = 6; // conservative avg glyph width at 10–11px font
+const UNSTACK_FALLBACK_DAY_PX = 96; // before the grid is measured, assume narrow → tall
+
+/** Estimated wrapped-row count for `text` in a card spanning `spanDays` columns
+ *  of `dayColWidth` px each. Returns 0 for empty text so an absent row isn't
+ *  reserved. Errs toward more rows (taller lane) so text never clips. */
+function estimateWrappedLines(text: string, spanDays: number, dayColWidth: number): number {
+  if (!text) return 0;
+  const perDay = dayColWidth > 0 ? dayColWidth : UNSTACK_FALLBACK_DAY_PX;
+  const usablePx = Math.max(24, spanDays * perDay - CARD_H_PADDING_PX);
+  const capChars = Math.max(6, Math.floor(usablePx / UNSTACK_AVG_CHAR_PX));
+  return Math.max(1, Math.ceil(text.length / capChars));
+}
+
 interface CardAddonFlags {
   showInvoice: boolean;
   showCrewBadge: boolean;
@@ -157,7 +178,35 @@ function cardContentLines(
   layout: "compact" | "stacked",
   flags: CardAddonFlags,
   stackAddons: boolean,
+  spanDays: number,
+  dayColWidth: number,
 ): number {
+  // Addons: one shared row on wide screens, one row per addon when stacked.
+  const addonLines = stackAddons
+    ? cardAddonCount(line, flags)
+    : cardHasAddons(line, flags)
+      ? 1
+      : 0;
+
+  // Un-stacked (multi-day install) cards: header (job# | customer | job desc)
+  // and the bullet-joined task list each wrap to as many rows as needed. Mirror
+  // JobCard's un-stack condition so the reserved height matches what renders.
+  if (spanDays > 1 && layout === "stacked" && !line.isCustom) {
+    const headerText = [line.jobNo, line.customerName, line.jobDescription]
+      .filter(Boolean)
+      .join(" | ");
+    const descText = (line.planningLineDescription || "")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(" • ");
+    return (
+      estimateWrappedLines(headerText, spanDays, dayColWidth) +
+      estimateWrappedLines(descText, spanDays, dayColWidth) +
+      addonLines
+    );
+  }
+
   let lines = 1; // header (job# + customer) or custom title
   if (line.jobDescription) lines += 1;
   const hasDesc = line.shipmentLoadId ? true : Boolean(line.planningLineDescription);
@@ -172,8 +221,7 @@ function cardContentLines(
       lines += 1; // compact desc is single-line (ellipsized)
     }
   }
-  // Addons: one shared row on wide screens, one row per addon when stacked.
-  lines += stackAddons ? cardAddonCount(line, flags) : cardHasAddons(line, flags) ? 1 : 0;
+  lines += addonLines;
   return lines;
 }
 
@@ -183,9 +231,11 @@ function computeLaneHeight(
   layout: "compact" | "stacked",
   flags: CardAddonFlags,
   stackAddons: boolean,
+  dayColWidth: number,
 ): number {
   const maxLines = cards.reduce(
-    (m, c) => Math.max(m, cardContentLines(c.line, layout, flags, stackAddons)),
+    (m, c) =>
+      Math.max(m, cardContentLines(c.line, layout, flags, stackAddons, c.spanDays, dayColWidth)),
     1,
   );
   const content = maxLines * CARD_LINE_PX + (maxLines - 1) * CARD_LINE_GAP;
@@ -207,6 +257,29 @@ function useStackedAddons(): boolean {
     return () => mq.removeEventListener("change", onChange);
   }, []);
   return stacked;
+}
+
+/** Measured pixel width of one day column, tracked via ResizeObserver on the
+ *  grid. Feeds the un-stacked height estimate so it stays accurate (no clip) as
+ *  the window resizes. 0 until first measured — estimateWrappedLines falls back
+ *  to a conservative width until then. */
+function useDayColumnWidth(gridRef: React.RefObject<HTMLDivElement | null>): number {
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const measure = () => {
+      const cell = grid.querySelector<HTMLElement>(
+        ".calendar-header-cell:not(.calendar-header-cell--resource)",
+      );
+      if (cell) setWidth(cell.getBoundingClientRect().width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(grid);
+    return () => ro.disconnect();
+  }, [gridRef]);
+  return width;
 }
 
 // Last visible working-day column: Friday (4) when the employee doesn't work
@@ -463,6 +536,7 @@ export default function CalendarView({
   // Narrow screens stack the crew/weather/$ addons vertically (they don't fit
   // on one row in a mobile day column) — the lane grows to fit them.
   const stackAddons = useStackedAddons();
+  const dayColWidth = useDayColumnWidth(gridRef);
 
   // --- Job Queue (Production + Installation) -------------------------------
   // Pick the per-board queue store (each board keeps its own queue). Selecting a
@@ -926,6 +1000,7 @@ export default function CalendarView({
                 cardLayout,
                 { showInvoice, showCrewBadge, showWeather },
                 stackAddons,
+                dayColWidth,
               );
               const rowMinHeight = (maxLane + 1) * laneHeight + 8;
 
