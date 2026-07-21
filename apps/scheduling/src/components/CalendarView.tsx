@@ -1557,6 +1557,13 @@ function GanttCard({
 }: GanttCardProps) {
   const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
 
+  // A stretched (multi-day) install card is un-stacked (see JobCard). Let it hug
+  // its own content height instead of filling the row's shared lane, so a taller
+  // stacked sibling in the same row doesn't leave blank space inside this card.
+  // Safe because the lane is sized to fit each card's content, so auto height ≤
+  // laneHeight and never overlaps a lower lane.
+  const unstacked = spanDays > 1 && cardLayout === "stacked" && !line.isCustom;
+
   // A job with a Red (drop-dead install) date gets a pulsing red outline on
   // every schedule. Keyed by job number, so it shows on all of the job's cards.
   const hasRedDate = useJobScheduleStore((s) => !!(line.jobNo && s.byJob[line.jobNo]?.redDate));
@@ -1628,7 +1635,7 @@ function GanttCard({
         left: `${leftPct}%`,
         width: `${previewWidthPct}%`,
         top,
-        height: laneHeight - 8,
+        height: unstacked ? "auto" : laneHeight - 8,
         bottom: "auto",
       }}
       draggable={!readOnly && !line.isLocked && !resizePreview}

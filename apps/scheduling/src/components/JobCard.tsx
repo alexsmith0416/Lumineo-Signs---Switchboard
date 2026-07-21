@@ -210,10 +210,7 @@ export default function JobCard({
           <div className="job-card__header job-card__header--inline">
             <span className="job-card__job-no">{line.jobNo}</span>
             {line.customerName && (
-              <>
-                <span className="job-card__sep">|</span>
-                <span className="job-card__customer">{line.customerName}</span>
-              </>
+              <span className="job-card__customer">{line.customerName}</span>
             )}
             {line.jobDescription && (
               <>
