@@ -172,18 +172,24 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 21, 2026):** Grouped job cards — an on-board container card
-  holding a list of BC jobs as pills, with a title + optional description,
-  auto-coloring to its department, and move/resize. Replaced the old Fill-in Jobs
-  feature. Model: a custom ScheduleLine whose `planningLineDescription` holds a
-  JSON payload behind the `grp:v1:` sentinel (`services/group-card.ts`); UI in
-  `GroupCardBody.tsx` / `GroupPanel.tsx`, AddJobPanel "Group Card" kind, JobCard
-  `isGroup` branch. Committed + pushed + deployed.
-  - ⚠️ **Live persistence is untested end-to-end.** The JSON round-trips through
-    the mock source and *should* survive the live `crfdf_notes` encoding
-    (`encodeDesc`/`decodeDesc` in `dataverse-live.ts`), but I verified only in dev
-    (mock). Confirm a group card survives a reload on the deployed app; if members
-    vanish, the live install source needs the payload mapped explicitly.
+- **Last shipped (Jul 21, 2026):** Group-card payload cap + member-add guard.
+  Verified group-card live persistence: the `grp:v1:` JSON round-trips correctly
+  through both live sources (`crfdf_notes` on install cards,
+  `crfdf_planninglinedescription` on production lines), both confirmed **Memo /
+  2000** on the live org (`scripts/check-desc-column-lengths.ps1`, device-code).
+  The mapping was already correct — no fix needed. Added `GROUP_PAYLOAD_LIMIT` +
+  `groupPayloadFits()` (`services/group-card.ts`) and a guard in
+  `GroupCardBody.tsx` that refuses a member add which would overflow 2000 chars
+  (~15 jobs) and silently truncate on save. Committed + pushed + deployed.
+  - ℹ️ Persistence is verified by code + live metadata; the only thing not done
+    empirically is a literal create-a-group-card-then-reload click-test on the
+    deployed app. Optional confirmation — do it if convenient.
+- **Earlier (Jul 21):** Grouped job cards — an on-board container card holding a
+  list of BC jobs as pills, with a title + optional description, auto-coloring to
+  its department, and move/resize. Replaced the old Fill-in Jobs feature. Model: a
+  custom ScheduleLine whose `planningLineDescription` holds a JSON payload behind
+  the `grp:v1:` sentinel (`services/group-card.ts`); UI in `GroupCardBody.tsx` /
+  `GroupPanel.tsx`, AddJobPanel "Group Card" kind, JobCard `isGroup` branch.
 - **Earlier (Jul 20):** Automatic multi-day card un-stacking + content-hugging
   height (`useDayColumnWidth` / lane measurer in `CalendarView.tsx`).
 - **Next:** _(nothing queued — ask the user what to pick up.)_
