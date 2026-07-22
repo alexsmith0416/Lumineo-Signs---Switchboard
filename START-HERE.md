@@ -172,7 +172,16 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 22, 2026):** Production stepper now shows on **job-card
+- **Last shipped (Jul 22, 2026):** Job cards get a **left-edge drag handle** that
+  changes the **start date** (mirrors the right-edge resize). Slides the card's
+  start to another day (snapped to whole days, clamped within the visible week),
+  keeping duration; commits via the existing `tryShiftWithConfirm` move path
+  (cascade prompt included). New `startMoveLeft` + `movePreview` in
+  `CalendarView.tsx`'s `GanttCard`; `.resize-handle--left` CSS already existed.
+  Verified: new build renders with no regression. NOTE — couldn't auto-drive the
+  7px handle drag through the cross-origin iframe; logic is a faithful mirror of
+  the working right handle + reuses the proven move commit path.
+- **Earlier (Jul 22, 2026):** Production stepper now shows on **job-card
   hover previews** (Production + Installation cards + group-card job pills),
   read-only. New `hooks/useJobSteps.ts` (shared completion+override stores,
   caches the per-job planning-line lookup); `JobTooltip` + `MemberDetailBody`
