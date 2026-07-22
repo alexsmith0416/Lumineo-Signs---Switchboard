@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useJobSearch } from "../hooks/useJobSearch";
 import { isInstallResource, isProductionResource } from "../services/planning-line-mapping";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
-import { newMemberId, type GroupMember } from "../services/group-card";
+import { groupPayloadFits, newMemberId, type GroupMember } from "../services/group-card";
 
 /**
  * Shared editor body for a grouped job card — title + optional description + a
@@ -34,6 +34,7 @@ export default function GroupCardBody({
   const kind = useStore((s) => s.dataSource.kind);
   const { query, setQuery, results, loading } = useJobSearch();
   const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [full, setFull] = useState(false);
 
   const addFromResult = (
     jobNo: string,
@@ -46,13 +47,21 @@ export default function GroupCardBody({
         ? isProductionResource(l.resourceNo ?? "")
         : isInstallResource(l.resourceNo ?? ""),
     );
-    onAddMember({
+    const next: GroupMember = {
       id: newMemberId(members.length),
       jobNo,
       customerName,
       task: lines.map((l) => l.description).join("\n") || jobDesc,
       estimatedHours: lines.reduce((sum, l) => sum + l.estimatedHours, 0),
-    });
+    };
+    // The payload is stored in a 2000-char Dataverse column; refuse an add that
+    // would overflow it, since a truncated payload loses every member on reload.
+    if (!groupPayloadFits({ title, description, members: [...members, next] })) {
+      setFull(true);
+      window.setTimeout(() => setFull(false), 4000);
+      return;
+    }
+    onAddMember(next);
     setJustAdded(jobNo);
     setQuery("");
     window.setTimeout(() => setJustAdded(null), 1200);
@@ -133,6 +142,11 @@ export default function GroupCardBody({
           />
           {loading && <div className="loading">Searching…</div>}
           {justAdded && <div className="group-members__added">Added {justAdded} ✓</div>}
+          {full && (
+            <div className="jtp__note" style={{ color: "var(--lumineo-red)" }}>
+              This group is full — remove a job or start another group card.
+            </div>
+          )}
           {results.length > 0 && (
             <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0" }}>
               {results.map((r) => (

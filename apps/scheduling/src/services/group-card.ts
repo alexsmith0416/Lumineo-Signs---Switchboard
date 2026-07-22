@@ -36,9 +36,21 @@ export interface GroupData {
 // columns; real task text never starts with this.
 const GROUP_TAG = "grp:v1:";
 
+// The description columns a group payload persists to (crfdf_notes on install
+// cards, crfdf_planninglinedescription on production lines) are 2000-char
+// Dataverse text fields. A payload longer than this is silently truncated on
+// save, which corrupts the JSON and makes the member jobs vanish on reload — so
+// the editor refuses to add a member that would push the payload over this cap.
+export const GROUP_PAYLOAD_LIMIT = 2000;
+
 /** Encode a group payload into the `planningLineDescription` field. */
 export function encodeGroup(data: GroupData): string {
   return GROUP_TAG + JSON.stringify(data);
+}
+
+/** True when a group's encoded payload fits the Dataverse column (no truncation). */
+export function groupPayloadFits(data: GroupData): boolean {
+  return encodeGroup(data).length <= GROUP_PAYLOAD_LIMIT;
 }
 
 /** Parse a line's group payload, or null if it isn't a group card. */
