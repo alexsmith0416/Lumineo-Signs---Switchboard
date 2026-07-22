@@ -172,7 +172,20 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 21, 2026):** Two live-app fixes found during the group-card
+- **Last shipped (Jul 21, 2026):** Group-card interaction upgrades (from a
+  handwritten feedback note; verified live):
+  1. **Add-a-job task picking** — adding a BC job to a group no longer dumps all
+     its planning lines. The tasks list as checkboxes (none pre-checked); the
+     member stores only the chosen tasks + summed hours (`GroupCardBody.tsx`).
+     Jobs with no BC lines still add whole.
+  2. **Member pill = standard job card** — hover shows a job-card-style preview,
+     click opens a detail popover (dept header, customer, tasks, hours) with
+     *Open Project* + *Open SharePoint Folder* links. Shared `MemberDetailBody`
+     in `JobCard.tsx`.
+  - The note's "Whole Department / multi-select can't pick individual tasks" item
+    is covered by the earlier Add-Job radio/checkbox fix (same panel/code path);
+    single-select verified live, multi uses the identical handler.
+- **Earlier (Jul 21):** Two live-app fixes found during the group-card
   create-then-reload click-test (both verified end-to-end on the deployed app):
   1. **Group cards vanished on reload** when placed on a busy person. They DID
      persist to Dataverse (row + `grp:v1:` payload intact — confirmed by direct
