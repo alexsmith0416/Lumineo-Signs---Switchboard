@@ -35,23 +35,34 @@ export default function ShipmentItemsPanel({
               <div style={{ fontSize: 12 }}>{stops.join(" · ")}</div>
             </div>
           )}
-          <div className="filler-list">
-            {load.items.map((it) => (
-              <div key={it.id} className="filler-list__item">
-                <div className="filler-list__main">
-                  <span className="filler-list__no">
-                    {it.kind === "pickup" ? "↩ PICKUP · " : ""}
-                    {it.jobNo ?? "—"}
-                  </span>
-                  <span className="filler-list__cust">{it.customerName}</span>
-                  {it.description && <span className="filler-list__desc">{it.description}</span>}
-                  {it.notes && <span className="filler-list__desc">📝 {it.notes}</span>}
+          <div className="ship-items">
+            {load.items.map((it) => {
+              const isPickup = it.kind === "pickup";
+              return (
+                <div key={it.id} className={`ship-item${isPickup ? " ship-item--pickup" : ""}`}>
+                  <div className="ship-item__head">
+                    <span className="ship-item__job">{it.jobNo || "No job #"}</span>
+                    <span className={`ship-item__badge ship-item__badge--${isPickup ? "pickup" : "delivery"}`}>
+                      {isPickup ? "↩ Pickup" : "→ Delivery"}
+                    </span>
+                  </div>
+                  {it.customerName && <div className="ship-item__cust">{it.customerName}</div>}
+                  {it.description && <div className="ship-item__desc">{it.description}</div>}
+                  {it.location && (
+                    <div className="ship-item__field">
+                      <span className="ship-item__label">{isPickup ? "Pickup" : "Delivery"} loc</span>
+                      <span>{it.location}</span>
+                    </div>
+                  )}
+                  {it.notes && (
+                    <div className="ship-item__field">
+                      <span className="ship-item__label">Notes</span>
+                      <span>{it.notes}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="filler-list__side">
-                  {it.location && <span className="filler-list__hours">{it.location}</span>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
