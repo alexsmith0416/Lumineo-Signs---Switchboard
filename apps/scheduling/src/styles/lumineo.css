@@ -2300,7 +2300,9 @@ input, select, textarea {
 }
 .ship-col {
   background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  /* --grid-line (not --border): the default border is too faint to see the day
+     columns on the white board, especially in light mode. */
+  border: 1px solid var(--grid-line);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -2312,30 +2314,29 @@ input, select, textarea {
   align-items: baseline;
   gap: 6px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--grid-line);
 }
 .ship-col__dow { font-weight: 700; font-size: 12px; color: var(--text-primary); }
 .ship-col__date { font-size: 11px; color: var(--text-secondary); }
 .ship-col__body { display: flex; flex-direction: column; gap: 6px; padding: 8px; flex: 1; }
 .ship-col__add {
   margin-top: auto;
-  background: transparent;
-  border: 1px dashed var(--border);
-  color: var(--text-secondary);
+  background: var(--lumineo-red);
+  border: none;
+  color: #fff;
   border-radius: 6px;
   padding: 6px;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
 }
 .ship-col__add:hover {
-  background: var(--surface-raised);
-  color: var(--accent-brand);
-  border-color: var(--accent-brand);
+  filter: brightness(1.08);
 }
 
 .load-card {
   background: var(--surface-raised);
-  border: 1px solid var(--border);
+  border: 1px solid var(--grid-line);
   border-left: 3px solid var(--accent-brand);
   border-radius: 6px;
   padding: 8px;
