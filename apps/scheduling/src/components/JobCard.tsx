@@ -123,6 +123,9 @@ export default function JobCard({
   const style = group ? deptStyle(department) : cardStyle(line, department);
   // The member whose detail popover is open (click a chip to view a held job).
   const [memberView, setMemberView] = useState<{ m: GroupMember; rect: DOMRect } | null>(null);
+  // The member being hovered (delayed preview, like a standard card's tooltip).
+  const [memberHover, setMemberHover] = useState<{ m: GroupMember; rect: DOMRect } | null>(null);
+  const memberTimerRef = useRef<number | undefined>(undefined);
   // Shipment cards are a LIVE reference to the load — title + summary derive
   // from the current load so edits in the Shipping schedule update the install
   // card automatically. Falls back to the stored snapshot if the load is gone.
@@ -220,9 +223,22 @@ export default function JobCard({
                     key={m.id}
                     type="button"
                     className="group-chip"
-                    title={`${m.jobNo} · ${m.customerName}${m.task ? "\n" + m.task : ""}${m.estimatedHours ? `\n${m.estimatedHours}h` : ""}`}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      if (memberTimerRef.current) window.clearTimeout(memberTimerRef.current);
+                      memberTimerRef.current = window.setTimeout(
+                        () => setMemberHover({ m, rect }),
+                        HOVER_DELAY_MS,
+                      );
+                    }}
+                    onMouseLeave={() => {
+                      if (memberTimerRef.current) window.clearTimeout(memberTimerRef.current);
+                      setMemberHover(null);
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (memberTimerRef.current) window.clearTimeout(memberTimerRef.current);
+                      setMemberHover(null);
                       setMemberView({ m, rect: e.currentTarget.getBoundingClientRect() });
                     }}
                   >
@@ -299,6 +315,30 @@ export default function JobCard({
           />,
           document.body,
         )}
+      {/* Hover preview — a standard-card-style tooltip for a held member job. */}
+      {memberHover && !memberView &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              top: Math.min(memberHover.rect.bottom + 6, window.innerHeight - 200),
+              left: Math.min(memberHover.rect.left, window.innerWidth - 292),
+              width: 280,
+              background: "var(--surface-raised)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+              zIndex: 100,
+              pointerEvents: "none",
+              fontSize: 12,
+              overflow: "hidden",
+            }}
+          >
+            <MemberDetailBody m={memberHover.m} deptStyle={style} deptName={department?.name} />
+          </div>,
+          document.body,
+        )}
+      {/* Click — pinned detail popover with the standard card's Open links. */}
       {memberView &&
         createPortal(
           <>
@@ -310,39 +350,44 @@ export default function JobCard({
               }}
             />
             <div
-              className="group-member-popover"
               style={{
                 position: "fixed",
-                top: Math.min(memberView.rect.bottom + 6, window.innerHeight - 180),
-                left: Math.min(memberView.rect.left, window.innerWidth - 280),
+                top: Math.min(memberView.rect.bottom + 6, window.innerHeight - 240),
+                left: Math.min(memberView.rect.left, window.innerWidth - 292),
+                width: 280,
+                background: "var(--surface-raised)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
                 zIndex: 301,
+                fontSize: 12,
+                overflow: "hidden",
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="group-member-popover__head">
-                <strong>{memberView.m.jobNo}</strong> · {memberView.m.customerName}
+              <MemberDetailBody m={memberView.m} deptStyle={style} deptName={department?.name} />
+              <div style={{ padding: "0 10px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    window.open(bcJobUrl(memberView.m.jobNo), "_blank", "noopener");
+                    setMemberView(null);
+                  }}
+                >
+                  Open Project
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    window.open(sharepointJobUrl(memberView.m.jobNo), "_blank", "noopener");
+                    setMemberView(null);
+                  }}
+                >
+                  Open SharePoint Folder
+                </button>
               </div>
-              {memberView.m.task && (
-                <div className="group-member-popover__task">
-                  {memberView.m.task.split("\n").map((t, i) => (
-                    <div key={i}>{t}</div>
-                  ))}
-                </div>
-              )}
-              <div className="group-member-popover__meta">
-                {memberView.m.estimatedHours > 0 ? `${memberView.m.estimatedHours}h` : "—"}
-              </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ width: "100%", marginTop: 8 }}
-                onClick={() => {
-                  window.open(bcJobUrl(memberView.m.jobNo), "_blank", "noopener");
-                  setMemberView(null);
-                }}
-              >
-                Open in BC
-              </button>
             </div>
           </>,
           document.body,
@@ -431,6 +476,49 @@ export default function JobCard({
           </>,
           document.body,
         )}
+    </>
+  );
+}
+
+/** Shared body for a group member's hover preview + click popover — mirrors the
+ *  standard job card's info (dept-colored header, customer, task lines, hours)
+ *  for a held (unscheduled) BC job. */
+function MemberDetailBody({
+  m,
+  deptStyle,
+  deptName,
+}: {
+  m: GroupMember;
+  deptStyle: { bg: string; text: string };
+  deptName: string | undefined;
+}) {
+  return (
+    <>
+      <div
+        style={{
+          padding: "8px 10px",
+          background: deptStyle.bg,
+          color: deptStyle.text,
+          fontWeight: 600,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+        }}
+      >
+        <span>{m.jobNo}</span>
+        <span style={{ fontSize: 10, opacity: 0.75 }}>{deptName ?? "—"}</span>
+      </div>
+      <div style={{ padding: "8px 10px" }}>
+        <div style={{ fontWeight: 600, fontSize: 13 }}>{m.customerName}</div>
+        {m.task && (
+          <div style={{ color: "var(--text-secondary)", marginTop: 4, whiteSpace: "pre-line" }}>
+            {m.task}
+          </div>
+        )}
+        <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-tertiary)" }}>
+          {m.estimatedHours > 0 ? `${m.estimatedHours}h` : "—"}
+        </div>
+      </div>
     </>
   );
 }

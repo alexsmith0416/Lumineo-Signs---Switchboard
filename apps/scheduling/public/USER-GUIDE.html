@@ -438,10 +438,13 @@
   you can <strong>move</strong> it (dragging sets its start day) and <strong>resize</strong> it like any card.</p>
   <ul>
     <li><strong>Add one</strong> — click <strong>+ Add Job</strong> (or an empty day cell), switch to the
-    <strong>Group Card</strong> tab, give it a title, and search-add the BC jobs that belong in it. To place it on a
-    <strong>whole department</strong> instead of one person, right-click the department banner → <em>Add group card…</em></li>
-    <li><strong>View a job</strong> in the group — <strong>hover</strong> a pill for a quick preview, or
-    <strong>click</strong> it to open that job's details (with a link into BC).</li>
+    <strong>Group Card</strong> tab, give it a title, then search a BC job. Picking a job shows its
+    <strong>planning lines as checkboxes</strong> — <strong>choose which tasks</strong> belong in the group (nothing is
+    pre-checked) and click <em>Add tasks to group</em>. To place the card on a <strong>whole department</strong> instead of
+    one person, right-click the department banner → <em>Add group card…</em></li>
+    <li><strong>View a job</strong> in the group — <strong>hover</strong> a pill for a standard job-card preview, or
+    <strong>click</strong> it to open a detail popover with <em>Open Project</em> and <em>Open SharePoint Folder</em> links —
+    just like a regular job card.</li>
     <li><strong>Edit the group</strong> — <strong>click the card's background</strong> to open its list, where editors can
     rename it, edit the description, add / remove jobs, or delete the whole group.</li>
     <li><strong>Size limit</strong> — a group holds roughly <strong>15 jobs</strong>. If it's full, the editor stops you
@@ -650,6 +653,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 21, 2026</td><td><strong>Group cards — pick tasks + richer job view</strong> — adding a BC job to a group card now lists its planning lines as checkboxes so you choose exactly which tasks to include (instead of adding them all). And a member pill now shows a standard job-card preview on hover and, on click, a detail popover with <em>Open Project</em> and <em>Open SharePoint Folder</em> links.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Add Job — clearer task picking</strong> — when you add a BC job, each planning line now shows a radio (Single) or checkbox (Multi) so it's obvious which tasks are selected. Nothing is pre-selected; click to choose. Fixes the case where the task list looked like everything was already selected.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Fix: group cards stay put</strong> — a group card placed on a busy person no longer disappears after a reload. Group cards (and other custom cards) are now pinned in place and never auto-shuffled by the scheduling engine.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Group card size limit</strong> — a group card now holds about 15 jobs; once it's full the editor stops you from adding more (with a note) so the list always saves intact. Remove a job or start a second group card.</td></tr>

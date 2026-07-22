@@ -31,3 +31,4 @@ apps/scheduling/flows/weathercache-clientdata.json
 apps/scheduling/flows/weathercache-clientdata-backup.json
 apps/scheduling/flows/weathercache-workflowid.txt
 apps/scheduling/flows/weather-rows-out.txt
+.playwright-mcp/
