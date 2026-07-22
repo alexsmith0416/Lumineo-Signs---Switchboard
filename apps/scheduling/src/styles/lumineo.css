@@ -2379,7 +2379,9 @@ input, select, textarea {
 
 /* Shipment "view all items" popup — one card per delivery / pickup line, with a
    colored left accent (navy = delivery, amber = pickup) and labeled fields. */
-.ship-items { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+/* 8px padding on every side = the same gap used between the cards, so they're
+   inset from the popup edges instead of running edge to edge. */
+.ship-items { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
 .ship-item {
   background: var(--surface-sunken);
   border: 1px solid var(--grid-line);
