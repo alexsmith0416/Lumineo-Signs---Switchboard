@@ -172,11 +172,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 21, 2026):** Shipping board polish (feedback note) —
-  per-day **"+ Add load"** buttons are now solid red/white (were a faint dashed
-  ghost), and shipping outlines (`.ship-col`, `.load-card`) use `--grid-line`
-  instead of the near-invisible `--border` so columns read in light mode
-  (`styles/lumineo.css`). Verified live.
+- **Last shipped (Jul 21, 2026):** Shipping board polish (feedback notes) —
+  (a) per-day **"+ Add load"** buttons are now solid red/white (were a faint
+  dashed ghost); (b) shipping outlines (`.ship-col`, `.load-card`) use
+  `--grid-line` instead of the near-invisible `--border` so columns read in light
+  mode; (c) the toolbar row (Prev/Today/Next/Week of/Add Load) is
+  vertically centered above the grid via `.calendar-toolbar--ship` (12px
+  padding-top → balanced 12/12, matching Production/Install, which get their top
+  gap from the WeekSummary the Shipping board lacks). All in
+  `styles/lumineo.css` + `ShippingBoard.tsx`. Verified live.
 - **Earlier (Jul 21):** Group-card interaction upgrades (from a
   handwritten feedback note; verified live):
   1. **Add-a-job task picking** — adding a BC job to a group no longer dumps all
