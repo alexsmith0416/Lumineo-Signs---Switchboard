@@ -11,6 +11,8 @@ import WeatherChip from "./WeatherChip";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { bcJobUrl, sharepointJobUrl } from "../services/job-links";
 import { parseGroup, type GroupMember } from "../services/group-card";
+import DepartmentStepper from "./DepartmentStepper";
+import { useJobSteps } from "../hooks/useJobSteps";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -492,6 +494,7 @@ function MemberDetailBody({
   deptStyle: { bg: string; text: string };
   deptName: string | undefined;
 }) {
+  const { steps } = useJobSteps(m.jobNo || undefined);
   return (
     <>
       <div
@@ -518,6 +521,22 @@ function MemberDetailBody({
         <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-tertiary)" }}>
           {m.estimatedHours > 0 ? `${m.estimatedHours}h` : "—"}
         </div>
+        {steps.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+                marginBottom: 4,
+              }}
+            >
+              Production stage
+            </div>
+            <DepartmentStepper steps={steps} size="sm" />
+          </div>
+        )}
       </div>
     </>
   );
@@ -562,6 +581,11 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         (line.customerDueDate.getTime() - line.endDateTime.getTime()) / (1000 * 60 * 60 * 24),
       )
     : null;
+
+  // Production stepper for the hover preview — only real BC job cards (custom /
+  // shipment cards have no production stages). Read-only here; the interactive
+  // version lives in the click-open card panel.
+  const { steps } = useJobSteps(line.isCustom ? undefined : line.jobNo || undefined);
 
   return (
     <div
@@ -698,6 +722,23 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
               </>
             }
           />
+        )}
+
+        {steps.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--text-tertiary)",
+                marginBottom: 4,
+              }}
+            >
+              Production stage
+            </div>
+            <DepartmentStepper steps={steps} size="sm" />
+          </div>
         )}
 
         {(line.isLocked || conflicts.length > 0) && (
