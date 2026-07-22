@@ -55,7 +55,7 @@ export default function ShippingBoard({ readOnly = false }: ShippingBoardProps =
 
   return (
     <div>
-      <div className="calendar-toolbar">
+      <div className="calendar-toolbar calendar-toolbar--ship">
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
         <button
           className="calendar-toolbar__today"

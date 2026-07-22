@@ -1088,6 +1088,12 @@ input, select, textarea {
      border = 13px in from its outer edge. */
   padding: 0 13px;
 }
+/* Shipping has no WeekSummary above its toolbar, so the row sits flush against
+   the top of the board (top-justified). Add 12px above to match the 12px the
+   Production / Installation toolbars get between the stats box and the grid —
+   balanced with the base 12px margin-bottom, so the row is vertically centered
+   in the band above the grid with equal padding above and below. */
+.calendar-toolbar--ship { padding-top: 12px; }
 .calendar-toolbar__nav { display: inline-flex; align-items: center; gap: 8px; }
 .calendar-toolbar__tools {
   display: flex;
