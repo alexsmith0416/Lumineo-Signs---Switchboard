@@ -172,7 +172,12 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 22, 2026):** Job cards get a **left-edge drag handle** that
+- **Last shipped (Jul 22, 2026):** Shipment "view all items" popup
+  (`ShipmentItemsPanel`) — each load line is now its own **card** (job # +
+  Delivery/Pickup badge, bold customer, description, labeled delivery/pickup
+  location + notes) instead of run-together inline spans. New `.ship-item*` CSS.
+  Verified live on the Olathe Load.
+- **Earlier (Jul 22, 2026):** Job cards get a **left-edge drag handle** that
   changes the **start date** (mirrors the right-edge resize). Slides the card's
   start to another day (snapped to whole days, clamped within the visible week),
   keeping duration; commits via the existing `tryShiftWithConfirm` move path
