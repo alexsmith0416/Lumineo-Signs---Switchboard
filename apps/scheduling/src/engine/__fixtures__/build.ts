@@ -59,5 +59,6 @@ export function line(partial: Partial<ScheduleLine> & {
     customerDueDate: partial.customerDueDate ?? null,
     isLocked: partial.isLocked ?? false,
     jobSequence: partial.jobSequence ?? 0,
+    isCustom: partial.isCustom,
   };
 }

@@ -197,7 +197,13 @@ function cascadeFixpoint(
 
       let lastEnd: Date | null = null;
       for (const task of queue) {
-        const isImmutable = task.id === immutableId || task.isLocked;
+        // Custom cards (PTO/OFF/holidays, and group-card containers) are
+        // annotations, not schedulable BC tasks — the cascade must never
+        // relocate them. Without this, a group card placed on a busy employee
+        // gets pushed forward past their existing jobs on the next settle
+        // (e.g. reload), sliding off the visible week so it vanishes from the
+        // board even though it persisted. Treat them as immovable like locked.
+        const isImmutable = task.id === immutableId || task.isLocked || !!task.isCustom;
         const preferred = preferredOf(task);
         const depFloor = computeDepFloor(task, work.schedule, work);
 

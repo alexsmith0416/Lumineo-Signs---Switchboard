@@ -758,14 +758,25 @@ export default function AddJobPanel({
                   const proposedSlot = isCurrent
                     ? predictedSlots?.find((p) => p.lineNo === line.lineNo)
                     : undefined;
+                  // Explicit selection indicator so it's obvious which tasks
+                  // will be scheduled: a radio in single/auto (one choice) and a
+                  // checkbox in multi (many). Auto pre-selects all and is
+                  // read-only. Without this the only cue was a near-invisible
+                  // background shade, so the list looked "all selected".
+                  const marker =
+                    mode === "multi" ? (isCurrent ? "☑" : "☐") : isCurrent ? "◉" : "○";
                   return (
                     <li
                       key={idx}
                       style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
                         padding: 8,
                         borderRadius: 4,
                         marginBottom: 6,
-                        background: isCurrent ? "var(--bg-tertiary)" : "var(--bg-secondary)",
+                        background: isCurrent ? "var(--label-bg)" : "var(--bg-secondary)",
+                        border: `1px solid ${isCurrent ? "var(--lumineo-navy)" : "var(--border)"}`,
                         cursor: mode === "auto" ? "default" : "pointer",
                       }}
                       onClick={() => {
@@ -778,6 +789,18 @@ export default function AddJobPanel({
                         }
                       }}
                     >
+                      <span
+                        aria-hidden
+                        style={{
+                          fontSize: 14,
+                          lineHeight: "16px",
+                          marginTop: 1,
+                          color: isCurrent ? "var(--lumineo-navy)" : "var(--text-tertiary)",
+                        }}
+                      >
+                        {marker}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 500 }}>
                         {line.description}
                       </div>
@@ -803,6 +826,7 @@ export default function AddJobPanel({
                           </div>
                         )
                       )}
+                      </div>
                     </li>
                   );
                 })}

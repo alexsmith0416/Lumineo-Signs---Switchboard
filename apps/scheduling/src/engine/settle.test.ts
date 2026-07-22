@@ -40,4 +40,15 @@ describe("settleSchedule", () => {
     const sl = settled.schedule.find((l) => l.id === "L")!;
     expect(sl.startDateTime.getTime()).toBe(at(0, 8).getTime());
   });
+
+  it("never moves a custom card (group container / annotation), even on a busy lane", () => {
+    // A group card (isCustom) placed at Mon 13:00 on Bob, who already has a
+    // full-day BC task at Mon 08:00. Before the fix the cascade pushed the
+    // custom card to after the BC task (and, on a full week, off the board).
+    const bcTask = line({ id: "BC", jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 8 });
+    const groupCard = line({ id: "G", jobNo: "Group", employeeId: "bob", departmentId: "metal", start: at(0, 13), estimatedHours: 8, isCustom: true });
+    const settled = settleSchedule(seed([bcTask, groupCard]));
+    const sg = settled.schedule.find((l) => l.id === "G")!;
+    expect(sg.startDateTime.getTime()).toBe(at(0, 13).getTime());
+  });
 });

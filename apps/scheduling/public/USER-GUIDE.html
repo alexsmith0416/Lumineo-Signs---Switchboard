@@ -354,6 +354,7 @@
   <ol class="steps">
     <li>Search by BC job number or customer name and pick the job.</li>
     <li>Choose a mode: <strong>Single</strong> (one task), <strong>Multi</strong> (pick several tasks — they stack on one card), <strong>Auto</strong> (the engine places every task on the best person/day), or <strong>Custom task</strong> (type a task for a job that has no BC planning line).</li>
+    <li>Pick the task(s): the job's planning lines list below the mode buttons, each with a selector — a <strong>radio</strong> (Single) or <strong>checkbox</strong> (Multi). Click a task to select it; the selected row highlights and the <strong>Schedule</strong> button turns on. Nothing is pre-selected, so choose exactly what you want to schedule. (Auto pre-selects and places every task for you.)</li>
     <li>Review the predicted placement, then <strong>Schedule</strong>.</li>
   </ol>
   <h4>Custom Card (blocking out time)</h4>
@@ -649,6 +650,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 21, 2026</td><td><strong>Add Job — clearer task picking</strong> — when you add a BC job, each planning line now shows a radio (Single) or checkbox (Multi) so it's obvious which tasks are selected. Nothing is pre-selected; click to choose. Fixes the case where the task list looked like everything was already selected.</td></tr>
+      <tr><td>Jul 21, 2026</td><td><strong>Fix: group cards stay put</strong> — a group card placed on a busy person no longer disappears after a reload. Group cards (and other custom cards) are now pinned in place and never auto-shuffled by the scheduling engine.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Group card size limit</strong> — a group card now holds about 15 jobs; once it's full the editor stops you from adding more (with a note) so the list always saves intact. Remove a job or start a second group card.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Grouped job cards</strong> — a new card type that holds a list of BC jobs (shown as pills) with a title + optional description. Add via <em>+ Add Job → Group Card</em> (or a department banner → <em>Add group card…</em>); hover/click a pill to view a job, click the card background to edit the list. It auto-colors to its department/location and can be moved &amp; resized. Replaces the old per-department "Fill-in Jobs" list.</td></tr>
       <tr><td>Jul 20, 2026</td><td><strong>Multi-day cards auto-resize</strong> — a job card stretched across several days now un-stacks to stay short: the job #, customer, and description share the top line (with " | " between the customer and the description) and the task list runs together with " • " separators instead of one task per row. The card hugs its content height and long text wraps rather than clipping.</td></tr>
