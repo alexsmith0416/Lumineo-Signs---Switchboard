@@ -172,18 +172,29 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 21, 2026):** Group-card payload cap + member-add guard.
-  Verified group-card live persistence: the `grp:v1:` JSON round-trips correctly
-  through both live sources (`crfdf_notes` on install cards,
-  `crfdf_planninglinedescription` on production lines), both confirmed **Memo /
-  2000** on the live org (`scripts/check-desc-column-lengths.ps1`, device-code).
-  The mapping was already correct — no fix needed. Added `GROUP_PAYLOAD_LIMIT` +
-  `groupPayloadFits()` (`services/group-card.ts`) and a guard in
-  `GroupCardBody.tsx` that refuses a member add which would overflow 2000 chars
-  (~15 jobs) and silently truncate on save. Committed + pushed + deployed.
-  - ℹ️ Persistence is verified by code + live metadata; the only thing not done
-    empirically is a literal create-a-group-card-then-reload click-test on the
-    deployed app. Optional confirmation — do it if convenient.
+- **Last shipped (Jul 21, 2026):** Two live-app fixes found during the group-card
+  create-then-reload click-test (both verified end-to-end on the deployed app):
+  1. **Group cards vanished on reload** when placed on a busy person. They DID
+     persist to Dataverse (row + `grp:v1:` payload intact — confirmed by direct
+     query), but the cascade only treated `isLocked` as immovable, not
+     `isCustom`. So `settleSchedule` on reload queued the container like a BC task
+     and pushed it past the person's jobs, off the visible week. Fix: `isCustom`
+     cards are now immovable in the cascade (`engine/cascade.ts`, +
+     `settle.test.ts` regression). Verified: the test card now renders on reload.
+  2. **Add Job → Single/Multi task list** had no visible selection affordance
+     (only a ~9/255 background shade) → looked like all tasks were preselected.
+     Added a radio (Single/Auto) / checkbox (Multi) marker + clear selected style
+     (`components/AddJobPanel.tsx`). Verified: clicking a task fills its radio and
+     enables Schedule.
+  - Diagnostics used (kept in `scripts/`, device-code, read-only):
+    `query-persist-test-card.ps1`, `query-emp-dept-map.ps1`,
+    `check-desc-column-lengths.ps1`.
+- **Earlier (Jul 21):** Group-card payload cap + member-add guard. Verified the
+  `grp:v1:` JSON round-trips through both live sources (`crfdf_notes` on install
+  cards, `crfdf_planninglinedescription` on production lines), both **Memo/2000**
+  on the live org. Added `GROUP_PAYLOAD_LIMIT` + `groupPayloadFits()`
+  (`services/group-card.ts`) + a guard in `GroupCardBody.tsx` refusing an
+  overflowing member add.
 - **Earlier (Jul 21):** Grouped job cards — an on-board container card holding a
   list of BC jobs as pills, with a title + optional description, auto-coloring to
   its department, and move/resize. Replaced the old Fill-in Jobs feature. Model: a
