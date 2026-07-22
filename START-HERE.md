@@ -172,7 +172,16 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 22, 2026):** Editable production stepper (feedback note).
+- **Last shipped (Jul 22, 2026):** Production stepper now shows on **job-card
+  hover previews** (Production + Installation cards + group-card job pills),
+  read-only. New `hooks/useJobSteps.ts` (shared completion+override stores,
+  caches the per-job planning-line lookup); `JobTooltip` + `MemberDetailBody`
+  render `<DepartmentStepper size="sm">`. Verified live on a production card.
+  - ℹ️ **The `crfdf_jobdeptoverride` table appears to now exist** — on live, a
+    Paint "active" override on J37329 survived a fresh reload and the override
+    store stopped erroring (console 4→2). If you ran the create script, editor
+    add/remove/active persistence is now LIVE. Worth confirming.
+- **Earlier (Jul 22, 2026):** Editable production stepper (feedback note).
   Any signed-in user can now complete a department: click node → yellow-orange
   glow → blue **Complete** button below (was Admin/Ops/Dev direct-toggle).
   Editors get **Edit** (add a missing dept/Install), red **Delete** (remove a
