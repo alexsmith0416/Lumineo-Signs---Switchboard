@@ -1740,6 +1740,73 @@ export async function removeJobDeptCompletion(jobNo: string, deptKey: string): P
   );
 }
 
+// ---------------------------------------------------------------------------
+// Job department overrides (crfdf_jobdeptoverride) — editable production stepper
+// ---------------------------------------------------------------------------
+// Layer editor edits on top of the BC-derived stepper: force a department in
+// (added) or out (removed) via `included`, and mark extra active steps via
+// `active`. A row exists only when there's an override for that (job, dept).
+const JOBOVR_SET = "crfdf_jobdeptoverrides";
+
+export interface JobDeptOverride {
+  jobNo: string;
+  deptKey: string;
+  included: boolean;
+  active: boolean;
+}
+
+function mapJobDeptOverride(r: Row): JobDeptOverride {
+  return {
+    jobNo: s(r.crfdf_jobno),
+    deptKey: s(r.crfdf_deptid),
+    included: r.crfdf_included == null ? true : Boolean(r.crfdf_included),
+    active: Boolean(r.crfdf_active),
+  };
+}
+
+export async function fetchJobDeptOverrides(): Promise<JobDeptOverride[]> {
+  const rows = await list(JOBOVR_SET, {});
+  return rows.map(mapJobDeptOverride).filter((o) => o.jobNo && o.deptKey);
+}
+
+/** Upsert the override row for a (job, dept): `included` false = removed from the
+ *  stepper, true = forced in (added); `active` = an extra editor-marked active. */
+export async function setJobDeptOverride(
+  jobNo: string,
+  deptKey: string,
+  included: boolean,
+  active: boolean,
+): Promise<void> {
+  const { S, org } = await sdk();
+  const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
+  const existing = await list(JOBOVR_SET, { filter: match }).catch(() => [] as Row[]);
+  const rec: Row = {
+    crfdf_jobno: jobNo,
+    crfdf_deptid: deptKey,
+    crfdf_included: included,
+    crfdf_active: active,
+    crfdf_name: `${jobNo} ${deptKey}`.trim(),
+  };
+  if (existing.length > 0) {
+    const id = s(existing[0]!.crfdf_jobdeptoverrideid);
+    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBOVR_SET, id, rec);
+    if (!res.success) throw new Error(res.error?.message ?? "setJobDeptOverride(update) failed");
+    return;
+  }
+  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBOVR_SET, { crfdf_jobdeptoverrideid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "setJobDeptOverride(create) failed");
+}
+
+/** Delete the override row(s) for a (job, dept) — back to the BC default. */
+export async function clearJobDeptOverride(jobNo: string, deptKey: string): Promise<void> {
+  const { S, org } = await sdk();
+  const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
+  const existing = await list(JOBOVR_SET, { filter: match }).catch(() => [] as Row[]);
+  await Promise.all(
+    existing.map((r) => S.DeleteRecordWithOrganization(org, JOBOVR_SET, s(r.crfdf_jobdeptoverrideid))),
+  );
+}
+
 /** Distinct PRODUCTION department names a job needs, from its BC planning lines.
  *  Used to detect vinyl/graphics-only jobs (shorter production target) and to
  *  build the production stepper. */

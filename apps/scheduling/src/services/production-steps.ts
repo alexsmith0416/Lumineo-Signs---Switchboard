@@ -18,27 +18,68 @@ export const DEPT_FLOW: ReadonlyArray<{ match: RegExp; key: string; label: strin
 /** The final "Install" step, appended when a job has installation labor. */
 export const INSTALL_STEP = { key: "I", label: "Install" } as const;
 
+/** Every candidate step in flow order (production departments + Install last) —
+ *  the pool an editor can add a missing department from. */
+export const ALL_STEP_DEFS: ReadonlyArray<{ key: string; label: string }> = [
+  ...DEPT_FLOW.map((d) => ({ key: d.key, label: d.label })),
+  { key: INSTALL_STEP.key, label: INSTALL_STEP.label },
+];
+
+/** An editor's override for one department on one job (from crfdf_jobdeptoverride). */
+export interface DeptOverride {
+  /** Force the department into (true) or out of (false) the stepper. */
+  included: boolean;
+  /** Mark it as an additional active step (on top of the default first-incomplete). */
+  active: boolean;
+}
+
+/** True when the BC planning lines put this step in the job by default. */
+export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean): boolean {
+  if (key === INSTALL_STEP.key) return hasInstall;
+  const def = DEPT_FLOW.find((d) => d.key === key);
+  return !!def && deptNames.some((n) => def.match.test(n));
+}
+
+/** The step defs actually shown for a job, in flow order: the BC-derived set with
+ *  editor overrides layered on (added / removed). */
+export function includedStepDefs(
+  deptNames: string[],
+  hasInstall: boolean,
+  overrides: Record<string, DeptOverride> = {},
+): Array<{ key: string; label: string }> {
+  return ALL_STEP_DEFS.filter((def) => {
+    const ov = overrides[def.key];
+    return ov ? ov.included : bcHasStep(def.key, deptNames, hasInstall);
+  });
+}
+
+/** Candidate steps NOT currently in the stepper — the "add a department" pool. */
+export function missingStepDefs(
+  deptNames: string[],
+  hasInstall: boolean,
+  overrides: Record<string, DeptOverride> = {},
+): Array<{ key: string; label: string }> {
+  const included = new Set(includedStepDefs(deptNames, hasInstall, overrides).map((d) => d.key));
+  return ALL_STEP_DEFS.filter((d) => !included.has(d.key));
+}
+
 /** Build ordered stepper steps from a job's production department names + whether
- *  it has install work, plus the set of completed step keys. `active` = the first
- *  needed step that isn't completed; everything after it is `included`. */
+ *  it has install work + the completed step keys + editor overrides. `active` =
+ *  the first not-completed step (default) PLUS any editor-marked-active step;
+ *  everything else not-completed is `included`. */
 export function buildDepartmentSteps(
   deptNames: string[],
   completed: Set<string>,
   hasInstall = false,
+  overrides: Record<string, DeptOverride> = {},
 ): DepartmentStep[] {
-  const needed = DEPT_FLOW.filter((d) => deptNames.some((n) => d.match.test(n)));
-  const defs = hasInstall
-    ? [...needed.map((d) => ({ key: d.key, label: d.label })), { key: INSTALL_STEP.key, label: INSTALL_STEP.label }]
-    : needed.map((d) => ({ key: d.key, label: d.label }));
-  let activeAssigned = false;
+  const defs = includedStepDefs(deptNames, hasInstall, overrides);
+  // Default active = the first step in flow order that isn't completed.
+  const firstActiveKey = defs.find((d) => !completed.has(d.key))?.key;
   return defs.map((d) => {
     let state: DepartmentStep["state"] = "included";
-    if (completed.has(d.key)) {
-      state = "completed";
-    } else if (!activeAssigned) {
-      state = "active";
-      activeAssigned = true;
-    }
+    if (completed.has(d.key)) state = "completed";
+    else if (d.key === firstActiveKey || overrides[d.key]?.active) state = "active";
     return { key: d.key, label: d.label, state };
   });
 }

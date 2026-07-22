@@ -390,13 +390,20 @@
   <h3>5.4 &nbsp;Production stage &amp; marking steps complete</h3>
   <p>Every BC job card shows a <strong>production stepper</strong> — the departments the job needs (Steel, Routing,
   Metal Fab, Paint, Vinyl / Graphics, Assembly), in flow order, plus a final <strong>Install</strong> step when the job
-  has install work. Each node shows its standing: <strong>completed</strong>, <strong>active</strong> (the current step),
-  or still to come.</p>
+  has install work. Each node shows its standing: <strong>completed</strong>, <strong>active</strong> (in progress, red),
+  or still to come (navy).</p>
   <ul>
-    <li><strong>Mark a step done</strong> — Admin / Ops / Developer click a node to complete it (click again to re-open).
-    Each completion is stamped with <strong>who</strong> and <strong>when</strong>, listed under <strong>Completed</strong> below the stepper.</li>
+    <li><strong>Mark a step done</strong> — <strong>anyone</strong> can complete a department. <strong>Click the
+    department</strong> on the stepper — it <strong>glows yellow-orange</strong> — then click the blue
+    <strong>Complete</strong> button that appears underneath. Each completion is stamped with <strong>who</strong> and
+    <strong>when</strong>, listed under <strong>Completed</strong> below the stepper. Click a completed department to see
+    its stamp; editors get a <strong>Reopen</strong> button there.</li>
     <li>When a step completes, that card <strong>recedes</strong> on the board, and the department's tasks in the
     Job tasks list (5.6) grey out as done.</li>
+    <li><strong>Editors</strong> (Admin / Ops / Developer) can tailor the stepper: click <strong>Edit</strong> to
+    <strong>add a missing department</strong> (or Install), and with a department selected use the red
+    <strong>Delete</strong> button to remove a node or <strong>Set active</strong> to flag extra departments as active
+    (so more than one can be in progress at once). These edits are saved per job.</li>
   </ul>
 
   <h3>5.5 &nbsp;Install dates &amp; the Red date</h3>
@@ -653,6 +660,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 22, 2026</td><td><strong>Editable production stepper</strong> — <em>anyone</em> can now complete a department: click it (it glows yellow-orange), then click the blue <strong>Complete</strong> button below. Editors get an <strong>Edit</strong> button to add a missing department, a red <strong>Delete</strong> to remove a node, and <strong>Set active</strong> so more than one department can be active at once. Edits are saved per job. (See §5.4.)</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Shipping board — clearer look</strong> — the per-day <em>+ Add load</em> buttons are now solid red so they're easy to spot, and the day-column / load-card outlines are darker so the columns read clearly (they were nearly invisible in light mode).</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Group cards — pick tasks + richer job view</strong> — adding a BC job to a group card now lists its planning lines as checkboxes so you choose exactly which tasks to include (instead of adding them all). And a member pill now shows a standard job-card preview on hover and, on click, a detail popover with <em>Open Project</em> and <em>Open SharePoint Folder</em> links.</td></tr>
       <tr><td>Jul 21, 2026</td><td><strong>Add Job — clearer task picking</strong> — when you add a BC job, each planning line now shows a radio (Single) or checkbox (Multi) so it's obvious which tasks are selected. Nothing is pre-selected; click to choose. Fixes the case where the task list looked like everything was already selected.</td></tr>

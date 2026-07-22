@@ -30,11 +30,14 @@ export default function DepartmentStepper({
   steps,
   size = "md",
   onNodeClick,
+  selectedKey,
 }: {
   steps: DepartmentStep[];
   size?: "sm" | "md";
-  /** When set, each node is a button (used to complete a step). */
+  /** When set, each node is a button (clicking selects it to act on). */
   onNodeClick?: (step: DepartmentStep) => void;
+  /** The currently-selected node key — rendered with the yellow-orange glow. */
+  selectedKey?: string | null;
 }): React.ReactElement {
   if (!steps || steps.length === 0) {
     return (
@@ -48,6 +51,7 @@ export default function DepartmentStepper({
       {steps.map((step, i) => {
         const barFilled = i > 0 && steps[i - 1].state !== "completed";
         const title = `${step.label} — ${STATE_VERB[step.state]}`;
+        const sel = selectedKey === step.key ? " is-selected" : "";
         return (
           <React.Fragment key={step.key}>
             {i > 0 && (
@@ -57,9 +61,10 @@ export default function DepartmentStepper({
               <button
                 type="button"
                 role="listitem"
-                className={`lum-stepper__node lum-stepper__node--btn is-${step.state}`}
+                className={`lum-stepper__node lum-stepper__node--btn is-${step.state}${sel}`}
                 title={title}
                 aria-label={title}
+                aria-pressed={selectedKey === step.key}
                 onClick={() => onNodeClick(step)}
               >
                 {step.key}
@@ -67,7 +72,7 @@ export default function DepartmentStepper({
             ) : (
               <span
                 role="listitem"
-                className={`lum-stepper__node is-${step.state}`}
+                className={`lum-stepper__node is-${step.state}${sel}`}
                 title={title}
                 aria-label={title}
               >

@@ -2587,9 +2587,76 @@ input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   .lum-stepper__node.is-active { animation: none; }
 }
+/* Selected node — the yellow-orange glow shown after a click, before Complete.
+   Defined after is-active so it wins the color/glow on an active node too. */
+.lum-stepper__node.is-selected {
+  background: var(--status-amber);
+  border-color: var(--status-amber);
+  color: #3a2600;
+  box-shadow: 0 0 0 4px rgba(242, 153, 74, 0.4);
+  animation: lum-stepper-glow-amber 1.4s ease-in-out infinite;
+}
+@keyframes lum-stepper-glow-amber {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(242, 153, 74, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(242, 153, 74, 0.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lum-stepper__node.is-selected { animation: none; }
+}
 .lum-stepper__bar { height: 2px; width: var(--lum-bar-w); flex: none; background: var(--lum-faint); }
 .lum-stepper__bar.is-filled { background: var(--lum-navy); }
 .lum-stepper-empty { color: var(--grid-line); }
+
+/* Editable stepper — Edit toggle, per-node action panel, add-department row. */
+.job-stepper__edit {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.job-stepper__edit.is-on { background: var(--accent-brand); color: #fff; border-color: var(--accent-brand); }
+.job-stepper__empty-note { font-size: 12px; color: var(--text-tertiary); }
+.job-stepper__actions,
+.job-stepper__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.job-stepper__actions-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.job-stepper__done-tag { font-size: 11px; color: var(--status-green); font-weight: 600; }
+.job-stepper__btn { height: 26px; padding: 0 10px; font-size: 12px; }
+.job-stepper__complete {
+  height: 28px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.job-stepper__complete:hover { filter: brightness(1.08); }
+.job-stepper__delete {
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--lumineo-red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.job-stepper__delete:hover { filter: brightness(1.08); }
 
 /* --- Help screen (embedded user guide) ------------------------------------- */
 .help-screen {
