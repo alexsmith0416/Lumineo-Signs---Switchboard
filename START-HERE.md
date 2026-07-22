@@ -177,10 +177,6 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   read-only. New `hooks/useJobSteps.ts` (shared completion+override stores,
   caches the per-job planning-line lookup); `JobTooltip` + `MemberDetailBody`
   render `<DepartmentStepper size="sm">`. Verified live on a production card.
-  - ℹ️ **The `crfdf_jobdeptoverride` table appears to now exist** — on live, a
-    Paint "active" override on J37329 survived a fresh reload and the override
-    store stopped erroring (console 4→2). If you ran the create script, editor
-    add/remove/active persistence is now LIVE. Worth confirming.
 - **Earlier (Jul 22, 2026):** Editable production stepper (feedback note).
   Any signed-in user can now complete a department: click node → yellow-orange
   glow → blue **Complete** button below (was Admin/Ops/Dev direct-toggle).
@@ -190,12 +186,10 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   + `active`). New `services` fns + `store/job-dept-override-store.ts`;
   `production-steps.ts` applies overrides; `DepartmentStepper` gains a selected
   (glow) state; `ProductionStepperSection.tsx` rewritten. Deployed + committed.
-  - 🔴 **TODO — create the Dataverse table.** Run
-    `apps/scheduling/scripts/create-jobdeptoverride-table.ps1` (device-code login,
-    kept timing out this session). Until it exists, the click→Complete flow works
-    (completions use the existing `crfdf_jobdeptcompletion`), but editor
-    add/remove/active **won't persist on live**. No redeploy needed once created —
-    the store reads the table on next load.
+  - ✅ **Table created + persistence confirmed live** (user ran
+    `create-jobdeptoverride-table.ps1`; a Paint "Set active" override on J37329
+    survived reload). Completions use `crfdf_jobdeptcompletion`; editor
+    add/remove/active use `crfdf_jobdeptoverride`.
 - **Earlier (Jul 21):** Shipping board polish (feedback notes) —
   (a) per-day **"+ Add load"** buttons are now solid red/white (were a faint
   dashed ghost); (b) shipping outlines (`.ship-col`, `.load-card`) use
