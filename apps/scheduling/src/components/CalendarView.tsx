@@ -1046,6 +1046,9 @@ export default function CalendarView({
                   onResize={async (line, newHours) => {
                     await tryResizeWithConfirm(line, newHours);
                   }}
+                  onMoveStart={async (line, newStart) => {
+                    await tryShiftWithConfirm(line.id, newStart);
+                  }}
                   onDuplicateLine={readOnly ? undefined : handleDuplicateLine}
                   onDeleteLine={readOnly ? undefined : handleDeleteLine}
                 />
@@ -1293,6 +1296,7 @@ interface EmployeeRowProps {
   onCellClick: (day: Date) => void;
   onJobClick: (line: ScheduleLine) => void;
   onResize: (line: ScheduleLine, newHours: number) => Promise<void>;
+  onMoveStart: (line: ScheduleLine, newStart: Date) => Promise<void>;
   /** Right-click card actions (omitted on read-only boards). */
   onDuplicateLine?: (line: ScheduleLine) => void;
   onDeleteLine?: (line: ScheduleLine) => void;
@@ -1325,6 +1329,7 @@ function EmployeeRow({
   onCellClick,
   onJobClick,
   onResize,
+  onMoveStart,
   onDuplicateLine,
   onDeleteLine,
 }: EmployeeRowProps) {
@@ -1513,6 +1518,7 @@ function EmployeeRow({
             onCardDrop={handleStripDrop}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
+            onMoveStart={(newStart) => onMoveStart(card.line, newStart)}
             onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
             onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
           />
@@ -1540,6 +1546,7 @@ interface GanttCardProps {
   onCardDrop: (e: React.DragEvent) => void;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
+  onMoveStart: (newStart: Date) => Promise<void>;
   onDuplicate?: () => void;
   onDelete?: () => void;
 }
@@ -1562,6 +1569,7 @@ function GanttCard({
   onCardDrop,
   onClick,
   onResize,
+  onMoveStart,
   onDuplicate,
   onDelete,
 }: GanttCardProps) {
@@ -1593,12 +1601,20 @@ function GanttCard({
     deltaPx: number;
     newHours: number;
   } | null>(null);
+  // Left-edge drag preview — changes the START date (keeps duration), snapped to
+  // whole days. Mirrors the right-edge resize but shifts the card instead of
+  // stretching it.
+  const [movePreview, setMovePreview] = useState<{
+    deltaDays: number;
+    newStart: Date;
+  } | null>(null);
 
   const widthPct = (spanDays / 7) * 100;
   const leftPct = (startIdx / 7) * 100;
   const previewWidthPct = resizePreview
     ? widthPct + (resizePreview.deltaPx / (daysRef.current?.clientWidth || 1)) * 100
     : widthPct;
+  const previewLeftPct = movePreview ? leftPct + (movePreview.deltaDays / 7) * 100 : leftPct;
 
   const top = 4 + lane * laneHeight;
 
@@ -1639,19 +1655,54 @@ function GanttCard({
     window.addEventListener("mouseup", onUp);
   };
 
+  // Left-edge drag → change the START date, snapped to whole days, keeping the
+  // task's duration (the whole card slides). The mirror of startResize.
+  const startMoveLeft = (e: React.MouseEvent) => {
+    if (readOnly || line.isLocked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const dayContainer = daysRef.current;
+    if (!dayContainer) return;
+    const dayWidth = dayContainer.clientWidth / 7;
+    const startX = e.clientX;
+    const baseStart = line.startDateTime;
+
+    const compute = (clientX: number) => {
+      // Clamp so the start stays inside the visible Mon–Sun week (the card
+      // doesn't slide off to another week and vanish from view).
+      const raw = Math.round((clientX - startX) / dayWidth);
+      const deltaDays = Math.max(-startIdx, Math.min(6 - startIdx, raw));
+      const newStart = new Date(baseStart);
+      newStart.setDate(newStart.getDate() + deltaDays);
+      return { deltaDays, newStart };
+    };
+
+    const onMove = (mv: MouseEvent) => setMovePreview(compute(mv.clientX));
+    const onUp = (mv: MouseEvent) => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const { deltaDays, newStart } = compute(mv.clientX);
+      setMovePreview(null);
+      if (deltaDays !== 0) void onMoveStart(newStart);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   const [dragging, setDragging] = useState(false);
 
   return (
     <div
       className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}${hasRedDate ? " gantt-card--reddate" : ""}${stepDone ? " gantt-card--done" : ""}`}
       style={{
-        left: `${leftPct}%`,
+        left: `${previewLeftPct}%`,
         width: `${previewWidthPct}%`,
         top,
         height: autoHeight ? "auto" : laneHeight - 8,
         bottom: "auto",
       }}
-      draggable={!readOnly && !line.isLocked && !resizePreview}
+      draggable={!readOnly && !line.isLocked && !resizePreview && !movePreview}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/lineId", line.id);
         e.dataTransfer.effectAllowed = "move";
@@ -1683,6 +1734,12 @@ function GanttCard({
       {!readOnly && !line.isLocked && (
         <>
           <div
+            className="resize-handle resize-handle--left"
+            onMouseDown={startMoveLeft}
+            onClick={(e) => e.stopPropagation()}
+            title="Drag to change the start date"
+          />
+          <div
             className="resize-handle resize-handle--right"
             onMouseDown={startResize}
             onClick={(e) => e.stopPropagation()}
@@ -1704,6 +1761,24 @@ function GanttCard({
               }}
             >
               {resizePreview.newHours}h
+            </div>
+          )}
+          {movePreview && movePreview.deltaDays !== 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: -22,
+                left: 0,
+                background: "var(--lumineo-navy)",
+                color: "#fff",
+                padding: "2px 6px",
+                borderRadius: 3,
+                fontSize: 10,
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+              }}
+            >
+              {format(movePreview.newStart, "EEE MMM d")}
             </div>
           )}
         </>
