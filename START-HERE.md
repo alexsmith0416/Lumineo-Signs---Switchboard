@@ -172,7 +172,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **Last shipped (Jul 21, 2026):** Shipping board polish (feedback notes) —
+- **Last shipped (Jul 22, 2026):** Editable production stepper (feedback note).
+  Any signed-in user can now complete a department: click node → yellow-orange
+  glow → blue **Complete** button below (was Admin/Ops/Dev direct-toggle).
+  Editors get **Edit** (add a missing dept/Install), red **Delete** (remove a
+  node), and **Set active** (extra active depts → multiple active at once).
+  Overrides persist per job in a new **`crfdf_jobdeptoverride`** table (`included`
+  + `active`). New `services` fns + `store/job-dept-override-store.ts`;
+  `production-steps.ts` applies overrides; `DepartmentStepper` gains a selected
+  (glow) state; `ProductionStepperSection.tsx` rewritten. Deployed + committed.
+  - 🔴 **TODO — create the Dataverse table.** Run
+    `apps/scheduling/scripts/create-jobdeptoverride-table.ps1` (device-code login,
+    kept timing out this session). Until it exists, the click→Complete flow works
+    (completions use the existing `crfdf_jobdeptcompletion`), but editor
+    add/remove/active **won't persist on live**. No redeploy needed once created —
+    the store reads the table on next load.
+- **Earlier (Jul 21):** Shipping board polish (feedback notes) —
   (a) per-day **"+ Add load"** buttons are now solid red/white (were a faint
   dashed ghost); (b) shipping outlines (`.ship-col`, `.load-card`) use
   `--grid-line` instead of the near-invisible `--border` so columns read in light
