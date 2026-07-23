@@ -42,6 +42,12 @@ import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
+import {
+  buildCompletionPush,
+  buildSchedulePush,
+  pushRowName,
+  type BcPlanningPush,
+} from "./bc-planning-sync";
 
 // Entity SET names (plural). The real production roster lives in the "1"
 // family — crfdf_department1 / crfdf_employee1 — which is what the
@@ -333,7 +339,15 @@ export const liveProductionDataSource: ScheduleDataSource = {
     const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, id, toRecord(changes));
     if (!res.success) throw new Error(res.error?.message ?? `UpdateRecord(${id}) failed`);
     const body = res.data as Row | undefined;
-    return body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
+    const line = body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
+    // Mirror a scheduling change (start/end/assignee) back to the BC planning
+    // step. Only when one of those actually changed — not on lock/hours-only
+    // edits. Team-lane lines carry no person, so no BC assignee. Fire-and-forget.
+    if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
+      const assignedTo = line.employeeId && !isLaneEmployeeId(line.employeeId) ? line.employeeId : "";
+      void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
+    }
+    return line;
   },
 
   async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
@@ -630,6 +644,12 @@ function createLiveInstallDataSource(
       const body = res.data as Row | undefined;
       const line = body?.crfdf_installcardid ? mapCardRecord(body) : ({ id, ...changes } as ScheduleLine);
       cacheUpdateCard(region, id, line);
+      // Mirror an install-step scheduling change back to BC (same outbox as
+      // production). Only on a start/end/assignee change; fire-and-forget.
+      if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
+        const assignedTo = line.employeeId && !isLaneEmployeeId(line.employeeId) ? line.employeeId : "";
+        void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
+      }
       return line;
     },
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
@@ -898,6 +918,50 @@ const BC = {
   billing: "crfdf_bcbillinglines",
   customers: "crfdf_bccustomers",
 } as const;
+
+// ---------------------------------------------------------------------------
+// BC planning-step write-back OUTBOX (crfdf_bcpushqueue)
+// ---------------------------------------------------------------------------
+// The Code App can only talk to Dataverse (its lone connector), so we don't
+// call the BC API from the browser. Instead a board commit drops a "pending"
+// row here; a Dataverse-triggered Power Automate flow (BCPush_PlanningSteps)
+// drains it, PATCHes the sign365 projectPlanningEntries API, and writes the
+// row's status back. See flows/BCPush_PlanningSteps.md.
+const BCPUSH_SET = "crfdf_bcpushqueues";
+
+function pushToRecord(p: BcPlanningPush): Row {
+  return {
+    crfdf_bcpushqueueid: uuid(),
+    crfdf_name: pushRowName(p),
+    crfdf_jobno: p.jobNo,
+    crfdf_kind: p.kind,
+    crfdf_planningstep: p.planningStep,
+    crfdf_deptkey: p.deptKey,
+    crfdf_startdatetime: p.startDateTime,
+    crfdf_enddatetime: p.endDateTime,
+    crfdf_assignedto: p.assignedTo,
+    crfdf_assignedtoname: p.assignedToName,
+    crfdf_complete: p.complete,
+    crfdf_started: p.started,
+    crfdf_status: "pending",
+    crfdf_sourcelineid: p.sourceLineId,
+  };
+}
+
+/**
+ * Enqueue a BC planning-step push. FIRE-AND-FORGET by contract: enqueuing must
+ * never block or fail a board commit, so all errors are swallowed + logged. A
+ * null push (non-BC / custom line) is a no-op.
+ */
+export async function enqueueBcPush(push: BcPlanningPush | null): Promise<void> {
+  if (!push) return;
+  try {
+    const { S, org } = await sdk();
+    await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, BCPUSH_SET, pushToRecord(push));
+  } catch (e) {
+    console.warn("[bc-sync] enqueue failed (non-blocking)", e);
+  }
+}
 
 export interface BcJobLive {
   jobNo: string;
@@ -1724,10 +1788,12 @@ export async function addJobDeptCompletion(jobNo: string, deptKey: string, compl
     const id = s(existing[0]!.crfdf_jobdeptcompletionid);
     const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, id, rec);
     if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(update) failed");
+    void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
     return;
   }
   const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, { crfdf_jobdeptcompletionid: uuid(), ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(create) failed");
+  void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
 }
 
 /** Un-complete a job's department (delete the completion row(s)). */
@@ -1738,6 +1804,7 @@ export async function removeJobDeptCompletion(jobNo: string, deptKey: string): P
   await Promise.all(
     existing.map((r) => S.DeleteRecordWithOrganization(org, JOBDEPT_SET, s(r.crfdf_jobdeptcompletionid))),
   );
+  void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: false }));
 }
 
 // ---------------------------------------------------------------------------
