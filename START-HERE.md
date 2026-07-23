@@ -172,6 +172,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
+- **In progress (Jul 22, 2026) — BC write-back (scheduler → Business Central):**
+  building the path to push a job task's start/end + assignee + started/complete
+  back to BC's Project Planning. **Client scaffold done & committed** (not
+  deployed): `services/bc-planning-sync.ts` (pure builders + tests),
+  `enqueueBcPush()` in `dataverse-live.ts` writes an **outbox** row
+  (`crfdf_bcpushqueue`, table created live) on every commit; assignee resolves
+  from `crfdf_employee1.crfdf_no` (add/back-fill via
+  `scripts/add-employee-resourceno-column.ps1`). Flow scaffolded
+  (`flows/BCPush_PlanningSteps-clientdata.json` + solution packager
+  `_build_pushflow_solution.py` → `BCPushReview_1_0_0_1.zip`).
+  🔴 **BLOCKED:** the `sign365 v1.0` BC API is **read-only** (all business
+  entitysets `Updatable=false`) — can't PATCH. **Next:** infotechConsultingGroup
+  must expose a writable endpoint (editable API page keyed on `systemId`, or a
+  bound `updateSchedule` action) — email drafted in
+  `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
+  is harmless to leave. Also: app not yet redeployed with the enqueue code.
 - **Last shipped (Jul 22, 2026):** Shipment "view all items" popup
   (`ShipmentItemsPanel`) — each load line is now its own **card** (job # +
   Delivery/Pickup badge, bold customer, description, labeled delivery/pickup
