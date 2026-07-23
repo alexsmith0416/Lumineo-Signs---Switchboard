@@ -42,6 +42,15 @@ Write-Host "Authenticated." -ForegroundColor Green
 $headers = @{ Authorization="Bearer $token"; 'Content-Type'='application/json'; 'OData-MaxVersion'='4.0'; 'OData-Version'='4.0'; Accept='application/json' }
 $base = "$org/api/data/v9.2"
 
+# Resolve the table's LogicalName (singular) from its EntitySet name (plural) —
+# EntityDefinitions is keyed by LogicalName, not the set name the app queries.
+$entitySet = 'crfdf_bcjobs'
+$def = Invoke-RestMethod -Method Get -Headers $headers `
+  -Uri "$base/EntityDefinitions?`$select=LogicalName&`$filter=EntitySetName eq '$entitySet'"
+if (-not $def.value -or $def.value.Count -eq 0) { throw "Could not resolve LogicalName for entity set '$entitySet'." }
+$entity = $def.value[0].LogicalName
+Write-Host ("Resolved {0} -> {1}" -f $entitySet, $entity) -ForegroundColor Gray
+
 function New-Label($text) {
   @{ '@odata.type'='Microsoft.Dynamics.CRM.Label'
      LocalizedLabels=@(@{ '@odata.type'='Microsoft.Dynamics.CRM.LocalizedLabel'; Label=$text; LanguageCode=1033 }) }
@@ -65,8 +74,8 @@ function New-DateTimeColumn($entity, $schema, $label) {
   }
 }
 
-Write-Host "Adding crfdf_ReleaseDate to crfdf_bcjobs…" -ForegroundColor Cyan
-New-DateTimeColumn 'crfdf_bcjobs' 'crfdf_ReleaseDate' 'Release Date'
+Write-Host "Adding crfdf_ReleaseDate to $entity…" -ForegroundColor Cyan
+New-DateTimeColumn $entity 'crfdf_ReleaseDate' 'Release Date'
 
 try {
   Invoke-RestMethod -Method Post -Uri "$base/PublishAllXml" -Headers $headers | Out-Null
