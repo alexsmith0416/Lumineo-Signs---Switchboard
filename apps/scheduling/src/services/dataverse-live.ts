@@ -1127,6 +1127,15 @@ export function bcJobMetaByJobNo(): Promise<Map<string, BcJobMeta>> {
   return bcJobMetaPromise;
 }
 
+/** BC order-release date for a job (crfdf_bcjobs.crfdf_releasedate), or null. */
+export async function jobReleaseDate(jobNo: string): Promise<Date | null> {
+  const meta = (await bcJobMetaByJobNo()).get(jobNo);
+  const v = meta?.releaseDate;
+  if (!v) return null;
+  const [y, mo, d] = v.split("-").map(Number);
+  return y ? new Date(y, (mo || 1) - 1, d || 1) : null;
+}
+
 // jobNo → BC salesperson code (crfdf_bcjobs.crfdf_salespersoncode, populated by
 // BCSync_SalesLines). Its own guarded query so a not-yet-added column can't break
 // the name/value overlay above — returns an empty map until the column exists.

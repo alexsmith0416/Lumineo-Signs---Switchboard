@@ -414,6 +414,13 @@
   <p>Editors open <strong>Install Dates</strong> in the Edit Job panel with the <strong>eye icon</strong> (it shows/hides
   the fields; the whole section is hidden for view-only roles):</p>
   <ul>
+    <li><strong>Release date</strong> — the job's <strong>order-release date</strong>, pulled from Business Central.
+    It anchors the target dates below. You can type a date to <strong>override</strong> it for a job; clear the
+    field to fall back to the BC date.</li>
+    <li><strong>Target dates</strong> (shown once a release date is known) —
+    <strong>Target production complete</strong> is <strong>7 weeks</strong> after release
+    (<strong>4 weeks</strong> for vinyl/graphics-only jobs), and the <strong>estimated install window</strong> is
+    <strong>8–10 weeks</strong> after release. These are computed guides, not committed dates.</li>
     <li><strong>Scheduled install</strong> — the job's committed install day.</li>
     <li><strong>Red date</strong> — a fixed, <em>drop-dead</em> install date. Setting it <strong>locks</strong> the
     scheduled date to match and gives the job a <strong>pulsing red outline</strong> on every board it appears on.</li>
@@ -678,6 +685,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Release date &amp; target dates</strong> — the Install Dates section now shows a job's <strong>order-release date</strong> from Business Central and the targets it drives: <em>target production complete</em> at release + 7 weeks (4 weeks for vinyl/graphics-only jobs) and an <em>estimated install window</em> at release + 8–10 weeks. You can override the release date per job.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Cleaner shipment load list</strong> — clicking a shipment (truck) card on the Installation board now lays each stop out as its own card with the job #, customer/job name, description, a labeled delivery/pickup location and notes, and a <em>Delivery</em> / <em>Pickup</em> badge — instead of the old run-together text.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Drag a card's left edge to change its start date</strong> — mirroring the right-edge resize, you can now grab the left edge of a job card and slide its start to another day (keeping the job's length). A live date badge previews the new start.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Production stepper on card hover</strong> — hovering a job card (Production / Installation, and the job pills inside a group card) now shows the production stepper in the preview, so you can see a job's progress at a glance without opening it.</td></tr>

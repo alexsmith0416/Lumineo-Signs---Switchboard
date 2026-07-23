@@ -5,11 +5,10 @@ import { computeJobTargets } from "../services/job-schedule-data";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
-// Release date + computed targets are hidden until we can source a real BC
-// release date (the "status Open" date isn't stored in BC; it's likely a custom
-// field). Flip this back to `true` once the flow maps the real field — the code
-// and the crfdf_jobschedule.releaseddate column stay in place, just hidden.
-const SHOW_TARGETS = false;
+// Release date + computed targets. The anchor is the real BC order-release date
+// (crfdf_bcjobs.crfdf_releasedate ← sign365 icgSgpOrderReleasedDate, via
+// BCSync_JobReleaseDates); the in-app date field is an optional override.
+const SHOW_TARGETS = true;
 
 /** Parse an <input type="date"> value ("yyyy-MM-dd") as a LOCAL date (no tz shift). */
 function parseDateInput(v: string): Date | null {
@@ -57,21 +56,31 @@ export default function JobSchedulePanel({
 
   // Vinyl/graphics-only → shorter production target. Only needed while targets show.
   const [vinylOnly, setVinylOnly] = useState(false);
+  // Real BC order-release date (anchors the targets); the manual field overrides it.
+  const [bcReleased, setBcReleased] = useState<Date | null>(null);
   useEffect(() => {
     if (!SHOW_TARGETS || !LIVE || !jobNo) return;
     let alive = true;
-    void import("../services/dataverse-live")
-      .then((m) => m.jobProductionDepartments(jobNo))
-      .then((depts) => {
-        if (alive) setVinylOnly(depts.length > 0 && depts.every((d) => /vinyl|graphic/i.test(d)));
-      })
-      .catch(() => {});
+    void import("../services/dataverse-live").then(async (m) => {
+      try {
+        const [depts, rel] = await Promise.all([
+          m.jobProductionDepartments(jobNo),
+          m.jobReleaseDate(jobNo),
+        ]);
+        if (!alive) return;
+        setVinylOnly(depts.length > 0 && depts.every((d) => /vinyl|graphic/i.test(d)));
+        setBcReleased(rel);
+      } catch {
+        /* leave defaults */
+      }
+    });
     return () => {
       alive = false;
     };
   }, [jobNo]);
 
-  const released = sched?.releasedDate ?? null;
+  // Manual override (crfdf_jobschedule.releaseddate) wins; else the BC release date.
+  const released = sched?.releasedDate ?? bcReleased;
   const scheduled = sched?.scheduledInstallDate ?? null;
   const red = sched?.redDate ?? null;
   const targets = useMemo(() => computeJobTargets(released, vinylOnly), [released, vinylOnly]);
@@ -112,7 +121,7 @@ export default function JobSchedulePanel({
                   className="form-field__input job-sched__date"
                   value={toDateInput(released)}
                   onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
-                  title="The day this job was released to production. Anchors the targets below."
+                  title="Order-release date from BC — anchors the targets below. Editing overrides it for this job; clear to fall back to the BC date."
                 />
               </div>
               {released && (

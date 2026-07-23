@@ -18,7 +18,7 @@ export interface JobSchedule {
 export interface JobTargets {
   /** Production should be done by release + 7 wk (or + 4 wk for vinyl/graphics-only). */
   targetProductionComplete: Date | null;
-  /** Estimated install window: release + 8 wk … + 10 wk (a 3-week buffer). */
+  /** Estimated install window: release + 8 wk … + 10 wk. */
   installWindowStart: Date | null;
   installWindowEnd: Date | null;
 }
