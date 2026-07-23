@@ -1,0 +1,120 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_dynamicssmbsaas": {
+        "api": { "name": "shared_dynamicssmbsaas" },
+        "connection": { "connectionReferenceLogicalName": "new_shareddynamicssmbsaas_69260" },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps-1": {
+        "api": { "name": "shared_commondataserviceforapps" },
+        "connection": { "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_4a52d" },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "comment": "BCSync_JobReleaseDates — overlays crfdf_bcjobs.crfdf_releasedate from the sign365 jobs entity's icgSgpOrderReleasedDate. UAT/production switch = the three Bc_* parameters below (only these change to cut over). Reads the sign365 dataset (has the custom release-date field); the main BCSync_Jobs stays on microsoft/analytics. Only updates rows the main sync already created; unmatched jobs are skipped (picked up next run).",
+      "parameters": {
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "$connections": { "defaultValue": {}, "type": "Object" },
+        "Bc_Environment": {
+          "type": "String",
+          "defaultValue": "UAT",
+          "metadata": { "description": "BC environment name. Switch to PRODUCTION when sign365 is live in prod." }
+        },
+        "Bc_CompanyId": {
+          "type": "String",
+          "defaultValue": "4738bfb5-a06d-ec11-bf27-000d3a132a9e",
+          "metadata": { "description": "BC company GUID (confirm the prod company id — it may match UAT)." }
+        },
+        "Bc_Dataset": {
+          "type": "String",
+          "defaultValue": "infotechConsultingGroup/sign365/v1.0",
+          "metadata": { "description": "BC API dataset (publisher/group/version) that exposes icgSgpOrderReleasedDate." }
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Central Standard Time",
+            "schedule": { "hours": ["2"], "minutes": [0] }
+          }
+        }
+      },
+      "actions": {
+        "Jobs": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "parameters": {
+              "bcenvironment": "@parameters('Bc_Environment')",
+              "company": "@parameters('Bc_CompanyId')",
+              "dataset": "@parameters('Bc_Dataset')",
+              "table": "jobs",
+              "$filter": "status eq 'Open' and complete eq false and no ne '1NON-JOBLABOR'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+              "operationId": "GetItemsV3",
+              "connectionName": "shared_dynamicssmbsaas"
+            }
+          }
+        },
+        "Apply_to_each": {
+          "type": "Foreach",
+          "runAfter": { "Jobs": ["Succeeded"] },
+          "foreach": "@outputs('Jobs')?['body/value']",
+          "actions": {
+            "List_rows": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bcjobs",
+                  "$filter": "crfdf_jobnumber eq '@{items('Apply_to_each')?['no']}'",
+                  "$select": "crfdf_bcjobid",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              }
+            },
+            "Has_row": {
+              "type": "If",
+              "runAfter": { "List_rows": ["Succeeded"] },
+              "expression": { "greater": ["@length(coalesce(body('List_rows')?['value'], json('[]')))", 0] },
+              "actions": {
+                "Update_release_date": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcjobs",
+                      "recordId": "@first(body('List_rows')?['value'])?['crfdf_bcjobid']",
+                      "item/crfdf_releasedate": "@if(or(empty(coalesce(items('Apply_to_each')?['icgSgpOrderReleasedDate'], '')), startsWith(coalesce(items('Apply_to_each')?['icgSgpOrderReleasedDate'], ''), '0001')), null, items('Apply_to_each')?['icgSgpOrderReleasedDate'])"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  }
+                }
+              },
+              "else": { "actions": {} }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

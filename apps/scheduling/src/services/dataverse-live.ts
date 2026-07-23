@@ -1098,13 +1098,17 @@ export interface BcJobMeta {
   name: string;
   remaining: number;
   shipToZip: string;
+  /** BC order-release date (crfdf_releasedate ← sign365 icgSgpOrderReleasedDate,
+   *  via BCSync_JobReleaseDates). ISO date ("" when unset / placeholder). Drives
+   *  target dates. */
+  releaseDate: string;
 }
 let bcJobMetaPromise: Promise<Map<string, BcJobMeta>> | null = null;
 export function bcJobMetaByJobNo(): Promise<Map<string, BcJobMeta>> {
   if (!bcJobMetaPromise) {
     bcJobMetaPromise = (async () => {
       const rows = await list(BC.jobs, {
-        select: "crfdf_jobnumber,crfdf_appjobname,crfdf_remainingbalance,crfdf_shiptozip",
+        select: "crfdf_jobnumber,crfdf_appjobname,crfdf_remainingbalance,crfdf_shiptozip,crfdf_releasedate",
       });
       const m = new Map<string, BcJobMeta>();
       for (const r of rows) {
@@ -1114,6 +1118,7 @@ export function bcJobMetaByJobNo(): Promise<Map<string, BcJobMeta>> {
             name: s(r.crfdf_appjobname),
             remaining: n(r.crfdf_remainingbalance),
             shipToZip: s(r.crfdf_shiptozip),
+            releaseDate: r.crfdf_releasedate == null ? "" : String(r.crfdf_releasedate).slice(0, 10),
           });
       }
       return m;
