@@ -1,0 +1,223 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": { "name": "shared_commondataserviceforapps" },
+        "connection": { "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_bcpush" },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "comment": "BCPush_PlanningSteps — drains the crfdf_bcpushqueue outbox and PATCHes the sign365 projectPlanningEntries API. See BCPush_PlanningSteps.md. TODOs before go-live: (1) fill the Bc_* parameters below (secret should come from Key Vault / an environment variable, not inline); (2) confirm the entry key is 'systemId' (else change Patch_* URIs); (3) map crfdf_assignedto (app employee id) to a BC resource no and add it to Patch_Schedule's body.",
+      "parameters": {
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "$connections": { "defaultValue": {}, "type": "Object" },
+        "Bc_ApiBase": {
+          "type": "String",
+          "defaultValue": "https://api.businesscentral.dynamics.com/v2.0/luminousneon.com/UAT/api/infotechConsultingGroup/sign365/v1.0"
+        },
+        "Bc_CompanyId": {
+          "type": "String",
+          "defaultValue": "4738bfb5-a06d-ec11-bf27-000d3a132a9e"
+        },
+        "Bc_Tenant": {
+          "type": "String",
+          "defaultValue": "fe0182fa-d183-46ab-8493-9e8ea9c3d0b8"
+        },
+        "Bc_Audience": {
+          "type": "String",
+          "defaultValue": "https://api.businesscentral.dynamics.com"
+        },
+        "Bc_ClientId": {
+          "type": "String",
+          "defaultValue": "<< Postman app registration client id >>"
+        },
+        "Bc_ClientSecret": {
+          "type": "String",
+          "defaultValue": "<< store in Key Vault / secure env var — do NOT commit >>"
+        }
+      },
+      "triggers": {
+        "When_a_push_row_is_added": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_bcpushqueue",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "crfdf_status"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Only_pending": {
+          "type": "If",
+          "expression": { "equals": ["@triggerOutputs()?['body/crfdf_status']", "pending"] },
+          "runAfter": {},
+          "actions": {
+            "Try": {
+              "type": "Scope",
+              "runAfter": {},
+              "actions": {
+                "Build_Filter": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@if(empty(triggerOutputs()?['body/crfdf_planningstep']), concat('auxiliaryIndex4 eq ''', triggerOutputs()?['body/crfdf_jobno'], ''''), concat('auxiliaryIndex4 eq ''', triggerOutputs()?['body/crfdf_jobno'], ''' and planningStepDescription eq ''', triggerOutputs()?['body/crfdf_planningstep'], ''''))"
+                },
+                "Resolve_Entry": {
+                  "type": "Http",
+                  "runAfter": { "Build_Filter": ["Succeeded"] },
+                  "inputs": {
+                    "method": "GET",
+                    "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries?$filter=@{encodeUriComponent(outputs('Build_Filter'))}",
+                    "headers": { "Accept": "application/json" },
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "authority": "https://login.microsoftonline.com",
+                      "tenant": "@parameters('Bc_Tenant')",
+                      "audience": "@parameters('Bc_Audience')",
+                      "clientId": "@parameters('Bc_ClientId')",
+                      "secret": "@parameters('Bc_ClientSecret')"
+                    }
+                  }
+                },
+                "Check_Found": {
+                  "type": "If",
+                  "runAfter": { "Resolve_Entry": ["Succeeded"] },
+                  "expression": { "greater": ["@length(coalesce(body('Resolve_Entry')?['value'], json('[]')))", 0] },
+                  "actions": {
+                    "For_each_entry": {
+                      "type": "Foreach",
+                      "runAfter": {},
+                      "foreach": "@body('Resolve_Entry')?['value']",
+                      "actions": {
+                        "Kind_is_schedule": {
+                          "type": "If",
+                          "runAfter": {},
+                          "expression": { "equals": ["@triggerOutputs()?['body/crfdf_kind']", "schedule"] },
+                          "actions": {
+                            "Patch_Schedule": {
+                              "type": "Http",
+                              "runAfter": {},
+                              "inputs": {
+                                "method": "PATCH",
+                                "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries(@{items('For_each_entry')?['systemId']})",
+                                "headers": { "Content-Type": "application/json", "If-Match": "*" },
+                                "body": "@json(concat('{\"startDateTime\":\"', triggerOutputs()?['body/crfdf_startdatetime'], '\",\"endDateTime\":\"', triggerOutputs()?['body/crfdf_enddatetime'], '\",\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), '}'))",
+                                "authentication": {
+                                  "type": "ActiveDirectoryOAuth",
+                                  "authority": "https://login.microsoftonline.com",
+                                  "tenant": "@parameters('Bc_Tenant')",
+                                  "audience": "@parameters('Bc_Audience')",
+                                  "clientId": "@parameters('Bc_ClientId')",
+                                  "secret": "@parameters('Bc_ClientSecret')"
+                                }
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Patch_Completion": {
+                                "type": "Http",
+                                "runAfter": {},
+                                "inputs": {
+                                  "method": "PATCH",
+                                  "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries(@{items('For_each_entry')?['systemId']})",
+                                  "headers": { "Content-Type": "application/json", "If-Match": "*" },
+                                  "body": "@json(concat('{\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), '}'))",
+                                  "authentication": {
+                                    "type": "ActiveDirectoryOAuth",
+                                    "authority": "https://login.microsoftonline.com",
+                                    "tenant": "@parameters('Bc_Tenant')",
+                                    "audience": "@parameters('Bc_Audience')",
+                                    "clientId": "@parameters('Bc_ClientId')",
+                                    "secret": "@parameters('Bc_ClientSecret')"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Mark_Synced": {
+                      "type": "OpenApiConnection",
+                      "runAfter": { "For_each_entry": ["Succeeded"] },
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crfdf_bcpushqueues",
+                          "recordId": "@triggerOutputs()?['body/crfdf_bcpushqueueid']",
+                          "item/crfdf_status": "synced",
+                          "item/crfdf_statusmessage": "@concat('patched ', string(length(body('Resolve_Entry')?['value'])), ' entr(y/ies)')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "UpdateRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Mark_NotFound": {
+                        "type": "OpenApiConnection",
+                        "runAfter": {},
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "crfdf_bcpushqueues",
+                            "recordId": "@triggerOutputs()?['body/crfdf_bcpushqueueid']",
+                            "item/crfdf_status": "failed",
+                            "item/crfdf_statusmessage": "No matching BC planning entry for the job + step filter"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "UpdateRecord",
+                            "connectionName": "shared_commondataserviceforapps"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "Catch": {
+              "type": "Scope",
+              "runAfter": { "Try": ["Failed", "TimedOut"] },
+              "actions": {
+                "Mark_Failed": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcpushqueues",
+                      "recordId": "@triggerOutputs()?['body/crfdf_bcpushqueueid']",
+                      "item/crfdf_status": "failed",
+                      "item/crfdf_statusmessage": "@concat('BC push failed — HTTP ', string(coalesce(outputs('Resolve_Entry')?['statusCode'], 0)), '. See run history.')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "else": { "actions": {} }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
