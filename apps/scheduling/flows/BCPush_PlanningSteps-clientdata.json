@@ -10,7 +10,7 @@
     "definition": {
       "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
       "contentVersion": "1.0.0.0",
-      "comment": "BCPush_PlanningSteps — drains the crfdf_bcpushqueue outbox and PATCHes the sign365 projectPlanningEntries API. See BCPush_PlanningSteps.md. TODOs before go-live: (1) fill the Bc_* parameters below (secret should come from Key Vault / an environment variable, not inline); (2) confirm the entry key is 'systemId' (else change Patch_* URIs); (3) map crfdf_assignedto (app employee id) to a BC resource no and add it to Patch_Schedule's body.",
+      "comment": "BCPush_PlanningSteps — drains the crfdf_bcpushqueue outbox and PATCHes the sign365 projectPlanningEntries API. See BCPush_PlanningSteps.md. crfdf_assignedto already holds the BC resource no (resolved in-app from crfdf_employee1.crfdf_no) and is passed straight to BC's assignedTo. TODOs before go-live: (1) fill the Bc_* parameters below (secret should come from Key Vault / an environment variable, not inline); (2) confirm the entry key is 'systemId' (else change Patch_* URIs).",
       "parameters": {
         "$authentication": { "defaultValue": {}, "type": "SecureObject" },
         "$connections": { "defaultValue": {}, "type": "Object" },
@@ -111,7 +111,7 @@
                                 "method": "PATCH",
                                 "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries(@{items('For_each_entry')?['systemId']})",
                                 "headers": { "Content-Type": "application/json", "If-Match": "*" },
-                                "body": "@json(concat('{\"startDateTime\":\"', triggerOutputs()?['body/crfdf_startdatetime'], '\",\"endDateTime\":\"', triggerOutputs()?['body/crfdf_enddatetime'], '\",\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), '}'))",
+                                "body": "@json(concat('{\"startDateTime\":\"', triggerOutputs()?['body/crfdf_startdatetime'], '\",\"endDateTime\":\"', triggerOutputs()?['body/crfdf_enddatetime'], '\",\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), if(empty(triggerOutputs()?['body/crfdf_assignedto']), '', concat(',\"assignedTo\":\"', triggerOutputs()?['body/crfdf_assignedto'], '\"')), '}'))",
                                 "authentication": {
                                   "type": "ActiveDirectoryOAuth",
                                   "authority": "https://login.microsoftonline.com",

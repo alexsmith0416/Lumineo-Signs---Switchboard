@@ -76,6 +76,11 @@ const uuid = (): string => crypto.randomUUID();
 
 type Row = Record<string, unknown>;
 
+// Roster employee id → BC resource number (crfdf_no), populated as employees
+// load. Lets the BC push resolve `assignedTo` from a schedule line's employeeId
+// (the outbox enqueue point only has the line, not the Employee object).
+const employeeResourceNo = new Map<string, string>();
+
 // Lazy SDK handle — defers getClient() (needs the runtime) to first use, and
 // resolves the Dataverse org URL from the app context. The connector's
 // ListRecords/CreateRecord/... operations require the organization explicitly
@@ -290,7 +295,13 @@ export const liveProductionDataSource: ScheduleDataSource = {
       maxOvertimePerDay: n(r.crfdf_maxovertimeperday, 0),
       worksWeekends: Boolean(r.crfdf_worksweekends),
       hourlyRate: nOrNull(r.crfdf_hourlyrate) ?? undefined,
-    }));
+      bcResourceNo: s(r.crfdf_no) || undefined,
+    })).map((e) => {
+      // Cache the id → BC resource-no so the outbox enqueue (which only has the
+      // schedule line's employeeId) can resolve the BC `assignedTo`.
+      if (e.bcResourceNo) employeeResourceNo.set(e.id, e.bcResourceNo);
+      return e;
+    });
   },
 
   async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
@@ -344,7 +355,8 @@ export const liveProductionDataSource: ScheduleDataSource = {
     // step. Only when one of those actually changed — not on lock/hours-only
     // edits. Team-lane lines carry no person, so no BC assignee. Fire-and-forget.
     if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
-      const assignedTo = line.employeeId && !isLaneEmployeeId(line.employeeId) ? line.employeeId : "";
+      const assignedTo =
+        line.employeeId && !isLaneEmployeeId(line.employeeId) ? employeeResourceNo.get(line.employeeId) ?? "" : "";
       void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
     }
     return line;
@@ -647,7 +659,8 @@ function createLiveInstallDataSource(
       // Mirror an install-step scheduling change back to BC (same outbox as
       // production). Only on a start/end/assignee change; fire-and-forget.
       if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
-        const assignedTo = line.employeeId && !isLaneEmployeeId(line.employeeId) ? line.employeeId : "";
+        const assignedTo =
+          line.employeeId && !isLaneEmployeeId(line.employeeId) ? employeeResourceNo.get(line.employeeId) ?? "" : "";
         void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
       }
       return line;

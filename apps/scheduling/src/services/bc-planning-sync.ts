@@ -39,9 +39,9 @@ export interface BcPlanningPush {
   /** ISO 8601, or null when this push doesn't set the time (completion). */
   startDateTime: string | null;
   endDateTime: string | null;
-  /** Who the step is scheduled to. Currently the app employee id (a Dataverse
-   *  GUID); the flow maps it to a BC resource code. "" for team/department
-   *  lines and completion pushes. */
+  /** Who the step is scheduled to — the BC resource number, resolved in-app from
+   *  the roster employee's crfdf_no. Passed straight to BC's `assignedTo`. "" for
+   *  team/department lines and completion pushes. */
   assignedTo: string;
   assignedToName: string;
   complete: boolean;

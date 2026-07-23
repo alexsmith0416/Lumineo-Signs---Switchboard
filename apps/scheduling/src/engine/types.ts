@@ -18,6 +18,10 @@ export interface Employee {
   maxOvertimePerDay: number;
   worksWeekends: boolean;
   hourlyRate?: number;
+  /** BC resource number (crfdf_no) — who the person is in Business Central.
+   *  Used to write `assignedTo` back to a BC planning step. Undefined until the
+   *  roster row is mapped to a BC resource. */
+  bcResourceNo?: string;
 
   // Installation-roster fields (from crfdf_InstallationEmployees). Production
   // employees leave these undefined. `position` is the explicit ordering within

@@ -34,7 +34,7 @@ zero new connector wiring in the Code App.
 | `deptkey` | app department id | (completion resolution only) |
 | `startdatetime` | scheduled start | `startDateTime` |
 | `enddatetime` | scheduled end | `endDateTime` |
-| `assignedto` | app employee id | `assignedTo` *(map GUID → BC resource)* |
+| `assignedto` | BC resource no (resolved in-app) | `assignedTo` *(passed straight through)* |
 | `assignedtoname` | display name | `assignedToName` |
 | `complete` | dept complete flag | `complete` |
 | `started` | on the board | (started flag, if the API exposes one) |
@@ -59,9 +59,10 @@ zero new connector wiring in the Code App.
    ```
    Send only the fields relevant to `kind` (schedule → times + assignee;
    completion → `complete`).
-3. **Map the assignee.** `crfdf_assignedto` holds the app employee id; look up
-   the matching BC resource no before sending `assignedTo`. (Interim: leave
-   `assignedTo` unset until an employee → BC-resource map exists.)
+3. **Assignee.** `crfdf_assignedto` already holds the BC resource no (the app
+   resolves it from `crfdf_employee1.crfdf_no` at enqueue time), so the schedule
+   PATCH passes it straight to `assignedTo` — no lookup needed. It's included in
+   the body only when non-empty, so a team/unmapped line never clears BC's value.
 4. **Write status back.** UPDATE the outbox row: `crfdf_status` = `synced` or
    `failed`, `crfdf_statusmessage` = the BC systemId (on success) or the error
    body (on failure). The app reads this to show a synced ✓ / failed ⚠ chip.
@@ -79,6 +80,9 @@ to production when promoted.
 - Confirm the entry key really is `auxiliaryIndex1` (the GET in step 1 should
   round-trip it) and that PATCH accepts `startDateTime` / `endDateTime` /
   `assignedTo` / `complete` (per the Postman write test).
-- Employee → BC resource-no mapping for `assignedTo`.
+- Assignee resource no lives on `crfdf_employee1.crfdf_no` (run
+  `scripts/add-employee-resourceno-column.ps1` to add + back-fill it from
+  `crfdf_appuser`). Install-board employees (`crfdf_InstallationEmployees`) aren't
+  cached yet, so install pushes send no assignee until they get a `crfdf_no` too.
 - Granularity: one app department can map to several BC steps — decide whether a
   completion PATCHes the primary labor step or all matching steps.
