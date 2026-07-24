@@ -80,7 +80,7 @@ export function ProductionCompleteField({ jobNo, readOnly = false }: { jobNo: st
         title="Override the computed production-complete target. Clear to fall back to the computed date. A Red date overrides this."
       />
       {!override && targets.targetProductionComplete && (
-        <div className="job-sched__hint">
+        <div className="form-field__hint">
           Using computed target <strong>{fmtLong(targets.targetProductionComplete)}</strong>. Set a date to override it.
         </div>
       )}

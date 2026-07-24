@@ -2089,6 +2089,14 @@ input, select, textarea {
   display: block;
   padding: 8px 10px;
 }
+/* A hint line under a field — spans the full width (not the 110px label column)
+   so it reads on one line, aligned with the input's text padding. */
+.form-field__hint {
+  grid-column: 1 / -1;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
 
 .form-field__label {
   background: var(--label-bg);
