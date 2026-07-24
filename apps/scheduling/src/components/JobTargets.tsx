@@ -17,25 +17,40 @@ const toDateInput = (d: Date | null): string => (d ? format(d, "yyyy-MM-dd") : "
  * Read-only target dates (production complete + estimated install window),
  * shown in its own section between the card text and the production stepper.
  */
+const fmtShort = (d: Date): string => format(d, "MM/dd/yy");
+
 export function JobTargetsSection({ jobNo }: { jobNo: string }) {
-  const { targets } = useJobTargets(jobNo);
+  const { targets, redDate, scheduledInstall } = useJobTargets(jobNo);
   if (!targets.targetProductionComplete) return null;
   return (
-    <div className="job-targets">
-      <div className="job-targets__title">Target dates</div>
-      <div className="job-targets__row">
-        <span className="job-targets__label">Target production complete</span>
-        <strong>{fmtLong(targets.targetProductionComplete)}</strong>
-      </div>
-      {targets.installWindowStart && (
+    <>
+      {redDate && <div className="job-red-bar">Red Date: {fmtShort(redDate)}</div>}
+      <div className="job-targets">
+        <div className="job-targets__title">Target dates</div>
         <div className="job-targets__row">
-          <span className="job-targets__label">Est. install window</span>
-          <strong>
-            {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
-          </strong>
+          <span className="job-targets__label">Target production complete</span>
+          <strong>{fmtLong(targets.targetProductionComplete)}</strong>
         </div>
-      )}
-    </div>
+        {/* Once install is committed the window is replaced by the committed day;
+            a Red date is shown by the bar above, so only show a Scheduled line here. */}
+        {!redDate && scheduledInstall ? (
+          <div className="job-targets__row">
+            <span className="job-targets__label">Scheduled install</span>
+            <strong>{fmtLong(scheduledInstall)}</strong>
+          </div>
+        ) : (
+          !redDate &&
+          targets.installWindowStart && (
+            <div className="job-targets__row">
+              <span className="job-targets__label">Est. install window</span>
+              <strong>
+                {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
+              </strong>
+            </div>
+          )
+        )}
+      </div>
+    </>
   );
 }
 

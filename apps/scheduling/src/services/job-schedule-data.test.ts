@@ -50,10 +50,12 @@ describe("computeJobTargets", () => {
     expect(iso(t.installWindowEnd)).toBe("2026-04-23");
   });
 
-  it("a committed scheduled install hides the window (target still computes)", () => {
+  it("a scheduled install pulls production to the working day before it and hides the window", () => {
+    // Scheduled = Fri Apr 10 → working day before = Thu Apr 9
     const t = computeJobTargets({ released, vinylOnly: false, scheduledInstall: new Date(2026, 3, 10) });
-    expect(iso(t.targetProductionComplete)).toBe("2026-02-19");
+    expect(iso(t.targetProductionComplete)).toBe("2026-04-09");
     expect(t.installWindowStart).toBeNull();
+    expect(t.installWindowEnd).toBeNull();
   });
 
   it("no release / red / override → no targets", () => {

@@ -10,6 +10,9 @@ export interface UseJobTargets {
    *  else the BC order-release date). */
   released: Date | null;
   vinylOnly: boolean;
+  /** Committed install dates (for the red bar + scheduled-install display). */
+  redDate: Date | null;
+  scheduledInstall: Date | null;
 }
 
 /**
@@ -63,5 +66,11 @@ export function useJobTargets(jobNo: string | undefined): UseJobTargets {
     [released, vinylOnly, sched?.redDate, sched?.scheduledInstallDate, sched?.productionCompleteDate],
   );
 
-  return { targets, released, vinylOnly };
+  return {
+    targets,
+    released,
+    vinylOnly,
+    redDate: sched?.redDate ?? null,
+    scheduledInstall: sched?.scheduledInstallDate ?? null,
+  };
 }

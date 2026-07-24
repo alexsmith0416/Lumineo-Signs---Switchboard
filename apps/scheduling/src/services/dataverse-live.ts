@@ -1746,7 +1746,10 @@ function jobScheduleToRecord(sch: Partial<JobSchedule>): Row {
     rec.crfdf_name = sch.jobNo || "Job";
   }
   if (sch.releasedDate !== undefined) rec.crfdf_releaseddate = fmtDateOnly(sch.releasedDate);
-  if (sch.productionCompleteDate !== undefined)
+  // Only include the (newer) production-complete override column while it's known
+  // to exist — otherwise a write that references a missing column fails wholesale,
+  // taking the scheduled-install / red-date edits down with it.
+  if (jobSchedProdCompleteCol && sch.productionCompleteDate !== undefined)
     rec.crfdf_productioncompletedate = fmtDateOnly(sch.productionCompleteDate);
   if (sch.scheduledInstallDate !== undefined)
     rec.crfdf_scheduledinstalldate = fmtDateOnly(sch.scheduledInstallDate);
@@ -1759,21 +1762,33 @@ export async function fetchJobSchedules(): Promise<JobSchedule[]> {
   return rows.map(mapJobSchedule).filter((sch) => sch.jobNo);
 }
 
+// The production-complete override column (crfdf_productioncompletedate) is
+// newer than the rest; until it's created it must not poison other writes.
+let jobSchedProdCompleteCol = true;
+const missingProdCompleteCol = (msg: string) =>
+  jobSchedProdCompleteCol && /crfdf_productioncompletedate/i.test(msg);
+
 /** One row per job (keyed by crfdf_jobno): update in place, else create. */
 export async function upsertJobSchedule(sch: JobSchedule): Promise<void> {
   const { S, org } = await sdk();
   const existing = await list(JOBSCHED_SET, {
     filter: `crfdf_jobno eq '${odataLit(sch.jobNo)}'`,
   }).catch(() => [] as Row[]);
-  if (existing.length > 0) {
-    const id = s(existing[0]!.crfdf_jobscheduleid);
-    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, id, jobScheduleToRecord(sch));
-    if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule(update) failed");
-    return;
+  const id = existing.length > 0 ? s(existing[0]!.crfdf_jobscheduleid) : null;
+  const run = () =>
+    id
+      ? S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, id, jobScheduleToRecord(sch))
+      : S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, {
+          crfdf_jobscheduleid: uuid(),
+          ...jobScheduleToRecord(sch),
+        });
+  let res = await run();
+  if (!res.success && missingProdCompleteCol(res.error?.message ?? "")) {
+    // Column not created yet — drop it and retry so the other dates still save.
+    jobSchedProdCompleteCol = false;
+    res = await run();
   }
-  const rec = { crfdf_jobscheduleid: uuid(), ...jobScheduleToRecord(sch) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, rec);
-  if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule(create) failed");
+  if (!res.success) throw new Error(res.error?.message ?? "upsertJobSchedule failed");
 }
 
 // ---------------------------------------------------------------------------

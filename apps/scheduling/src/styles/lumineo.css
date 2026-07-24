@@ -2511,6 +2511,17 @@ input, select, textarea {
 .job-targets__label {
   color: var(--text-secondary);
 }
+/* Red-date bar — its own section above Target dates when a drop-dead date is set. */
+.job-red-bar {
+  border-top: 1px solid var(--border);
+  background: var(--lumineo-red);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  padding: 7px 12px;
+}
 .job-sched__hint {
   font-size: 11px;
   color: var(--text-tertiary);

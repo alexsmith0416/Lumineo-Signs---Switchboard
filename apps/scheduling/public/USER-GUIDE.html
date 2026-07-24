@@ -418,17 +418,20 @@
     <li><strong>Target production complete</strong> — <strong>7 weeks</strong> after the job's <em>release date</em>
     (<strong>4 weeks</strong> for vinyl/graphics-only jobs).</li>
     <li><strong>Est. install window</strong> — starts the <strong>working day after</strong> production completes and runs
-    <strong>3 weeks</strong>. It's hidden once install is committed (a Scheduled install or Red date).</li>
+    <strong>3 weeks</strong>. As soon as you set a <strong>Scheduled install</strong>, the window is replaced by that
+    committed day (which then shows on the job card).</li>
   </ul>
-  <p>The anchor is the <strong>Release date</strong> — the job's order-release date pulled from Business Central (shown
-  in Install Dates; you can type a date to override it per job, or clear it to fall back to the BC date). Two things
-  shift the production target:</p>
+  <p>When a <strong>Red date</strong> is set, it appears as a <strong>red bar above</strong> the Target dates section
+  (<em>Red Date: mm/dd/yy</em>). The anchor for the targets is the <strong>Release date</strong> — the job's
+  order-release date from Business Central (shown in Install Dates; type a date to override per job, or clear it to fall
+  back to the BC date). Three things shift the production target:</p>
   <ul>
-    <li><strong>A Red date</strong> — <strong>always wins</strong>: it pulls the production target to the
-    <strong>working day before</strong> the Red date (production has to finish before the drop-dead install).</li>
+    <li><strong>A Red date</strong> — <strong>always wins</strong>: production target = the <strong>working day
+    before</strong> the Red date (production has to finish before the drop-dead install).</li>
+    <li><strong>A Scheduled install</strong> — with no Red date, production target = the <strong>working day
+    before</strong> the scheduled install day.</li>
     <li><strong>Production completion (override)</strong> — a field (between the End date and Install Dates) to set the
-    production-complete date by hand when there's no Red date. It re-anchors the install window. Clear it to use the
-    computed date.</li>
+    production-complete date by hand when there's no committed install. Clear it to use the computed date.</li>
   </ul>
   <p class="tip">All targets land on <strong>working days</strong> — a target that would fall on a weekend moves
   <em>forward</em> to Monday (never back to Friday).</p>
@@ -703,6 +706,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Scheduled install &amp; Red date on the targets</strong> — setting a <strong>Scheduled install</strong> now replaces the estimated window with that committed day, and a <strong>Red date</strong> shows as a red bar above the targets. Either one pulls the production target to the working day before it. (Also fixed the scheduled-install date not saving.)</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Target dates</strong> — every job card now shows a <strong>Target dates</strong> section (in the editor and on the hover preview): <em>target production complete</em> at release + 7 weeks (4 weeks vinyl/graphics-only) and an <em>estimated install window</em> starting the working day after production and running 3 weeks. Anchored on the BC <strong>release date</strong>; you can set a <strong>production-completion override</strong>, a <strong>Red date</strong> pulls the production target to the working day before it, and all targets skip weekends (forward to Monday).</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Cleaner shipment load list</strong> — clicking a shipment (truck) card on the Installation board now lays each stop out as its own card with the job #, customer/job name, description, a labeled delivery/pickup location and notes, and a <em>Delivery</em> / <em>Pickup</em> badge — instead of the old run-together text.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Drag a card's left edge to change its start date</strong> — mirroring the right-edge resize, you can now grab the left edge of a job card and slide its start to another day (keeping the job's length). A live date badge previews the new start.</td></tr>

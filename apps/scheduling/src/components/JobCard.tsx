@@ -587,7 +587,9 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
   // shipment cards have no production stages). Read-only here; the interactive
   // version lives in the click-open card panel.
   const { steps } = useJobSteps(line.isCustom ? undefined : line.jobNo || undefined);
-  const { targets: jobTargets } = useJobTargets(line.isCustom ? undefined : line.jobNo || undefined);
+  const { targets: jobTargets, redDate: jobRed, scheduledInstall: jobScheduled } = useJobTargets(
+    line.isCustom ? undefined : line.jobNo || undefined,
+  );
 
   return (
     <div
@@ -729,11 +731,18 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         {jobTargets.targetProductionComplete && (
           <Row label="Target prod." value={format(jobTargets.targetProductionComplete, "EEE MMM d")} />
         )}
-        {jobTargets.installWindowStart && jobTargets.installWindowEnd && (
-          <Row
-            label="Est. install"
-            value={`${format(jobTargets.installWindowStart, "MMM d")} – ${format(jobTargets.installWindowEnd, "MMM d")}`}
-          />
+        {jobRed ? (
+          <Row label="Red date" value={<span style={{ color: "var(--lumineo-red)", fontWeight: 700 }}>{format(jobRed, "EEE MMM d")}</span>} />
+        ) : jobScheduled ? (
+          <Row label="Install" value={format(jobScheduled, "EEE MMM d")} />
+        ) : (
+          jobTargets.installWindowStart &&
+          jobTargets.installWindowEnd && (
+            <Row
+              label="Est. install"
+              value={`${format(jobTargets.installWindowStart, "MMM d")} – ${format(jobTargets.installWindowEnd, "MMM d")}`}
+            />
+          )
         )}
 
         {steps.length > 0 && (
