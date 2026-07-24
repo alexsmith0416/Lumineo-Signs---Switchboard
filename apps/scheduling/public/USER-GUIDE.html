@@ -424,10 +424,11 @@
   in Install Dates; you can type a date to override it per job, or clear it to fall back to the BC date). Two things
   shift the production target:</p>
   <ul>
+    <li><strong>A Red date</strong> — <strong>always wins</strong>: it pulls the production target to the
+    <strong>working day before</strong> the Red date (production has to finish before the drop-dead install).</li>
     <li><strong>Production completion (override)</strong> — a field (between the End date and Install Dates) to set the
-    production-complete date by hand. It re-anchors the install window. Clear it to use the computed date.</li>
-    <li><strong>A Red date</strong> — pulls the production target to the <strong>working day before</strong> the Red date
-    (production has to finish before the drop-dead install).</li>
+    production-complete date by hand when there's no Red date. It re-anchors the install window. Clear it to use the
+    computed date.</li>
   </ul>
   <p class="tip">All targets land on <strong>working days</strong> — a target that would fall on a weekend moves
   <em>forward</em> to Monday (never back to Friday).</p>

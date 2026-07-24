@@ -33,6 +33,16 @@ describe("computeJobTargets", () => {
     expect(t.installWindowEnd).toBeNull();
   });
 
+  it("a Red date wins even over a manual production override", () => {
+    const t = computeJobTargets({
+      released,
+      vinylOnly: false,
+      redDate: new Date(2026, 2, 16), // Mon Mar 16 → Fri Mar 13
+      productionOverride: new Date(2026, 3, 1),
+    });
+    expect(iso(t.targetProductionComplete)).toBe("2026-03-13");
+  });
+
   it("manual production override wins and drives the install window", () => {
     const t = computeJobTargets({ released, vinylOnly: false, productionOverride: new Date(2026, 3, 1) }); // Wed Apr 1
     expect(iso(t.targetProductionComplete)).toBe("2026-04-01");

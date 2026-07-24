@@ -62,7 +62,7 @@ export function ProductionCompleteField({ jobNo, readOnly = false }: { jobNo: st
         className="form-field__input"
         value={toDateInput(override)}
         onChange={(e) => void update(jobNo, { productionCompleteDate: parseDateInput(e.target.value) })}
-        title="Override the computed production-complete target. Clear to fall back to the computed date."
+        title="Override the computed production-complete target. Clear to fall back to the computed date. A Red date overrides this."
       />
       {!override && targets.targetProductionComplete && (
         <div className="job-sched__hint">

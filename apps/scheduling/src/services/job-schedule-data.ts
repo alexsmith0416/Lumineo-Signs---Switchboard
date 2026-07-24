@@ -19,8 +19,8 @@ export interface JobSchedule {
 }
 
 export interface JobTargets {
-  /** When production should be done. Precedence: manual override → the working
-   *  day before a Red date → release + 7 wk (4 wk vinyl/graphics-only). */
+  /** When production should be done. Precedence: the working day before a Red
+   *  date → manual override → release + 7 wk (4 wk vinyl/graphics-only). */
   targetProductionComplete: Date | null;
   /** Estimated install window: the working day after production complete, then a
    *  3-week span. Null once install is committed (Red or Scheduled install). */
@@ -50,11 +50,12 @@ export interface JobTargetsInput {
 export function computeJobTargets(input: JobTargetsInput): JobTargets {
   const { released, vinylOnly, redDate = null, scheduledInstall = null, productionOverride = null } = input;
 
-  // Production complete target — override wins, then a Red date pulls it to the
-  // working day before, else release + the lead time (rolled forward off a weekend).
+  // Production complete target — a Red date always wins (production must finish
+  // before the drop-dead install), then a manual override, else release + the
+  // lead time (rolled forward off a weekend).
   let prod: Date | null;
-  if (productionOverride) prod = productionOverride;
-  else if (redDate) prod = addBusinessDays(redDate, -1); // the working day before the Red date
+  if (redDate) prod = addBusinessDays(redDate, -1); // the working day before the Red date
+  else if (productionOverride) prod = productionOverride;
   else if (released)
     prod = forwardWorkingDay(
       addWeeks(released, vinylOnly ? LEAD_TIMES.vinylProductionWeeks : LEAD_TIMES.productionWeeks),
