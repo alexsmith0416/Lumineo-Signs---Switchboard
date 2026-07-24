@@ -135,6 +135,59 @@ async function sdk(): Promise<{ S: Svc; org: string }> {
 
 const isOrgUrlError = (msg: string) => /organization url/i.test(msg);
 
+// A write is "transient" when a retry is likely to succeed — network blips,
+// throttling, gateway errors, a stale org URL. These are exactly the failures
+// behind the "my edit didn't take, but it worked when I did it again" reports:
+// the store's catch reloads the board (erasing the optimistic edit) instead of
+// retrying. Retrying here is the automatic "do it again" so the reload never
+// fires for a transient blip.
+const isTransientWrite = (msg: string): boolean =>
+  isOrgUrlError(msg) ||
+  /\b(429|500|502|503|504)\b|timeout|timed out|network|socket|ECONN|ETIMEDOUT|fetch failed|throttl|too many requests|temporarily|unavailable|transient|connection/i.test(
+    msg,
+  );
+
+interface SdkResult {
+  success: boolean;
+  error?: { message?: string };
+  data?: unknown;
+}
+
+/** Run a Dataverse write, retrying transient failures a few times with backoff.
+ *  `op` re-acquires sdk() each attempt so an org-URL re-resolve takes effect. */
+async function writeWithRetry(op: () => Promise<SdkResult>, attempts = 3): Promise<SdkResult> {
+  let res = await op();
+  let tries = 1;
+  while (!res.success && tries < attempts && isTransientWrite(res.error?.message ?? "")) {
+    if (isOrgUrlError(res.error?.message ?? "")) _sdkPromise = null; // force org re-resolve
+    await new Promise((r) => setTimeout(r, 150 * tries)); // 150ms, 300ms
+    res = await op();
+    tries++;
+  }
+  return res;
+}
+
+/** Retrying Dataverse write helpers — use for user-edit writes so a transient
+ *  blip doesn't trigger a board reload that erases the edit. */
+async function dvUpdate(set: string, id: string, rec: Row): Promise<SdkResult> {
+  return writeWithRetry(async () => {
+    const { S, org } = await sdk();
+    return S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, set, id, rec);
+  });
+}
+async function dvCreate(set: string, rec: Row): Promise<SdkResult> {
+  return writeWithRetry(async () => {
+    const { S, org } = await sdk();
+    return S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, set, rec);
+  });
+}
+async function dvDelete(set: string, id: string): Promise<SdkResult> {
+  return writeWithRetry(async () => {
+    const { S, org } = await sdk();
+    return S.DeleteRecordWithOrganization(org, set, id);
+  });
+}
+
 async function list(
   entitySet: string,
   opts: { select?: string; filter?: string; orderby?: string } = {},
@@ -346,8 +399,7 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
-    const { S, org } = await sdk();
-    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, id, toRecord(changes));
+    const res = await dvUpdate(SET.lines, id, toRecord(changes));
     if (!res.success) throw new Error(res.error?.message ?? `UpdateRecord(${id}) failed`);
     const body = res.data as Row | undefined;
     const line = body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
@@ -363,10 +415,9 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
-    const { S, org } = await sdk();
     // No crfdf_name — the primary-name column isn't crfdf_name on this table.
     const rec = toRecord(line);
-    const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.lines, rec);
+    const res = await dvCreate(SET.lines, rec);
     if (!res.success) throw new Error(res.error?.message ?? `CreateRecord failed`);
     // CreateRecord returns void; the new id is in the response location header
     // which the generated wrapper doesn't surface — return the input line. A
@@ -375,8 +426,7 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async deleteScheduleLine(id: string): Promise<void> {
-    const { S, org } = await sdk();
-    const res = await S.DeleteRecordWithOrganization(org, SET.lines, id);
+    const res = await dvDelete(SET.lines, id);
     if (!res.success) throw new Error(res.error?.message ?? `DeleteRecord(${id}) failed`);
   },
 
@@ -644,16 +694,11 @@ function createLiveInstallDataSource(
     },
 
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
-      const { S, org } = await sdk();
-      let res = await S.UpdateRecordWithOrganization(
-        PREFER_WRITE, ACCEPT, org, SHIP.cards, id, cardToRecord(changes, isNek, false),
-      );
+      let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       if (!res.success && installExtraColsAvailable) {
         // Newer columns may be missing — drop them and retry so the edit sticks.
         installExtraColsAvailable = false;
-        res = await S.UpdateRecordWithOrganization(
-          PREFER_WRITE, ACCEPT, org, SHIP.cards, id, cardToRecord(changes, isNek, false),
-        );
+        res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       }
       if (!res.success) throw new Error(res.error?.message ?? `UpdateInstallCard(${id}) failed`);
       const body = res.data as Row | undefined;
@@ -669,17 +714,13 @@ function createLiveInstallDataSource(
       return line;
     },
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
-      const { S, org } = await sdk();
       const id = uuid();
-      let res = await S.CreateRecordWithOrganization(
-        PREFER_WRITE, ACCEPT, org, SHIP.cards, { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) },
-      );
+      const rec = { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) };
+      let res = await dvCreate(SHIP.cards, rec);
       if (!res.success && installExtraColsAvailable) {
         // Newer columns may be missing — drop them and retry so the card saves.
         installExtraColsAvailable = false;
-        res = await S.CreateRecordWithOrganization(
-          PREFER_WRITE, ACCEPT, org, SHIP.cards, { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) },
-        );
+        res = await dvCreate(SHIP.cards, rec);
       }
       if (!res.success) throw new Error(res.error?.message ?? "CreateInstallCard failed");
       const created = { ...line, id };
@@ -687,8 +728,7 @@ function createLiveInstallDataSource(
       return created;
     },
     async deleteScheduleLine(id: string): Promise<void> {
-      const { S, org } = await sdk();
-      const res = await S.DeleteRecordWithOrganization(org, SHIP.cards, id);
+      const res = await dvDelete(SHIP.cards, id);
       if (!res.success) throw new Error(res.error?.message ?? `DeleteInstallCard(${id}) failed`);
       cacheRemoveCard(region, id);
     },
@@ -1773,18 +1813,14 @@ const missingProdCompleteCol = (msg: string) =>
 
 /** One row per job (keyed by crfdf_jobno): update in place, else create. */
 export async function upsertJobSchedule(sch: JobSchedule): Promise<void> {
-  const { S, org } = await sdk();
   const existing = await list(JOBSCHED_SET, {
     filter: `crfdf_jobno eq '${odataLit(sch.jobNo)}'`,
   }).catch(() => [] as Row[]);
   const id = existing.length > 0 ? s(existing[0]!.crfdf_jobscheduleid) : null;
   const run = () =>
     id
-      ? S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, id, jobScheduleToRecord(sch))
-      : S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBSCHED_SET, {
-          crfdf_jobscheduleid: uuid(),
-          ...jobScheduleToRecord(sch),
-        });
+      ? dvUpdate(JOBSCHED_SET, id, jobScheduleToRecord(sch))
+      : dvCreate(JOBSCHED_SET, { crfdf_jobscheduleid: uuid(), ...jobScheduleToRecord(sch) });
   let res = await run();
   if (!res.success && missingProdCompleteCol(res.error?.message ?? "")) {
     // Column not created yet — drop it and retry so the other dates still save.

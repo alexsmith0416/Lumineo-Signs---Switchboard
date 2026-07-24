@@ -50,6 +50,26 @@ data/        mock fixtures for the stubbed services
 generated/   generated Dataverse model/service types
 ```
 
+### ⚠️ Write-path invariant (avoid the "my edit didn't take, but worked the 2nd time" bug)
+
+Stores update **optimistically** (change the UI now, persist in the background) and,
+on a write failure, **reload the board** (`loadWeek()` / `load()`) to resync — which
+**erases the optimistic edit**. So a *transient* Dataverse blip (network, throttle,
+gateway, stale org URL) silently reverts the user's action; redoing it usually
+works. To prevent this:
+
+- **All user-edit writes go through the retrying helpers** in
+  `services/dataverse-live.ts` — `dvUpdate` / `dvCreate` / `dvDelete` (they wrap the
+  SDK call in `writeWithRetry`, which retries transient failures with backoff before
+  bubbling up). **Do not** call `S.UpdateRecordWithOrganization` / `CreateRecord` /
+  `DeleteRecord` directly for an edit path — a transient failure there will trigger a
+  board reload that discards the edit.
+- Keep the store's reload-on-failure as the *last-resort* resync only (after retries
+  exhausted = a real error), never the first response to a blip.
+- When adding a NEW editable action (input, date picker, drag/resize, toggle), route
+  its persistence through `dv*` and confirm a simulated transient failure doesn't wipe
+  the optimistic change.
+
 ## 3. Run it locally
 
 ```powershell
