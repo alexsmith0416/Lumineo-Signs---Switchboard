@@ -1801,6 +1801,17 @@ function GanttCard({
       const { newDays } = compute(mv.clientX);
       setResizePreview(null);
       if (newDays !== baseDays) onSpan(newDays);
+      // A drag that ends off the handle fires a synthetic `click` on the card
+      // wrapper (the common ancestor of mousedown+mouseup) — which would open
+      // the editor. Swallow that one click.
+      window.addEventListener(
+        "click",
+        (ce) => {
+          ce.stopPropagation();
+          ce.preventDefault();
+        },
+        { capture: true, once: true },
+      );
     };
 
     window.addEventListener("mousemove", onMove);
