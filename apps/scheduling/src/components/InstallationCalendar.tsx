@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { addDays, isSameDay, startOfDay } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { addDays, format, isSameDay, startOfDay, startOfWeek } from "date-fns";
 import {
   useInstallationStoreNEK,
   useInstallationStoreWK,
 } from "../store/schedule-store";
 import { useJobScheduleStore } from "../store/job-schedule-store";
+import { useAssistStore } from "../store/assist-store";
+import type { AssistHalf } from "../services/dataverse-live";
 import {
   useInstallationScenarioStoreNEK,
   useInstallationScenarioStoreWK,
@@ -58,6 +60,36 @@ export default function InstallationCalendar({
   const scenarioStore =
     region === "WK" ? useInstallationScenarioStoreWK : useInstallationScenarioStoreNEK;
   const weekStart = useStore((s) => s.weekStart);
+
+  // "Assist installation" INVERSE: on the install board, a lent production person
+  // shows a "Production" filler on the days/halves they're in the shop (not lent),
+  // mirroring the "Installation" filler on the production board. Keyed by the
+  // assist row's install-employee id (how they appear on this board).
+  const assistRows = useAssistStore((s) => s.rows);
+  const refreshAssist = useAssistStore((s) => s.refresh);
+  useEffect(() => {
+    void refreshAssist();
+  }, [refreshAssist]);
+  const weekMonday = format(startOfWeek(weekStart, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const productionDaysByEmployee = useMemo(() => {
+    const m = new Map<string, Map<number, AssistHalf>>();
+    for (const a of assistRows) {
+      if (a.weekStart !== weekMonday) continue;
+      const installSet = new Set(a.days.length ? a.days : [0, 1, 2, 3, 4]);
+      const byDay = new Map<number, AssistHalf>();
+      for (let d = 0; d < 5; d++) {
+        if (!installSet.has(d)) {
+          byDay.set(d, "full"); // whole day in production (not lent)
+        } else if (a.halves[d] === "am") {
+          byDay.set(d, "pm"); // on install AM → in production PM
+        } else if (a.halves[d] === "pm") {
+          byDay.set(d, "am"); // on install PM → in production AM
+        } // full install day → no production filler
+      }
+      if (byDay.size) m.set(a.id, byDay);
+    }
+    return m;
+  }, [assistRows, weekMonday]);
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
 
@@ -182,6 +214,8 @@ export default function InstallationCalendar({
           title: `Installation & Service Schedule · ${region}`,
         }}
         cardLayout="stacked"
+        assistDaysByEmployee={productionDaysByEmployee}
+        assistFiller={{ full: "Production", half: "Prod" }}
         showInvoice={showMoney}
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}

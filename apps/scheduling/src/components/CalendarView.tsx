@@ -104,6 +104,9 @@ interface CalendarViewProps {
    *  "am"/"pm" half tints half the cell, labels "Install AM/PM", and still lets
    *  a production job land the other half. */
   assistDaysByEmployee?: Map<string, Map<number, AssistHalf>>;
+  /** Filler label for assist cells. Production board shows where a lent person
+   *  IS ("Installation"); the install board shows the inverse ("Production"). */
+  assistFiller?: { full: string; half: string };
   /** Enables the right-hand Job Queue slide-out (Production + Installation). */
   enableJobQueue?: boolean;
   /** Use the 3-row Installation toolbar layout (week label alone on row 1,
@@ -362,6 +365,7 @@ export default function CalendarView({
   installRegionIsNek,
   rosterUnlockable = false,
   assistDaysByEmployee,
+  assistFiller = { full: "Installation", half: "Install" },
   enableJobQueue = false,
   installLayout = false,
 }: CalendarViewProps) {
@@ -1094,6 +1098,7 @@ export default function CalendarView({
                   days={days}
                   cards={cards}
                   assistDays={assistDaysByEmployee?.get(emp.id)}
+                  assistFiller={assistFiller}
                   departments={departments}
                   conflicts={conflicts}
                   laneHeight={laneHeight}
@@ -1408,6 +1413,7 @@ interface EmployeeRowProps {
   cards: CardLayout[];
   /** Weekday index → which half this employee is lent to Installation. */
   assistDays?: Map<number, AssistHalf>;
+  assistFiller: { full: string; half: string };
   departments: Map<string, Department>;
   conflicts: Conflict[];
   laneHeight: number;
@@ -1446,6 +1452,7 @@ function EmployeeRow({
   days,
   cards,
   assistDays,
+  assistFiller,
   departments,
   conflicts,
   laneHeight,
@@ -1626,10 +1633,10 @@ function EmployeeRow({
                   : undefined
               }
             >
-              {assistFull && <span className="day-cell__assist">Installation</span>}
+              {assistFull && <span className="day-cell__assist">{assistFiller.full}</span>}
               {assistPartial && (
                 <span className="day-cell__assist day-cell__assist--half">
-                  Install {assistHalf === "am" ? "AM" : "PM"}
+                  {assistFiller.half} {assistHalf === "am" ? "AM" : "PM"}
                 </span>
               )}
             </div>
