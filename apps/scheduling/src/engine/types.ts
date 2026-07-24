@@ -52,6 +52,10 @@ export interface ScheduleLine {
   endDateTime: Date;
   estimatedHours: number;
   overrideHours: number | null;
+  /** Manual VISUAL span in calendar days (from dragging the card's right edge).
+   *  Display-only — the engine ignores it (capacity/cascade use endDateTime), so
+   *  stretching a card reserves no capacity. Undefined/≤1 = span from hours. */
+  spanDays?: number | null;
   employeeId: EmployeeId;
   departmentId: DepartmentId;
   customerDueDate: Date | null;

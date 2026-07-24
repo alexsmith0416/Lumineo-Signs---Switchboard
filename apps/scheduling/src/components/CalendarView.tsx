@@ -299,7 +299,13 @@ function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: bo
 
   for (const line of ordered) {
     const startIdx = getDayIndex(line.startDateTime, weekStart);
-    const endIdx = getDayIndex(line.endDateTime, weekStart);
+    // Card can be stretched to a manual VISUAL span (line.spanDays) — a display
+    // overlay only; the engine still uses endDateTime (hours-derived) for
+    // capacity/cascade, so the extra days don't block the person. The card is
+    // drawn to the LATER of its natural (hours) end and the manual span.
+    const naturalEndIdx = getDayIndex(line.endDateTime, weekStart);
+    const spanEndIdx = line.spanDays && line.spanDays > 1 ? startIdx + (line.spanDays - 1) : naturalEndIdx;
+    const endIdx = Math.max(naturalEndIdx, spanEndIdx);
     if (endIdx < 0 || startIdx > 6) continue;
     const clippedStart = Math.max(0, startIdx);
     let clippedEnd = Math.min(6, endIdx);
@@ -371,6 +377,7 @@ export default function CalendarView({
     loadWeek,
     shiftTaskAndCommit,
     updateTaskHours,
+    setTaskSpan,
     moveRosterPermanent,
     moveRosterWeek,
     deleteScheduleLine,
@@ -1046,6 +1053,11 @@ export default function CalendarView({
                   onResize={async (line, newHours) => {
                     await tryResizeWithConfirm(line, newHours);
                   }}
+                  onSpan={(line, days) => {
+                    // Right-edge drag = manual VISUAL span. Clear (null) when it's
+                    // back to a single day so the card reverts to hours-derived.
+                    void setTaskSpan(line.id, days > 1 ? days : null);
+                  }}
                   onMoveStart={async (line, newStart) => {
                     await tryShiftWithConfirm(line.id, newStart);
                   }}
@@ -1296,6 +1308,7 @@ interface EmployeeRowProps {
   onCellClick: (day: Date) => void;
   onJobClick: (line: ScheduleLine) => void;
   onResize: (line: ScheduleLine, newHours: number) => Promise<void>;
+  onSpan: (line: ScheduleLine, spanDays: number) => void;
   onMoveStart: (line: ScheduleLine, newStart: Date) => Promise<void>;
   /** Right-click card actions (omitted on read-only boards). */
   onDuplicateLine?: (line: ScheduleLine) => void;
@@ -1329,6 +1342,7 @@ function EmployeeRow({
   onCellClick,
   onJobClick,
   onResize,
+  onSpan,
   onMoveStart,
   onDuplicateLine,
   onDeleteLine,
@@ -1518,6 +1532,7 @@ function EmployeeRow({
             onCardDrop={handleStripDrop}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
+            onSpan={(days) => onSpan(card.line, days)}
             onMoveStart={(newStart) => onMoveStart(card.line, newStart)}
             onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
             onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
@@ -1546,6 +1561,7 @@ interface GanttCardProps {
   onCardDrop: (e: React.DragEvent) => void;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
+  onSpan: (spanDays: number) => void;
   onMoveStart: (newStart: Date) => Promise<void>;
   onDuplicate?: () => void;
   onDelete?: () => void;
@@ -1569,6 +1585,7 @@ function GanttCard({
   onCardDrop,
   onClick,
   onResize,
+  onSpan,
   onMoveStart,
   onDuplicate,
   onDelete,
@@ -1599,7 +1616,7 @@ function GanttCard({
 
   const [resizePreview, setResizePreview] = useState<{
     deltaPx: number;
-    newHours: number;
+    newDays: number;
   } | null>(null);
   // Left-edge drag preview — changes the START date (keeps duration), snapped to
   // whole days. Mirrors the right-edge resize but shifts the card instead of
@@ -1626,32 +1643,27 @@ function GanttCard({
     if (!dayContainer) return;
     const dayWidth = dayContainer.clientWidth / 7;
     const startX = e.clientX;
-    const dayH = employee.standardHoursPerDay || 8;
-    const baseHours = line.overrideHours ?? line.estimatedHours;
-    // Resize in whole-DAY chunks (8h): drag snaps to day columns and sets hours
-    // to daySpan × 8h. Keeps the card on clean day boundaries and never collapses
-    // a small task to 0.25h. Exact sub-day hours are set in the Modified labor
-    // hours box instead.
-    const baseDays = Math.max(1, Math.round(baseHours / dayH));
+    // Right-edge drag sets the card's VISUAL day span only — no hours change, no
+    // cascade, no dialog. A quick way to lay out the week; edit actual hours in
+    // Modified labor hours when ready. Snaps to whole day columns.
+    const baseDays = spanDays; // the card's current rendered span
     const compute = (clientX: number) => {
-      const dayDelta = Math.round((clientX - startX) / dayWidth); // whole days dragged
+      const dayDelta = Math.round((clientX - startX) / dayWidth);
       const newDays = Math.max(1, baseDays + dayDelta);
-      return { newHours: newDays * dayH, snappedDeltaPx: (newDays - baseDays) * dayWidth };
+      return { newDays, snappedDeltaPx: (newDays - baseDays) * dayWidth };
     };
 
     const onMove = (mv: MouseEvent) => {
-      const { newHours, snappedDeltaPx } = compute(mv.clientX);
-      setResizePreview({ deltaPx: snappedDeltaPx, newHours });
+      const { newDays, snappedDeltaPx } = compute(mv.clientX);
+      setResizePreview({ deltaPx: snappedDeltaPx, newDays });
     };
 
     const onUp = (mv: MouseEvent) => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
-      const { newHours } = compute(mv.clientX);
+      const { newDays } = compute(mv.clientX);
       setResizePreview(null);
-      if (newHours !== baseHours) {
-        void onResize(newHours);
-      }
+      if (newDays !== baseDays) onSpan(newDays);
     };
 
     window.addEventListener("mousemove", onMove);
@@ -1763,7 +1775,7 @@ function GanttCard({
                 pointerEvents: "none",
               }}
             >
-              {resizePreview.newHours}h
+              {resizePreview.newDays}d
             </div>
           )}
           {movePreview && movePreview.deltaDays !== 0 && (

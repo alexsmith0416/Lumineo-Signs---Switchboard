@@ -62,6 +62,9 @@ export interface ScheduleStoreState {
     cascade?: boolean,
   ) => Promise<void>;
   updateTaskHours: (lineId: string, overrideHours: number, cascade?: boolean) => Promise<void>;
+  /** Set a card's manual VISUAL day span (right-edge drag). Display-only: no
+   *  cascade, no dialog, no hours change. null clears it (back to hours-derived). */
+  setTaskSpan: (lineId: string, spanDays: number | null) => Promise<void>;
   addScheduleLine: (line: ScheduleLine) => Promise<void>;
   deleteScheduleLine: (lineId: string) => Promise<void>;
   setWeekStart: (date: Date) => void;
@@ -477,6 +480,22 @@ export function createScheduleStore(
         console.error("[schedule] resize persist failed — resyncing", e);
         void get().loadWeek();
       });
+    },
+
+    setTaskSpan: async (lineId, spanDays) => {
+      const state = get();
+      // Visual-only: update the card's span in place; no engine run, no cascade.
+      const after = state.schedule.map((l) =>
+        l.id === lineId ? { ...l, spanDays: spanDays ?? undefined } : l,
+      );
+      set({ schedule: after });
+      const ds = state.dataSource;
+      await queueWrite(lineId, () => ds.updateScheduleLine(lineId, { spanDays: spanDays ?? null })).catch(
+        (e) => {
+          console.error("[schedule] span persist failed — resyncing", e);
+          void get().loadWeek();
+        },
+      );
     },
 
     addScheduleLine: async (line) => {

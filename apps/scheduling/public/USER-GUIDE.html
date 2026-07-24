@@ -369,7 +369,7 @@
   <h3>5.2 &nbsp;Moving, resizing &amp; the cascade</h3>
   <ul>
     <li><strong>Move</strong> — drag a card to another day or person.</li>
-    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to change how long the job takes. Resizing works in <strong>whole-day (8h) steps</strong> — the card snaps to day columns. For an exact number of hours, use <strong>Modified labor hours</strong> in the Edit Job panel.</li>
+    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to spread it across <strong>more days</strong> (or back to one). This is a <strong>visual span only</strong> — it does <em>not</em> change the labor hours and does <em>not</em> pop up a dialog, so you can lay out the week quickly. The stretched days aren't reserved (other jobs can still use that person). Set the actual hours in <strong>Modified labor hours</strong> when you're ready.</li>
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
     <li><strong>Cascade</strong> — when a move/resize would push other jobs, a dialog previews exactly what moves and offers: <strong>Continue</strong> (cascade the others), <strong>Move only this</strong>, <strong>Try in Sandbox</strong>, or <strong>Turn cascade off</strong>.</li>
   </ul>
@@ -708,6 +708,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Resize = visual span</strong> — dragging a card's right edge now just spreads it across more days (or back to one) to help you lay out the week. It no longer changes the labor hours and no longer pops up a dialog. The stretched days aren't reserved. Set actual hours in Modified labor hours when ready.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Estimated vs. Modified labor hours</strong> — the task's <strong>Estimated hours</strong> (the BC estimate) is now read-only and never changes; a new <strong>Modified labor hours</strong> box holds the actual working hours (leave blank to use the estimate). Resizing a card now moves in <strong>whole-day (8h) steps</strong> instead of collapsing to fractions.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Scheduled install &amp; Red date on the targets</strong> — setting a <strong>Scheduled install</strong> now replaces the estimated window with that committed day, and a <strong>Red date</strong> shows as a red bar above the targets. Either one pulls the production target to the working day before it. (Also fixed the scheduled-install date not saving.)</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Target dates</strong> — every job card now shows a <strong>Target dates</strong> section (in the editor and on the hover preview): <em>target production complete</em> at release + 7 weeks (4 weeks vinyl/graphics-only) and an <em>estimated install window</em> starting the working day after production and running 3 weeks. Anchored on the BC <strong>release date</strong>; you can set a <strong>production-completion override</strong>, a <strong>Red date</strong> pulls the production target to the working day before it, and all targets skip weekends (forward to Monday).</td></tr>

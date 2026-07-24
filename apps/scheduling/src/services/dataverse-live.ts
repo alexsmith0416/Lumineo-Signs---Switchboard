@@ -188,6 +188,11 @@ async function dvDelete(set: string, id: string): Promise<SdkResult> {
   });
 }
 
+// crfdf_spandays (manual visual span) is newer than the schedule-line tables;
+// until it's created it must not poison other schedule-line writes.
+let scheduleSpanCol = true;
+const missingSpanCol = (msg: string) => scheduleSpanCol && /crfdf_spandays/i.test(msg);
+
 async function list(
   entitySet: string,
   opts: { select?: string; filter?: string; orderby?: string } = {},
@@ -245,6 +250,7 @@ function mapLine(r: Row): ScheduleLine {
     endDateTime: dt(r.crfdf_enddatetime),
     estimatedHours: n(r.crfdf_estimatedhours),
     overrideHours: nOrNull(r.crfdf_overridehours),
+    spanDays: nOrNull(r.crfdf_spandays),
     // Team (department-wide) lines store no employee; their runtime resource is
     // the synthetic department lane so the board + engine can key off it.
     employeeId: Boolean(r.crfdf_departmentwide)
@@ -281,6 +287,7 @@ function toRecord(line: Partial<ScheduleLine>): Row {
   if (line.endDateTime !== undefined) rec.crfdf_enddatetime = iso(line.endDateTime);
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;
   if (line.overrideHours !== undefined) rec.crfdf_overridehours = line.overrideHours;
+  if (scheduleSpanCol && line.spanDays !== undefined) rec.crfdf_spandays = line.spanDays;
   if (line.customerDueDate !== undefined) rec.crfdf_customerduedate = iso(line.customerDueDate);
   if (line.isLocked !== undefined) rec.crfdf_islocked = line.isLocked;
   if (line.jobSequence !== undefined) rec.crfdf_jobsequence = line.jobSequence;
@@ -399,7 +406,11 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
-    const res = await dvUpdate(SET.lines, id, toRecord(changes));
+    let res = await dvUpdate(SET.lines, id, toRecord(changes));
+    if (!res.success && missingSpanCol(res.error?.message ?? "")) {
+      scheduleSpanCol = false; // column not created yet — drop it and retry
+      res = await dvUpdate(SET.lines, id, toRecord(changes));
+    }
     if (!res.success) throw new Error(res.error?.message ?? `UpdateRecord(${id}) failed`);
     const body = res.data as Row | undefined;
     const line = body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
@@ -695,9 +706,10 @@ function createLiveInstallDataSource(
 
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
       let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
-      if (!res.success && installExtraColsAvailable) {
+      if (!res.success && (installExtraColsAvailable || missingSpanCol(res.error?.message ?? ""))) {
         // Newer columns may be missing — drop them and retry so the edit sticks.
         installExtraColsAvailable = false;
+        if (missingSpanCol(res.error?.message ?? "")) scheduleSpanCol = false;
         res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       }
       if (!res.success) throw new Error(res.error?.message ?? `UpdateInstallCard(${id}) failed`);
@@ -807,6 +819,7 @@ function mapCardRecord(r: Row): ScheduleLine {
     endDateTime: dt(r.crfdf_enddatetime),
     estimatedHours: n(r.crfdf_estimatedhours, 8),
     overrideHours: nOrNull(r.crfdf_overridehours),
+    spanDays: nOrNull(r.crfdf_spandays),
     employeeId: s(r["_crfdf_employee_value"]),
     departmentId: String(n(r.crfdf_locationvalue, 6)),
     customerDueDate: null,
@@ -830,6 +843,7 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   if (line.endDateTime !== undefined) rec.crfdf_enddatetime = iso(line.endDateTime);
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;
   if (line.overrideHours !== undefined) rec.crfdf_overridehours = line.overrideHours;
+  if (scheduleSpanCol && line.spanDays !== undefined) rec.crfdf_spandays = line.spanDays;
   if (line.departmentId !== undefined) rec.crfdf_locationvalue = Number(line.departmentId) || 0;
   if (line.isLocked !== undefined) rec.crfdf_islocked = line.isLocked;
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;
