@@ -21,6 +21,7 @@ import GroupPanel from "./GroupPanel";
 import { isGroupCard } from "../services/group-card";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
 import { useLoadsStore } from "../shipping/loads-store";
+import { useClipboardStore } from "../store/clipboard-store";
 import { QueueToggleIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
@@ -471,6 +472,69 @@ export default function CalendarView({
     void addScheduleLine({ ...copy, endDateTime: end });
   };
 
+  // Copy / paste (right-click menu + Ctrl+C / Ctrl+V). Paste duplicates ALL the
+  // copied card's fields onto the target person + day (start at the day's 08:00).
+  const copyCard = useClipboardStore((s) => s.copy);
+  const clipboardCard = useClipboardStore((s) => s.card);
+  const handlePasteToCell = (employeeId: string, day: Date) => {
+    const card = useClipboardStore.getState().card;
+    if (!card) return;
+    const ctx = getContext();
+    const emp = ctx.employees.get(employeeId);
+    const start = new Date(day);
+    start.setHours(8, 0, 0, 0);
+    const copy: ScheduleLine = {
+      ...card,
+      id: `line-${card.jobNo || "job"}-paste-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      employeeId,
+      departmentId: emp?.departmentId ?? card.departmentId, // adopt the target person's dept
+      departmentWide: isLaneEmployeeId(employeeId) || undefined,
+      startDateTime: start,
+      preferredStart: start,
+      isLocked: false,
+    };
+    const end = emp ? calculateEndTime(start, effectiveHours(copy, emp), emp, ctx, copy.id) : new Date(start);
+    void addScheduleLine({ ...copy, endDateTime: end });
+  };
+  const [pasteMenu, setPasteMenu] = useState<{ x: number; y: number; employeeId: string; day: Date } | null>(null);
+
+  // Track the card / day-cell under the cursor (via data-* attributes) so Ctrl+C
+  // copies the hovered card and Ctrl+V pastes onto the hovered day.
+  const hoveredLineRef = useRef<ScheduleLine | null>(null);
+  const hoveredCellRef = useRef<{ employeeId: string; day: Date } | null>(null);
+  const scheduleRef = useRef(schedule);
+  scheduleRef.current = schedule;
+  const onBoardMouseOver = (e: React.MouseEvent) => {
+    const t = e.target as HTMLElement;
+    const cardEl = t.closest<HTMLElement>("[data-line-id]");
+    hoveredLineRef.current = cardEl
+      ? scheduleRef.current.find((l) => l.id === cardEl.dataset.lineId) ?? null
+      : null;
+    const cellEl = t.closest<HTMLElement>("[data-cell-emp]");
+    hoveredCellRef.current =
+      cellEl && cellEl.dataset.cellDay
+        ? { employeeId: cellEl.dataset.cellEmp!, day: new Date(cellEl.dataset.cellDay) }
+        : null;
+  };
+  useEffect(() => {
+    if (readOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === "c" && hoveredLineRef.current) {
+        copyCard(hoveredLineRef.current);
+      } else if (k === "v" && hoveredCellRef.current) {
+        handlePasteToCell(hoveredCellRef.current.employeeId, hoveredCellRef.current.day);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // handlePasteToCell / copyCard are stable enough; refs hold the live targets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly]);
+
   const onRosterDragStart = (e: React.DragEvent, empId: string) => {
     e.dataTransfer.setData("text/crewId", empId);
     e.dataTransfer.effectAllowed = "move";
@@ -868,7 +932,15 @@ export default function CalendarView({
       </div>
       )}
 
-      <div className="calendar-grid" ref={gridRef}>
+      <div
+        className="calendar-grid"
+        ref={gridRef}
+        onMouseOver={onBoardMouseOver}
+        onMouseLeave={() => {
+          hoveredLineRef.current = null;
+          hoveredCellRef.current = null;
+        }}
+      >
         <div className="calendar-header-row">
           <div
             className={
@@ -1061,8 +1133,18 @@ export default function CalendarView({
                   onMoveStart={async (line, newStart) => {
                     await tryShiftWithConfirm(line.id, newStart);
                   }}
+                  onCopyLine={readOnly ? undefined : (line) => copyCard(line)}
                   onDuplicateLine={readOnly ? undefined : handleDuplicateLine}
                   onDeleteLine={readOnly ? undefined : handleDeleteLine}
+                  onCellContextMenu={
+                    readOnly
+                      ? undefined
+                      : (e, employeeId, day) => {
+                          if (!useClipboardStore.getState().card) return; // nothing to paste
+                          e.preventDefault();
+                          setPasteMenu({ x: e.clientX, y: e.clientY, employeeId, day });
+                        }
+                  }
                 />
               );
             })}
@@ -1247,6 +1329,39 @@ export default function CalendarView({
         />
       )}
 
+      {pasteMenu && clipboardCard && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 4000 }}
+            onClick={() => setPasteMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setPasteMenu(null);
+            }}
+          />
+          <div
+            className="job-context-menu"
+            style={{
+              position: "fixed",
+              zIndex: 4001,
+              top: Math.min(pasteMenu.y, window.innerHeight - 90),
+              left: Math.min(pasteMenu.x, window.innerWidth - 220),
+            }}
+          >
+            <div className="job-context-menu__head">Paste {clipboardCard.jobNo || "card"}</div>
+            <button
+              type="button"
+              onClick={() => {
+                handlePasteToCell(pasteMenu.employeeId, pasteMenu.day);
+                setPasteMenu(null);
+              }}
+            >
+              Paste here <span className="job-context-menu__kbd">Ctrl+V</span>
+            </button>
+          </div>
+        </>
+      )}
+
       {pendingRosterMove && (
         <div className="modal-scrim" onClick={() => setPendingRosterMove(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 400 }}>
@@ -1311,8 +1426,11 @@ interface EmployeeRowProps {
   onSpan: (line: ScheduleLine, spanDays: number) => void;
   onMoveStart: (line: ScheduleLine, newStart: Date) => Promise<void>;
   /** Right-click card actions (omitted on read-only boards). */
+  onCopyLine?: (line: ScheduleLine) => void;
   onDuplicateLine?: (line: ScheduleLine) => void;
   onDeleteLine?: (line: ScheduleLine) => void;
+  /** Right-click a day cell (for Paste). Omitted on read-only boards. */
+  onCellContextMenu?: (e: React.MouseEvent, employeeId: string, day: Date) => void;
 }
 
 function EmployeeRow({
@@ -1344,8 +1462,10 @@ function EmployeeRow({
   onResize,
   onSpan,
   onMoveStart,
+  onCopyLine,
   onDuplicateLine,
   onDeleteLine,
+  onCellContextMenu,
 }: EmployeeRowProps) {
   const daysRef = useRef<HTMLDivElement>(null);
   // Day index currently under a drag, for the drop-target highlight. Null when
@@ -1493,11 +1613,18 @@ function EmployeeRow({
                 `${assistFull ? " day-cell--assist" : ""}` +
                 `${assistPartial ? ` day-cell--assist-${assistHalf}` : ""}`
               }
+              data-cell-emp={emp.id}
+              data-cell-day={day.toISOString()}
               onDragOver={assistFull ? undefined : handleStripDragOver}
               onDrop={assistFull ? undefined : handleStripDrop}
               onClick={() => {
                 if (addable) onCellClick(day);
               }}
+              onContextMenu={
+                onCellContextMenu && addable
+                  ? (e) => onCellContextMenu(e, emp.id, day)
+                  : undefined
+              }
             >
               {assistFull && <span className="day-cell__assist">Installation</span>}
               {assistPartial && (
@@ -1534,6 +1661,7 @@ function EmployeeRow({
             onResize={(newHours) => onResize(card.line, newHours)}
             onSpan={(days) => onSpan(card.line, days)}
             onMoveStart={(newStart) => onMoveStart(card.line, newStart)}
+            onCopy={onCopyLine ? () => onCopyLine(card.line) : undefined}
             onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
             onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
           />
@@ -1563,6 +1691,7 @@ interface GanttCardProps {
   onResize: (newHours: number) => Promise<void>;
   onSpan: (spanDays: number) => void;
   onMoveStart: (newStart: Date) => Promise<void>;
+  onCopy?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
 }
@@ -1587,6 +1716,7 @@ function GanttCard({
   onResize,
   onSpan,
   onMoveStart,
+  onCopy,
   onDuplicate,
   onDelete,
 }: GanttCardProps) {
@@ -1709,6 +1839,7 @@ function GanttCard({
 
   return (
     <div
+      data-line-id={line.id}
       className={`gantt-card${overflowLeft ? " gantt-card--overflow-left" : ""}${overflowRight ? " gantt-card--overflow-right" : ""}${highlighted ? " gantt-card--highlighted" : ""}${dragging ? " gantt-card--dragging" : ""}${hasRedDate ? " gantt-card--reddate" : ""}${stepDone ? " gantt-card--done" : ""}`}
       style={{
         left: `${previewLeftPct}%`,
@@ -1743,6 +1874,7 @@ function GanttCard({
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}
         multiDay={spanDays > 1}
+        onCopy={onCopy}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
       />

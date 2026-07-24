@@ -27,6 +27,8 @@ interface JobCardProps {
   /** The card spans more than one day (wider). On mobile its addons lay out on
    *  one line (wrapping only if too long) instead of stacking. */
   multiDay?: boolean;
+  /** Right-click menu action: copy this card to the clipboard (Ctrl+C). */
+  onCopy?: () => void;
   /** Right-click menu action: duplicate this card (omitted on read-only boards). */
   onDuplicate?: () => void;
   /** Right-click menu action: delete this card (omitted on read-only boards). */
@@ -116,6 +118,7 @@ export default function JobCard({
   showWeather = false,
   layout = "compact",
   multiDay = false,
+  onCopy,
   onDuplicate,
   onDelete,
 }: JobCardProps) {
@@ -179,7 +182,7 @@ export default function JobCard({
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
   // The context menu opens if there's anything to show: BC links and/or the
   // duplicate/delete actions (present only on editable boards).
-  const hasMenu = canOpenLinks || !!onDuplicate || !!onDelete;
+  const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onDelete;
 
   const open = () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -451,6 +454,17 @@ export default function JobCard({
                     Open SharePoint Folder
                   </button>
                 </>
+              )}
+              {onCopy && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCopy();
+                    setMenu(null);
+                  }}
+                >
+                  Copy <span className="job-context-menu__kbd">Ctrl+C</span>
+                </button>
               )}
               {onDuplicate && (
                 <button

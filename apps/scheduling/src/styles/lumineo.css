@@ -1978,6 +1978,13 @@ input, select, textarea {
 .job-context-menu button:hover {
   background: var(--bg-tertiary);
 }
+.job-context-menu__kbd {
+  float: right;
+  margin-left: 16px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  opacity: 0.8;
+}
 .job-context-menu__danger {
   color: var(--lumineo-red) !important;
 }

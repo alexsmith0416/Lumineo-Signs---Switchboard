@@ -607,9 +607,11 @@
     <tr><th>Shortcut</th><th>Action</th></tr>
     <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>Undo the last board change</td></tr>
     <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Y</span> &nbsp;or&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span></td><td>Redo</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">C</span></td><td>Copy the job card under the cursor</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">V</span></td><td>Paste the copied card onto the day cell under the cursor (a full duplicate)</td></tr>
     <tr><td><span class="kbd">Esc</span></td><td>Exit Presentation / TV mode</td></tr>
-    <tr><td>Right-click</td><td>Context actions — banner (add), name (edit/assist), column header (unlock reorder), card (duplicate/delete)</td></tr>
-    <tr><td>Drag right edge</td><td>Resize a job's duration</td></tr>
+    <tr><td>Right-click</td><td>Context actions — banner (add), name (edit/assist), column header (unlock reorder), card (copy/duplicate/delete), day cell (paste)</td></tr>
+    <tr><td>Drag right edge</td><td>Spread a card across more days (visual span)</td></tr>
     <tr><td>Drag left edge</td><td>Change a job's start date (keeps its length)</td></tr>
     <tr><td>Click empty cell</td><td>Add a job to that person on that day</td></tr>
   </table>
@@ -708,6 +710,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Copy &amp; paste job cards</strong> — right-click a card → <em>Copy</em> (or <span class="kbd">Ctrl</span>+<span class="kbd">C</span> while hovering it), then right-click a day cell → <em>Paste</em> (or <span class="kbd">Ctrl</span>+<span class="kbd">V</span> while hovering it) to drop a full duplicate of that card onto the target person and day.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Resize = visual span</strong> — dragging a card's right edge now just spreads it across more days (or back to one) to help you lay out the week. It no longer changes the labor hours and no longer pops up a dialog. The stretched days aren't reserved. Set actual hours in Modified labor hours when ready.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Estimated vs. Modified labor hours</strong> — the task's <strong>Estimated hours</strong> (the BC estimate) is now read-only and never changes; a new <strong>Modified labor hours</strong> box holds the actual working hours (leave blank to use the estimate). Resizing a card now moves in <strong>whole-day (8h) steps</strong> instead of collapsing to fractions.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Scheduled install &amp; Red date on the targets</strong> — setting a <strong>Scheduled install</strong> now replaces the estimated window with that committed day, and a <strong>Red date</strong> shows as a red bar above the targets. Either one pulls the production target to the working day before it. (Also fixed the scheduled-install date not saving.)</td></tr>
