@@ -1626,28 +1626,31 @@ function GanttCard({
     if (!dayContainer) return;
     const dayWidth = dayContainer.clientWidth / 7;
     const startX = e.clientX;
+    const dayH = employee.standardHoursPerDay || 8;
     const baseHours = line.overrideHours ?? line.estimatedHours;
+    // Resize in whole-DAY chunks (8h): drag snaps to day columns and sets hours
+    // to daySpan × 8h. Keeps the card on clean day boundaries and never collapses
+    // a small task to 0.25h. Exact sub-day hours are set in the Modified labor
+    // hours box instead.
+    const baseDays = Math.max(1, Math.round(baseHours / dayH));
+    const compute = (clientX: number) => {
+      const dayDelta = Math.round((clientX - startX) / dayWidth); // whole days dragged
+      const newDays = Math.max(1, baseDays + dayDelta);
+      return { newHours: newDays * dayH, snappedDeltaPx: (newDays - baseDays) * dayWidth };
+    };
 
     const onMove = (mv: MouseEvent) => {
-      const deltaPx = mv.clientX - startX;
-      const dayDelta = deltaPx / dayWidth;
-      const hourDelta = dayDelta * employee.standardHoursPerDay;
-      const proposed = Math.max(0.25, baseHours + hourDelta);
-      const rounded = Math.round(proposed * 4) / 4; // nearest 0.25h
-      setResizePreview({ deltaPx, newHours: rounded });
+      const { newHours, snappedDeltaPx } = compute(mv.clientX);
+      setResizePreview({ deltaPx: snappedDeltaPx, newHours });
     };
 
     const onUp = (mv: MouseEvent) => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
-      const deltaPx = mv.clientX - startX;
-      const dayDelta = deltaPx / dayWidth;
-      const hourDelta = dayDelta * employee.standardHoursPerDay;
-      const proposed = Math.max(0.25, baseHours + hourDelta);
-      const rounded = Math.round(proposed * 4) / 4;
+      const { newHours } = compute(mv.clientX);
       setResizePreview(null);
-      if (Math.abs(rounded - baseHours) >= 0.25) {
-        void onResize(rounded);
+      if (newHours !== baseHours) {
+        void onResize(newHours);
       }
     };
 

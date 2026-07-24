@@ -369,7 +369,7 @@
   <h3>5.2 &nbsp;Moving, resizing &amp; the cascade</h3>
   <ul>
     <li><strong>Move</strong> — drag a card to another day or person.</li>
-    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to change how long the job takes (hours snap to quarter-hours; a live "Nh" badge shows the new duration).</li>
+    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to change how long the job takes. Resizing works in <strong>whole-day (8h) steps</strong> — the card snaps to day columns. For an exact number of hours, use <strong>Modified labor hours</strong> in the Edit Job panel.</li>
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
     <li><strong>Cascade</strong> — when a move/resize would push other jobs, a dialog previews exactly what moves and offers: <strong>Continue</strong> (cascade the others), <strong>Move only this</strong>, <strong>Try in Sandbox</strong>, or <strong>Turn cascade off</strong>.</li>
   </ul>
@@ -380,8 +380,10 @@
   <h3>5.3 &nbsp;Editing a job</h3>
   <p>Click a card to open the <strong>Edit Job</strong> panel. There you can edit the job description and card text,
   re-pick which BC tasks the card covers (see <strong>5.6</strong>), reassign the employee, and set the
-  <strong>Start</strong> and <strong>End</strong> dates and <strong>Estimated hours</strong> (setting the End date
-  adjusts the hours to land there). Use the <strong>lock icon</strong> in the panel header to pin the card so cascade
+  <strong>Start</strong> and <strong>End</strong> dates, the read-only <strong>Estimated hours</strong> (the task's fixed
+  BC estimate), and <strong>Modified labor hours</strong> — the actual working hours for this card, which override the
+  estimate (leave blank to use the estimate). Setting the End date adjusts the Modified hours to land there (in whole-day
+  steps). Use the <strong>lock icon</strong> in the panel header to pin the card so cascade
   flows around it. On Installation you also set <strong>trips, men, trucks</strong>, the <strong>install ZIP</strong>,
   and the <strong>Final install</strong> flag (5.5). You can <strong>Duplicate</strong> the card onto other people, or
   <strong>Delete</strong> it.</p>
@@ -706,6 +708,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Estimated vs. Modified labor hours</strong> — the task's <strong>Estimated hours</strong> (the BC estimate) is now read-only and never changes; a new <strong>Modified labor hours</strong> box holds the actual working hours (leave blank to use the estimate). Resizing a card now moves in <strong>whole-day (8h) steps</strong> instead of collapsing to fractions.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Scheduled install &amp; Red date on the targets</strong> — setting a <strong>Scheduled install</strong> now replaces the estimated window with that committed day, and a <strong>Red date</strong> shows as a red bar above the targets. Either one pulls the production target to the working day before it. (Also fixed the scheduled-install date not saving.)</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Target dates</strong> — every job card now shows a <strong>Target dates</strong> section (in the editor and on the hover preview): <em>target production complete</em> at release + 7 weeks (4 weeks vinyl/graphics-only) and an <em>estimated install window</em> starting the working day after production and running 3 weeks. Anchored on the BC <strong>release date</strong>; you can set a <strong>production-completion override</strong>, a <strong>Red date</strong> pulls the production target to the working day before it, and all targets skip weekends (forward to Monday).</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Cleaner shipment load list</strong> — clicking a shipment (truck) card on the Installation board now lays each stop out as its own card with the job #, customer/job name, description, a labeled delivery/pickup location and notes, and a <em>Delivery</em> / <em>Pickup</em> badge — instead of the old run-together text.</td></tr>

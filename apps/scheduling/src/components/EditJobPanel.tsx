@@ -61,9 +61,9 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [duplicating, setDuplicating] = useState(false);
   const [dupEmployeeIds, setDupEmployeeIds] = useState<Set<string>>(new Set());
 
-  const [overrideHours, setOverrideHours] = useState(
-    line.overrideHours?.toString() ?? line.estimatedHours.toString(),
-  );
+  // Modified labor hours — the editable override of the fixed BC estimate. Empty
+  // means "no override → use the estimate". (Estimated hours itself is read-only.)
+  const [overrideHours, setOverrideHours] = useState(line.overrideHours?.toString() ?? "");
   const [jobDescription, setJobDescription] = useState(line.jobDescription ?? "");
   const [taskDescription, setTaskDescription] = useState(line.planningLineDescription ?? "");
   const [crewTrips, setCrewTrips] = useState(line.crewTrips?.toString() ?? "");
@@ -85,7 +85,8 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
 
   // Live end preview shared by the End field + the Predicted pane.
   const startObj = startDate ? new Date(startDate) : null;
-  const hoursNum = Number(overrideHours);
+  // Empty Modified labor hours → fall back to the fixed estimate.
+  const hoursNum = overrideHours.trim() === "" ? line.estimatedHours : Number(overrideHours);
   const preview = useLivePreview(
     startObj,
     Number.isNaN(hoursNum) ? line.estimatedHours : hoursNum,
@@ -122,14 +123,19 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
       else hi = mid;
     }
     const rate = emp.productivityRate === 0 ? 1 : emp.productivityRate;
-    const raw = Math.max(0.25, Math.round(((lo + hi) / 2) * rate * 4) / 4);
-    setOverrideHours(String(raw));
+    // Snap to whole-DAY chunks (8h) to match the board resize; exact sub-day
+    // hours are typed straight into the Modified labor hours box.
+    const dayH = emp.standardHoursPerDay || 8;
+    const exact = ((lo + hi) / 2) * rate;
+    const snapped = Math.max(dayH, Math.round(exact / dayH) * dayH);
+    setOverrideHours(String(snapped));
   };
 
   const onSave = async () => {
     setBusy(true);
     try {
-      const newHours = Number(overrideHours);
+      // Empty Modified labor hours → no override (use the estimate).
+      const newHours = overrideHours.trim() === "" ? line.estimatedHours : Number(overrideHours);
       // Only write hours when they actually changed. Compare against the line's
       // CURRENT effective hours (override if set, else the BC estimate) — not
       // line.overrideHours, which is usually null, so the old check fired an
@@ -321,12 +327,24 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           <div className="form-field__label">Estimated hours</div>
           <input
             className="form-field__input"
+            type="text"
+            value={line.estimatedHours}
+            readOnly
+            disabled
+            title="The task's BC estimate — fixed. Change the actual hours in Modified labor hours."
+          />
+        </div>
+        <div className="form-field">
+          <div className="form-field__label">Modified labor hours</div>
+          <input
+            className="form-field__input"
             type="number"
             min="0.25"
             step="0.25"
             value={overrideHours}
             onChange={(e) => setOverrideHours(e.target.value)}
-            placeholder={`est. ${line.estimatedHours}`}
+            placeholder={`estimate: ${line.estimatedHours}`}
+            title="Actual working hours for this card (overrides the estimate). Leave blank to use the estimate."
             disabled={readOnly}
           />
         </div>
