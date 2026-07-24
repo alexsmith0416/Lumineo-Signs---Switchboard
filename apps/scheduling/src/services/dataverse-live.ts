@@ -429,6 +429,7 @@ const INSTALL_SET = "crfdf_installationemployeeses";
 function mapInstallEmployee(r: Row): Employee {
   const loc = n(r.crfdf_location, 6);
   const truck = s(r.crfdf_truck).trim();
+  const isAssistRow = Boolean(s(r.crfdf_assistsourceemp).trim());
   return {
     id: s(r.crfdf_installationemployeesid),
     name: s(r.crfdf_employeename, "Employee"),
@@ -439,9 +440,11 @@ function mapInstallEmployee(r: Row): Employee {
     maxOvertimePerDay: 0,
     worksWeekends: false,
     truckNumber: truck === "" ? null : truck,
-    isCertifiedCraneOperator: Boolean(r.crfdf_certifiedcraneoperator),
+    // Assist (lent production) rows are never crane operators on the install
+    // board — the CCO badge belongs to real install crew only.
+    isCertifiedCraneOperator: isAssistRow ? false : Boolean(r.crfdf_certifiedcraneoperator),
     position: n(r.crfdf_positiononschedule, 0),
-    isAssist: Boolean(s(r.crfdf_assistsourceemp).trim()),
+    isAssist: isAssistRow,
   };
 }
 

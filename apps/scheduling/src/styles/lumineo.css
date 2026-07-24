@@ -5,6 +5,9 @@
    ============================================================ */
 :root,
 [data-theme="light"] {
+  color-scheme: light;
+  /* Whole-department (team lane) icon — brand navy in light. */
+  --group-icon-fill: #141464;
   --bg-page: #f4f5f8;
   --surface-raised: #ffffff;
   --surface-sunken: #f4f5f8;
@@ -50,6 +53,9 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark; /* native controls (date pickers) render dark */
+  /* Whole-department icon — lightened so it reads on the dark surface. */
+  --group-icon-fill: #b9c0f5;
   --bg-page: #0b0e1f;
   --surface-raised: #1a1f3d;
   --surface-sunken: #131734;
