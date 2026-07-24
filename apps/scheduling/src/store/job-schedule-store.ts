@@ -11,7 +11,10 @@ import {
  * Writes are optimistic (local first, persist in the background) and resync on
  * failure — same pattern as the other stores.
  */
-type DateFields = Pick<JobSchedule, "releasedDate" | "scheduledInstallDate" | "redDate">;
+type DateFields = Pick<
+  JobSchedule,
+  "releasedDate" | "productionCompleteDate" | "scheduledInstallDate" | "redDate"
+>;
 
 interface JobScheduleState {
   byJob: Record<string, JobSchedule>;

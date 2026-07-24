@@ -2485,6 +2485,32 @@ input, select, textarea {
 .job-sched__note {
   color: var(--text-tertiary);
 }
+/* Target dates — own section between the card text and the production stepper. */
+.job-targets {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.job-targets__title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.job-targets__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.job-targets__label {
+  color: var(--text-secondary);
+}
 .job-sched__hint {
   font-size: 11px;
   color: var(--text-tertiary);

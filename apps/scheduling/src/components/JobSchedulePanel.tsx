@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useJobScheduleStore } from "../store/job-schedule-store";
-import { computeJobTargets } from "../services/job-schedule-data";
+import { useJobTargets } from "../hooks/useJobTargets";
 
-const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
-
-// Release date + computed targets. The anchor is the real BC order-release date
-// (crfdf_bcjobs.crfdf_releasedate ← sign365 icgSgpOrderReleasedDate, via
-// BCSync_JobReleaseDates); the in-app date field is an optional override.
-const SHOW_TARGETS = true;
+// The Release date field anchors the targets (now shown in their own section —
+// see JobTargets). The anchor is the real BC order-release date
+// (crfdf_bcjobs.crfdf_releasedate); the in-app date field is an optional override.
+const SHOW_RELEASE = true;
 
 /** Parse an <input type="date"> value ("yyyy-MM-dd") as a LOCAL date (no tz shift). */
 function parseDateInput(v: string): Date | null {
@@ -17,7 +15,6 @@ function parseDateInput(v: string): Date | null {
   return y ? new Date(y, (mo || 1) - 1, d || 1) : null;
 }
 const toDateInput = (d: Date | null): string => (d ? format(d, "yyyy-MM-dd") : "");
-const fmtLong = (d: Date | null): string => (d ? format(d, "EEE MMM d, yyyy") : "—");
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
@@ -54,36 +51,11 @@ export default function JobSchedulePanel({
 
   const [revealed, setRevealed] = useState(false);
 
-  // Vinyl/graphics-only → shorter production target. Only needed while targets show.
-  const [vinylOnly, setVinylOnly] = useState(false);
-  // Real BC order-release date (anchors the targets); the manual field overrides it.
-  const [bcReleased, setBcReleased] = useState<Date | null>(null);
-  useEffect(() => {
-    if (!SHOW_TARGETS || !LIVE || !jobNo) return;
-    let alive = true;
-    void import("../services/dataverse-live").then(async (m) => {
-      try {
-        const [depts, rel] = await Promise.all([
-          m.jobProductionDepartments(jobNo),
-          m.jobReleaseDate(jobNo),
-        ]);
-        if (!alive) return;
-        setVinylOnly(depts.length > 0 && depts.every((d) => /vinyl|graphic/i.test(d)));
-        setBcReleased(rel);
-      } catch {
-        /* leave defaults */
-      }
-    });
-    return () => {
-      alive = false;
-    };
-  }, [jobNo]);
-
-  // Manual override (crfdf_jobschedule.releaseddate) wins; else the BC release date.
-  const released = sched?.releasedDate ?? bcReleased;
+  // The anchor date (BC release date, or the in-app override) — shared with the
+  // targets section + tooltip so they all compute identically.
+  const { released } = useJobTargets(jobNo);
   const scheduled = sched?.scheduledInstallDate ?? null;
   const red = sched?.redDate ?? null;
-  const targets = useMemo(() => computeJobTargets(released, vinylOnly), [released, vinylOnly]);
 
   const onRedChange = (v: string) => {
     const d = parseDateInput(v);
@@ -112,35 +84,17 @@ export default function JobSchedulePanel({
 
       {revealed && (
         <>
-          {SHOW_TARGETS && (
-            <>
-              <div className="job-sched__row">
-                <span className="job-sched__label">Release date</span>
-                <input
-                  type="date"
-                  className="form-field__input job-sched__date"
-                  value={toDateInput(released)}
-                  onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
-                  title="Order-release date from BC — anchors the targets below. Editing overrides it for this job; clear to fall back to the BC date."
-                />
-              </div>
-              {released && (
-                <div className="job-sched__targets">
-                  <div>
-                    Target production complete: <strong>{fmtLong(targets.targetProductionComplete)}</strong>
-                    {vinylOnly && <span className="job-sched__note"> · vinyl/graphics (4 wk)</span>}
-                  </div>
-                  {!scheduled && (
-                    <div>
-                      Est. install window:{" "}
-                      <strong>
-                        {fmtLong(targets.installWindowStart)} – {fmtLong(targets.installWindowEnd)}
-                      </strong>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
+          {SHOW_RELEASE && (
+            <div className="job-sched__row">
+              <span className="job-sched__label">Release date</span>
+              <input
+                type="date"
+                className="form-field__input job-sched__date"
+                value={toDateInput(released)}
+                onChange={(e) => void update(jobNo, { releasedDate: parseDateInput(e.target.value) })}
+                title="Order-release date from BC — anchors the target dates. Editing overrides it for this job; clear to fall back to the BC date."
+              />
+            </div>
           )}
 
           <div className="job-sched__reveal">

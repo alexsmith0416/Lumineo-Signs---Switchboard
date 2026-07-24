@@ -1,54 +1,84 @@
-import { addWeeks } from "date-fns";
+import { addBusinessDays, addWeeks, isWeekend, nextMonday } from "date-fns";
 
 /**
  * Per-job scheduling data (crfdf_jobschedule) + derived target dates.
  *
- * releasedDate is the anchor for automated scheduling — the day the job first
- * hit BC status "Open" (stamped by the BCSync flow; also editable in-app). From
- * it we COMPUTE the production target + the estimated install window, so those
- * aren't stored. scheduledInstallDate and redDate are app-entered.
+ * releasedDate is the anchor for automated scheduling — the BC order-release
+ * date (crfdf_bcjobs.crfdf_releasedate ← sign365 icgSgpOrderReleasedDate; also
+ * editable in-app). From it we COMPUTE the production target + install window.
+ * productionCompleteDate is a manual override of the computed production target.
+ * scheduledInstallDate and redDate are app-entered.
  */
 export interface JobSchedule {
   jobNo: string;
   releasedDate: Date | null;
+  /** Manual override of the computed production-complete target. */
+  productionCompleteDate: Date | null;
   scheduledInstallDate: Date | null;
   redDate: Date | null;
 }
 
 export interface JobTargets {
-  /** Production should be done by release + 7 wk (or + 4 wk for vinyl/graphics-only). */
+  /** When production should be done. Precedence: manual override → the working
+   *  day before a Red date → release + 7 wk (4 wk vinyl/graphics-only). */
   targetProductionComplete: Date | null;
-  /** Estimated install window: release + 8 wk … + 10 wk. */
+  /** Estimated install window: the working day after production complete, then a
+   *  3-week span. Null once install is committed (Red or Scheduled install). */
   installWindowStart: Date | null;
   installWindowEnd: Date | null;
 }
 
-// Lead times (weeks from release). Constants for now; a Settings-backed table
-// can replace these later without touching callers.
+// Lead times (weeks). Constants for now; a Settings-backed table can replace
+// these later without touching callers.
 export const LEAD_TIMES = {
   productionWeeks: 7,
   vinylProductionWeeks: 4,
-  installWindowStartWeeks: 8,
-  installWindowEndWeeks: 10,
+  installWindowWeeks: 3,
 } as const;
 
-export function computeJobTargets(released: Date | null, vinylOnly: boolean): JobTargets {
-  if (!released) {
+/** Roll a weekend target FORWARD to Monday (never back to Friday). */
+const forwardWorkingDay = (d: Date): Date => (isWeekend(d) ? nextMonday(d) : d);
+
+export interface JobTargetsInput {
+  released: Date | null;
+  vinylOnly: boolean;
+  redDate?: Date | null;
+  scheduledInstall?: Date | null;
+  productionOverride?: Date | null;
+}
+
+export function computeJobTargets(input: JobTargetsInput): JobTargets {
+  const { released, vinylOnly, redDate = null, scheduledInstall = null, productionOverride = null } = input;
+
+  // Production complete target — override wins, then a Red date pulls it to the
+  // working day before, else release + the lead time (rolled forward off a weekend).
+  let prod: Date | null;
+  if (productionOverride) prod = productionOverride;
+  else if (redDate) prod = addBusinessDays(redDate, -1); // the working day before the Red date
+  else if (released)
+    prod = forwardWorkingDay(
+      addWeeks(released, vinylOnly ? LEAD_TIMES.vinylProductionWeeks : LEAD_TIMES.productionWeeks),
+    );
+  else prod = null;
+
+  if (!prod) {
     return { targetProductionComplete: null, installWindowStart: null, installWindowEnd: null };
   }
-  return {
-    targetProductionComplete: addWeeks(
-      released,
-      vinylOnly ? LEAD_TIMES.vinylProductionWeeks : LEAD_TIMES.productionWeeks,
-    ),
-    installWindowStart: addWeeks(released, LEAD_TIMES.installWindowStartWeeks),
-    installWindowEnd: addWeeks(released, LEAD_TIMES.installWindowEndWeeks),
-  };
+
+  // Install window only when install isn't already committed to a fixed day.
+  const committed = redDate ?? scheduledInstall;
+  if (committed) {
+    return { targetProductionComplete: prod, installWindowStart: null, installWindowEnd: null };
+  }
+  const start = addBusinessDays(prod, 1); // the working day after production
+  const end = forwardWorkingDay(addWeeks(start, LEAD_TIMES.installWindowWeeks));
+  return { targetProductionComplete: prod, installWindowStart: start, installWindowEnd: end };
 }
 
 export const emptyJobSchedule = (jobNo: string): JobSchedule => ({
   jobNo,
   releasedDate: null,
+  productionCompleteDate: null,
   scheduledInstallDate: null,
   redDate: null,
 });

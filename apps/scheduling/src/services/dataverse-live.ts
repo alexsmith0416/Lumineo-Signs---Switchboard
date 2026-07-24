@@ -1733,6 +1733,7 @@ function mapJobSchedule(r: Row): JobSchedule {
   return {
     jobNo: s(r.crfdf_jobno),
     releasedDate: parseDateOnly(r.crfdf_releaseddate),
+    productionCompleteDate: parseDateOnly(r.crfdf_productioncompletedate),
     scheduledInstallDate: parseDateOnly(r.crfdf_scheduledinstalldate),
     redDate: parseDateOnly(r.crfdf_reddate),
   };
@@ -1745,6 +1746,8 @@ function jobScheduleToRecord(sch: Partial<JobSchedule>): Row {
     rec.crfdf_name = sch.jobNo || "Job";
   }
   if (sch.releasedDate !== undefined) rec.crfdf_releaseddate = fmtDateOnly(sch.releasedDate);
+  if (sch.productionCompleteDate !== undefined)
+    rec.crfdf_productioncompletedate = fmtDateOnly(sch.productionCompleteDate);
   if (sch.scheduledInstallDate !== undefined)
     rec.crfdf_scheduledinstalldate = fmtDateOnly(sch.scheduledInstallDate);
   if (sch.redDate !== undefined) rec.crfdf_reddate = fmtDateOnly(sch.redDate);

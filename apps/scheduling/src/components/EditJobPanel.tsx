@@ -10,6 +10,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
 import ProductionStepperSection from "./ProductionStepperSection";
+import { JobTargetsSection, ProductionCompleteField } from "./JobTargets";
 
 // Start/End are edited as dates only, but the engine schedules with times, so we
 // keep the time-of-day on the underlying datetime-local string and only swap the
@@ -287,6 +288,8 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
           />
         </div>
 
+        {line.jobNo && !line.isCustom && <JobTargetsSection jobNo={line.jobNo} />}
+
         {line.jobNo && !line.isCustom && <ProductionStepperSection jobNo={line.jobNo} />}
 
         <div className="form-field">
@@ -346,6 +349,9 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             disabled={readOnly}
           />
         </div>
+        {line.jobNo && !line.isCustom && (
+          <ProductionCompleteField jobNo={line.jobNo} readOnly={readOnly} />
+        )}
         {line.jobNo && !line.isCustom && (
           <JobSchedulePanel jobNo={line.jobNo} readOnly={readOnly} />
         )}

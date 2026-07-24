@@ -410,17 +410,34 @@
     (so more than one can be in progress at once). These edits are saved per job.</li>
   </ul>
 
-  <h3>5.5 &nbsp;Install dates &amp; the Red date</h3>
+  <h3>5.5 &nbsp;Target &amp; install dates</h3>
+  <p>Every BC job card shows a <strong>Target dates</strong> section (in the Edit Job panel, between the card text and
+  the production stepper — and on the card's <strong>hover preview</strong>). These are computed guides, not committed
+  dates:</p>
+  <ul>
+    <li><strong>Target production complete</strong> — <strong>7 weeks</strong> after the job's <em>release date</em>
+    (<strong>4 weeks</strong> for vinyl/graphics-only jobs).</li>
+    <li><strong>Est. install window</strong> — starts the <strong>working day after</strong> production completes and runs
+    <strong>3 weeks</strong>. It's hidden once install is committed (a Scheduled install or Red date).</li>
+  </ul>
+  <p>The anchor is the <strong>Release date</strong> — the job's order-release date pulled from Business Central (shown
+  in Install Dates; you can type a date to override it per job, or clear it to fall back to the BC date). Two things
+  shift the production target:</p>
+  <ul>
+    <li><strong>Production completion (override)</strong> — a field (between the End date and Install Dates) to set the
+    production-complete date by hand. It re-anchors the install window. Clear it to use the computed date.</li>
+    <li><strong>A Red date</strong> — pulls the production target to the <strong>working day before</strong> the Red date
+    (production has to finish before the drop-dead install).</li>
+  </ul>
+  <p class="tip">All targets land on <strong>working days</strong> — a target that would fall on a weekend moves
+  <em>forward</em> to Monday (never back to Friday).</p>
+
+  <h4>Install dates &amp; the Red date</h4>
   <p>Editors open <strong>Install Dates</strong> in the Edit Job panel with the <strong>eye icon</strong> (it shows/hides
   the fields; the whole section is hidden for view-only roles):</p>
   <ul>
-    <li><strong>Release date</strong> — the job's <strong>order-release date</strong>, pulled from Business Central.
-    It anchors the target dates below. You can type a date to <strong>override</strong> it for a job; clear the
-    field to fall back to the BC date.</li>
-    <li><strong>Target dates</strong> (shown once a release date is known) —
-    <strong>Target production complete</strong> is <strong>7 weeks</strong> after release
-    (<strong>4 weeks</strong> for vinyl/graphics-only jobs), and the <strong>estimated install window</strong> is
-    <strong>8–10 weeks</strong> after release. These are computed guides, not committed dates.</li>
+    <li><strong>Release date</strong> — the job's <strong>order-release date</strong> from Business Central; anchors the
+    target dates (5.5). Type to override per job; clear to fall back to the BC date.</li>
     <li><strong>Scheduled install</strong> — the job's committed install day.</li>
     <li><strong>Red date</strong> — a fixed, <em>drop-dead</em> install date. Setting it <strong>locks</strong> the
     scheduled date to match and gives the job a <strong>pulsing red outline</strong> on every board it appears on.</li>
@@ -685,7 +702,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
-      <tr><td>Jul 23, 2026</td><td><strong>Release date &amp; target dates</strong> — the Install Dates section now shows a job's <strong>order-release date</strong> from Business Central and the targets it drives: <em>target production complete</em> at release + 7 weeks (4 weeks for vinyl/graphics-only jobs) and an <em>estimated install window</em> at release + 8–10 weeks. You can override the release date per job.</td></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Target dates</strong> — every job card now shows a <strong>Target dates</strong> section (in the editor and on the hover preview): <em>target production complete</em> at release + 7 weeks (4 weeks vinyl/graphics-only) and an <em>estimated install window</em> starting the working day after production and running 3 weeks. Anchored on the BC <strong>release date</strong>; you can set a <strong>production-completion override</strong>, a <strong>Red date</strong> pulls the production target to the working day before it, and all targets skip weekends (forward to Monday).</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Cleaner shipment load list</strong> — clicking a shipment (truck) card on the Installation board now lays each stop out as its own card with the job #, customer/job name, description, a labeled delivery/pickup location and notes, and a <em>Delivery</em> / <em>Pickup</em> badge — instead of the old run-together text.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Drag a card's left edge to change its start date</strong> — mirroring the right-edge resize, you can now grab the left edge of a job card and slide its start to another day (keeping the job's length). A live date badge previews the new start.</td></tr>
       <tr><td>Jul 22, 2026</td><td><strong>Production stepper on card hover</strong> — hovering a job card (Production / Installation, and the job pills inside a group card) now shows the production stepper in the preview, so you can see a job's progress at a glance without opening it.</td></tr>

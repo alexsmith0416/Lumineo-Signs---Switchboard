@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import type { ActiveJob } from "../services/dataverse-live";
 import JobTaskPicker from "./JobTaskPicker";
 import ProductionStepperSection from "./ProductionStepperSection";
+import { JobTargetsSection } from "./JobTargets";
 
 /**
  * Read-only job card for Sales / PM (and admins browsing Sales/PM). A job spans
@@ -50,6 +51,7 @@ export default function JobCardPanel({ job, onClose }: { job: ActiveJob; onClose
             />
           </div>
 
+          <JobTargetsSection jobNo={job.jobNo} />
           <ProductionStepperSection jobNo={job.jobNo} />
         </div>
 

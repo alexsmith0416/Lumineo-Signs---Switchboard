@@ -13,6 +13,7 @@ import { bcJobUrl, sharepointJobUrl } from "../services/job-links";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
+import { useJobTargets } from "../hooks/useJobTargets";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -586,6 +587,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
   // shipment cards have no production stages). Read-only here; the interactive
   // version lives in the click-open card panel.
   const { steps } = useJobSteps(line.isCustom ? undefined : line.jobNo || undefined);
+  const { targets: jobTargets } = useJobTargets(line.isCustom ? undefined : line.jobNo || undefined);
 
   return (
     <div
@@ -721,6 +723,16 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
                 )}
               </>
             }
+          />
+        )}
+
+        {jobTargets.targetProductionComplete && (
+          <Row label="Target prod." value={format(jobTargets.targetProductionComplete, "EEE MMM d")} />
+        )}
+        {jobTargets.installWindowStart && jobTargets.installWindowEnd && (
+          <Row
+            label="Est. install"
+            value={`${format(jobTargets.installWindowStart, "MMM d")} – ${format(jobTargets.installWindowEnd, "MMM d")}`}
           />
         )}
 
