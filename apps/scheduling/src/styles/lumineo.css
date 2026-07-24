@@ -1188,6 +1188,28 @@ input, select, textarea {
   opacity: 0.4;
   cursor: default;
 }
+/* "Go to date" button on the current week — icon + label on one line. */
+.calendar-toolbar__today svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.calendar-toolbar__gotowrap {
+  position: relative;
+  display: inline-flex;
+}
+/* Hidden date input — present so its native calendar can be opened via
+   showPicker(); anchored under the button so the popup lands nearby. */
+.calendar-toolbar__gotodate {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* Undo / redo — sit just left of the Job Queue button in the summary bar.
    Outline buttons sized to match .wk-queue-toggle; greyed when the stack

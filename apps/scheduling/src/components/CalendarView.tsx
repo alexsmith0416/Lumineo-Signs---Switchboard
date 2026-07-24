@@ -43,6 +43,17 @@ import CascadeConfirmDialog, {
   type CascadeMove,
 } from "./CascadeConfirmDialog";
 
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+    </svg>
+  );
+}
+
 interface CalendarViewProps {
   useStore: UseScheduleStore;
   kindMeta: ScheduleKindMeta;
@@ -421,6 +432,7 @@ export default function CalendarView({
   // Printable grid element (used by the Print button). Declared with the other
   // hooks — above the loading/error early returns — to keep hook order stable.
   const gridRef = useRef<HTMLDivElement>(null);
+  const goToDateRef = useRef<HTMLInputElement>(null);
 
   const applyRosterDrop = (draggedId: string, drop: RosterDropTarget) => {
     // Build the roster edits, then ask "this week vs permanent" before committing.
@@ -895,17 +907,49 @@ export default function CalendarView({
             state-only week change would show an empty/stale week. */}
         <div className="calendar-toolbar__nav">
           <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
-          <button
-            className="calendar-toolbar__today"
-            onClick={() => void loadWeek(new Date())}
-            disabled={
-              startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
-              startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
-            }
-            title="Jump back to this week"
-          >
-            Today
-          </button>
+          {startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
+          startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() ? (
+            // On this week → a date picker to jump to any day/week.
+            <span className="calendar-toolbar__gotowrap">
+              <button
+                className="calendar-toolbar__today"
+                onClick={() => {
+                  const el = goToDateRef.current;
+                  if (!el) return;
+                  try {
+                    (el as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+                  } catch {
+                    el.focus();
+                  }
+                }}
+                title="Go to a date / week"
+                aria-label="Go to a date"
+              >
+                <CalendarIcon /> Go to…
+              </button>
+              <input
+                ref={goToDateRef}
+                type="date"
+                className="calendar-toolbar__gotodate"
+                value={format(weekStart, "yyyy-MM-dd")}
+                onChange={(e) => {
+                  const [y, mo, d] = e.target.value.split("-").map(Number);
+                  if (y) void loadWeek(new Date(y, (mo || 1) - 1, d || 1));
+                }}
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            </span>
+          ) : (
+            // Away from this week → jump back.
+            <button
+              className="calendar-toolbar__today"
+              onClick={() => void loadWeek(new Date())}
+              title="Jump back to this week"
+            >
+              Today
+            </button>
+          )}
           <button onClick={() => void loadWeek(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
         </div>
         <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>

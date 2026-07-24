@@ -319,7 +319,7 @@
     <li><strong>Rows</strong> are grouped under a colored <strong>department / location banner</strong> (Metal Shop, Paint, Hutchinson, Wichita…). The banner color also tints that group's cards.</li>
     <li><strong>Columns</strong> are the seven days (Mon–Sun). Weekends are shaded because we don't usually schedule them.</li>
     <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend. A card that spans several days <strong>un-stacks automatically</strong> to stay short — the job #, customer, and description move onto one line (with " | " between the customer and the description) and its task list runs together with " • " separators instead of one task per row.</li>
-    <li><strong>Week navigation</strong> — use <span class="kbd">‹ Prev</span> / <span class="kbd">Next ›</span> to move a week at a time, or <span class="kbd">Today</span> to jump back to the current week.</li>
+    <li><strong>Week navigation</strong> — use <span class="kbd">‹ Prev</span> / <span class="kbd">Next ›</span> to move a week at a time. On the current week, the middle button is <span class="kbd">📅 Go to…</span> — click it to pick any day from a calendar and jump to that week. Once you're on another week it becomes <span class="kbd">Today</span> to jump back.</li>
   </ul>
 
   <div class="tip box"><span class="box__label">Tip</span>
@@ -712,6 +712,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 23, 2026</td><td><strong>Jump to any week</strong> — on the current week, the toolbar's middle button is now <em>Go to…</em>: click it to pick a day from a calendar and jump straight to that week. It switches back to <em>Today</em> once you've navigated away.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Production filler on the install board</strong> — when a Production person is lent to Installation, their install row now shows a <strong>Production</strong> block on the days (or halves) they're back in the shop, so the schedule doesn't look empty. Mirrors the <em>Installation</em> filler on the Production board.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Copy &amp; paste job cards</strong> — right-click a card → <em>Copy</em> (or <span class="kbd">Ctrl</span>+<span class="kbd">C</span> while hovering it), then right-click a day cell → <em>Paste</em> (or <span class="kbd">Ctrl</span>+<span class="kbd">V</span> while hovering it) to drop a full duplicate of that card onto the target person and day.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Resize = visual span</strong> — dragging a card's right edge now just spreads it across more days (or back to one) to help you lay out the week. It no longer changes the labor hours and no longer pops up a dialog. The stretched days aren't reserved. Set actual hours in Modified labor hours when ready.</td></tr>
