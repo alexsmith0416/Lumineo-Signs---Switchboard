@@ -11,6 +11,8 @@ export default function SettingsScreen() {
   const setCascadeEnabled = useSettingsStore((s) => s.setCascadeEnabled);
   const hideHeader = useSettingsStore((s) => s.hideHeader);
   const setHideHeader = useSettingsStore((s) => s.setHideHeader);
+  const showNowLine = useSettingsStore((s) => s.showNowLine);
+  const setShowNowLine = useSettingsStore((s) => s.setShowNowLine);
   const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
   // Only real admins see + open the Users manager.
   const { realType } = useCurrentUser();
@@ -109,6 +111,31 @@ export default function SettingsScreen() {
         <div className="settings-row__status">
           The header is set to <strong>{hideHeader ? "hidden" : "shown"}</strong>.
           {!isInPowerPlayer() && " (Preview mode — this applies only in the deployed app.)"}
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Current time line</div>
+            <div className="settings-row__desc">
+              Shows a faint, softly pulsing <strong>red line</strong> at the current day and time
+              on the Production, Installation and Shipping calendars — a quick visual marker of
+              where “now” falls in the week. It only appears when you're viewing the current week.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showNowLine}
+            aria-label="Current time line"
+            className={"settings-switch" + (showNowLine ? " settings-switch--on" : "")}
+            onClick={() => setShowNowLine(!showNowLine)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          The current-time line is <strong>{showNowLine ? "on" : "off"}</strong>.
         </div>
       </div>
 

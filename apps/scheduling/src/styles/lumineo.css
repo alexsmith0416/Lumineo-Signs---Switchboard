@@ -1328,6 +1328,51 @@ input, select, textarea {
   position: relative;
 }
 
+/* "Now" indicator — a faint, softly pulsing red line at the current day + time.
+   Drawn as a grid overlay that mirrors the header columns so it needs no
+   measurement. Toggled via Settings → Display → Current time line. */
+.calendar-now-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 140px repeat(7, minmax(110px, 1fr));
+  grid-template-rows: 1fr;
+  pointer-events: none;
+  z-index: 20;
+}
+.calendar-now-cell {
+  grid-row: 1;
+  position: relative;
+}
+.calendar-now-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--lumineo-red);
+  opacity: 0.3;
+  animation: nowline-pulse 3.6s ease-in-out infinite;
+}
+@keyframes nowline-pulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    box-shadow: 0 0 3px 0 rgba(232, 21, 27, 0.35);
+  }
+  50% {
+    opacity: 0.42;
+    box-shadow: 0 0 7px 1px rgba(232, 21, 27, 0.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar-now-line {
+    animation: none;
+    opacity: 0.35;
+    box-shadow: 0 0 4px 0 rgba(232, 21, 27, 0.35);
+  }
+}
+
 .calendar-header-row {
   display: grid;
   grid-template-columns: 140px repeat(7, minmax(110px, 1fr));

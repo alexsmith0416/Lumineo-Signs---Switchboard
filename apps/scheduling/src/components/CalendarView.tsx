@@ -625,6 +625,26 @@ export default function CalendarView({
   const stackAddons = useStackedAddons();
   const dayColWidth = useDayColumnWidth(gridRef);
 
+  // "Now" indicator — a faint pulsing red line at the current day + time, drawn
+  // as a CSS-grid overlay that mirrors the header columns (no measurement, so it
+  // can't flicker). Ticks each minute so it drifts through the workday. Toggled
+  // via Settings → Display → Current time line.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setNowTick((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const showNowLine = useSettingsStore((s) => s.showNowLine);
+  const nowLine = (() => {
+    if (!showNowLine) return null;
+    const now = new Date();
+    const dayIdx = getDayIndex(now, weekStart);
+    if (dayIdx < 0 || dayIdx > 6) return null; // not viewing the current week
+    const mins = now.getHours() * 60 + now.getMinutes();
+    const frac = Math.min(1, Math.max(0, (mins - 8 * 60) / (8 * 60))); // 08:00–16:00
+    return { dayIdx, frac };
+  })();
+
   // --- Job Queue (Production + Installation) -------------------------------
   // Pick the per-board queue store (each board keeps its own queue). Selecting a
   // store REFERENCE here (not calling a hook conditionally) keeps hook order stable.
@@ -978,6 +998,13 @@ export default function CalendarView({
           hoveredCellRef.current = null;
         }}
       >
+        {nowLine && (
+          <div className="calendar-now-overlay" aria-hidden="true">
+            <div className="calendar-now-cell" style={{ gridColumnStart: nowLine.dayIdx + 2 }}>
+              <div className="calendar-now-line" style={{ left: `${nowLine.frac * 100}%` }} />
+            </div>
+          </div>
+        )}
         <div className="calendar-header-row">
           <div
             className={
