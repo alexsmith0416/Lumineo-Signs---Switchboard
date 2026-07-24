@@ -1193,32 +1193,48 @@ input, select, textarea {
   vertical-align: -2px;
   margin-right: 4px;
 }
-/* "Go to date" control on the current week — a native date input styled to
-   match the toolbar buttons; its own calendar icon opens the picker (works in
-   the cross-origin iframe, unlike showPicker()). */
+/* "Go to date" control on the current week — a blue calendar-icon button.
+   The native date input is overlaid transparently (its value + default icon
+   hidden); its full-size, invisible calendar indicator opens the picker on
+   click — which works in the cross-origin iframe, unlike showPicker(). */
 .calendar-toolbar__gotowrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: var(--surface-raised);
   color: var(--lumineo-navy);
   border: 1px solid var(--lumineo-navy);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
 }
 .calendar-toolbar__gotowrap svg {
   color: var(--lumineo-navy);
   flex-shrink: 0;
+  vertical-align: -2px;
 }
 .calendar-toolbar__gotodate {
-  background: transparent;
-  color: var(--lumineo-navy);
-  border: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   padding: 0;
-  font: inherit;
+  border: 0;
+  opacity: 0;
   cursor: pointer;
 }
+/* Stretch the (invisible) picker indicator over the whole button so clicking
+   anywhere on it opens the calendar. */
 .calendar-toolbar__gotodate::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
   cursor: pointer;
 }
 

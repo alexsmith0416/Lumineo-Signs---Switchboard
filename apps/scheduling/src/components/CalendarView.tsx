@@ -913,7 +913,10 @@ export default function CalendarView({
             // programmatic showPicker() is blocked in the Power Apps cross-origin
             // iframe, so the input's own calendar icon is what opens the picker.)
             <span className="calendar-toolbar__gotowrap" title="Go to a date / week">
-              <CalendarIcon />
+              <CalendarIcon /> Go to…
+              {/* Transparent native date input overlaid on the button; its
+                  (invisible, full-size) calendar indicator opens the picker on
+                  click — the date value + default icon are hidden. */}
               <input
                 ref={goToDateRef}
                 type="date"
