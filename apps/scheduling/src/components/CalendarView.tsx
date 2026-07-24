@@ -909,24 +909,11 @@ export default function CalendarView({
           <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
           {startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
           startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() ? (
-            // On this week → a date picker to jump to any day/week.
-            <span className="calendar-toolbar__gotowrap">
-              <button
-                className="calendar-toolbar__today"
-                onClick={() => {
-                  const el = goToDateRef.current;
-                  if (!el) return;
-                  try {
-                    (el as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
-                  } catch {
-                    el.focus();
-                  }
-                }}
-                title="Go to a date / week"
-                aria-label="Go to a date"
-              >
-                <CalendarIcon /> Go to…
-              </button>
+            // On this week → a native date input to jump to any day/week. (A
+            // programmatic showPicker() is blocked in the Power Apps cross-origin
+            // iframe, so the input's own calendar icon is what opens the picker.)
+            <span className="calendar-toolbar__gotowrap" title="Go to a date / week">
+              <CalendarIcon />
               <input
                 ref={goToDateRef}
                 type="date"
@@ -936,8 +923,7 @@ export default function CalendarView({
                   const [y, mo, d] = e.target.value.split("-").map(Number);
                   if (y) void loadWeek(new Date(y, (mo || 1) - 1, d || 1));
                 }}
-                aria-hidden="true"
-                tabIndex={-1}
+                aria-label="Go to a date"
               />
             </span>
           ) : (

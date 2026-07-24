@@ -1193,22 +1193,33 @@ input, select, textarea {
   vertical-align: -2px;
   margin-right: 4px;
 }
+/* "Go to date" control on the current week — a native date input styled to
+   match the toolbar buttons; its own calendar icon opens the picker (works in
+   the cross-origin iframe, unlike showPicker()). */
 .calendar-toolbar__gotowrap {
-  position: relative;
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  border: 1px solid var(--lumineo-navy);
+  border-radius: 4px;
+  padding: 4px 8px;
 }
-/* Hidden date input — present so its native calendar can be opened via
-   showPicker(); anchored under the button so the popup lands nearby. */
+.calendar-toolbar__gotowrap svg {
+  color: var(--lumineo-navy);
+  flex-shrink: 0;
+}
 .calendar-toolbar__gotodate {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
+  background: transparent;
+  color: var(--lumineo-navy);
   border: 0;
-  opacity: 0;
-  pointer-events: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.calendar-toolbar__gotodate::-webkit-calendar-picker-indicator {
+  cursor: pointer;
 }
 
 /* Undo / redo — sit just left of the Job Queue button in the summary bar.
