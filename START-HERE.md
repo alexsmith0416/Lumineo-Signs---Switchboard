@@ -208,6 +208,28 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
+- **Last shipped (Jul 26, 2026) — deployed + committed:** three calendar changes.
+  1. **Same-day card reordering ("resequence the day")** — on Production &
+     Installation, drag a card up/down within its own day to set the order the
+     person works them (top = first). Native-DnD drop resolves to a reorder when
+     the dragged card is already on that person+day (`buildReorder` in
+     `CalendarView.tsx`, blue insertion line); commits via new
+     `store.resequenceDay` → `engine/cascade.ts` `diffResequence`. **Key design:**
+     it does a SCOPED chain-pack of only the listed cards (NOT global
+     `settleSchedule`) — the first version re-settled the whole board and shoved
+     unrelated downstream jobs weeks out (the "fills the week / other job
+     disappears" bug). No new Dataverse column (order rides on `startDateTime`).
+     New `nextWorkStart` helper in `time-walker.ts` snaps a chained start to a
+     real work slot. Tests: `engine/resequence.test.ts`.
+  2. **Resize can now SHRINK and sticks** — a manual right-edge span (`spanDays`)
+     is now authoritative in `computeRowCards` (was `Math.max(natural, span)`, so
+     it could never go below the hours-derived length). `onSpan` stores the exact
+     value incl. 1-day. Still visual-only; user adjusts hours separately.
+  3. **Current-time line spans full board** — wrapped grid content in
+     `.calendar-grid__inner` (content-sized positioned ancestor) so the overlay
+     is full schedule height, not viewport height.
+  Also: dragging a card (move/resize/reorder) now suppresses its hover preview
+  (`suppressTooltip` on `JobCard`). Guide bumped to v1.3.
 - **Last shipped (Jul 22, 2026):** Shipment "view all items" popup
   (`ShipmentItemsPanel`) — each load line is now its own **card** (job # +
   Delivery/Pickup badge, bold customer, description, labeled delivery/pickup

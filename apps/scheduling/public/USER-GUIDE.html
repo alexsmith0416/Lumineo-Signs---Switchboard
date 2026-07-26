@@ -369,8 +369,9 @@
   <h3>5.2 &nbsp;Moving, resizing &amp; the cascade</h3>
   <ul>
     <li><strong>Move</strong> — drag a card to another day or person.</li>
-    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to spread it across <strong>more days</strong> (or back to one). This is a <strong>visual span only</strong> — it does <em>not</em> change the labor hours and does <em>not</em> pop up a dialog, so you can lay out the week quickly. The stretched days aren't reserved (other jobs can still use that person). Set the actual hours in <strong>Modified labor hours</strong> when you're ready.</li>
+    <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to set how many days it spans — <strong>longer or shorter</strong>. Whatever length you drag it to <strong>sticks</strong> (you can even make a card shorter than its hours would normally fill). This is a <strong>visual span only</strong> — it does <em>not</em> change the labor hours and does <em>not</em> pop up a dialog, so you can lay out the week quickly. The days it spans aren't reserved (other jobs can still use that person). Set the actual hours in <strong>Modified labor hours</strong> when you're ready.</li>
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
+    <li><strong>Reorder same-day jobs (set priority)</strong> — when a person has more than one job on the same day, drag a card <strong>up or down</strong> within that day to set the order they work them, <strong>top = first</strong>. A blue insertion line shows where the card will land. The card you move takes the earlier start and the others shift later that day; if the day is already full, the job that no longer fits rolls to the next day. On Production &amp; Installation boards.</li>
     <li><strong>Cascade</strong> — when a move/resize would push other jobs, a dialog previews exactly what moves and offers: <strong>Continue</strong> (cascade the others), <strong>Move only this</strong>, <strong>Try in Sandbox</strong>, or <strong>Turn cascade off</strong>.</li>
   </ul>
   <div class="note box"><span class="box__label">Cascade on vs. off</span>
@@ -713,6 +714,9 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Resize now shrinks too — and sticks</strong> — dragging a card's right edge shorter now holds at that length (previously it snapped back to the length its hours filled). Schedule a card whatever length you want, then fine-tune <em>Modified labor hours</em> separately.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Current-time line spans the whole board</strong> — the faint red "now" line now runs the full height of the schedule instead of stopping at the bottom of the visible page.</td></tr>
+      <tr><td>Jul 24, 2026</td><td><strong>Reorder a person's jobs on the same day</strong> — when someone has more than one job on a day, drag a card up or down within that day to set the order they work them (<strong>top = first</strong>). A blue insertion line shows where it will land; the card you move takes the earlier start and the rest shift later that day. On the Production &amp; Installation boards. See §5.2.</td></tr>
       <tr><td>Jul 24, 2026</td><td><strong>Current-time line</strong> — an optional faint, softly pulsing red line marks the current day &amp; time on the calendars (current week only). Toggle it in <em>Settings → Display → Current time line</em> (on by default).</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Jump to any week</strong> — on the current week, the toolbar's middle button is now <em>Go to…</em>: click it to pick a day from a calendar and jump straight to that week. It switches back to <em>Today</em> once you've navigated away.</td></tr>
       <tr><td>Jul 23, 2026</td><td><strong>Production filler on the install board</strong> — when a Production person is lent to Installation, their install row now shows a <strong>Production</strong> block on the days (or halves) they're back in the shop, so the schedule doesn't look empty. Mirrors the <em>Installation</em> filler on the Production board.</td></tr>
@@ -760,7 +764,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v1.1.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v1.3 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

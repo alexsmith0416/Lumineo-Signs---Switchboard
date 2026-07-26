@@ -80,6 +80,28 @@ export function calculateEndTime(
   return cursor;
 }
 
+/** Advance a start time to the next valid working slot: snap up to the
+ *  business-day start, and roll past end-of-day and non-working days (weekends /
+ *  zero-capacity). Used to normalize a chained start so a card that would begin
+ *  at end-of-day (e.g. 16:00) renders on the next working day, not the current. */
+export function nextWorkStart(
+  start: Date,
+  employee: Employee,
+  ctx: ScheduleContext,
+): Date {
+  let cursor = new Date(start);
+  if (cursor.getHours() < DAY_START_HOUR) cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+  for (let i = 0; i < MAX_DAYS_LOOKAHEAD; i++) {
+    const hoursOfDay = cursor.getHours() + cursor.getMinutes() / 60;
+    if (hoursOfDay >= DAY_END_HOUR || getDayCapacity(employee, cursor, ctx) <= 0) {
+      cursor = rollToNextWorkday(cursor);
+      continue;
+    }
+    return cursor;
+  }
+  return cursor;
+}
+
 export function recalcEnd(
   line: ScheduleLine,
   employee: Employee,

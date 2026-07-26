@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { differenceInMinutes, format } from "date-fns";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
@@ -33,6 +33,9 @@ interface JobCardProps {
   onDuplicate?: () => void;
   /** Right-click menu action: delete this card (omitted on read-only boards). */
   onDelete?: () => void;
+  /** While the card is being dragged (move / resize / reorder), suppress the
+   *  hover preview so it doesn't cover the board mid-drag. */
+  suppressTooltip?: boolean;
 }
 
 function formatMoney(amount: number): string {
@@ -121,6 +124,7 @@ export default function JobCard({
   onCopy,
   onDuplicate,
   onDelete,
+  suppressTooltip = false,
 }: JobCardProps) {
   // A grouped job card renders its own layout (title + optional description +
   // member job chips) and auto-colors to its department/location (so it recolors
@@ -185,6 +189,7 @@ export default function JobCard({
   const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onDelete;
 
   const open = () => {
+    if (suppressTooltip) return; // don't pop up while dragging this card
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
       if (cardRef.current) setTooltipRect(cardRef.current.getBoundingClientRect());
@@ -194,6 +199,14 @@ export default function JobCard({
     if (timerRef.current) window.clearTimeout(timerRef.current);
     setTooltipRect(null);
   };
+
+  // A drag (move / resize / reorder) starting cancels any open/pending preview
+  // so it can't hover over the board while the user repositions the card. Mouse
+  // enter/leave don't fire mid-drag, so we can't rely on onMouseLeave here.
+  useEffect(() => {
+    if (suppressTooltip) close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppressTooltip]);
 
   return (
     <>

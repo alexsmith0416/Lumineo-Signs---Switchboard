@@ -1,4 +1,4 @@
-import { calculateEndTime } from "./time-walker";
+import { calculateEndTime, nextWorkStart } from "./time-walker";
 import { effectiveHours } from "./capacity";
 import { detectConflicts } from "./conflicts";
 import type {
@@ -384,6 +384,70 @@ export function diffShift(
   }
   const noop = shiftTask(ctx, lineId, target.startDateTime, undefined, { cascade, previewOnly: true });
   return buildDiff(ctx, lineId, move, noop);
+}
+
+/**
+ * Reorder the cards a person works on a single day. `orderedLineIds` is the
+ * desired top-to-bottom sequence (a permutation of that day's line ids).
+ *
+ * We re-pack ONLY the listed cards, anchored at their earliest current start,
+ * chaining each to start when the previous ends. Crucially we do NOT re-settle
+ * the whole board: reordering same-day cards leaves their combined end time
+ * unchanged (sum of hours from the same anchor is order-independent), so no
+ * downstream task and no other person needs to move. Re-settling globally would
+ * reshuffle the person's entire job chain and shove unrelated jobs far out.
+ *
+ * Each card's end is walked from its own hours (occupancy ignored) so the pack
+ * follows the requested order rather than dodging other tasks. The re-packed
+ * `startDateTime` encodes the order, which is what the board reconstructs from
+ * on reload — no new persisted field needed.
+ */
+export function diffResequence(
+  ctx: ScheduleContext,
+  orderedLineIds: ScheduleLineId[],
+): DiffShiftResult {
+  const committedSchedule = ctx.schedule.map((l) => ({ ...l }));
+  const byId = new Map(committedSchedule.map((l) => [l.id, l]));
+  // Only genuine, movable cards take part — locked / custom (PTO, group
+  // containers) stay put and are never reordered.
+  const listed = orderedLineIds
+    .map((id) => byId.get(id))
+    .filter((l): l is ScheduleLine => !!l && !l.isLocked && !l.isCustom);
+  const committed: ScheduleContext = {
+    employees: ctx.employees,
+    departments: ctx.departments,
+    schedule: committedSchedule,
+    workHours: ctx.workHours,
+    overtime: ctx.overtime,
+  };
+
+  if (listed.length < 2) {
+    return { committed, changed: [], target: null, conflicts: detectConflicts(committed) };
+  }
+
+  const emp = ctx.employees.get(listed[0]!.employeeId);
+  let cursor = new Date(Math.min(...listed.map((l) => l.startDateTime.getTime())));
+  const changed: ScheduleLine[] = [];
+  for (const id of orderedLineIds) {
+    const l = byId.get(id);
+    if (!l || l.isLocked || l.isCustom) continue;
+    // Snap the chained start to a real working slot so a card whose predecessor
+    // ends at end-of-day starts the NEXT working day (renders on the right day),
+    // not at 16:00 of the current one.
+    const newStart = emp ? nextWorkStart(cursor, emp, committed) : new Date(cursor);
+    const newEnd = emp
+      ? calculateEndTime(newStart, effectiveHours(l, emp), emp, committed, l.id, true)
+      : new Date(l.endDateTime);
+    if (Math.abs(l.startDateTime.getTime() - newStart.getTime()) >= MEANINGFUL_DELTA_MS) {
+      changed.push(l);
+    }
+    l.startDateTime = newStart;
+    l.endDateTime = newEnd;
+    l.preferredStart = new Date(newStart);
+    cursor = newEnd;
+  }
+
+  return { committed, changed, target: null, conflicts: detectConflicts(committed) };
 }
 
 /** Differential duration change — same isolation as {@link diffShift}. */

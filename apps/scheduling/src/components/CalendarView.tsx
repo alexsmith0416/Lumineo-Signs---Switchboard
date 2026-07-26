@@ -319,8 +319,13 @@ function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: bo
     // capacity/cascade, so the extra days don't block the person. The card is
     // drawn to the LATER of its natural (hours) end and the manual span.
     const naturalEndIdx = getDayIndex(line.endDateTime, weekStart);
-    const spanEndIdx = line.spanDays && line.spanDays > 1 ? startIdx + (line.spanDays - 1) : naturalEndIdx;
-    const endIdx = Math.max(naturalEndIdx, spanEndIdx);
+    // A manual right-edge resize sets an explicit visual span (spanDays) that is
+    // AUTHORITATIVE — it can shrink the card BELOW its hours-derived length as
+    // well as extend it (the user schedules the card the length they want, then
+    // adjusts hours separately). Without a manual span, fall back to the
+    // hours-derived end.
+    const endIdx =
+      line.spanDays && line.spanDays >= 1 ? startIdx + (line.spanDays - 1) : naturalEndIdx;
     if (endIdx < 0 || startIdx > 6) continue;
     const clippedStart = Math.max(0, startIdx);
     let clippedEnd = Math.min(6, endIdx);
@@ -392,6 +397,7 @@ export default function CalendarView({
     overtime,
     loadWeek,
     shiftTaskAndCommit,
+    resequenceDay,
     updateTaskHours,
     setTaskSpan,
     moveRosterPermanent,
@@ -399,6 +405,14 @@ export default function CalendarView({
     deleteScheduleLine,
     addScheduleLine,
   } = useStore();
+
+  // Tracks the line id currently being dragged so a same-day drop / drag-over
+  // can tell a vertical reorder from a cross-day move — the HTML5 dataTransfer
+  // payload isn't readable during `dragover`.
+  const draggedLineIdRef = useRef<string | null>(null);
+  const onResequence = (orderedLineIds: string[]) => {
+    void resequenceDay(orderedLineIds);
+  };
 
   const [editLineId, setEditLineId] = useState<string | null>(null);
   const [editEmployeeId, setEditEmployeeId] = useState<string | null>(null);
@@ -998,6 +1012,10 @@ export default function CalendarView({
           hoveredCellRef.current = null;
         }}
       >
+        {/* Inner wrapper sizes to the full schedule content (not the scroll
+            viewport), so the current-time overlay below spans the whole board
+            height instead of stopping at the bottom of the visible page. */}
+        <div className="calendar-grid__inner">
         {nowLine && (
           <div className="calendar-now-overlay" aria-hidden="true">
             <div className="calendar-now-cell" style={{ gridColumnStart: nowLine.dayIdx + 2 }}>
@@ -1173,6 +1191,8 @@ export default function CalendarView({
                       : null
                   }
                   onCellDrop={onCellDrop}
+                  draggedLineIdRef={draggedLineIdRef}
+                  onResequence={onResequence}
                   canAddJob={!!onEmptyCellClick}
                   onCellClick={(day) => {
                     if (!onEmptyCellClick) return;
@@ -1191,9 +1211,11 @@ export default function CalendarView({
                     await tryResizeWithConfirm(line, newHours);
                   }}
                   onSpan={(line, days) => {
-                    // Right-edge drag = manual VISUAL span. Clear (null) when it's
-                    // back to a single day so the card reverts to hours-derived.
-                    void setTaskSpan(line.id, days > 1 ? days : null);
+                    // Right-edge drag = manual VISUAL span, and it's authoritative:
+                    // store the exact length (including a 1-day shrink) so the card
+                    // sticks where the user dragged it instead of snapping back to
+                    // its hours-derived length.
+                    void setTaskSpan(line.id, days);
                   }}
                   onMoveStart={async (line, newStart) => {
                     await tryShiftWithConfirm(line.id, newStart);
@@ -1215,6 +1237,7 @@ export default function CalendarView({
             })}
           </div>
         ))}
+        </div>
       </div>
 
       {!onJobClick && editLineId && (() => {
@@ -1484,6 +1507,11 @@ interface EmployeeRowProps {
   showWeather: boolean;
   highlightedLineIds: Set<string> | null;
   onCellDrop: (e: React.DragEvent, employeeId: string, day: Date) => void;
+  /** Id of the card being dragged (shared with CalendarView) — lets a same-day
+   *  drop resolve to a vertical reorder instead of a move. */
+  draggedLineIdRef: React.MutableRefObject<string | null>;
+  /** Commit a new top-to-bottom order for one person's day. */
+  onResequence: (orderedLineIds: string[]) => void;
   /** Whether clicking a day cell adds a job (false on read-only boards). */
   canAddJob: boolean;
   onCellClick: (day: Date) => void;
@@ -1523,6 +1551,8 @@ function EmployeeRow({
   showWeather,
   highlightedLineIds,
   onCellDrop,
+  draggedLineIdRef,
+  onResequence,
   canAddJob,
   onCellClick,
   onJobClick,
@@ -1538,6 +1568,12 @@ function EmployeeRow({
   // Day index currently under a drag, for the drop-target highlight. Null when
   // nothing is being dragged over this row.
   const [dropHoverIdx, setDropHoverIdx] = useState<number | null>(null);
+  // When dragging a card over its own day (a vertical reorder rather than a
+  // move), the insertion line's day column + pixel offset. Null otherwise.
+  const [reorderInsert, setReorderInsert] = useState<{
+    dayIdx: number;
+    topPx: number;
+  } | null>(null);
 
   // Un-stacked cards are auto-height (hug their content), but the passed
   // laneHeight comes from a deliberately-generous wrap ESTIMATE — so a row whose
@@ -1587,18 +1623,84 @@ function EmployeeRow({
     return Math.max(0, Math.min(6, Math.floor(((clientX - rect.left) / rect.width) * 7)));
   };
 
+  // This person's cards on weekday `dayIdx`, in visual top-to-bottom order
+  // (lane order == vertical stack). `cards` is start-sorted by computeRowCards.
+  const dayCardsAt = (dayIdx: number): CardLayout[] =>
+    cards
+      .filter((c) => getDayIndex(c.line.startDateTime, days[0]!) === dayIdx)
+      .sort((a, b) => a.lane - b.lane);
+
+  // Where, among `rest` (the day's OTHER cards), the cursor's y lands: count the
+  // cards whose lane midpoint sits above it. Returns 0..rest.length.
+  const insertIndexAmong = (clientY: number, rest: CardLayout[]): number => {
+    const strip = daysRef.current;
+    if (!strip) return rest.length;
+    const rel = clientY - strip.getBoundingClientRect().top;
+    let idx = 0;
+    for (const c of rest) {
+      if (rel > 4 + c.lane * effLaneHeight + effLaneHeight / 2) idx++;
+    }
+    return idx;
+  };
+
+  // If the dragged card belongs to this person's `dayIdx` (and there's another
+  // card to reorder against), return the new top-to-bottom id order for that
+  // day — else null (a normal cross-day/person move).
+  const buildReorder = (dayIdx: number, clientY: number): string[] | null => {
+    const draggedId = draggedLineIdRef.current;
+    if (!draggedId) return null;
+    const dayCards = dayCardsAt(dayIdx);
+    if (dayCards.length < 2 || !dayCards.some((c) => c.line.id === draggedId)) return null;
+    const rest = dayCards.filter((c) => c.line.id !== draggedId);
+    const idx = Math.max(0, Math.min(rest.length, insertIndexAmong(clientY, rest)));
+    const restIds = rest.map((c) => c.line.id);
+    const ordered = [...restIds.slice(0, idx), draggedId, ...restIds.slice(idx)];
+    const current = dayCards.map((c) => c.line.id);
+    if (ordered.every((id, i) => id === current[i])) return null; // unchanged
+    return ordered;
+  };
+
+  const reorderInsertTop = (dayIdx: number, clientY: number): number | null => {
+    const draggedId = draggedLineIdRef.current;
+    if (!draggedId) return null;
+    const dayCards = dayCardsAt(dayIdx);
+    if (dayCards.length < 2 || !dayCards.some((c) => c.line.id === draggedId)) return null;
+    const rest = dayCards.filter((c) => c.line.id !== draggedId);
+    const idx = Math.max(0, Math.min(rest.length, insertIndexAmong(clientY, rest)));
+    const lastLane = rest.length ? rest[rest.length - 1]!.lane : 0;
+    const lane = idx >= rest.length ? lastLane + 1 : rest[idx]!.lane;
+    return 4 + lane * effLaneHeight - 1;
+  };
+
   const handleStripDragOver = (e: React.DragEvent) => {
     if (readOnly) return;
     e.preventDefault();
     const idx = dayIndexFromClientX(e.clientX);
+    const top = reorderInsertTop(idx, e.clientY);
+    if (top != null) {
+      // Reordering within this day — show the insertion line, not the day tint.
+      setDropHoverIdx(null);
+      setReorderInsert((prev) =>
+        prev && prev.dayIdx === idx && prev.topPx === top ? prev : { dayIdx: idx, topPx: top },
+      );
+      return;
+    }
+    setReorderInsert(null);
     setDropHoverIdx((prev) => (prev === idx ? prev : idx));
   };
 
   const handleStripDrop = (e: React.DragEvent) => {
     setDropHoverIdx(null);
+    setReorderInsert(null);
     if (readOnly) return;
     e.preventDefault();
-    onCellDrop(e, emp.id, days[dayIndexFromClientX(e.clientX)]!);
+    const dayIdx = dayIndexFromClientX(e.clientX);
+    const reorder = buildReorder(dayIdx, e.clientY);
+    if (reorder) {
+      onResequence(reorder);
+      return;
+    }
+    onCellDrop(e, emp.id, days[dayIdx]!);
   };
 
   return (
@@ -1654,9 +1756,22 @@ function EmployeeRow({
         onDragLeave={(e) => {
           // Only clear when the drag actually leaves the strip, not when it
           // crosses between child cells/cards inside it.
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropHoverIdx(null);
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setDropHoverIdx(null);
+            setReorderInsert(null);
+          }
         }}
       >
+        {reorderInsert && (
+          <div
+            className="reorder-insert-line"
+            style={{
+              left: `${(reorderInsert.dayIdx / 7) * 100}%`,
+              width: `${100 / 7}%`,
+              top: reorderInsert.topPx,
+            }}
+          />
+        )}
         {days.map((day, i) => {
           const weekend = isWeekend(day);
           // Assist: "full" blocks the whole day (greyed, no drop); "am"/"pm"
@@ -1724,6 +1839,11 @@ function EmployeeRow({
             // handles the visual stacking).
             onCardDragOver={handleStripDragOver}
             onCardDrop={handleStripDrop}
+            onDragStartLine={(id) => (draggedLineIdRef.current = id)}
+            onDragEndLine={() => {
+              draggedLineIdRef.current = null;
+              setReorderInsert(null);
+            }}
             onClick={() => onJobClick(card.line)}
             onResize={(newHours) => onResize(card.line, newHours)}
             onSpan={(days) => onSpan(card.line, days)}
@@ -1754,6 +1874,9 @@ interface GanttCardProps {
   daysRef: React.RefObject<HTMLDivElement | null>;
   onCardDragOver: (e: React.DragEvent) => void;
   onCardDrop: (e: React.DragEvent) => void;
+  /** Report drag start/end so the row can detect a same-day reorder. */
+  onDragStartLine?: (lineId: string) => void;
+  onDragEndLine?: () => void;
   onClick: () => void;
   onResize: (newHours: number) => Promise<void>;
   onSpan: (spanDays: number) => void;
@@ -1777,6 +1900,8 @@ function GanttCard({
   showWeather,
   highlighted,
   daysRef,
+  onDragStartLine,
+  onDragEndLine,
   onCardDragOver,
   onCardDrop,
   onClick,
@@ -1931,8 +2056,12 @@ function GanttCard({
         e.dataTransfer.setData("text/lineId", line.id);
         e.dataTransfer.effectAllowed = "move";
         setDragging(true);
+        onDragStartLine?.(line.id);
       }}
-      onDragEnd={() => setDragging(false)}
+      onDragEnd={() => {
+        setDragging(false);
+        onDragEndLine?.();
+      }}
       // Forward drops landing on this card to the row strip so the dragged
       // task stacks onto the day under the cursor instead of being lost.
       onDragOver={onCardDragOver}
@@ -1955,6 +2084,7 @@ function GanttCard({
         onCopy={onCopy}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        suppressTooltip={dragging || !!movePreview || !!resizePreview}
       />
       {!readOnly && !line.isLocked && (
         <>

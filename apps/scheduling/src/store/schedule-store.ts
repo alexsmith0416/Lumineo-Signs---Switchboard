@@ -1,6 +1,6 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek, format } from "date-fns";
-import { settleSchedule, diffShift, diffResize } from "../engine/cascade";
+import { settleSchedule, diffShift, diffResize, diffResequence } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
@@ -62,6 +62,9 @@ export interface ScheduleStoreState {
     cascade?: boolean,
   ) => Promise<void>;
   updateTaskHours: (lineId: string, overrideHours: number, cascade?: boolean) => Promise<void>;
+  /** Reorder the cards a person works on one day. `orderedLineIds` is the new
+   *  top-to-bottom sequence; the cascade re-packs their start times to match. */
+  resequenceDay: (orderedLineIds: string[]) => Promise<void>;
   /** Set a card's manual VISUAL day span (right-edge drag). Display-only: no
    *  cascade, no dialog, no hours change. null clears it (back to hours-derived). */
   setTaskSpan: (lineId: string, spanDays: number | null) => Promise<void>;
@@ -431,6 +434,53 @@ export function createScheduleStore(
           console.error("[schedule] shift persist failed — resyncing", e);
           void get().loadWeek();
         });
+    },
+
+    resequenceDay: async (orderedLineIds) => {
+      const state = get();
+      const ctx = buildContext(state);
+      const diff = diffResequence(ctx, orderedLineIds);
+      const ds = state.dataSource;
+      const toPersist = diff.changed;
+      if (toPersist.length === 0) return; // order unchanged — nothing to write
+
+      const beforeSchedule = state.schedule;
+      const afterSchedule = diff.committed.schedule;
+      // Optimistic: restack the day's cards immediately, persist affected lines
+      // in the background (resync on failure). Same write payload/path as a move
+      // so it inherits the retrying helper and the write-path invariant.
+      set({ schedule: afterSchedule, conflicts: diff.conflicts });
+
+      const beforeById = new Map(beforeSchedule.map((l) => [l.id, l]));
+      const shiftPayload = (l: ScheduleLine) => ({
+        startDateTime: l.startDateTime,
+        endDateTime: l.endDateTime,
+        employeeId: l.employeeId,
+        departmentId: l.departmentId,
+        departmentWide: l.departmentWide ?? false,
+      });
+      recordEdit(
+        "Reorder",
+        beforeSchedule,
+        afterSchedule,
+        () =>
+          Promise.all(
+            toPersist.map((l) => {
+              const b = beforeById.get(l.id);
+              return b ? ds.updateScheduleLine(b.id, shiftPayload(b)) : Promise.resolve();
+            }),
+          ),
+        () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, shiftPayload(l)))),
+      );
+
+      await Promise.all(
+        toPersist.map((line) =>
+          queueWrite(line.id, () => ds.updateScheduleLine(line.id, shiftPayload(line))),
+        ),
+      ).catch((e) => {
+        console.error("[schedule] resequence persist failed — resyncing", e);
+        void get().loadWeek();
+      });
     },
 
     updateTaskHours: async (lineId, overrideHours, cascade = true) => {

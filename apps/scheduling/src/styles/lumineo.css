@@ -1328,6 +1328,14 @@ input, select, textarea {
   position: relative;
 }
 
+/* Sizes to the full schedule content (taller than the scroll viewport) and is
+   the positioned ancestor for the current-time overlay — so the line spans the
+   whole board, not just the visible page. */
+.calendar-grid__inner {
+  position: relative;
+  min-height: 100%;
+}
+
 /* "Now" indicator — a faint, softly pulsing red line at the current day + time.
    Drawn as a grid overlay that mirrors the header columns so it needs no
    measurement. Toggled via Settings → Display → Current time line. */
@@ -1775,6 +1783,18 @@ input, select, textarea {
    clearly. The card stays in place (HTML5 drag shows a ghost image). */
 .gantt-card--dragging {
   opacity: 0.4;
+}
+
+/* Insertion line shown while dragging a card up/down within its own day to
+   reorder that person's jobs (top = worked first). */
+.reorder-insert-line {
+  position: absolute;
+  height: 3px;
+  background: var(--accent-brand);
+  border-radius: 2px;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px var(--bg-primary);
 }
 
 .gantt-card--highlighted {
