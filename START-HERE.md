@@ -208,7 +208,28 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 26, 2026 · pm) — deployed + committed: Demo mode + interactive tutorial.**
+- **Last shipped (Jul 26, 2026 · eve) — deployed + committed: Unified job add (Phase 1) + Batch scheduling (Phase 2).**
+  Goal: ONE way to add jobs everywhere. Progress so far:
+  - **Phase 1 — unified single-job add.** Add Job (BC) is now two steps: search +
+    task-select (`AddJobPanel`, **Auto mode removed** — was broken) → **Continue →**
+    hands a draft to the **edit panel in "create" mode** (`EditJobPanel` `mode="create"`),
+    pre-filled (task text, summed hours, target dates via `useJobTargets`, stepper via
+    `useJobSteps`; employee/start/end blank). Footer = **Schedule** (employee+start set)
+    or **Auto Schedule** (either blank). Placement via new `services/schedule-draft.ts`
+    `placeDraft()` (Schedule / next-open-slot for a chosen employee / proposeSchedule
+    least-loaded when no employee). Wired via `onConfigure`+`createDraft` in
+    Production/InstallationCalendar.
+  - **Phase 2 — batch scheduling.** `AddJobPanel` Single/Multiple toggle. Multiple →
+    create panel button becomes **Add to list** → `BatchListPanel` (drag-reorder +
+    sort by release/prod-complete/install/hours) → **Schedule N jobs** places
+    top-to-bottom via `services/batch-schedule.ts` `scheduleBatch()` (rebuilds ctx per
+    item so auto packs around prior placements). `BatchItem` type there.
+  - **NEXT — Phase 3 (in progress):** route the **Job Queue** add and **group-card**
+    add through this SAME create-panel flow (queue = same list; still drag in/out).
+    `JobTaskChooser` (custom-task row) from earlier may be superseded/reused.
+  - Phase 4 (routing-labor) — user says it's working; SKIP.
+  - Guide → v1.7. Verified Phase 1 + 2 in-browser (Playwright).
+- **Earlier (Jul 26, 2026 · pm) — deployed + committed: Demo mode + interactive tutorial.**
   - **Isolated demo sandbox:** entering demo swaps every board store to a fresh
     in-memory source (`store.setDataSource` / `resetDataSource`) loaded with ~4
     weeks of tiled test jobs (`src/demo/demo-data.ts`). All edits local; never

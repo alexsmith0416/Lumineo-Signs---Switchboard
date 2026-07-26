@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Department } from "../engine/types";
-import { newId, type QueueGroup, type QueueItem } from "../services/job-queue-data";
+import { newId, type QueueGroup, type QueueItem, type QueueKind } from "../services/job-queue-data";
 import type { UseJobQueueStore } from "../store/job-queue-store";
-import JobSearch from "./JobSearch";
+import { useJobSearch } from "../hooks/useJobSearch";
+import { isInstallResource, isProductionResource } from "../services/planning-line-mapping";
+import JobTaskChooser, { type ChooserLine, type TaskChoice } from "./JobTaskChooser";
 import JobTaskPicker from "./JobTaskPicker";
 import { QueueEditIcon, QueueToggleIcon } from "./QueueIcons";
 
@@ -117,6 +119,7 @@ export default function JobQueuePanel({
               key={group.id}
               group={group}
               deptMap={deptMap}
+              kind={kind}
               editing={editing}
               canEdit={canEdit}
               adding={addingTo === group.id}
@@ -182,6 +185,8 @@ export default function JobQueuePanel({
 interface GroupBlockProps {
   group: QueueGroup;
   deptMap: Map<string, Department>;
+  /** Board kind — drives which BC task band is offered when adding a job. */
+  kind: QueueKind;
   editing: boolean;
   canEdit: boolean;
   adding: boolean;
@@ -203,6 +208,7 @@ interface GroupBlockProps {
 function GroupBlock({
   group,
   deptMap,
+  kind,
   editing,
   canEdit,
   adding,
@@ -222,6 +228,73 @@ function GroupBlock({
 }: GroupBlockProps) {
   const [dropActive, setDropActive] = useState(false);
   const totalHours = group.items.reduce((sum, it) => sum + (it.estimatedHours || 0), 0);
+
+  // Add-a-job flow: search a BC job, then pick which tasks (BC + custom) go on
+  // the queued card — mirrors the group card / regular Add Job.
+  const { query, setQuery, results, loading } = useJobSearch();
+  const [pendingJob, setPendingJob] = useState<{
+    jobNo: string;
+    customerName: string;
+    jobDesc: string;
+    lines: ChooserLine[];
+  } | null>(null);
+  const [choice, setChoice] = useState<TaskChoice | null>(null);
+
+  // Reset the in-progress pick whenever the add area is closed.
+  useEffect(() => {
+    if (!adding) {
+      setPendingJob(null);
+      setChoice(null);
+    }
+  }, [adding]);
+
+  const pickJob = (
+    jobNo: string,
+    customerName: string,
+    jobDesc: string,
+    mapped: Array<{ resourceNo?: string; description: string; estimatedHours: number; departmentId: string | null }>,
+  ) => {
+    const lines: ChooserLine[] = mapped
+      .filter((l) =>
+        kind === "production" ? isProductionResource(l.resourceNo ?? "") : isInstallResource(l.resourceNo ?? ""),
+      )
+      .map((l) => ({ description: l.description, estimatedHours: l.estimatedHours, departmentId: l.departmentId }));
+    setPendingJob({ jobNo, customerName, jobDesc, lines });
+    setChoice(null);
+    setQuery("");
+  };
+
+  const commitPendingJob = () => {
+    if (!pendingJob) return;
+    const descriptions = choice?.descriptions ?? [];
+    const hasSel = descriptions.length > 0;
+    // A job with BC tasks needs at least one chosen (BC or custom); a job with
+    // none is queued whole (its description becomes the card text, 8h default).
+    if (pendingJob.lines.length > 0 && !hasSel) return;
+    onAddJob({
+      id: newId(),
+      groupId: group.id,
+      jobNo: pendingJob.jobNo,
+      customerName: pendingJob.customerName,
+      jobDescription: pendingJob.jobDesc,
+      planningLineDescription: hasSel
+        ? descriptions.join("\n")
+        : pendingJob.jobDesc || pendingJob.jobNo,
+      estimatedHours: hasSel ? choice?.totalHours ?? 0 : 8,
+      departmentId: choice?.departmentId ?? "",
+      crewPersons: null,
+      crewTrucks: null,
+      crewTrips: null,
+      installZip: null,
+      invoiceAmount: null,
+      isCustom: false,
+      customColor: null,
+      customTextColor: null,
+      sortOrder: group.items.length,
+    });
+    setPendingJob(null);
+    setChoice(null);
+  };
 
   const acceptDrop = (e: React.DragEvent, index: number) => {
     const itemId = e.dataTransfer.getData(DND_QUEUE_ITEM);
@@ -314,29 +387,74 @@ function GroupBlock({
 
           {canEdit && adding && (
             <div className="jq-add-job">
-              <JobSearch
-                onPick={(job) =>
-                  onAddJob({
-                    id: newId(),
-                    groupId: group.id,
-                    jobNo: job.jobNo,
-                    customerName: job.customerName,
-                    jobDescription: "",
-                    planningLineDescription: job.description,
-                    estimatedHours: 8,
-                    departmentId: "",
-                    crewPersons: null,
-                    crewTrucks: null,
-                    crewTrips: null,
-                    installZip: null,
-                    invoiceAmount: null,
-                    isCustom: false,
-                    customColor: null,
-                    customTextColor: null,
-                    sortOrder: group.items.length,
-                  })
-                }
-              />
+              {pendingJob ? (
+                // A job is picked — choose which of its tasks (BC + custom) get queued.
+                <div style={{ border: "1px solid var(--border)", borderRadius: 4, padding: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>
+                      {pendingJob.jobNo} — {pendingJob.customerName}
+                    </div>
+                    <button
+                      type="button"
+                      className="group-members__remove"
+                      title="Cancel"
+                      onClick={() => {
+                        setPendingJob(null);
+                        setChoice(null);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <JobTaskChooser key={pendingJob.jobNo} lines={pendingJob.lines} onChange={setChoice} />
+                  </div>
+                  {(() => {
+                    const n = choice?.descriptions.length ?? 0;
+                    return (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ width: "100%", marginTop: 8 }}
+                        disabled={pendingJob.lines.length > 0 && n === 0}
+                        onClick={commitPendingJob}
+                      >
+                        {pendingJob.lines.length === 0 && n === 0
+                          ? "Add job to queue"
+                          : `Add ${n || ""} task${n === 1 ? "" : "s"} to queue`}
+                      </button>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <>
+                  <input
+                    className="form-field__input"
+                    style={{ width: "100%", borderRadius: 4 }}
+                    placeholder="Search BC job number (e.g. J103101 or 103101)…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  {loading && <div className="loading">Searching…</div>}
+                  {results.length > 0 && (
+                    <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0" }}>
+                      {results.map((r) => (
+                        <li key={r.job.jobNo} style={{ marginBottom: 4 }}>
+                          <button
+                            className="btn-secondary"
+                            style={{ width: "100%", textAlign: "left" }}
+                            onClick={() =>
+                              pickJob(r.job.jobNo, r.job.customerName, r.job.description ?? "", r.mappedLines)
+                            }
+                          >
+                            <span style={{ fontWeight: 600 }}>{r.job.jobNo}</span> — {r.job.customerName}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
           )}
 

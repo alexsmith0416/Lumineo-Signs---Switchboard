@@ -15,6 +15,10 @@ import { KIND_META } from "../services/data-source";
 import CalendarView from "./CalendarView";
 import { cardMoneyValue } from "./JobCard";
 import AddJobPanel from "./AddJobPanel";
+import EditJobPanel from "./EditJobPanel";
+import BatchListPanel from "./BatchListPanel";
+import { scheduleBatch, type BatchItem } from "../services/batch-schedule";
+import type { ScheduleLine } from "../engine/types";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
 
@@ -53,6 +57,11 @@ export default function InstallationCalendar({
     start?: Date;
     employeeId?: string;
   } | null>(null);
+  const [createDraft, setCreateDraft] = useState<ScheduleLine | null>(null);
+  const [batchMode, setBatchMode] = useState(false);
+  const [batch, setBatch] = useState<BatchItem[]>([]);
+  const [showBatchList, setShowBatchList] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
@@ -239,7 +248,9 @@ export default function InstallationCalendar({
             <button
               className="btn-add-job"
               onClick={() =>
-                setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
+                batch.length > 0
+                  ? setShowBatchList(true)
+                  : setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
               }
             >
               + Add Job
@@ -255,7 +266,49 @@ export default function InstallationCalendar({
           initialStart={addJobContext.start}
           initialEmployeeId={addJobContext.employeeId}
           onClose={() => setAddJobContext(null)}
+          onConfigure={(draft) => setCreateDraft(draft)}
           useStore={useStore}
+          batchMode={batchMode}
+          onBatchModeChange={setBatchMode}
+          batchCount={batch.length}
+        />
+      )}
+      {createDraft && (
+        <EditJobPanel
+          line={createDraft}
+          mode="create"
+          batchMode={batchMode}
+          onAddToBatch={(item) => {
+            setBatch((b) => [...b, item]);
+            setCreateDraft(null);
+            setShowBatchList(true);
+          }}
+          onClose={() => setCreateDraft(null)}
+          useStore={useStore}
+        />
+      )}
+      {showBatchList && (
+        <BatchListPanel
+          items={batch}
+          busy={batchBusy}
+          onChange={setBatch}
+          onRemove={(id) => setBatch((b) => b.filter((x) => x.id !== id))}
+          onAddAnother={() => {
+            setShowBatchList(false);
+            setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined });
+          }}
+          onScheduleAll={async () => {
+            setBatchBusy(true);
+            try {
+              await scheduleBatch(batch, useStore);
+            } finally {
+              setBatchBusy(false);
+            }
+            setBatch([]);
+            setShowBatchList(false);
+            setBatchMode(false);
+          }}
+          onClose={() => setShowBatchList(false)}
         />
       )}
     </>

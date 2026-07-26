@@ -7,6 +7,10 @@ import { KIND_META } from "../services/data-source";
 import { isLaneEmployeeId, laneDeptId } from "../services/department-lane";
 import CalendarView from "./CalendarView";
 import AddJobPanel from "./AddJobPanel";
+import EditJobPanel from "./EditJobPanel";
+import BatchListPanel from "./BatchListPanel";
+import { scheduleBatch, type BatchItem } from "../services/batch-schedule";
+import type { ScheduleLine } from "../engine/types";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
 
@@ -29,6 +33,14 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
     employeeId?: string;
     departmentId?: string;
   } | null>(null);
+  // A draft handed off from Add Job (search + task select) → opens the unified
+  // create panel where the user configures + schedules it.
+  const [createDraft, setCreateDraft] = useState<ScheduleLine | null>(null);
+  // Batch (Multiple-jobs) scheduling: a prioritized staging list.
+  const [batchMode, setBatchMode] = useState(false);
+  const [batch, setBatch] = useState<BatchItem[]>([]);
+  const [showBatchList, setShowBatchList] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
@@ -116,7 +128,10 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
             <button
               className="btn-add-job"
               onClick={() =>
-                setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
+                // If a batch list is in progress, reopen it; otherwise start a new add.
+                batch.length > 0
+                  ? setShowBatchList(true)
+                  : setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined })
               }
             >
               + Add Job
@@ -140,6 +155,47 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
           initialEmployeeId={addJobContext.employeeId}
           initialDepartmentId={addJobContext.departmentId}
           onClose={() => setAddJobContext(null)}
+          onConfigure={(draft) => setCreateDraft(draft)}
+          batchMode={batchMode}
+          onBatchModeChange={setBatchMode}
+          batchCount={batch.length}
+        />
+      )}
+      {createDraft && (
+        <EditJobPanel
+          line={createDraft}
+          mode="create"
+          batchMode={batchMode}
+          onAddToBatch={(item) => {
+            setBatch((b) => [...b, item]);
+            setCreateDraft(null);
+            setShowBatchList(true);
+          }}
+          onClose={() => setCreateDraft(null)}
+        />
+      )}
+      {showBatchList && (
+        <BatchListPanel
+          items={batch}
+          busy={batchBusy}
+          onChange={setBatch}
+          onRemove={(id) => setBatch((b) => b.filter((x) => x.id !== id))}
+          onAddAnother={() => {
+            setShowBatchList(false);
+            setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined });
+          }}
+          onScheduleAll={async () => {
+            setBatchBusy(true);
+            try {
+              await scheduleBatch(batch, useScheduleStore);
+            } finally {
+              setBatchBusy(false);
+            }
+            setBatch([]);
+            setShowBatchList(false);
+            setBatchMode(false);
+          }}
+          onClose={() => setShowBatchList(false)}
         />
       )}
     </>

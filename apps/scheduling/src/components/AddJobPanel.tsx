@@ -62,9 +62,19 @@ interface AddJobPanelProps {
   useStore?: UseScheduleStore;
   /** Open directly on a card kind (e.g. "group" for the "Add group card" flow). */
   initialKind?: CardKind;
+  /** Hand a pre-filled DRAFT job card to the unified create panel (the edit
+   *  panel in "create" mode) instead of scheduling directly. Individual BC jobs
+   *  use this two-step flow; team/custom/group cards still commit directly. */
+  onConfigure?: (draft: ScheduleLine) => void;
+  /** Batch (Single vs Multiple jobs) toggle state + setter, owned by the parent
+   *  so it persists across the search → configure → list round-trips. */
+  batchMode?: boolean;
+  onBatchModeChange?: (v: boolean) => void;
+  /** Count of jobs already staged (shown on the Multiple toggle). */
+  batchCount?: number;
 }
 
-type Mode = "single" | "multi" | "auto" | "custom-task";
+type Mode = "single" | "multi" | "custom-task";
 type CardKind = "bc" | "custom" | "group";
 
 export default function AddJobPanel({
@@ -74,6 +84,10 @@ export default function AddJobPanel({
   initialDepartmentId,
   useStore = useScheduleStore,
   initialKind = "bc",
+  onConfigure,
+  batchMode = false,
+  onBatchModeChange,
+  batchCount = 0,
 }: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
@@ -194,7 +208,6 @@ export default function AddJobPanel({
       return new Set<number>(singleIdx !== null ? [singleIdx] : []);
     }
     if (mode === "multi") return new Set<number>(checkedIdx);
-    if (mode === "auto") return new Set<number>(visibleLines.map((_, i) => i));
     return new Set<number>(); // custom-task: no planning lines involved
   }, [selected, visibleLines, mode, singleIdx, checkedIdx]);
 
@@ -209,7 +222,7 @@ export default function AddJobPanel({
     };
     const targets = visibleLines.filter((_, i) => targetIdx.has(i));
     const preferred =
-      initialEmployeeId && mode !== "auto"
+      initialEmployeeId
         ? Object.fromEntries(
             [...employees.values()]
               .filter((e) => e.id === initialEmployeeId)
@@ -235,6 +248,34 @@ export default function AddJobPanel({
 
     if (targets.length === 0) return;
 
+    // Individual job → hand a pre-filled DRAFT to the unified create panel
+    // (search + task-select is step 1; the edit panel is step 2). Team (dept
+    // lane) jobs stay on the direct path below.
+    if (!isTeam && onConfigure) {
+      const f = targets[0]!;
+      onConfigure({
+        id: "draft",
+        jobNo: selected.job.jobNo,
+        customerName: selected.job.customerName,
+        jobDescription: selected.job.description ?? "",
+        planningLineDescription: targets.map((t) => t.description).join("\n"),
+        startDateTime: initialStart ?? new Date(),
+        endDateTime: initialStart ?? new Date(),
+        estimatedHours: targets.reduce((sum, t) => sum + t.estimatedHours, 0),
+        overrideHours: null,
+        employeeId: initialEmployeeId ?? "",
+        departmentId:
+          f.departmentId ??
+          (initialEmployeeId ? employees.get(initialEmployeeId)?.departmentId ?? "" : ""),
+        customerDueDate: safeDate(selected.job.promisedDate),
+        isLocked: false,
+        jobSequence: f.lineNo,
+        installZip: selected.job.shipToZip || null,
+      });
+      onClose();
+      return;
+    }
+
     const ctxForEngine = {
       employees: ctxEmployees,
       departments,
@@ -248,7 +289,7 @@ export default function AddJobPanel({
     // department matching — useful for installation/shipping where the
     // resource's "department" is a base location, and for team jobs where the
     // target is the whole department lane.
-    if ((initialEmployeeId || isTeam) && mode !== "auto") {
+    if (initialEmployeeId || isTeam) {
       const emp = isTeam ? laneEmp! : employees.get(initialEmployeeId!);
       if (!emp) return;
 
@@ -343,13 +384,38 @@ export default function AddJobPanel({
   const commitCustomTask = async () => {
     if (!selected) return;
 
+    const hours = Number(customTaskHours);
+    if (!customTaskDesc.trim() || Number.isNaN(hours) || hours <= 0) return;
+
+    // Individual job → hand off to the create panel (employee chosen there).
+    if (!isTeam && onConfigure) {
+      onConfigure({
+        id: "draft",
+        jobNo: selected.job.jobNo,
+        customerName: selected.job.customerName,
+        jobDescription: selected.job.description ?? "",
+        planningLineDescription: customTaskDesc.trim(),
+        startDateTime: initialStart ?? new Date(),
+        endDateTime: initialStart ?? new Date(),
+        estimatedHours: hours,
+        overrideHours: null,
+        employeeId: initialEmployeeId ?? "",
+        departmentId: initialEmployeeId ? employees.get(initialEmployeeId)?.departmentId ?? "" : "",
+        customerDueDate: safeDate(selected.job.promisedDate),
+        isLocked: false,
+        jobSequence: 0,
+        installZip: selected.job.shipToZip || null,
+      });
+      onClose();
+      return;
+    }
+
     const emp = isTeam
       ? laneEmp!
       : customTaskEmployeeId
         ? employees.get(customTaskEmployeeId)
         : undefined;
-    const hours = Number(customTaskHours);
-    if (!emp || !customTaskDesc.trim() || Number.isNaN(hours) || hours <= 0) return;
+    if (!emp) return;
 
     let cursor = initialStart ? new Date(initialStart) : new Date();
     if (cursor.getHours() < 8) cursor.setHours(8, 0, 0, 0);
@@ -611,6 +677,28 @@ export default function AddJobPanel({
         <div className="slide-over__body">
         {cardKind === "bc" && (
         <>
+        {!isTeam && onBatchModeChange && (
+          <div style={{ display: "flex", gap: 6, padding: "10px 12px 0" }}>
+            <button
+              type="button"
+              className={!batchMode ? "btn-primary" : "btn-secondary"}
+              style={{ flex: 1, padding: "6px 10px", fontSize: 12 }}
+              onClick={() => onBatchModeChange(false)}
+              title="Add and schedule one job"
+            >
+              Single job
+            </button>
+            <button
+              type="button"
+              className={batchMode ? "btn-primary" : "btn-secondary"}
+              style={{ flex: 1, padding: "6px 10px", fontSize: 12 }}
+              onClick={() => onBatchModeChange(true)}
+              title="Build a prioritized list of jobs, then schedule them all at once"
+            >
+              Multiple jobs{batchCount > 0 ? ` (${batchCount})` : ""}
+            </button>
+          </div>
+        )}
         <div style={{ padding: 12 }}>
           <input
             className="form-field__input"
@@ -670,15 +758,6 @@ export default function AddJobPanel({
                 >
                   Multi
                 </button>
-                {!isTeam && (
-                  <button
-                    className={mode === "auto" ? "btn-primary" : "btn-secondary"}
-                    style={{ flex: 1 }}
-                    onClick={() => setMode("auto")}
-                  >
-                    Auto
-                  </button>
-                )}
                 <button
                   className={mode === "custom-task" ? "btn-primary" : "btn-secondary"}
                   style={{ flex: 1 }}
@@ -777,7 +856,7 @@ export default function AddJobPanel({
                         marginBottom: 6,
                         background: isCurrent ? "var(--label-bg)" : "var(--bg-secondary)",
                         border: `1px solid ${isCurrent ? "var(--lumineo-navy)" : "var(--border)"}`,
-                        cursor: mode === "auto" ? "default" : "pointer",
+                        cursor: "pointer",
                       }}
                       onClick={() => {
                         if (mode === "single") setSingleIdx(idx);
@@ -817,9 +896,7 @@ export default function AddJobPanel({
                           <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 4 }}>
                             →{" "}
                             {employees.get(
-                              initialEmployeeId && mode !== "auto"
-                                ? initialEmployeeId
-                                : proposedSlot.employeeId,
+                              initialEmployeeId ? initialEmployeeId : proposedSlot.employeeId,
                             )?.name ?? proposedSlot.employeeId}{" "}
                             on {format(proposedSlot.start, "EEE MMM d")}{" "}
                             {format(proposedSlot.start, "HH:mm")}
@@ -1275,7 +1352,9 @@ export default function AddJobPanel({
                 ? mode === "custom-task"
                   ? !selected ||
                     !customTaskDesc.trim() ||
-                    (!isTeam && !customTaskEmployeeId) ||
+                    // Employee is required only for the direct team path — the
+                    // create panel picks the employee for individual jobs.
+                    (!isTeam && !onConfigure && !customTaskEmployeeId) ||
                     Number(customTaskHours) <= 0
                   : !selected ||
                     (mode === "single" && singleIdx === null) ||
@@ -1297,7 +1376,11 @@ export default function AddJobPanel({
                   : commitCustom
             }
           >
-            {cardKind === "group" ? "Create group card" : "Schedule"}
+            {cardKind === "group"
+              ? "Create group card"
+              : cardKind === "bc" && !isTeam && onConfigure
+                ? "Continue →"
+                : "Schedule"}
           </button>
         </div>
       </div>

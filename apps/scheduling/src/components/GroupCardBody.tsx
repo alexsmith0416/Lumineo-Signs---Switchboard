@@ -3,6 +3,7 @@ import { useJobSearch } from "../hooks/useJobSearch";
 import { isInstallResource, isProductionResource } from "../services/planning-line-mapping";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
 import { groupPayloadFits, newMemberId, type GroupMember } from "../services/group-card";
+import JobTaskChooser, { type TaskChoice } from "./JobTaskChooser";
 
 /**
  * Shared editor body for a grouped job card — title + optional description + a
@@ -44,7 +45,8 @@ export default function GroupCardBody({
     jobDesc: string;
     lines: { description: string; estimatedHours: number }[];
   } | null>(null);
-  const [pickedIdx, setPickedIdx] = useState<Set<number>>(new Set());
+  // Running selection (BC tasks + any custom tasks) from the task chooser.
+  const [choice, setChoice] = useState<TaskChoice | null>(null);
 
   const pickResult = (
     jobNo: string,
@@ -60,23 +62,24 @@ export default function GroupCardBody({
       )
       .map((l) => ({ description: l.description, estimatedHours: l.estimatedHours }));
     setPending({ jobNo, customerName, jobDesc, lines });
-    setPickedIdx(new Set());
+    setChoice(null);
     setQuery("");
   };
 
   const commitPending = () => {
     if (!pending) return;
-    const hasLines = pending.lines.length > 0;
-    const picked = pending.lines.filter((_, i) => pickedIdx.has(i));
-    // A job with planning lines requires at least one chosen task; a job with no
-    // BC lines is added whole (its description becomes the task text, 0h).
-    if (hasLines && picked.length === 0) return;
+    const descriptions = choice?.descriptions ?? [];
+    const hasSel = descriptions.length > 0;
+    // A job with planning lines requires at least one chosen task (BC or custom);
+    // a job with no BC lines is added whole (its description becomes the task
+    // text, 0h) unless the user typed custom tasks.
+    if (pending.lines.length > 0 && !hasSel) return;
     const next: GroupMember = {
       id: newMemberId(members.length),
       jobNo: pending.jobNo,
       customerName: pending.customerName,
-      task: hasLines ? picked.map((l) => l.description).join("\n") : pending.jobDesc,
-      estimatedHours: hasLines ? picked.reduce((sum, l) => sum + l.estimatedHours, 0) : 0,
+      task: hasSel ? descriptions.join("\n") : pending.jobDesc,
+      estimatedHours: hasSel ? (choice?.totalHours ?? 0) : 0,
     };
     // The payload is stored in a 2000-char Dataverse column; refuse an add that
     // would overflow it, since a truncated payload loses every member on reload.
@@ -88,7 +91,7 @@ export default function GroupCardBody({
     onAddMember(next);
     setJustAdded(pending.jobNo);
     setPending(null);
-    setPickedIdx(new Set());
+    setChoice(null);
     window.setTimeout(() => setJustAdded(null), 1200);
   };
 
@@ -174,67 +177,31 @@ export default function GroupCardBody({
                   title="Cancel"
                   onClick={() => {
                     setPending(null);
-                    setPickedIdx(new Set());
+                    setChoice(null);
                   }}
                 >
                   ✕
                 </button>
               </div>
-              {pending.lines.length === 0 ? (
-                <div className="jtp__note" style={{ marginTop: 6 }}>
-                  No BC planning lines for this job — it'll be added as a whole job.
-                </div>
-              ) : (
-                <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0" }}>
-                  {pending.lines.map((l, idx) => {
-                    const on = pickedIdx.has(idx);
-                    return (
-                      <li
-                        key={idx}
-                        onClick={() => {
-                          const nextSet = new Set(pickedIdx);
-                          if (nextSet.has(idx)) nextSet.delete(idx);
-                          else nextSet.add(idx);
-                          setPickedIdx(nextSet);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 8,
-                          padding: 6,
-                          borderRadius: 4,
-                          marginBottom: 4,
-                          cursor: "pointer",
-                          background: on ? "var(--label-bg)" : "var(--bg-secondary)",
-                          border: `1px solid ${on ? "var(--lumineo-navy)" : "var(--border)"}`,
-                        }}
-                      >
-                        <span
-                          aria-hidden
-                          style={{ fontSize: 14, lineHeight: "16px", color: on ? "var(--lumineo-navy)" : "var(--text-tertiary)" }}
-                        >
-                          {on ? "☑" : "☐"}
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 500 }}>{l.description}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{l.estimatedHours}h</div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <button
-                type="button"
-                className="btn-primary"
-                style={{ width: "100%", marginTop: 6 }}
-                disabled={pending.lines.length > 0 && pickedIdx.size === 0}
-                onClick={commitPending}
-              >
-                {pending.lines.length === 0
-                  ? "Add job to group"
-                  : `Add ${pickedIdx.size || ""} task${pickedIdx.size === 1 ? "" : "s"} to group`}
-              </button>
+              <div style={{ marginTop: 8 }}>
+                <JobTaskChooser key={pending.jobNo} lines={pending.lines} onChange={setChoice} />
+              </div>
+              {(() => {
+                const n = choice?.descriptions.length ?? 0;
+                return (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ width: "100%", marginTop: 8 }}
+                    disabled={pending.lines.length > 0 && n === 0}
+                    onClick={commitPending}
+                  >
+                    {pending.lines.length === 0 && n === 0
+                      ? "Add job to group"
+                      : `Add ${n || ""} task${n === 1 ? "" : "s"} to group`}
+                  </button>
+                );
+              })()}
             </div>
           ) : (
             <>

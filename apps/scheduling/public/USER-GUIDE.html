@@ -360,11 +360,39 @@
   <h3>5.1 &nbsp;Adding a job</h3>
   <p>Click <strong>+ Add Job</strong> (top-right of the toolbar) or click an empty day cell for a person. You get two kinds of card:</p>
   <h4>BC Job</h4>
+  <p>Adding a BC job is now a simple <strong>two-step</strong> flow — the same job card you get when you click a
+  scheduled job, opened up front so you set the card exactly how you want before it lands:</p>
   <ol class="steps">
-    <li>Search by BC job number or customer name and pick the job.</li>
-    <li>Choose a mode: <strong>Single</strong> (one task), <strong>Multi</strong> (pick several tasks — they stack on one card), <strong>Auto</strong> (the engine places every task on the best person/day), or <strong>Custom task</strong> (type a task for a job that has no BC planning line).</li>
-    <li>Pick the task(s): the job's planning lines list below the mode buttons, each with a selector — a <strong>radio</strong> (Single) or <strong>checkbox</strong> (Multi). Click a task to select it; the selected row highlights and the <strong>Schedule</strong> button turns on. Nothing is pre-selected, so choose exactly what you want to schedule. (Auto pre-selects and places every task for you.)</li>
-    <li>Review the predicted placement, then <strong>Schedule</strong>.</li>
+    <li><strong>Search &amp; pick tasks.</strong> Search by BC job number or customer name and pick the job. Then choose
+    <strong>Single</strong> (one task), <strong>Multi</strong> (several tasks — they stack on one card and their hours
+    sum), or <strong>Custom task</strong> (type a one-off task for a job that has no BC planning line). Click the task(s)
+    you want, then <strong>Continue →</strong>.</li>
+    <li><strong>Configure &amp; schedule.</strong> The job card opens <strong>pre-filled</strong>: the task text, the
+    <strong>estimated hours</strong> (summed from the tasks you picked), the <strong>target production / install window</strong>
+    (from the release-date rules), and the <strong>production stage stepper</strong> (from the job's planning lines).
+    Employee, Start, Modified labor hours and End start blank — fill in what you know:
+      <ul>
+        <li>Set an <strong>employee</strong> and a <strong>start date</strong> → the button reads <strong>Schedule</strong> and drops the card exactly there.</li>
+        <li>Leave either blank → the button reads <strong>Auto Schedule</strong>. It places the card on the next open day — for the employee you chose, or (if none) on the <strong>least-loaded person</strong> in the task's department.</li>
+      </ul>
+    </li>
+  </ol>
+  <div class="note box"><span class="box__label">Heads up</span>
+  The old <em>Auto</em> mode (which force-selected every task) has been removed — use <strong>Auto Schedule</strong> on
+  the configure step instead. This same configure-then-schedule flow is becoming the single way jobs get set up
+  everywhere (Job Queue and group cards next).</div>
+
+  <h4>Scheduling several jobs at once (batch)</h4>
+  <p>At the top of the BC Job panel, switch from <strong>Single job</strong> to <strong>Multiple jobs</strong> to build a
+  prioritized list and schedule them together:</p>
+  <ol class="steps">
+    <li>Set up each job exactly as above (search → tasks → configure), but the button now reads <strong>Add to list</strong>
+    instead of Schedule — the job is staged, not placed yet. Repeat <strong>+ Add job</strong> to add as many as you want.</li>
+    <li>In the list, <strong>prioritize</strong> the jobs: <strong>drag</strong> them up/down, or <strong>Sort</strong> by
+    Release date, Production complete, Install window, or Hours (ascending/descending).</li>
+    <li>Click <strong>Schedule N jobs</strong>. They're scheduled <strong>top-to-bottom</strong> — each job lands per how you
+    set it up (fixed employee/day, or auto onto the next open slot), and auto-scheduled jobs pack around the ones above them
+    so your priority order is respected.</li>
   </ol>
   <h4>Custom Card (blocking out time)</h4>
   <p>For PTO, holidays, inventory, truck maintenance, certifications — anything that isn't a BC job.</p>
@@ -494,6 +522,9 @@
   scheduling but don't have a slot yet. Organize jobs into colored <strong>groups</strong> ("Needs Scheduled",
   "Ready to Schedule"…), then drag a card straight onto the board — or drag a scheduled card back into the queue to
   un-schedule it.</p>
+  <p><strong>Adding a job to the queue</strong> — click <strong>+ Add Job</strong> in a group, search a BC job, then
+  <strong>pick which tasks</strong> go on the card (checkboxes, just like the regular Add Job). Hours sum automatically,
+  and you can add a <strong>custom task</strong> (see below) for anything that isn't a BC planning line.</p>
   <h4>Grouped job cards</h4>
   <p>A <strong>group card</strong> is a container you drop on the board to hold a list of BC jobs — handy for
   "waiting on parts", a punch-list, or any set of jobs a crew can pick up together. It has a <strong>title</strong>,
@@ -506,6 +537,9 @@
     <strong>planning lines as checkboxes</strong> — <strong>choose which tasks</strong> belong in the group (nothing is
     pre-checked) and click <em>Add tasks to group</em>. To place the card on a <strong>whole department</strong> instead of
     one person, right-click the department banner → <em>Add group card…</em></li>
+    <li><strong>Custom task</strong> — under the task list (in the group card <em>and</em> the Job Queue add flow) there's a
+    <strong>+ Custom task</strong> row. Click it to type a one-off task name and its estimated hours, then <em>Add task</em> —
+    it joins the selected tasks and its hours are included in the total. Use it for work that has no BC planning line.</li>
     <li><strong>View a job</strong> in the group — <strong>hover</strong> a pill for a standard job-card preview, or
     <strong>click</strong> it to open a detail popover with <em>Open Project</em> and <em>Open SharePoint Folder</em> links —
     just like a regular job card.</li>
@@ -723,6 +757,9 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Batch scheduling — add many jobs at once</strong> — the BC Job panel has a <strong>Single / Multiple</strong> toggle. In Multiple mode each configured job is <em>added to a list</em>; prioritize the list by dragging or sorting (release date, production complete, install window, hours), then <strong>Schedule N jobs</strong> places them all top-to-bottom. See §5.1.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Add Job now opens the job card, pre-filled — Schedule or Auto&nbsp;Schedule</strong> — adding a BC job is a two-step flow: search &amp; pick tasks (Single/Multi/Custom — <em>Auto</em> removed), then <strong>Continue →</strong> opens the full job card pre-filled with the task text, summed hours, target dates and production stepper. Set an employee + start to <strong>Schedule</strong>, or leave them blank to <strong>Auto&nbsp;Schedule</strong> onto the next open day (of the chosen person, or the least-loaded one in the department). See §5.1.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Pick tasks (and add custom tasks) when queueing / grouping jobs</strong> — adding a job to the <em>Job Queue</em> now lets you choose which BC tasks go on the card (checkboxes), matching the regular Add Job and group cards. And both the Job Queue and group-card add flows gained a <strong>+ Custom task</strong> row — type a one-off task name + hours for work that has no BC planning line. See §5.8.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Interactive demo &amp; tutorial</strong> — a new <em>Launch demo &amp; tutorial</em> button on this Help page opens a safe practice sandbox (a private copy loaded with ~4 weeks of test jobs) with a guided, click-through tour of adding &amp; organizing work. Nothing in the demo is saved. Trainees can also be assigned a demo-only login that always opens in the sandbox. See §2.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Resize now shrinks too — and sticks</strong> — dragging a card's right edge shorter now holds at that length (previously it snapped back to the length its hours filled). Schedule a card whatever length you want, then fine-tune <em>Modified labor hours</em> separately.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Current-time line spans the whole board</strong> — the faint red "now" line now runs the full height of the schedule instead of stopping at the bottom of the visible page.</td></tr>
@@ -774,7 +811,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v1.4 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v1.7 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

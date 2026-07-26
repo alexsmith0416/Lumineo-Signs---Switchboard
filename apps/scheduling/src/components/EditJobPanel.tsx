@@ -6,6 +6,9 @@ import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
 import { useSettingsStore } from "../store/settings-store";
+import { placeDraft } from "../services/schedule-draft";
+import type { BatchItem } from "../services/batch-schedule";
+import { useJobTargets } from "../hooks/useJobTargets";
 import ConfirmDialog from "./ConfirmDialog";
 import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
@@ -37,9 +40,30 @@ interface EditJobPanelProps {
   useStore?: UseScheduleStore;
   /** View-only: disable every field and hide Save/Delete/Duplicate. */
   readOnly?: boolean;
+  /** "create" = adding a NEW (unscheduled) card: employee/start/end start blank,
+   *  Delete/Duplicate are hidden, and the footer shows Schedule / Auto Schedule
+   *  which places the card via placeDraft. Default "edit". */
+  mode?: "edit" | "create";
+  /** Called after a create-mode card is scheduled (defaults to onClose). Lets a
+   *  batch flow keep the panel open / advance to the next job later. */
+  onScheduled?: () => void;
+  /** Batch mode (create only): the footer becomes "Add to list" and calls
+   *  onAddToBatch with the configured item instead of scheduling now. */
+  batchMode?: boolean;
+  onAddToBatch?: (item: BatchItem) => void;
 }
 
-export default function EditJobPanel({ line, onClose, useStore = useScheduleStore, readOnly = false }: EditJobPanelProps) {
+export default function EditJobPanel({
+  line,
+  onClose,
+  useStore = useScheduleStore,
+  readOnly = false,
+  mode = "edit",
+  onScheduled,
+  batchMode = false,
+  onAddToBatch,
+}: EditJobPanelProps) {
+  const isCreate = mode === "create";
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
   const schedule = useStore((s) => s.schedule);
@@ -71,9 +95,11 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
   const [crewTrucks, setCrewTrucks] = useState(line.crewTrucks?.toString() ?? "");
   const [installZip, setInstallZip] = useState(line.installZip ?? "");
   const [finalInstall, setFinalInstall] = useState(!!line.finalInstall);
-  const [employeeId, setEmployeeId] = useState(line.employeeId);
+  // Create mode starts unscheduled: no employee, no start (the user fills them
+  // in, or leaves blank to auto-schedule).
+  const [employeeId, setEmployeeId] = useState(isCreate ? "" : line.employeeId);
   const [startDate, setStartDate] = useState(
-    format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
+    isCreate ? "" : format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
   );
   const [isLocked, setIsLocked] = useState(line.isLocked);
   const [busy, setBusy] = useState(false);
@@ -99,7 +125,9 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
 
   // The End field mirrors the computed end, but holds the user's picked value
   // during a change so a native picker doesn't snap it back.
-  const [endInput, setEndInput] = useState(() => format(line.endDateTime, "yyyy-MM-dd'T'HH:mm"));
+  const [endInput, setEndInput] = useState(() =>
+    isCreate ? "" : format(line.endDateTime, "yyyy-MM-dd'T'HH:mm"),
+  );
   useEffect(() => {
     if (preview.end) setEndInput(format(preview.end, "yyyy-MM-dd'T'HH:mm"));
   }, [preview.end]);
@@ -231,12 +259,89 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
     }
   };
 
+  // Job targets (release-date rules) — used to pre-fill the target section and to
+  // capture sort keys when a job is added to a batch list.
+  const jobTargets = useJobTargets(line.jobNo);
+
+  // Build the configured draft + chosen hours from the (pre-filled + edited)
+  // fields. Shared by Schedule / Auto Schedule and Add-to-list.
+  const makeDraft = (): { draft: ScheduleLine; hours: number } => {
+    const hoursStr = overrideHours.trim();
+    const parsed = hoursStr === "" ? line.estimatedHours : Number(hoursStr);
+    const hours = Number.isNaN(parsed) || parsed <= 0 ? line.estimatedHours : parsed;
+    const num = (v: string): number | null => {
+      const t = v.trim();
+      if (t === "") return null;
+      const n = Number(t);
+      return Number.isNaN(n) ? null : n;
+    };
+    const draft: ScheduleLine = {
+      ...line,
+      jobDescription,
+      planningLineDescription: taskDescription,
+      estimatedHours: hours,
+      overrideHours: null,
+      isLocked,
+      installZip: installZip.trim() || null,
+      crewTrips: num(crewTrips),
+      crewPersons: num(crewPersons),
+      crewTrucks: num(crewTrucks),
+      finalInstall: isInstall ? finalInstall : undefined,
+    };
+    return { draft, hours };
+  };
+
+  // Create mode: build the draft and place it. Schedule (employee + start) drops
+  // it exactly there; Auto Schedule (either blank) finds the next open slot — for
+  // the chosen employee, or the least-loaded person in the task's department.
+  const onCreate = async () => {
+    setBusy(true);
+    try {
+      const { draft } = makeDraft();
+      const ctx: ScheduleContext = { employees, departments, schedule, workHours, overtime };
+      const placed = placeDraft({
+        draft,
+        employeeId: employeeId || null,
+        start: startDate ? new Date(startDate) : null,
+        ctx,
+      });
+      if (!placed) {
+        setBusy(false);
+        return;
+      }
+      await addScheduleLine(placed);
+      (onScheduled ?? onClose)();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Batch mode: stage the configured job in the priority list instead of
+  // scheduling it now (it schedules later, with the rest, in list order).
+  const onAdd = () => {
+    const { draft, hours } = makeDraft();
+    const empId = employeeId || null;
+    onAddToBatch?.({
+      id: `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      draft,
+      employeeId: empId,
+      start: startDate ? new Date(startDate) : null,
+      employeeName: empId ? employees.get(empId)?.name ?? null : null,
+      hours,
+      releaseDate: jobTargets.released ?? null,
+      productionComplete: jobTargets.targets.targetProductionComplete ?? null,
+      installWindow: jobTargets.targets.installWindowStart ?? null,
+    });
+    onClose();
+  };
+
   return (
     <>
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
           <span>
+            {isCreate && <span style={{ fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>New · </span>}
             {line.jobNo} · {line.customerName}
             {readOnly && <span style={{ marginLeft: 8, fontWeight: 400, fontSize: 12, color: "var(--text-tertiary)" }}>· View only</span>}
           </span>
@@ -265,7 +370,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             disabled={readOnly}
           />
         </div>
-        {line.jobNo && !line.isCustom && (
+        {line.jobNo && !line.isCustom && !isCreate && (
           <div className="form-field form-field--block">
             <JobTaskPicker
               jobNo={line.jobNo}
@@ -306,6 +411,7 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             onChange={(e) => setEmployeeId(e.target.value)}
             disabled={readOnly}
           >
+            {isCreate && <option value="">Select employee… (blank = auto)</option>}
             {[...employees.values()].map((e) => (
               <option key={e.id} value={e.id}>{e.name}</option>
             ))}
@@ -449,14 +555,17 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
         </>
         )}
 
-        <PreviewPane
-          startInput={startDate}
-          hours={Number(overrideHours)}
-          employeeId={employeeId}
-          useStore={useStore}
-          currentEnd={line.endDateTime}
-          ignoreLineId={line.id}
-        />
+        {(!isCreate || (employeeId && startDate)) && (
+          <PreviewPane
+            startInput={startDate}
+            hours={overrideHours.trim() === "" ? line.estimatedHours : Number(overrideHours)}
+            employeeId={employeeId}
+            useStore={useStore}
+            currentEnd={line.endDateTime}
+            ignoreLineId={line.id}
+            hideComparison={isCreate}
+          />
+        )}
 
         <div style={{ flex: 1 }} />
 
@@ -468,7 +577,41 @@ export default function EditJobPanel({ line, onClose, useStore = useScheduleStor
             gap: 8,
           }}
         >
-          {readOnly ? (
+          {isCreate && batchMode ? (
+            <>
+              <div style={{ flex: 1 }} />
+              <button className="btn-secondary" disabled={busy} onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                disabled={busy}
+                onClick={onAdd}
+                title="Add this configured job to the schedule list — it schedules with the rest, in priority order"
+              >
+                {employeeId && startDate ? "Add to list (scheduled)" : "Add to list (auto)"}
+              </button>
+            </>
+          ) : isCreate ? (
+            <>
+              <div style={{ flex: 1 }} />
+              <button className="btn-secondary" disabled={busy} onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                disabled={busy}
+                onClick={onCreate}
+                title={
+                  employeeId && startDate
+                    ? "Schedule this card to the chosen employee on the chosen day"
+                    : "Auto-schedule to the next open slot (of the chosen employee, or the least-loaded person in the department)"
+                }
+              >
+                {busy ? "Scheduling…" : employeeId && startDate ? "Schedule" : "Auto Schedule"}
+              </button>
+            </>
+          ) : readOnly ? (
             <>
               <div style={{ flex: 1 }} />
               <button className="btn-primary" onClick={onClose}>
@@ -598,9 +741,11 @@ interface PreviewPaneProps {
   useStore: UseScheduleStore;
   currentEnd: Date;
   ignoreLineId?: string;
+  /** Create mode: no existing end to compare against — hide the changed / was bits. */
+  hideComparison?: boolean;
 }
 
-function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd, ignoreLineId }: PreviewPaneProps) {
+function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd, ignoreLineId, hideComparison }: PreviewPaneProps) {
   const start = startInput ? new Date(startInput) : null;
   const preview = useLivePreview(
     start,
@@ -611,7 +756,7 @@ function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd, igno
     ignoreLineId,
   );
   const changedEnd =
-    preview.end && preview.end.getTime() !== currentEnd.getTime();
+    !hideComparison && preview.end && preview.end.getTime() !== currentEnd.getTime();
   return (
     <div
       style={{
@@ -631,7 +776,8 @@ function PreviewPane({ startInput, hours, employeeId, useStore, currentEnd, igno
             <strong>{format(preview.end, "EEE MMM d HH:mm")}</strong>
           </div>
           <div style={{ color: "var(--text-tertiary)", fontSize: 11, marginTop: 2 }}>
-            {preview.effectiveHours.toFixed(2)}h scheduled · was {format(currentEnd, "MMM d HH:mm")}
+            {preview.effectiveHours.toFixed(2)}h scheduled
+            {!hideComparison && <> · was {format(currentEnd, "MMM d HH:mm")}</>}
           </div>
         </>
       ) : (
