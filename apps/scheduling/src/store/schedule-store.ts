@@ -54,6 +54,11 @@ export interface ScheduleStoreState {
   conflicts: Conflict[];
 
   loadWeek: (weekStart?: Date) => Promise<void>;
+  /** Swap this board's data source at runtime (e.g. entering/leaving the demo
+   *  sandbox) and reload. Demo edits then hit the in-memory source only. */
+  setDataSource: (dataSource: ScheduleDataSource) => Promise<void>;
+  /** Restore the data source the store was created with (leave demo mode). */
+  resetDataSource: () => Promise<void>;
   getContext: () => ScheduleContext;
   shiftTaskAndCommit: (
     lineId: string,
@@ -335,6 +340,20 @@ export function createScheduleStore(
       } catch (err) {
         set({ loading: false, error: err instanceof Error ? err.message : String(err) });
       }
+    },
+
+    setDataSource: async (nextSource) => {
+      // Point the board at a different source (demo sandbox <-> live) and reload
+      // the current week from it. `dataSource` (the factory arg) is the original,
+      // restored by resetDataSource.
+      set({ dataSource: nextSource });
+      useHistoryStore.getState().clear(boardId);
+      await get().loadWeek();
+    },
+    resetDataSource: async () => {
+      set({ dataSource });
+      useHistoryStore.getState().clear(boardId);
+      await get().loadWeek();
     },
 
     getContext: () => buildContext(get()),

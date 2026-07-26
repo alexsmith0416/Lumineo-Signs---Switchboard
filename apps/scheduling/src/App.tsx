@@ -11,6 +11,9 @@ import MonthlyPlanView from "./components/MonthlyPlanView";
 import MyScheduleScreen from "./components/MyScheduleScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import HelpScreen from "./components/HelpScreen";
+import DemoBanner from "./components/DemoBanner";
+import DemoTutorial from "./components/DemoTutorial";
+import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCardCache } from "./services/dataverse-live";
 import { useCurrentUser } from "./services/current-user";
@@ -71,8 +74,16 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, permissions, defaultView, installRegion, isImpersonating, viewingAsName } =
+  const { role, loading: userLoading, permissions, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser } =
     useCurrentUser();
+
+  // Demo sandbox. Demo users boot LOCKED into it (welcome tour shown); anyone
+  // else can launch it from Help (unlocked, can exit).
+  const demoMode = useDemoStore((s) => s.demoMode);
+  const enterDemo = useDemoStore((s) => s.enterDemo);
+  useEffect(() => {
+    if (!userLoading && isDemoUser && !demoMode) enterDemo({ locked: true, welcome: true });
+  }, [userLoading, isDemoUser, demoMode, enterDemo]);
   const myScheduleLabel =
     role.kind === "admin"
       ? "Employee Schedules"
@@ -142,6 +153,7 @@ export default function App() {
           minimal={presentationMode}
         />
         {!presentationMode && <ImpersonationBanner />}
+        {!presentationMode && <DemoBanner />}
         <div className="app-content">
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
@@ -164,9 +176,18 @@ export default function App() {
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
           {view === "settings" && <SettingsScreen />}
-          {view === "help" && <HelpScreen />}
+          {view === "help" && (
+            <HelpScreen
+              onLaunchDemo={() => {
+                enterDemo({ locked: false, welcome: true });
+                setView("production");
+              }}
+            />
+          )}
         </div>
       </main>
+
+      <DemoTutorial onNavigate={(v) => setView(v as View)} />
 
       {presentationMode && (
         <button

@@ -5,9 +5,28 @@
  */
 const GUIDE_URL = `${import.meta.env.BASE_URL}USER-GUIDE.html`;
 
-export default function HelpScreen() {
+interface HelpScreenProps {
+  /** Launch the interactive demo sandbox + guided tutorial. */
+  onLaunchDemo?: () => void;
+}
+
+export default function HelpScreen({ onLaunchDemo }: HelpScreenProps) {
   return (
     <div className="help-screen">
+      {onLaunchDemo && (
+        <div className="help-demo-cta">
+          <div className="help-demo-cta__text">
+            <div className="help-demo-cta__title">Try the interactive demo</div>
+            <div className="help-demo-cta__sub">
+              Open a safe practice copy loaded with test jobs and take a guided, click-through
+              tour. Nothing you do there is saved.
+            </div>
+          </div>
+          <button type="button" className="help-demo-cta__btn" onClick={onLaunchDemo}>
+            ▶ Launch demo &amp; tutorial
+          </button>
+        </div>
+      )}
       <div className="help-screen__bar">
         <div className="help-screen__intro">
           <div className="help-screen__title">User Guide</div>

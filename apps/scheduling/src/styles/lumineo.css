@@ -4091,3 +4091,276 @@ input, select, textarea {
   border-radius: 6px;
   text-align: center;
 }
+
+/* ============================================================
+   Demo sandbox + interactive tutorial
+   ============================================================ */
+
+/* Banner across the top of the app while the demo sandbox is active. */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  background: var(--status-amber-soft);
+  border-bottom: 1px solid var(--status-amber);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.demo-banner__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--status-amber);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-amber) 30%, transparent);
+  flex: none;
+}
+.demo-banner__label {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.demo-banner__msg {
+  color: var(--text-mid);
+}
+.demo-banner__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.demo-banner__btn {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--status-amber);
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+.demo-banner__btn:hover {
+  background: color-mix(in srgb, var(--status-amber) 18%, transparent);
+}
+.demo-banner__btn--exit {
+  border-color: var(--status-red);
+  color: var(--status-red);
+}
+.demo-banner__btn--exit:hover {
+  background: color-mix(in srgb, var(--status-red) 12%, transparent);
+}
+
+/* "Launch demo" call-to-action at the top of the Help screen. */
+.help-demo-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 16px 0;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: linear-gradient(
+    100deg,
+    var(--accent-brand) 0%,
+    color-mix(in srgb, var(--accent-brand) 78%, #3a3aa0) 100%
+  );
+  color: var(--text-on-accent);
+}
+.help-demo-cta__title {
+  font-weight: 700;
+  font-size: 16px;
+}
+.help-demo-cta__sub {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-top: 2px;
+  max-width: 60ch;
+}
+.help-demo-cta__btn {
+  margin-left: auto;
+  flex: none;
+  padding: 10px 18px;
+  border-radius: 7px;
+  border: none;
+  background: #fff;
+  color: var(--accent-brand);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+.help-demo-cta__btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Full-screen scrim behind the welcome card / a targetless step. */
+.tour-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 28, 0.55);
+  z-index: 400;
+}
+.tour-scrim--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Welcome / choose-a-tour card. */
+.tour-welcome {
+  width: min(460px, calc(100vw - 32px));
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  padding: 26px 26px 20px;
+  z-index: 401;
+}
+.tour-welcome__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-brand);
+}
+.tour-welcome__title {
+  margin: 6px 0 8px;
+  font-size: 22px;
+}
+.tour-welcome__sub {
+  color: var(--text-mid);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+.tour-welcome__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tour-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-sunken);
+  cursor: pointer;
+}
+.tour-choice:hover {
+  border-color: var(--accent-brand);
+  background: var(--accent-brand-soft);
+}
+.tour-choice__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+.tour-choice__meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.tour-welcome__skip {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tour-welcome__skip:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* Spotlight ring around the targeted element; the big spread shadow dims the
+   rest of the screen so attention lands on the highlighted control. */
+.tour-spotlight {
+  position: fixed;
+  z-index: 400;
+  border-radius: 8px;
+  border: 2px solid var(--accent-brand);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent-brand) 45%, transparent),
+    0 0 0 9999px rgba(10, 12, 28, 0.55);
+  pointer-events: none;
+  transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
+}
+
+/* Coach-mark tooltip card. */
+.tour-pop {
+  position: fixed;
+  z-index: 402;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 12px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.38);
+  padding: 16px 18px 14px;
+}
+.tour-pop__step {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-brand);
+}
+.tour-pop__title {
+  margin: 5px 0 6px;
+  font-size: 17px;
+}
+.tour-pop__body {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-mid);
+}
+.tour-pop__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tour-pop__skip {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.tour-pop__skip:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+.tour-pop__btns {
+  display: flex;
+  gap: 8px;
+}
+.tour-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.tour-btn--ghost {
+  background: transparent;
+  border-color: var(--border-default);
+  color: var(--text-mid);
+}
+.tour-btn--ghost:hover {
+  border-color: var(--text-dim);
+  color: var(--text-primary);
+}
+.tour-btn--primary {
+  background: var(--accent-brand);
+  color: var(--text-on-accent);
+}
+.tour-btn--primary:hover {
+  filter: brightness(1.08);
+}

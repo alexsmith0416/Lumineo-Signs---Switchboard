@@ -53,6 +53,7 @@ function NavItem({
       type="button"
       className={`sb-nav__item${active ? " sb-nav__item--active" : ""}`}
       aria-current={active ? "page" : undefined}
+      data-tour={`nav-${item.id}`}
       onClick={onClick}
     >
       <span className="sb-nav__icon">

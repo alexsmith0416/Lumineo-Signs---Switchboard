@@ -208,7 +208,26 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 26, 2026) — deployed + committed:** three calendar changes.
+- **Last shipped (Jul 26, 2026 · pm) — deployed + committed: Demo mode + interactive tutorial.**
+  - **Isolated demo sandbox:** entering demo swaps every board store to a fresh
+    in-memory source (`store.setDataSource` / `resetDataSource`) loaded with ~4
+    weeks of tiled test jobs (`src/demo/demo-data.ts`). All edits local; never
+    touch Dataverse. Orchestrated by `src/store/demo-store.ts` (`enterDemo` /
+    `exitDemo`, tutorial phase/track/step). `DemoBanner` shows while active.
+  - **Two ways in:** (1) "▶ Launch demo & tutorial" CTA on `HelpScreen` (everyone;
+    `App` passes `onLaunchDemo`). (2) A new **`demo` UserType** — assign an email →
+    `"demo"` in `USER_DIRECTORY`/Dataverse; they boot **locked** into the sandbox
+    (`isDemoUser` in `current-user.ts`; `App` calls `enterDemo({locked:true})`).
+  - **Tutorial:** `DemoTutorial.tsx` — welcome card (Scheduling tour / Full tour /
+    Skip) + coach-marks (spotlight ring via box-shadow, tooltip, Back/Next/Skip).
+    Targets via `data-tour` attrs on Sidebar items, `.calendar-toolbar__nav`
+    (`calendar-nav`), and `.calendar-toolbar__add` (`add-job`); job-card steps
+    target `.gantt-card`. Steps navigate screens via `onNavigate`.
+  - Verified end-to-end in-browser (Playwright). Guide → v1.4.
+  - Possible follow-ups: add real trainee email(s) as `demo`; hand-craft more
+    varied demo jobs (currently tiled repeats); swap scenario/monthly stores too
+    if a demo user should see demo data there (they read the board stores today).
+- **Earlier (Jul 26, 2026) — deployed + committed:** three calendar changes.
   1. **Same-day card reordering ("resequence the day")** — on Production &
      Installation, drag a card up/down within its own day to set the order the
      person works them (top = first). Native-DnD drop resolves to a reorder when

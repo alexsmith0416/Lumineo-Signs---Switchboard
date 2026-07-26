@@ -939,7 +939,7 @@ export default function CalendarView({
         {/* Navigate via loadWeek (not setWeekStart) so the target week's data is
             actually fetched — live schedule lines are queried per week, so a
             state-only week change would show an empty/stale week. */}
-        <div className="calendar-toolbar__nav">
+        <div className="calendar-toolbar__nav" data-tour="calendar-nav">
           <button onClick={() => void loadWeek(addDays(weekStart, -7))} aria-label="Previous week">‹ Prev</button>
           {startOfWeek(weekStart, { weekStartsOn: 1 }).getTime() ===
           startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() ? (
@@ -999,7 +999,7 @@ export default function CalendarView({
             <PrintIcon />
           </button>
         </div>
-        {addAction && <div className="calendar-toolbar__add">{addAction}</div>}
+        {addAction && <div className="calendar-toolbar__add" data-tour="add-job">{addAction}</div>}
       </div>
       )}
 

@@ -40,7 +40,12 @@ export type UserType =
   | "install-wk"
   | "install-nek"
   | "sales"
-  | "pm";
+  | "pm"
+  // A demo/trainee login. Boots LOCKED into the isolated demo sandbox (mock
+  // data, local-only edits) with full edit rights so they can play freely
+  // without ever touching the real schedules. Assign by mapping an email to
+  // "demo" in USER_DIRECTORY (or the Dataverse users table).
+  | "demo";
 
 export type AppView =
   | "my-schedule"
@@ -93,6 +98,9 @@ export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
   "install-nek": { label: "NEK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
   sales: { label: "Sales", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
   pm: { label: "Project Manager", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
+  // Demo/trainee: full sandbox access so they can try everything. Real data is
+  // never at risk — App boots this type into the locked in-memory demo.
+  demo: { label: "Demo", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
 };
 
 // Roster: login email (lower-case) → user type. Fill this from the provided list.
@@ -176,6 +184,9 @@ export interface CurrentUser {
   defaultView: AppView;
   /** Preferred install region (for installer types). */
   installRegion?: "WK" | "NEK";
+  /** True when the signed-in login is a demo/trainee account — App boots it
+   *  locked into the demo sandbox. */
+  isDemoUser: boolean;
 
   // --- Impersonation ("view as user") ---------------------------------------
   /** The real signed-in user's type (unchanged by impersonation). Only real
@@ -267,6 +278,7 @@ export function useCurrentUser(): CurrentUser {
     },
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,
+    isDemoUser: realType === "demo",
     realType,
     isImpersonating: !!active,
     viewingAsName: active?.name,
