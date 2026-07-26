@@ -1409,6 +1409,7 @@ export default function CalendarView({
       {enableJobQueue && (
         <JobQueuePanel
           useQueueStore={queueStore}
+          scheduleStore={useStore}
           open={queueOpen}
           onClose={() => setQueueOpen(false)}
           canEdit={!readOnly}

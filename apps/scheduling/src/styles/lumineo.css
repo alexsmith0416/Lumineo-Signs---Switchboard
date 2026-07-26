@@ -4128,31 +4128,6 @@ input, select, textarea {
   flex: none;
 }
 
-/* "+ Custom task" row + inline entry form in the add-a-job task chooser. */
-.jtc-custom-add {
-  width: 100%;
-  margin-top: 2px;
-  padding: 7px;
-  border: 1px dashed var(--border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--accent-brand);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.jtc-custom-add:hover {
-  border-color: var(--accent-brand);
-  background: var(--accent-brand-soft);
-}
-.jtc-custom {
-  margin-top: 2px;
-  padding: 8px;
-  border: 1px solid var(--accent-brand);
-  border-radius: 4px;
-  background: var(--bg-secondary);
-}
-
 /* ============================================================
    Demo sandbox + interactive tutorial
    ============================================================ */

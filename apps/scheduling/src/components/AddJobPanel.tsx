@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
 import {
@@ -72,6 +73,11 @@ interface AddJobPanelProps {
   onBatchModeChange?: (v: boolean) => void;
   /** Count of jobs already staged (shown on the Multiple toggle). */
   batchCount?: number;
+  /** BC-only mode: hide the Custom Card / Group Card kind tabs (used when this
+   *  panel is reused to add a job to the Job Queue or a group card). */
+  bcOnly?: boolean;
+  /** Override the confirm button label (default "Continue →" for the handoff). */
+  confirmLabel?: string;
 }
 
 type Mode = "single" | "multi" | "custom-task";
@@ -88,6 +94,8 @@ export default function AddJobPanel({
   batchMode = false,
   onBatchModeChange,
   batchCount = 0,
+  bcOnly = false,
+  confirmLabel,
 }: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
@@ -620,8 +628,11 @@ export default function AddJobPanel({
     onClose();
   };
 
-  return (
-    <div className="slide-over" onClick={onClose}>
+  // Portal to <body> with a high z-index: this panel is often opened from ON TOP
+  // of another slide-over or the (transformed) Job Queue aside, which would
+  // otherwise trap its fixed positioning and stacking.
+  return createPortal(
+    <div className="slide-over" style={{ zIndex: 300 }} onClick={onClose}>
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
           {cardKind === "group" ? "Add Group Card" : isTeam ? "Add Team Job" : "Add Job"}
@@ -636,8 +647,9 @@ export default function AddJobPanel({
 
         {/* Kind toggle: BC Job (search) · Custom Card (block out time) · Group
             card (container of jobs). Team adds are BC-only; a group added via the
-            banner opens straight in group mode (no toggle needed). */}
-        {!isTeam && (
+            banner opens straight in group mode (no toggle needed); bcOnly (reused
+            for queue / group adds) hides the tabs entirely. */}
+        {!isTeam && !bcOnly && (
         <div
           style={{
             display: "flex",
@@ -1379,11 +1391,12 @@ export default function AddJobPanel({
             {cardKind === "group"
               ? "Create group card"
               : cardKind === "bc" && !isTeam && onConfigure
-                ? "Continue →"
+                ? confirmLabel ?? "Continue →"
                 : "Schedule"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

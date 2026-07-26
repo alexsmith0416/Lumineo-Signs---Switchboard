@@ -224,11 +224,17 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     sort by release/prod-complete/install/hours) → **Schedule N jobs** places
     top-to-bottom via `services/batch-schedule.ts` `scheduleBatch()` (rebuilds ctx per
     item so auto packs around prior placements). `BatchItem` type there.
-  - **NEXT — Phase 3 (in progress):** route the **Job Queue** add and **group-card**
-    add through this SAME create-panel flow (queue = same list; still drag in/out).
-    `JobTaskChooser` (custom-task row) from earlier may be superseded/reused.
+  - **Phase 3 — one way everywhere (DONE, deployed).** The **Job Queue** add and
+    **group-card** add now open the SAME `AddJobPanel` (new `bcOnly` prop hides the
+    Custom/Group tabs; custom `confirmLabel`). `onConfigure(draft)` → queue:
+    `queueItemFromDraft` (`JobQueuePanel`, gets the board schedule store via a new
+    `scheduleStore` prop from `CalendarView`); group: `addFromDraft` → GroupMember
+    (`GroupCardBody`). `AddJobPanel` now **portals to `document.body`** (zIndex 300)
+    to escape the queue's `transform` + stacking. Deleted the orphaned
+    `JobTaskChooser` + its CSS. Verified queue + group adds in-browser.
   - Phase 4 (routing-labor) — user says it's working; SKIP.
-  - Guide → v1.7. Verified Phase 1 + 2 in-browser (Playwright).
+  - **Unified-add goal COMPLETE (Phases 1–3).** One add flow: board, batch, queue,
+    group. Guide → v1.8.
 - **Earlier (Jul 26, 2026 · pm) — deployed + committed: Demo mode + interactive tutorial.**
   - **Isolated demo sandbox:** entering demo swaps every board store to a fresh
     in-memory source (`store.setDataSource` / `resetDataSource`) loaded with ~4
