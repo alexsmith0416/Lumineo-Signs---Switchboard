@@ -243,6 +243,11 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
      a "Schedule from" date input (blank = next opening) → future-week batches.
      Tests in `services/schedule-draft.test.ts`.
   Guide → v2.3. 108 tests green.
+- **Also (Jul 26, 2026 · latest) — deployed + committed:** clicking a person's day
+  cell now pre-fills BOTH the employee AND the clicked Start date in the create
+  panel (Production + Installation). `EditJobPanel` create mode seeds `startDate`
+  from `line.startDateTime` only when `line.employeeId` is set (the cell-click
+  signal); toolbar +Add Job stays blank. Guide → v2.4.
 - **Earlier (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
   - **Employee hours/day + time-efficiency%** (Production): right-click a name →
     edit `Hours / day` + `Time efficiency (%)`. Efficiency moved from job-side to

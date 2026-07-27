@@ -370,9 +370,10 @@
     <li><strong>Configure &amp; schedule.</strong> The job card opens <strong>pre-filled</strong>: the task text, the
     <strong>estimated hours</strong> (summed from the tasks you picked), the <strong>target production / install window</strong>
     (from the release-date rules), and the <strong>production stage stepper</strong> (from the job's planning lines).
-    Start, Modified labor hours and End start blank. <strong>Tip:</strong> if you started the add by clicking a
-    <em>person's day cell</em>, that <strong>employee is already selected</strong> for you (via the toolbar
-    <em>+ Add Job</em> button it stays blank). Fill in what you know:
+    Modified labor hours and End start blank. <strong>Tip:</strong> if you started the add by clicking a
+    <em>person's day cell</em> (Production or Installation), that <strong>employee and the clicked date</strong> are
+    already filled in for you — so it's ready to <em>Schedule</em> right there (via the toolbar <em>+ Add Job</em> button
+    both stay blank). Fill in what you know:
       <ul>
         <li>Set an <strong>employee</strong> and a <strong>start date</strong> → the button reads <strong>Schedule</strong> and drops the card exactly there.</li>
         <li>Leave either blank → the button reads <strong>Auto Schedule</strong>. It places the card on the employee's
@@ -772,6 +773,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-fills the employee <em>and</em> the date</strong> — adding a job by clicking a day cell (Production or Installation) now fills in both that employee and the clicked start date, ready to Schedule. The toolbar <em>+ Add Job</em> button still starts blank. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Auto-schedule respects PTO / block-out cards</strong> — a PTO, Holiday, or other block-out card now makes those days unavailable, so auto/batch scheduling never places a job on a blocked day (even when the block-out is stretched across the week visually). </td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Batch: pick a "Schedule from" week</strong> — the schedule list has a <em>Schedule from</em> date so you can aim a batch at a future week; auto-scheduled jobs start from the first opening on/after it (blank = next available opening). See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Auto-scheduled installs stay on one day</strong> — an install job placed by Auto/Batch Schedule now completes on its scheduled day regardless of hours (never bleeds into the next day). You can still manually drag-resize it across days. Install crews stay at 100% efficiency. See §5.1.</td></tr>
@@ -835,7 +837,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.3 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.4 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
