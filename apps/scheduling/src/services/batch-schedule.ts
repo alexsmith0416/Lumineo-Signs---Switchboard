@@ -70,6 +70,7 @@ export interface BatchStoreLike {
     schedule: ScheduleLine[];
     workHours: import("../engine/types").WorkHoursOverride[];
     overtime: import("../engine/types").OvertimeOverride[];
+    dataSource: { kind: import("./data-source").ScheduleKind };
     addScheduleLine: (line: ScheduleLine) => Promise<void>;
   };
 }
@@ -96,7 +97,13 @@ export async function scheduleBatch(items: BatchItem[], store: BatchStoreLike): 
       workHours: s.workHours,
       overtime: s.overtime,
     };
-    const placed = placeDraft({ draft: item.draft, employeeId: item.employeeId, start: item.start, ctx });
+    const placed = placeDraft({
+      draft: item.draft,
+      employeeId: item.employeeId,
+      start: item.start,
+      ctx,
+      singleDay: s.dataSource.kind === "installation",
+    });
     if (!placed) {
       failed.push(item);
       continue;

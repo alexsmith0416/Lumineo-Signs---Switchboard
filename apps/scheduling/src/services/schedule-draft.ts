@@ -35,16 +35,35 @@ export interface PlaceDraftInput {
   /** Chosen start day, or null to auto-find the next open day. */
   start: Date | null;
   ctx: ScheduleContext;
+  /** Installation: a placed card completes on its scheduled DAY regardless of
+   *  hours — clamp the end to the start's calendar day so it never bleeds into
+   *  the next day. (Manual drag-resize can still span it afterwards.) */
+  singleDay?: boolean;
 }
 
-export function placeDraft({ draft, employeeId, start, ctx }: PlaceDraftInput): ScheduleLine | null {
+const DAY_END_HOUR = 16;
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDraftInput): ScheduleLine | null {
   const id = `line-${draft.jobNo || "job"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   const finalize = (empId: string, deptId: string, s: Date): ScheduleLine | null => {
     const emp = ctx.employees.get(empId);
     if (!emp) return null;
     const line: ScheduleLine = { ...draft, id, employeeId: empId, departmentId: deptId, startDateTime: s };
-    const end = calculateEndTime(s, effectiveHours(line, emp), emp, ctx, id);
+    let end = calculateEndTime(s, effectiveHours(line, emp), emp, ctx, id);
+    // Installation completes its scheduled day — keep the card on one day even if
+    // its hours would otherwise spill into the next.
+    if (singleDay && !sameCalendarDay(end, s)) {
+      end = new Date(s);
+      end.setHours(DAY_END_HOUR, 0, 0, 0);
+    }
     return { ...line, endDateTime: end, preferredStart: s };
   };
 

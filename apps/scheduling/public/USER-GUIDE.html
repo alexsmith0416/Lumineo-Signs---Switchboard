@@ -379,7 +379,9 @@
         <strong>first open day</strong> — filling a partial day if they're under 8h, then bleeding into later days as the
         hours need, or starting the first fully-free day if their scheduled days are already full. It always lands
         <em>after</em> existing work (never on top of it). With no employee chosen it picks the <strong>least-loaded
-        person</strong> in the task's department.</li>
+        person</strong> in the task's department. <strong>Installation:</strong> an auto-scheduled install always stays on
+        its <em>single</em> day (installs complete the day they're scheduled, regardless of hours) — you can still manually
+        drag-resize it across days afterward.</li>
       </ul>
     </li>
   </ol>
@@ -768,6 +770,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Auto-scheduled installs stay on one day</strong> — an install job placed by Auto/Batch Schedule now completes on its scheduled day regardless of hours (never bleeds into the next day). You can still manually drag-resize it across days. Install crews stay at 100% efficiency. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>A change affects only the card you change</strong> — editing / moving / resizing a card no longer nudges any other card, and the board keeps its exact positions on reload. (Auto-arrange is now an opt-in <em>Auto-cascade</em> setting.) Fixes cards unexpectedly stretching to fill the week when you edited a different one. See §5.2.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Smarter auto-schedule</strong> — auto-scheduling (and batch scheduling) now places each job on the employee's <em>first open day</em>, filling a partial day then bleeding into the next as hours require, always after existing work. Fixes jobs piling onto Monday / filling the whole week. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-selects that employee</strong> — when you add a job by clicking a cell on someone's row, they're now auto-selected in the job card's Employee dropdown (blank only when you use the toolbar <em>+ Add Job</em> button). See §5.1.</td></tr>
@@ -828,7 +831,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.1 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.2 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -224,6 +224,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     card's end with **ignoreOccupancy when cascade off** (a card owns its own hours →
     stable reload, no cross-card stretch). Auto-cascade is opt-in in Settings.
   - Guide → v2.1. 101 tests green.
+- **Also (Jul 26, 2026 · latest) — deployed + committed:** auto-scheduled INSTALL
+  jobs stay single-day. `placeDraft` gained a `singleDay` flag that clamps the
+  placed end to the start's calendar day; passed `true` for installation from
+  `EditJobPanel` (isInstall) and `scheduleBatch` (`dataSource.kind`). Manual
+  drag-resize still spans. Install crews stay 100% (no efficiency editor — by
+  design, installs are day-based). Test: `services/schedule-draft.test.ts`.
+  Guide → v2.2.
 - **Earlier (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
   - **Employee hours/day + time-efficiency%** (Production): right-click a name →
     edit `Hours / day` + `Time efficiency (%)`. Efficiency moved from job-side to

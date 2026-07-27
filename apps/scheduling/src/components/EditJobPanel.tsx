@@ -306,6 +306,7 @@ export default function EditJobPanel({
         employeeId: employeeId || null,
         start: startDate ? new Date(startDate) : null,
         ctx,
+        singleDay: isInstall, // installs complete their scheduled day
       });
       if (!placed) {
         setBusy(false);
