@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
-import { effectiveHours, isWeekend } from "../engine/capacity";
+import { dayLoad, effectiveHours, isWeekend } from "../engine/capacity";
 import { calculateEndTime } from "../engine/time-walker";
 import { diffShift, diffResize } from "../engine/cascade";
-import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
+import type { Conflict, Department, Employee, ScheduleContext, ScheduleLine } from "../engine/types";
 import type { AssistHalf } from "../services/dataverse-live";
 import type { ResourceAdminInput, ScheduleKind, ScheduleKindMeta } from "../services/data-source";
 import { computeRosterReorder, type RosterDropTarget } from "../services/install-reorder";
@@ -1175,6 +1175,7 @@ export default function CalendarView({
                   }
                   days={days}
                   cards={cards}
+                  scheduleCtx={context}
                   assistDays={assistDaysByEmployee?.get(emp.id)}
                   assistFiller={assistFiller}
                   departments={departments}
@@ -1495,6 +1496,8 @@ interface EmployeeRowProps {
   onRosterDrop?: (e: React.DragEvent) => void;
   days: Date[];
   cards: CardLayout[];
+  /** Full schedule context — for the per-day hours hover readout. */
+  scheduleCtx: ScheduleContext;
   /** Weekday index → which half this employee is lent to Installation. */
   assistDays?: Map<number, AssistHalf>;
   assistFiller: { full: string; half: string };
@@ -1540,6 +1543,7 @@ function EmployeeRow({
   onRosterDrop,
   days,
   cards,
+  scheduleCtx,
   assistDays,
   assistFiller,
   departments,
@@ -1575,6 +1579,9 @@ function EmployeeRow({
     dayIdx: number;
     topPx: number;
   } | null>(null);
+  // Weekday index whose scheduled-hours readout is showing (mouse hover). Null =
+  // hidden. Suppressed while dragging so it doesn't fight the drag affordances.
+  const [hoursDayIdx, setHoursDayIdx] = useState<number | null>(null);
 
   // Un-stacked cards are auto-height (hug their content), but the passed
   // laneHeight comes from a deliberately-generous wrap ESTIMATE — so a row whose
@@ -1754,6 +1761,14 @@ function EmployeeRow({
         className="employee-row__days"
         ref={daysRef}
         style={{ minHeight: effRowMinHeight }}
+        onMouseMove={(e) => {
+          // Show the scheduled-hours readout for the day under the cursor. Works
+          // over job cards too (mousemove bubbles). Only re-render on day change.
+          if (draggedLineIdRef.current) return; // not while dragging
+          const idx = dayIndexFromClientX(e.clientX);
+          setHoursDayIdx((prev) => (prev === idx ? prev : idx));
+        }}
+        onMouseLeave={() => setHoursDayIdx(null)}
         onDragLeave={(e) => {
           // Only clear when the drag actually leaves the strip, not when it
           // crosses between child cells/cards inside it.
@@ -1763,6 +1778,36 @@ function EmployeeRow({
           }
         }}
       >
+        {hoursDayIdx !== null && days[hoursDayIdx] && (() => {
+          const load = dayLoad(emp, days[hoursDayIdx]!, scheduleCtx);
+          const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+          const over = load.scheduled - load.capacity;
+          return (
+            <div
+              className="day-hours-tip"
+              style={{ left: `${(hoursDayIdx / 7) * 100}%`, width: `${100 / 7}%` }}
+            >
+              {load.blocked ? (
+                <span className="day-hours-tip__blocked">{load.blockLabel || "Off"} · blocked</span>
+              ) : load.capacity <= 0 ? (
+                <span className="day-hours-tip__muted">
+                  {load.scheduled > 0 ? `${fmt(load.scheduled)}h · off day` : "Off day"}
+                </span>
+              ) : (
+                <>
+                  <span className={over > 0.05 ? "day-hours-tip__over" : ""}>
+                    {fmt(load.scheduled)}h of {fmt(load.capacity)}h
+                  </span>
+                  <span className="day-hours-tip__sub">
+                    {over > 0.05
+                      ? `${fmt(over)}h over`
+                      : `${fmt(load.capacity - load.scheduled)}h open`}
+                  </span>
+                </>
+              )}
+            </div>
+          );
+        })()}
         {reorderInsert && (
           <div
             className="reorder-insert-line"

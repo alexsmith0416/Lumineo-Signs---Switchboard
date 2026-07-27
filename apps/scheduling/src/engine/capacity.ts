@@ -106,6 +106,37 @@ function effectiveHoursOnDay(line: ScheduleLine, date: Date): number {
   return Math.max(0, (to - from) / 3_600_000);
 }
 
+export interface DayLoad {
+  /** Real job hours scheduled on the day (excludes block-out cards). */
+  scheduled: number;
+  /** The day's available capacity (efficiency-scaled; 0 on a non-working day). */
+  capacity: number;
+  /** True when a PTO / holiday / block-out card covers the day. */
+  blocked: boolean;
+  /** The block-out card's title (jobNo), if any — e.g. "PTO". */
+  blockLabel?: string;
+}
+
+/** Per-employee, per-day load for the hover readout: real scheduled job hours,
+ *  the day's capacity, and whether a block-out (PTO/holiday) covers it. */
+export function dayLoad(employee: Employee, date: Date, ctx: ScheduleContext): DayLoad {
+  const key = dayKey(date);
+  let scheduled = 0;
+  let blocked = false;
+  let blockLabel: string | undefined;
+  for (const line of ctx.schedule) {
+    if (line.employeeId !== employee.id) continue;
+    if (dayKey(line.startDateTime) > key || coverageEndKey(line) < key) continue;
+    if (isBlockoutCard(line)) {
+      blocked = true;
+      blockLabel = blockLabel ?? line.jobNo;
+      continue;
+    }
+    scheduled += effectiveHoursOnDay(line, date);
+  }
+  return { scheduled, capacity: getDayCapacity(employee, date, ctx), blocked, blockLabel };
+}
+
 // A card consumes its raw hours of capacity. Time-efficiency is applied on the
 // CAPACITY side now (see getDayCapacity), so it must NOT be applied here too —
 // the `employee` arg is kept for call-site compatibility.

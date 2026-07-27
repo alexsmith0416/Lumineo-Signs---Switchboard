@@ -243,6 +243,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
      a "Schedule from" date input (blank = next opening) → future-week batches.
      Tests in `services/schedule-draft.test.ts`.
   Guide → v2.3. 108 tests green.
+- **Also (Jul 26, 2026 · latest) — deployed + committed:** per-day scheduled-hours
+  **hover readout**. Hovering a person's day shows "Xh of Yh · Zh open" (red when
+  over, "PTO/off" when blocked). New `dayLoad(employee, date, ctx)` in
+  `capacity.ts` (separates real job hours from the block-out sentinel). `EmployeeRow`
+  tracks the hovered day via `dayIndexFromClientX` (works over cards) and renders a
+  `.day-hours-tip` pill; `scheduleCtx` (the store context) passed down from
+  `CalendarView`. Guide → v2.5.
 - **Also (Jul 26, 2026 · latest) — deployed + committed:** clicking a person's day
   cell now pre-fills BOTH the employee AND the clicked Start date in the create
   panel (Production + Installation). `EditJobPanel` create mode seeds `startDate`

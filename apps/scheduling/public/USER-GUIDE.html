@@ -340,6 +340,7 @@
   <table>
     <tr><th>You see</th><th>It means</th></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
+    <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation.</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
     <tr><td>Pulsing red outline</td><td>The job has a <strong>Red date</strong> — a fixed, drop-dead install date. The outline shows on every board the job appears on so the deadline is never missed.</td></tr>
@@ -773,6 +774,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>See a day's scheduled hours on hover</strong> — hover any day on a person's row to see hours scheduled vs. capacity (e.g. "6h of 8h · 2h open"), red when over capacity, PTO/off for blocked days. See §4.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-fills the employee <em>and</em> the date</strong> — adding a job by clicking a day cell (Production or Installation) now fills in both that employee and the clicked start date, ready to Schedule. The toolbar <em>+ Add Job</em> button still starts blank. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Auto-schedule respects PTO / block-out cards</strong> — a PTO, Holiday, or other block-out card now makes those days unavailable, so auto/batch scheduling never places a job on a blocked day (even when the block-out is stretched across the week visually). </td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Batch: pick a "Schedule from" week</strong> — the schedule list has a <em>Schedule from</em> date so you can aim a batch at a future week; auto-scheduled jobs start from the first opening on/after it (blank = next available opening). See §5.1.</td></tr>
@@ -837,7 +839,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.4 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.5 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
