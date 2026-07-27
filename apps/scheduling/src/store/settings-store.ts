@@ -3,13 +3,12 @@ import { create } from "zustand";
 /**
  * App-wide scheduling preferences (per device, persisted in localStorage).
  *
- * `cascadeEnabled` controls the conflict/cascade behavior: when ON (default),
- * moving or resizing a task that would push other tasks shows the cascade
- * preview dialog, and the board settles to a conflict-free fixpoint on load.
- * When OFF, tasks move/resize freely (a "full override") — nothing auto-moves,
- * the dialog never appears, and the loaded board keeps its stored positions
- * (overlaps just surface a conflict icon). Toggle it in Settings, or turn it
- * off from the cascade dialog itself.
+ * `cascadeEnabled` controls the conflict/cascade behavior. Default OFF: editing
+ * a card (move / resize / hours) changes ONLY that card, nothing auto-moves, no
+ * dialog appears, and the loaded board keeps its stored positions exactly
+ * (overlaps just surface a conflict icon). When ON, moving/resizing a task that
+ * would push others shows the cascade preview dialog and the board settles to a
+ * conflict-free fixpoint on load. Toggle it in Settings.
  */
 const CASCADE_KEY = "lumineo.settings.cascadeEnabled";
 // Whether to hide the purple Power Apps player header. Default OFF (shown).
@@ -56,7 +55,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  cascadeEnabled: readBool(CASCADE_KEY, true),
+  cascadeEnabled: readBool(CASCADE_KEY, false),
   setCascadeEnabled: (value) => {
     writeBool(CASCADE_KEY, value);
     set({ cascadeEnabled: value });

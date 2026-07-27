@@ -208,7 +208,23 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
+- **Last shipped (Jul 26, 2026 · latest) — deployed + committed: no-auto-move edits + smarter auto-schedule.**
+  Fixes two reported bugs: (a) auto-scheduling multiple jobs piled them onto Monday /
+  filled the week; (b) editing one card stretched/moved another.
+  - **Auto-schedule placement** rewritten: `placeDraft` (case B employee-no-start &
+    case C auto-pick) now uses new **`firstOpenSlot(from, emp, ctx, ignoreLineId)`**
+    in `time-walker.ts` — capacity-aware: first work day under 8h (efficiency-scaled),
+    positioned after used hours, then `calculateEndTime` bleeds into later days;
+    skips full days/weekends; appends after existing work (never overlaps).
+    Replaced the old time-gap `findEarliestEmployeeSlot` (now dead, still exported
+    via `_internal`). Tests: `engine/first-open-slot.test.ts` (6).
+  - **Edits never touch other cards:** default **`cascadeEnabled` → false**
+    (`settings-store.ts`). Off = move/resize/hours change only that card, no dialog,
+    and `loadWeek` skips `settleSchedule`. Also loadWeek normalize now computes each
+    card's end with **ignoreOccupancy when cascade off** (a card owns its own hours →
+    stable reload, no cross-card stretch). Auto-cascade is opt-in in Settings.
+  - Guide → v2.1. 101 tests green.
+- **Earlier (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
   - **Employee hours/day + time-efficiency%** (Production): right-click a name →
     edit `Hours / day` + `Time efficiency (%)`. Efficiency moved from job-side to
     **capacity-side**: `capacity.ts` `getDayCapacity` now `*= productivityRate`;

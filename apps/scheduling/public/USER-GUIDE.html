@@ -375,7 +375,11 @@
     <em>+ Add Job</em> button it stays blank). Fill in what you know:
       <ul>
         <li>Set an <strong>employee</strong> and a <strong>start date</strong> → the button reads <strong>Schedule</strong> and drops the card exactly there.</li>
-        <li>Leave either blank → the button reads <strong>Auto Schedule</strong>. It places the card on the next open day — for the employee you chose, or (if none) on the <strong>least-loaded person</strong> in the task's department.</li>
+        <li>Leave either blank → the button reads <strong>Auto Schedule</strong>. It places the card on the employee's
+        <strong>first open day</strong> — filling a partial day if they're under 8h, then bleeding into later days as the
+        hours need, or starting the first fully-free day if their scheduled days are already full. It always lands
+        <em>after</em> existing work (never on top of it). With no employee chosen it picks the <strong>least-loaded
+        person</strong> in the task's department.</li>
       </ul>
     </li>
   </ol>
@@ -412,11 +416,13 @@
     <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to set how many days it spans — <strong>longer or shorter</strong>. Whatever length you drag it to <strong>sticks</strong> (you can even make a card shorter than its hours would normally fill). This is a <strong>visual span only</strong> — it does <em>not</em> change the labor hours and does <em>not</em> pop up a dialog, so you can lay out the week quickly. The days it spans aren't reserved (other jobs can still use that person). Set the actual hours in <strong>Modified labor hours</strong> when you're ready.</li>
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
     <li><strong>Reorder same-day jobs (set priority)</strong> — when a person has more than one job on the same day, drag a card <strong>up or down</strong> within that day to set the order they work them, <strong>top = first</strong>. A blue insertion line shows where the card will land. The card you move takes the earlier start and the others shift later that day; if the day is already full, the job that no longer fits rolls to the next day. On Production &amp; Installation boards.</li>
-    <li><strong>Cascade</strong> — when a move/resize would push other jobs, a dialog previews exactly what moves and offers: <strong>Continue</strong> (cascade the others), <strong>Move only this</strong>, <strong>Try in Sandbox</strong>, or <strong>Turn cascade off</strong>.</li>
   </ul>
-  <div class="note box"><span class="box__label">Cascade on vs. off</span>
-  With cascade <strong>on</strong> (default) the board keeps itself conflict-free by nudging downstream work. Turn it
-  <strong>off</strong> in Settings to move things freely as a full override — overlaps just show a ⚡ icon instead of auto-moving.</div>
+  <div class="note box"><span class="box__label">A change only affects the card you change</span>
+  By <strong>default nothing auto-moves</strong>: editing, moving, or resizing a card changes <em>only that card</em> —
+  no other job shifts on its own, and the board keeps its exact positions when you reload (overlaps just show a ⚡
+  conflict icon so you can fix them by hand). If you'd rather the board <strong>auto-arrange</strong> around your changes,
+  turn on <strong>Auto-cascade</strong> in Settings — then a move/resize that would push other jobs shows a preview
+  dialog (Continue / Move only this / Try in Sandbox) before nudging downstream work.</div>
 
   <h3>5.3 &nbsp;Editing a job</h3>
   <p>Click a card to open the <strong>Edit Job</strong> panel. There you can edit the job description and card text,
@@ -589,7 +595,7 @@
   <h3>5.14 &nbsp;Settings</h3>
   <table>
     <tr><th>Setting</th><th>What it does</th></tr>
-    <tr><td>Auto-cascade &amp; conflict prompts</td><td>On = the board keeps itself in order with move/resize previews. Off = free-form override with ⚡ conflict icons.</td></tr>
+    <tr><td>Auto-cascade &amp; conflict prompts</td><td><strong>Off (default)</strong> = a change affects only that card; nothing auto-moves; overlaps show a ⚡ icon. On = the board auto-arranges around your changes with move/resize previews.</td></tr>
     <tr><td>Full screen (Presentation / TV mode)</td><td>Hides everything but the schedule for a shop TV. Press <span class="kbd">Esc</span> to exit.</td></tr>
     <tr><td>Hide the Power Apps header</td><td>Reclaims the purple bar at the very top for more space (reloads the app; deployed app only).</td></tr>
     <tr><td>Current time line</td><td>Shows a faint, softly pulsing red line at the current day &amp; time on the calendars — a quick marker of where "now" is in the week. Only appears on the current week. On by default.</td></tr>
@@ -762,6 +768,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>A change affects only the card you change</strong> — editing / moving / resizing a card no longer nudges any other card, and the board keeps its exact positions on reload. (Auto-arrange is now an opt-in <em>Auto-cascade</em> setting.) Fixes cards unexpectedly stretching to fill the week when you edited a different one. See §5.2.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Smarter auto-schedule</strong> — auto-scheduling (and batch scheduling) now places each job on the employee's <em>first open day</em>, filling a partial day then bleeding into the next as hours require, always after existing work. Fixes jobs piling onto Monday / filling the whole week. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-selects that employee</strong> — when you add a job by clicking a cell on someone's row, they're now auto-selected in the job card's Employee dropdown (blank only when you use the toolbar <em>+ Add Job</em> button). See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Routing labor now always lists</strong> — fixed a background-sync filter that could drop a job's Routing labor line (BC resource 2010) from the task list. Any resource line on a job now syncs and appears.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Edit an employee's hours/day &amp; time efficiency</strong> — right-click a Production employee's name to set their <strong>Hours / day</strong> and <strong>Time efficiency %</strong>. Efficiency now scales their <em>actual available hours</em> (8h @ 80% = 6.4 usable hours/day), so day capacity, spill, and utilization all reflect it. See §5.9.</td></tr>
@@ -820,7 +828,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.0 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.1 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

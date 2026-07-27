@@ -102,6 +102,49 @@ export function nextWorkStart(
   return cursor;
 }
 
+/**
+ * The first slot an employee has FREE CAPACITY, at or after `from` — where an
+ * auto-scheduled job should start. Walks working days: on the first day whose
+ * used hours are below capacity, returns that day positioned right after the
+ * used hours (so a new job fills a partial day, then bleeds into later days via
+ * calculateEndTime). If every day up to `from`'s week is full, it lands on the
+ * first day with room. Unlike a raw time-gap search this respects the 8h/day
+ * (efficiency-scaled) capacity, so jobs append after existing work instead of
+ * stacking onto the same morning.
+ */
+export function firstOpenSlot(
+  from: Date,
+  employee: Employee,
+  ctx: ScheduleContext,
+  ignoreLineId?: string,
+): Date {
+  let cursor = new Date(from);
+  if (cursor.getHours() < DAY_START_HOUR) cursor.setHours(DAY_START_HOUR, 0, 0, 0);
+  cursor.setMinutes(0, 0, 0);
+  for (let i = 0; i < MAX_DAYS_LOOKAHEAD; i++) {
+    const cap = getDayCapacity(employee, cursor, ctx);
+    if (cap <= 0) {
+      cursor = rollToNextWorkday(cursor);
+      continue;
+    }
+    const used = getHoursUsedOnDay(employee.id, cursor, ctx.schedule, ignoreLineId);
+    // Where the day's committed work ends, in clock hours from 08:00. On the
+    // first pass we honor the caller's start time-of-day if it's later.
+    const usedEndHour = DAY_START_HOUR + used;
+    const cursorHour = cursor.getHours() + cursor.getMinutes() / 60;
+    const startHour = Math.max(usedEndHour, i === 0 ? cursorHour : DAY_START_HOUR);
+    // A day is "open" only if there's real room left after existing work AND the
+    // slot begins before the business-day close.
+    if (cap - used >= 0.05 && startHour < DAY_END_HOUR - 0.05) {
+      const res = new Date(cursor);
+      res.setHours(Math.floor(startHour), Math.round((startHour % 1) * 60), 0, 0);
+      return res;
+    }
+    cursor = rollToNextWorkday(cursor);
+  }
+  return cursor;
+}
+
 export function recalcEnd(
   line: ScheduleLine,
   employee: Employee,

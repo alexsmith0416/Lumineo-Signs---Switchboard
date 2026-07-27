@@ -14,9 +14,8 @@
  */
 import { proposeSchedule } from "./auto-schedule";
 import type { MappedPlanningLine } from "./planning-line-mapping";
-import { calculateEndTime, nextWorkStart } from "../engine/time-walker";
+import { calculateEndTime, firstOpenSlot } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
-import { findEarliestEmployeeSlot } from "../engine/cascade";
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
 
 const DAY_START_HOUR = 8;
@@ -56,12 +55,13 @@ export function placeDraft({ draft, employeeId, start, ctx }: PlaceDraftInput): 
     return finalize(employeeId, emp.departmentId, morning(start));
   }
 
-  // Case B — employee chosen, no start: their next open slot.
+  // Case B — employee chosen, no start: their FIRST OPEN slot (fills the first
+  // day under capacity, then bleeds into later days). Appends after existing
+  // work rather than stacking onto the same morning.
   if (employeeId) {
     const emp = ctx.employees.get(employeeId);
     if (!emp) return null;
-    const gap = findEarliestEmployeeSlot(employeeId, morning(start ?? undefined), id, ctx.schedule);
-    return finalize(employeeId, emp.departmentId, nextWorkStart(gap, emp, ctx));
+    return finalize(employeeId, emp.departmentId, firstOpenSlot(morning(start ?? undefined), emp, ctx, id));
   }
 
   // Case C — no employee: least-loaded person in the task's department.
@@ -79,8 +79,12 @@ export function placeDraft({ draft, employeeId, start, ctx }: PlaceDraftInput): 
   );
   const slot = slots.find((s) => s.employeeId);
   if (slot?.employeeId) {
-    const deptId = slot.departmentId ?? ctx.employees.get(slot.employeeId)?.departmentId ?? draft.departmentId;
-    return finalize(slot.employeeId, deptId, slot.start);
+    const emp = ctx.employees.get(slot.employeeId);
+    const deptId = slot.departmentId ?? emp?.departmentId ?? draft.departmentId;
+    // proposeSchedule picked the least-loaded person; place at THAT person's
+    // first open slot so the card appends after their existing work.
+    const s = emp ? firstOpenSlot(morning(start ?? undefined), emp, ctx, id) : slot.start;
+    return finalize(slot.employeeId, deptId, s);
   }
 
   // Fallback — no one in the department (or unmapped): first available person.
@@ -88,5 +92,5 @@ export function placeDraft({ draft, employeeId, start, ctx }: PlaceDraftInput): 
     [...ctx.employees.values()].find((e) => !draft.departmentId || e.departmentId === draft.departmentId) ??
     [...ctx.employees.values()][0];
   if (!fallback) return null;
-  return finalize(fallback.id, fallback.departmentId, nextWorkStart(morning(start ?? undefined), fallback, ctx));
+  return finalize(fallback.id, fallback.departmentId, firstOpenSlot(morning(start ?? undefined), fallback, ctx, id));
 }

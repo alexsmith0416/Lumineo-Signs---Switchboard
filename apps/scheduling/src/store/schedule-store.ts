@@ -296,6 +296,12 @@ export function createScheduleStore(
         // schema changes (new productivityRate column) and legacy rows.
         // Also seeds `preferredStart` to the loaded position when absent,
         // so the cascade has a "user-intended" floor to pull tasks back to.
+        //
+        // Cascade OFF (default): each card's end spans its OWN hours from its
+        // start (ignoreOccupancy) — a card's length depends only on itself, so
+        // reloading never lets one card's presence stretch another. Cascade ON:
+        // keep occupancy-aware ends since settle re-packs starts below.
+        const cascadeOn = useSettingsStore.getState().cascadeEnabled;
         const normalized = schedule.map((line) => {
           const emp = engineEmpMap.get(line.employeeId);
           const seededPreferred =
@@ -309,6 +315,7 @@ export function createScheduleStore(
             emp,
             ctxForNormalize,
             seededPreferred.id,
+            !cascadeOn, // ignoreOccupancy when cascade off → card owns its hours
           );
           return engineEnd.getTime() === seededPreferred.endDateTime.getTime()
             ? seededPreferred
@@ -325,9 +332,7 @@ export function createScheduleStore(
         // settle so the board keeps its stored positions exactly — overlaps just
         // surface a conflict icon instead of tasks auto-moving.
         const normalizedCtx = { ...ctxForNormalize, schedule: normalized };
-        const final = useSettingsStore.getState().cascadeEnabled
-          ? settleSchedule(normalizedCtx)
-          : normalizedCtx;
+        const final = cascadeOn ? settleSchedule(normalizedCtx) : normalizedCtx;
         set({
           employees: empMap,
           departments: deptMap,
