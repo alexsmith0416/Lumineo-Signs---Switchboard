@@ -1,8 +1,33 @@
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import type { Employee, ScheduleContext, ScheduleLine } from "./types";
 
 export function dayKey(d: Date): string {
   return format(d, "yyyy-MM-dd");
+}
+
+// A "block-out" card (PTO / OFF / Holiday / Maintenance) removes a person's
+// availability for every day it covers. It is a custom card that is NOT a group
+// container ("grp:v1:") or a shipment load — those keep normal hours-based
+// counting. Blocking a huge per-day figure makes the day unavailable to the
+// capacity walker regardless of the day's (efficiency-scaled) capacity.
+const BLOCKOUT_PER_DAY = 1e6;
+function isBlockoutCard(line: ScheduleLine): boolean {
+  return (
+    !!line.isCustom &&
+    !line.shipmentLoadId &&
+    !line.planningLineDescription?.startsWith("grp:v1:")
+  );
+}
+/** The last calendar day a card occupies for CAPACITY — its real end, extended
+ *  by a block-out card's visual span (a PTO card stretched across the week via
+ *  spanDays must block all those days, not just its hours-derived end). */
+function coverageEndKey(line: ScheduleLine): string {
+  let endKey = dayKey(line.endDateTime);
+  if (isBlockoutCard(line) && line.spanDays && line.spanDays > 1) {
+    const spanEnd = dayKey(addDays(line.startDateTime, line.spanDays - 1));
+    if (spanEnd > endKey) endKey = spanEnd;
+  }
+  return endKey;
 }
 
 export function isWeekend(d: Date): boolean {
@@ -47,7 +72,7 @@ export function getHoursUsedOnDay(
         line.employeeId === employeeId &&
         line.id !== ignoreLineId &&
         dayKey(line.startDateTime) <= key &&
-        dayKey(line.endDateTime) >= key,
+        coverageEndKey(line) >= key,
     )
     .reduce((sum, line) => sum + effectiveHoursOnDay(line, date), 0);
 }
@@ -58,6 +83,8 @@ const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 16;
 
 function effectiveHoursOnDay(line: ScheduleLine, date: Date): number {
+  // A block-out card (PTO/OFF/holiday) makes each day it covers unavailable.
+  if (isBlockoutCard(line)) return BLOCKOUT_PER_DAY;
   const total = line.overrideHours ?? line.estimatedHours;
   // Single business-day task: all its hours land on that one day. Keeps the
   // common case exact (the getHoursUsedOnDay contract the tests pin).

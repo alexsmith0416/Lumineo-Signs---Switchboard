@@ -60,5 +60,6 @@ export function line(partial: Partial<ScheduleLine> & {
     isLocked: partial.isLocked ?? false,
     jobSequence: partial.jobSequence ?? 0,
     isCustom: partial.isCustom,
+    spanDays: partial.spanDays,
   };
 }

@@ -44,6 +44,17 @@ describe("firstOpenSlot", () => {
     expect(firstOpenSlot(at(0, 8), bobOf(ctx), ctx).getTime()).toBe(at(7, 8).getTime());
   });
 
+  it("skips days blocked by a PTO block-out card (visual span)", () => {
+    // Bob is on PTO all week (card stretched via spanDays) → first open slot is
+    // the following Monday, not filled alongside the PTO.
+    const pto = line({
+      id: "PTO", jobNo: "PTO", employeeId: "bob", departmentId: "metal",
+      start: at(0, 8), estimatedHours: 8, isCustom: true, spanDays: 5,
+    });
+    const ctx = buildContext([pto]);
+    expect(firstOpenSlot(at(0, 8), bobOf(ctx), ctx).getTime()).toBe(at(7, 8).getTime());
+  });
+
   it("does NOT overlap when placing several jobs in sequence (batch)", () => {
     // Simulate the batch loop: place a job at its first open slot, add it to the
     // schedule (with a real capacity-walked end), then place the next.

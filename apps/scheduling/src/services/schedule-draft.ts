@@ -39,6 +39,10 @@ export interface PlaceDraftInput {
    *  hours — clamp the end to the start's calendar day so it never bleeds into
    *  the next day. (Manual drag-resize can still span it afterwards.) */
   singleDay?: boolean;
+  /** Auto-schedule floor: don't place before this date (search for the first
+   *  open slot from here forward). Used to schedule a batch into a future week.
+   *  Ignored when an explicit `start` is given. */
+  earliestStart?: Date | null;
 }
 
 const DAY_END_HOUR = 16;
@@ -50,8 +54,10 @@ function sameCalendarDay(a: Date, b: Date): boolean {
   );
 }
 
-export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDraftInput): ScheduleLine | null {
+export function placeDraft({ draft, employeeId, start, ctx, singleDay, earliestStart }: PlaceDraftInput): ScheduleLine | null {
   const id = `line-${draft.jobNo || "job"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  // Floor for auto-search: the chosen batch "schedule from" date, else today.
+  const autoFrom = morning(earliestStart ?? undefined);
 
   const finalize = (empId: string, deptId: string, s: Date): ScheduleLine | null => {
     const emp = ctx.employees.get(empId);
@@ -80,7 +86,7 @@ export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDr
   if (employeeId) {
     const emp = ctx.employees.get(employeeId);
     if (!emp) return null;
-    return finalize(employeeId, emp.departmentId, firstOpenSlot(morning(start ?? undefined), emp, ctx, id));
+    return finalize(employeeId, emp.departmentId, firstOpenSlot(start ? morning(start) : autoFrom, emp, ctx, id));
   }
 
   // Case C — no employee: least-loaded person in the task's department.
@@ -94,7 +100,7 @@ export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDr
     { jobNo: draft.jobNo, customerName: draft.customerName, promisedDate: draft.customerDueDate },
     [mapped],
     ctx,
-    start ? { earliestStart: morning(start) } : {},
+    { earliestStart: start ? morning(start) : autoFrom },
   );
   const slot = slots.find((s) => s.employeeId);
   if (slot?.employeeId) {
@@ -102,7 +108,7 @@ export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDr
     const deptId = slot.departmentId ?? emp?.departmentId ?? draft.departmentId;
     // proposeSchedule picked the least-loaded person; place at THAT person's
     // first open slot so the card appends after their existing work.
-    const s = emp ? firstOpenSlot(morning(start ?? undefined), emp, ctx, id) : slot.start;
+    const s = emp ? firstOpenSlot(start ? morning(start) : autoFrom, emp, ctx, id) : slot.start;
     return finalize(slot.employeeId, deptId, s);
   }
 
@@ -111,5 +117,5 @@ export function placeDraft({ draft, employeeId, start, ctx, singleDay }: PlaceDr
     [...ctx.employees.values()].find((e) => !draft.departmentId || e.departmentId === draft.departmentId) ??
     [...ctx.employees.values()][0];
   if (!fallback) return null;
-  return finalize(fallback.id, fallback.departmentId, firstOpenSlot(morning(start ?? undefined), fallback, ctx, id));
+  return finalize(fallback.id, fallback.departmentId, firstOpenSlot(start ? morning(start) : autoFrom, fallback, ctx, id));
 }

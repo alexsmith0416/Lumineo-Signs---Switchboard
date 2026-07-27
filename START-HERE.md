@@ -231,6 +231,18 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   drag-resize still spans. Install crews stay 100% (no efficiency editor — by
   design, installs are day-based). Test: `services/schedule-draft.test.ts`.
   Guide → v2.2.
+- **Also (Jul 26, 2026 · latest) — deployed + committed:** two auto-schedule fixes.
+  1. **PTO/block-out cards now block capacity.** `capacity.ts`: a "block-out"
+     custom card (isCustom, NOT a group `grp:v1:` or shipment) makes every day it
+     covers unavailable — including days covered only by its visual `spanDays`
+     (root cause: a PTO stretched via spanDays kept its real end on day 1, so
+     only that day blocked). `getHoursUsedOnDay`/`coverageEndKey`/`effectiveHoursOnDay`
+     updated; fixture now passes `spanDays`. Tests in capacity + first-open-slot.
+  2. **Batch "Schedule from" date.** `placeDraft` gained `earliestStart` floor;
+     `scheduleBatch(items, store, earliestStart)` threads it; `BatchListPanel` has
+     a "Schedule from" date input (blank = next opening) → future-week batches.
+     Tests in `services/schedule-draft.test.ts`.
+  Guide → v2.3. 108 tests green.
 - **Earlier (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
   - **Employee hours/day + time-efficiency%** (Production): right-click a name →
     edit `Hours / day` + `Time efficiency (%)`. Efficiency moved from job-side to

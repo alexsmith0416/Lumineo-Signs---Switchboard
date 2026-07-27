@@ -399,8 +399,10 @@
     instead of Schedule — the job is staged, not placed yet. Repeat <strong>+ Add job</strong> to add as many as you want.</li>
     <li>In the list, <strong>prioritize</strong> the jobs: <strong>drag</strong> them up/down, or <strong>Sort</strong> by
     Release date, Production complete, Install window, or Hours (ascending/descending).</li>
+    <li>Pick a <strong>Schedule from</strong> date to aim the whole list at a future week — auto-scheduled jobs start from
+    the first opening on or after that date. Leave it blank for the <strong>next available opening</strong>.</li>
     <li>Click <strong>Schedule N jobs</strong>. They're scheduled <strong>top-to-bottom</strong> — each job lands per how you
-    set it up (fixed employee/day, or auto onto the next open slot), and auto-scheduled jobs pack around the ones above them
+    set it up (fixed employee/day, or auto onto the first open slot), and auto-scheduled jobs pack around the ones above them
     so your priority order is respected.</li>
   </ol>
   <h4>Custom Card (blocking out time)</h4>
@@ -770,6 +772,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Auto-schedule respects PTO / block-out cards</strong> — a PTO, Holiday, or other block-out card now makes those days unavailable, so auto/batch scheduling never places a job on a blocked day (even when the block-out is stretched across the week visually). </td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Batch: pick a "Schedule from" week</strong> — the schedule list has a <em>Schedule from</em> date so you can aim a batch at a future week; auto-scheduled jobs start from the first opening on/after it (blank = next available opening). See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Auto-scheduled installs stay on one day</strong> — an install job placed by Auto/Batch Schedule now completes on its scheduled day regardless of hours (never bleeds into the next day). You can still manually drag-resize it across days. Install crews stay at 100% efficiency. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>A change affects only the card you change</strong> — editing / moving / resizing a card no longer nudges any other card, and the board keeps its exact positions on reload. (Auto-arrange is now an opt-in <em>Auto-cascade</em> setting.) Fixes cards unexpectedly stretching to fill the week when you edited a different one. See §5.2.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Smarter auto-schedule</strong> — auto-scheduling (and batch scheduling) now places each job on the employee's <em>first open day</em>, filling a partial day then bleeding into the next as hours require, always after existing work. Fixes jobs piling onto Monday / filling the whole week. See §5.1.</td></tr>
@@ -831,7 +835,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.2 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.3 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

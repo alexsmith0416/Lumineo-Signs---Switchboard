@@ -184,10 +184,10 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
             setShowBatchList(false);
             setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined });
           }}
-          onScheduleAll={async () => {
+          onScheduleAll={async (fromDate) => {
             setBatchBusy(true);
             try {
-              await scheduleBatch(batch, useScheduleStore);
+              await scheduleBatch(batch, useScheduleStore, fromDate);
             } finally {
               setBatchBusy(false);
             }

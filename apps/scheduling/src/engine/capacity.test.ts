@@ -87,6 +87,30 @@ describe("getHoursUsedOnDay", () => {
     expect(used).toBe(6);
   });
 
+  it("a PTO block-out card blocks every day of its visual span", () => {
+    // PTO stretched across the week via spanDays (real end is still day 0).
+    const pto = line({
+      id: "PTO", jobNo: "PTO", employeeId: "bob", departmentId: "metal",
+      start: at(0, 8), estimatedHours: 8, isCustom: true, spanDays: 5,
+    });
+    // Every covered day (Mon–Fri) reads as fully consumed, so nothing schedules over it.
+    for (const d of [0, 1, 2, 3, 4]) {
+      expect(getHoursUsedOnDay("bob", at(d, 10), [pto])).toBeGreaterThan(8);
+    }
+    // The day after the span is free again.
+    expect(getHoursUsedOnDay("bob", at(5, 10), [pto])).toBe(0);
+  });
+
+  it("a group card is NOT treated as a block-out (keeps hours counting)", () => {
+    const grp = line({
+      id: "G", jobNo: "Group", employeeId: "bob", departmentId: "metal",
+      start: at(0, 8), estimatedHours: 4, isCustom: true,
+      planningLineDescription: "grp:v1:{}", spanDays: 5,
+    });
+    expect(getHoursUsedOnDay("bob", at(0, 10), [grp])).toBe(4); // its hours, not a block
+    expect(getHoursUsedOnDay("bob", at(2, 10), [grp])).toBe(0); // span doesn't block
+  });
+
   it("ignores given ignoreLineId", () => {
     const l1 = line({ id: "a", jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 6 });
     expect(getHoursUsedOnDay("bob", at(0, 12), [l1], "a")).toBe(0);

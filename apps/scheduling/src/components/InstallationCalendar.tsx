@@ -297,10 +297,10 @@ export default function InstallationCalendar({
             setShowBatchList(false);
             setAddJobContext({ start: addDays(weekStart, 0), employeeId: undefined });
           }}
-          onScheduleAll={async () => {
+          onScheduleAll={async (fromDate) => {
             setBatchBusy(true);
             try {
-              await scheduleBatch(batch, useStore);
+              await scheduleBatch(batch, useStore, fromDate);
             } finally {
               setBatchBusy(false);
             }

@@ -85,7 +85,13 @@ export interface BatchResult {
  * the store BEFORE each placement so auto-scheduled jobs see the ones already
  * placed and pack around them — honoring the priority order.
  */
-export async function scheduleBatch(items: BatchItem[], store: BatchStoreLike): Promise<BatchResult> {
+export async function scheduleBatch(
+  items: BatchItem[],
+  store: BatchStoreLike,
+  /** Auto-schedule floor: place auto items on the first open slot from this date
+   *  forward (lets a batch be scheduled into a future week). Null = from today. */
+  earliestStart: Date | null = null,
+): Promise<BatchResult> {
   let scheduled = 0;
   const failed: BatchItem[] = [];
   for (const item of items) {
@@ -103,6 +109,7 @@ export async function scheduleBatch(items: BatchItem[], store: BatchStoreLike): 
       start: item.start,
       ctx,
       singleDay: s.dataSource.kind === "installation",
+      earliestStart,
     });
     if (!placed) {
       failed.push(item);
