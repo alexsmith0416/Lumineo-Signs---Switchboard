@@ -95,9 +95,11 @@ export default function EditJobPanel({
   const [crewTrucks, setCrewTrucks] = useState(line.crewTrucks?.toString() ?? "");
   const [installZip, setInstallZip] = useState(line.installZip ?? "");
   const [finalInstall, setFinalInstall] = useState(!!line.finalInstall);
-  // Create mode starts unscheduled: no employee, no start (the user fills them
-  // in, or leaves blank to auto-schedule).
-  const [employeeId, setEmployeeId] = useState(isCreate ? "" : line.employeeId);
+  // Create mode starts unscheduled with no start date. The employee is seeded
+  // from the draft: when the add was started by clicking a person's day cell the
+  // draft carries that employee (pre-select them here); when started from the
+  // toolbar "Add Job" button the draft's employeeId is blank (stays "auto").
+  const [employeeId, setEmployeeId] = useState(line.employeeId);
   const [startDate, setStartDate] = useState(
     isCreate ? "" : format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
   );

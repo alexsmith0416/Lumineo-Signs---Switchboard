@@ -26,6 +26,11 @@ export interface ResourceAdminInput {
   truckNumber?: string | null;
   /** Installation: crfdf_certifiedcraneoperator. */
   isCertifiedCraneOperator?: boolean;
+  /** Standard clock hours available per work day (crfdf_standardhoursperday). */
+  standardHoursPerDay?: number;
+  /** Time-efficiency as a rate (1 = 100%). Scales available hours per day
+   *  (crfdf_productivityrate). */
+  productivityRate?: number;
 }
 
 export interface ScheduleDataSource {

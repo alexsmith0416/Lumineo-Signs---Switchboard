@@ -39,14 +39,37 @@ describe("getDayCapacity", () => {
     const bob = ctx.employees.get("bob")!;
     expect(getDayCapacity(bob, at(0, 8), ctx)).toBe(11);
   });
+
+  it("scales available hours by time-efficiency", () => {
+    const ctx = buildContext([]);
+    // 8h/day at 80% efficiency = 6.4 usable hours.
+    ctx.employees.set("bob", { ...ctx.employees.get("bob")!, productivityRate: 0.8 });
+    const bob = ctx.employees.get("bob")!;
+    expect(getDayCapacity(bob, at(0, 8), ctx)).toBeCloseTo(6.4, 5);
+  });
+
+  it("scales overtime by efficiency too", () => {
+    const ctx = buildContext([]);
+    ctx.employees.set("bob", { ...ctx.employees.get("bob")!, productivityRate: 0.5 });
+    ctx.overtime.push({ employeeId: "bob", date: "2026-06-01", extraHours: 2, costMultiplier: 1.5 });
+    const bob = ctx.employees.get("bob")!;
+    expect(getDayCapacity(bob, at(0, 8), ctx)).toBe(5); // (8 + 2) * 0.5
+  });
+
+  it("treats efficiency 0 as 100% (legacy/blank, never zero capacity)", () => {
+    const ctx = buildContext([]);
+    ctx.employees.set("bob", { ...ctx.employees.get("bob")!, productivityRate: 0 });
+    const bob = ctx.employees.get("bob")!;
+    expect(getDayCapacity(bob, at(0, 8), ctx)).toBe(8);
+  });
 });
 
 describe("effectiveHours", () => {
-  it("divides by productivity rate", () => {
+  it("returns raw hours — efficiency lives on the capacity side now", () => {
     const ctx = buildContext([]);
     const bob = { ...ctx.employees.get("bob")!, productivityRate: 0.8 };
     const l = line({ jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 8 });
-    expect(effectiveHours(l, bob)).toBe(10);
+    expect(effectiveHours(l, bob)).toBe(8);
   });
 
   it("uses overrideHours when set", () => {
@@ -54,13 +77,6 @@ describe("effectiveHours", () => {
     const bob = { ...ctx.employees.get("bob")!, productivityRate: 1 };
     const l = line({ jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 8, overrideHours: 5 });
     expect(effectiveHours(l, bob)).toBe(5);
-  });
-
-  it("treats productivity rate of 0 as 1 (no division)", () => {
-    const ctx = buildContext([]);
-    const bob = { ...ctx.employees.get("bob")!, productivityRate: 0 };
-    const l = line({ jobNo: "J1", employeeId: "bob", departmentId: "metal", start: at(0, 8), estimatedHours: 8 });
-    expect(effectiveHours(l, bob)).toBe(8);
   });
 });
 

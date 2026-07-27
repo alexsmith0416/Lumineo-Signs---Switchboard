@@ -370,7 +370,9 @@
     <li><strong>Configure &amp; schedule.</strong> The job card opens <strong>pre-filled</strong>: the task text, the
     <strong>estimated hours</strong> (summed from the tasks you picked), the <strong>target production / install window</strong>
     (from the release-date rules), and the <strong>production stage stepper</strong> (from the job's planning lines).
-    Employee, Start, Modified labor hours and End start blank — fill in what you know:
+    Start, Modified labor hours and End start blank. <strong>Tip:</strong> if you started the add by clicking a
+    <em>person's day cell</em>, that <strong>employee is already selected</strong> for you (via the toolbar
+    <em>+ Add Job</em> button it stays blank). Fill in what you know:
       <ul>
         <li>Set an <strong>employee</strong> and a <strong>start date</strong> → the button reads <strong>Schedule</strong> and drops the card exactly there.</li>
         <li>Leave either blank → the button reads <strong>Auto Schedule</strong>. It places the card on the next open day — for the employee you chose, or (if none) on the <strong>least-loaded person</strong> in the task's department.</li>
@@ -554,6 +556,10 @@
   <ul>
     <li><strong>Add</strong> a person — right-click a department / location banner → <em>Add employee</em>.</li>
     <li><strong>Edit / delete</strong> — right-click a person's name.</li>
+    <li><strong>Hours per day &amp; time efficiency</strong> (Production) — right-click a person's name to set their
+    <strong>Hours / day</strong> and <strong>Time efficiency %</strong>. Efficiency scales their <strong>usable hours</strong>:
+    e.g. 8h/day at 80% = <strong>6.4 available hours</strong> per day (shown live as you type). Lower efficiency means jobs
+    fill more of their week and their day capacity / utilization update accordingly.</li>
     <li><strong>Reorder / move</strong> — right-click the <em>resource column header</em> to unlock drag-reordering, then drag a name to a new spot or group. You'll be asked <strong>"just this week"</strong> or <strong>"permanent"</strong> (see Walkthrough 4).</li>
   </ul>
 
@@ -756,6 +762,9 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-selects that employee</strong> — when you add a job by clicking a cell on someone's row, they're now auto-selected in the job card's Employee dropdown (blank only when you use the toolbar <em>+ Add Job</em> button). See §5.1.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Routing labor now always lists</strong> — fixed a background-sync filter that could drop a job's Routing labor line (BC resource 2010) from the task list. Any resource line on a job now syncs and appears.</td></tr>
+      <tr><td>Jul 26, 2026</td><td><strong>Edit an employee's hours/day &amp; time efficiency</strong> — right-click a Production employee's name to set their <strong>Hours / day</strong> and <strong>Time efficiency %</strong>. Efficiency now scales their <em>actual available hours</em> (8h @ 80% = 6.4 usable hours/day), so day capacity, spill, and utilization all reflect it. See §5.9.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>One consistent way to add jobs — everywhere</strong> — the Job Queue and group cards now use the <em>same</em> Add Job panel as the board (search → Single / Multi / Custom task). Adding to the queue ends with <strong>Add to queue</strong>; adding to a group ends with <strong>Add to group</strong>. No more slightly-different add flows per feature. See §5.8.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Batch scheduling — add many jobs at once</strong> — the BC Job panel has a <strong>Single / Multiple</strong> toggle. In Multiple mode each configured job is <em>added to a list</em>; prioritize the list by dragging or sorting (release date, production complete, install window, hours), then <strong>Schedule N jobs</strong> places them all top-to-bottom. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Add Job now opens the job card, pre-filled — Schedule or Auto&nbsp;Schedule</strong> — adding a BC job is a two-step flow: search &amp; pick tasks (Single/Multi/Custom — <em>Auto</em> removed), then <strong>Continue →</strong> opens the full job card pre-filled with the task text, summed hours, target dates and production stepper. Set an employee + start to <strong>Schedule</strong>, or leave them blank to <strong>Auto&nbsp;Schedule</strong> onto the next open day (of the chosen person, or the least-loaded one in the department). See §5.1.</td></tr>
@@ -811,7 +820,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v1.8 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.0 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -116,6 +116,8 @@ function applyResourceInput(
 ): Employee {
   const out = { ...emp };
   if (input.name !== undefined) out.name = input.name;
+  if (input.standardHoursPerDay !== undefined) out.standardHoursPerDay = input.standardHoursPerDay;
+  if (input.productivityRate !== undefined) out.productivityRate = input.productivityRate;
   if (kind === "installation") {
     if (input.location !== undefined) out.departmentId = String(input.location);
     if (input.position !== undefined) out.position = Number(input.position);

@@ -208,7 +208,31 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 26, 2026 · eve) — deployed + committed: Unified job add (Phase 1) + Batch scheduling (Phase 2).**
+- **Last shipped (Jul 26, 2026 · late) — deployed + committed: employee hours/efficiency, routing-labor flow fix, cell-click employee pre-fill.**
+  - **Employee hours/day + time-efficiency%** (Production): right-click a name →
+    edit `Hours / day` + `Time efficiency (%)`. Efficiency moved from job-side to
+    **capacity-side**: `capacity.ts` `getDayCapacity` now `*= productivityRate`;
+    `effectiveHours` returns raw hours (no `/rate`); `useLivePreview` matched.
+    `ResourceAdminInput` + `applyResourceInput` + live `employeeRecord`
+    (`crfdf_standardhoursperday` / `crfdf_productivityrate`) persist it. All 100%
+    today → no behavior change until set. Install crews NOT wired (hardcoded, no
+    columns) — could add later. Tests in `capacity.test.ts`.
+  - **Routing-labor fix — ⚠️ FLOW, needs a separate deploy step (NOT in `pac code
+    push`).** Root cause was NOT app code (2010 passes `isProductionResource`); it
+    was the Power Automate `BCSync_JobPlanningLines` "Filter resource lines" step
+    excluding `jobTaskNo == 2010`, which wrongly dropped routing labor whose task#
+    is 2010. Fixed the filter in
+    `flows/BCSync_JobPlanningLines-*.json` (+ `-clientdata-backup.json`) to keep
+    ALL Resource-type + Billable lines; bumped `_build_solution.py` →
+    `BCSyncReview_1_0_0_6.zip`. 🔴 **TO GO LIVE:** in Power Automate edit that
+    flow's filter to `@or(equals(lineType,'Billable'), equals(jobType,'Resource'))`
+    (or import the new zip), then **Run it once** so previously-dropped routing
+    lines sync into `crfdf_bcplanninglines`.
+  - **Cell-click pre-selects employee:** `EditJobPanel` create mode seeds employee
+    from the draft (`line.employeeId`) — clicking a person's day cell pre-selects
+    them; toolbar +Add Job stays blank.
+  - Guide → v2.0.
+- **Earlier (Jul 26, 2026 · eve) — deployed + committed: Unified job add (Phase 1) + Batch scheduling (Phase 2).**
   Goal: ONE way to add jobs everywhere. Progress so far:
   - **Phase 1 — unified single-job add.** Add Job (BC) is now two steps: search +
     task-select (`AddJobPanel`, **Auto mode removed** — was broken) → **Continue →**

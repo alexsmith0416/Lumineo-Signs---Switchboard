@@ -73,6 +73,10 @@ export default function EmployeeAdminPanel({
   const [position, setPosition] = useState(padPos(emp?.position ?? 0));
   const [truck, setTruck] = useState(emp?.truckNumber ?? "");
   const [cco, setCco] = useState<boolean>(!!emp?.isCertifiedCraneOperator);
+  // Capacity: clock hours per day + time-efficiency % (efficiency scales the
+  // usable hours per day).
+  const [hoursPerDay, setHoursPerDay] = useState(String(emp?.standardHoursPerDay ?? 8));
+  const [efficiencyPct, setEfficiencyPct] = useState(String(Math.round((emp?.productivityRate ?? 1) * 100)));
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -222,6 +226,13 @@ export default function EmployeeAdminPanel({
     } else {
       if (mode === "create" || departmentId !== emp?.departmentId)
         input.departmentId = departmentId;
+      // Hours per day + efficiency (production capacity).
+      const hpd = Number(hoursPerDay);
+      const rate = Number(efficiencyPct) / 100;
+      if (!Number.isNaN(hpd) && (mode === "create" || hpd !== (emp?.standardHoursPerDay ?? 8)))
+        input.standardHoursPerDay = hpd;
+      if (!Number.isNaN(rate) && rate > 0 && (mode === "create" || rate !== (emp?.productivityRate ?? 1)))
+        input.productivityRate = rate;
     }
     return input;
   };
@@ -297,6 +308,50 @@ export default function EmployeeAdminPanel({
               ))}
             </select>
           </div>
+        )}
+
+        {!isInstall && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="form-field" style={{ margin: 0 }}>
+                <div className="form-field__label">Hours / day</div>
+                <input
+                  className="form-field__input"
+                  type="number"
+                  min="0"
+                  max="24"
+                  step="0.5"
+                  value={hoursPerDay}
+                  onChange={(e) => setHoursPerDay(e.target.value)}
+                />
+              </div>
+              <div className="form-field" style={{ margin: 0 }}>
+                <div className="form-field__label">Time efficiency (%)</div>
+                <input
+                  className="form-field__input"
+                  type="number"
+                  min="10"
+                  max="200"
+                  step="5"
+                  value={efficiencyPct}
+                  onChange={(e) => setEfficiencyPct(e.target.value)}
+                  title="Scales the usable hours per day (100% = full)."
+                />
+              </div>
+            </div>
+            {(() => {
+              const hpd = Number(hoursPerDay);
+              const rate = Number(efficiencyPct) / 100;
+              const avail = Number.isNaN(hpd) || Number.isNaN(rate) ? null : hpd * rate;
+              return (
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: -2 }}>
+                  {avail != null
+                    ? `Available capacity: ${(+avail.toFixed(2))}h/day${rate !== 1 ? ` (${hpd}h × ${efficiencyPct}%)` : ""}`
+                    : "Enter valid hours and efficiency."}
+                </div>
+              );
+            })()}
+          </>
         )}
 
         {isInstall && (

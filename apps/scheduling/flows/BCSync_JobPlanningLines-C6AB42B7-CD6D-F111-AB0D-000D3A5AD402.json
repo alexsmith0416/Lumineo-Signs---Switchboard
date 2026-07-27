@@ -95,10 +95,10 @@
             },
             "Filter_resource_lines": {
               "type": "Query",
-              "description": "Filter resource lines to only include jobs where 'Order Released' is Yes and 'Status' is Open. Excludes all other jobs.",
+              "description": "Keep schedulable Resource-type planning lines (every resource, incl. routing resource 2010) plus billable lines. Note: jobTaskNo is the BC job-task number, NOT the resource number — the old filter excluded jobTaskNo 2010, which wrongly dropped routing labor whose task number happens to be 2010.",
               "inputs": {
                 "from": "@outputs('List_BC_PlanningLines')?['body/value']",
-                "where": "@or(\r\n  equals(item()?['lineType'], 'Billable'),\r\n  and(\r\n    equals(item()?['jobType'], 'Resource'),\r\n    not(equals(int(coalesce(item()?['jobTaskNo'], '0')), 2010))\r\n  )\r\n)"
+                "where": "@or(\r\n  equals(item()?['lineType'], 'Billable'),\r\n  equals(item()?['jobType'], 'Resource')\r\n)"
               },
               "runAfter": {
                 "List_BC_PlanningLines": [

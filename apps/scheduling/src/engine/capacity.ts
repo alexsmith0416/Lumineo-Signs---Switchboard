@@ -15,11 +15,15 @@ export function getDayCapacity(
   date: Date,
   ctx: ScheduleContext,
 ): number {
+  // Time-efficiency scales an employee's AVAILABLE hours: someone at 80%
+  // efficiency has 0.8× their clock hours of usable capacity. (Rate 0 is
+  // treated as 100% — a legacy/blank value, never "no capacity".)
+  const rate = employee.productivityRate > 0 ? employee.productivityRate : 1;
   const key = dayKey(date);
   const override = ctx.workHours.find(
     (w) => w.employeeId === employee.id && w.date === key,
   );
-  if (override) return override.hours;
+  if (override) return override.hours * rate;
 
   if (isWeekend(date) && !employee.worksWeekends) return 0;
 
@@ -27,7 +31,7 @@ export function getDayCapacity(
     .filter((o) => o.employeeId === employee.id && o.date === key)
     .reduce((sum, o) => sum + o.extraHours, 0);
 
-  return employee.standardHoursPerDay + ot;
+  return (employee.standardHoursPerDay + ot) * rate;
 }
 
 export function getHoursUsedOnDay(
@@ -75,7 +79,9 @@ function effectiveHoursOnDay(line: ScheduleLine, date: Date): number {
   return Math.max(0, (to - from) / 3_600_000);
 }
 
-export function effectiveHours(line: ScheduleLine, employee: Employee): number {
-  const rate = employee.productivityRate === 0 ? 1 : employee.productivityRate;
-  return (line.overrideHours ?? line.estimatedHours) / rate;
+// A card consumes its raw hours of capacity. Time-efficiency is applied on the
+// CAPACITY side now (see getDayCapacity), so it must NOT be applied here too —
+// the `employee` arg is kept for call-site compatibility.
+export function effectiveHours(line: ScheduleLine, _employee: Employee): number {
+  return line.overrideHours ?? line.estimatedHours;
 }

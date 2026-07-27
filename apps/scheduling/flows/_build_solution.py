@@ -5,7 +5,7 @@ import os, re, shutil, zipfile
 FLOWS = os.path.dirname(os.path.abspath(__file__))
 EXPORT_CUST = r"C:\Users\Alex\Downloads\_bcsync_extract\customizations.xml"
 STAGE = r"C:\Users\Alex\Downloads\bcsync_build"
-OUT_ZIP = r"C:\Users\Alex\Downloads\BCSyncReview_1_0_0_5.zip"
+OUT_ZIP = r"C:\Users\Alex\Downloads\BCSyncReview_1_0_0_6.zip"
 
 # Flow files (name -> (guid, filename))
 FLOW_FILES = {

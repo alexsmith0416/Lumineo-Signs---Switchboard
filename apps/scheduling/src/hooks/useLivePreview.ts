@@ -34,9 +34,10 @@ export function useLivePreview(
     const emp = employees.get(employeeId);
     if (!emp) return { start, end: null, effectiveHours: 0 };
 
-    const rawHours = overrideHours ?? estimatedHours;
-    const rate = emp.productivityRate === 0 ? 1 : emp.productivityRate;
-    const eff = rawHours / rate;
+    // Efficiency is applied on the capacity side (getDayCapacity), so a card
+    // consumes its raw hours here — the walker spans it over the (reduced)
+    // available hours per day.
+    const eff = overrideHours ?? estimatedHours;
     const end = calculateEndTime(
       start,
       eff,

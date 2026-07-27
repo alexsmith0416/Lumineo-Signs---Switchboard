@@ -465,12 +465,16 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 };
 
-/** Map an admin input to a crfdf_employee1 record payload (name + dept lookup). */
+/** Map an admin input to a crfdf_employee1 record payload (name + dept lookup +
+ *  hours/efficiency). */
 function employeeRecord(input: ResourceAdminInput): Row {
   const rec: Row = {};
   if (input.name !== undefined) rec.crfdf_employeename = input.name;
   if (input.departmentId)
     rec["crfdf_Department@odata.bind"] = `/${SET.departments}(${input.departmentId})`;
+  if (input.standardHoursPerDay !== undefined)
+    rec.crfdf_standardhoursperday = input.standardHoursPerDay;
+  if (input.productivityRate !== undefined) rec.crfdf_productivityrate = input.productivityRate;
   return rec;
 }
 
