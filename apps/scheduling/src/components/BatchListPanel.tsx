@@ -30,6 +30,12 @@ interface Props {
   onScheduleAll: (fromDate: Date | null) => void;
   onClose: () => void;
   busy?: boolean;
+  /** Job Queue groups that can be pre-loaded into the list. */
+  queueGroups?: { id: string; name: string; count: number }[];
+  /** Import a queue group's jobs into the list. */
+  onLoadGroup?: (groupId: string) => void;
+  /** Open a staged job to edit its fields (employee, start, hours, …). */
+  onEditItem?: (item: BatchItem) => void;
 }
 
 export default function BatchListPanel({
@@ -40,6 +46,9 @@ export default function BatchListPanel({
   onScheduleAll,
   onClose,
   busy,
+  queueGroups,
+  onLoadGroup,
+  onEditItem,
 }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<BatchSortKey>("release");
@@ -55,9 +64,32 @@ export default function BatchListPanel({
           Schedule list · {items.length} job{items.length === 1 ? "" : "s"}
         </div>
         <div style={{ padding: "0 12px 8px", fontSize: 11, color: "var(--text-secondary)" }}>
-          Order the jobs however you want — drag to reorder, or sort. They schedule
-          top-to-bottom (top first).
+          Order the jobs however you want — drag to reorder, or sort. Click a job to
+          edit it (employee, start, hours). They schedule top-to-bottom (top first).
         </div>
+
+        {queueGroups && queueGroups.length > 0 && onLoadGroup && (
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 10px", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Load from queue</span>
+            <select
+              className="form-field__select"
+              style={{ flex: 1, fontSize: 12 }}
+              value=""
+              onChange={(e) => {
+                if (e.target.value) onLoadGroup(e.target.value);
+                e.target.value = "";
+              }}
+              title="Pre-load all jobs from a Job Queue group into this list"
+            >
+              <option value="">Choose a group…</option>
+              {queueGroups.map((g) => (
+                <option key={g.id} value={g.id} disabled={g.count === 0}>
+                  {g.name} ({g.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 6, padding: "0 12px 10px", alignItems: "center" }}>
           <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Schedule from</span>
@@ -141,7 +173,11 @@ export default function BatchListPanel({
                     ⠿
                   </span>
                   <span className="batch-item__num">{i + 1}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{ flex: 1, minWidth: 0, cursor: onEditItem ? "pointer" : "default" }}
+                    onClick={() => onEditItem?.(it)}
+                    title={onEditItem ? "Click to edit this job (employee, start, hours…)" : undefined}
+                  >
                     <div style={{ fontSize: 12, fontWeight: 600 }}>
                       {it.draft.jobNo} · {it.draft.customerName}
                     </div>

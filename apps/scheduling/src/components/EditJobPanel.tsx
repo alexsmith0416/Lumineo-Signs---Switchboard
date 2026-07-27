@@ -51,6 +51,11 @@ interface EditJobPanelProps {
    *  onAddToBatch with the configured item instead of scheduling now. */
   batchMode?: boolean;
   onAddToBatch?: (item: BatchItem) => void;
+  /** Editing an EXISTING batch item: seed employee/start from it and keep its id
+   *  so onAddToBatch replaces it in place (rather than adding a new row). */
+  batchItemId?: string;
+  seedEmployeeId?: string;
+  seedStart?: Date | null;
 }
 
 export default function EditJobPanel({
@@ -62,8 +67,13 @@ export default function EditJobPanel({
   onScheduled,
   batchMode = false,
   onAddToBatch,
+  batchItemId,
+  seedEmployeeId,
+  seedStart,
 }: EditJobPanelProps) {
   const isCreate = mode === "create";
+  // Editing an existing batch item — seed its chosen employee/start explicitly.
+  const editingBatchItem = seedEmployeeId !== undefined || seedStart !== undefined;
   const employees = useStore((s) => s.employees);
   const departments = useStore((s) => s.departments);
   const schedule = useStore((s) => s.schedule);
@@ -100,13 +110,19 @@ export default function EditJobPanel({
   // employee (and day), so pre-fill both. The toolbar "Add Job" button leaves
   // employeeId blank, so both stay empty ("auto"). Cell-click ⇒ employee + date
   // filled, so the footer reads "Schedule" (place it exactly there).
-  const [employeeId, setEmployeeId] = useState(line.employeeId);
+  const [employeeId, setEmployeeId] = useState(
+    editingBatchItem ? seedEmployeeId ?? "" : line.employeeId,
+  );
   const [startDate, setStartDate] = useState(
-    isCreate
-      ? line.employeeId
-        ? format(line.startDateTime, "yyyy-MM-dd'T'HH:mm")
+    editingBatchItem
+      ? seedStart
+        ? format(seedStart, "yyyy-MM-dd'T'HH:mm")
         : ""
-      : format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
+      : isCreate
+        ? line.employeeId
+          ? format(line.startDateTime, "yyyy-MM-dd'T'HH:mm")
+          : ""
+        : format(line.startDateTime, "yyyy-MM-dd'T'HH:mm"),
   );
   const [isLocked, setIsLocked] = useState(line.isLocked);
   const [busy, setBusy] = useState(false);
@@ -330,7 +346,8 @@ export default function EditJobPanel({
     const { draft, hours } = makeDraft();
     const empId = employeeId || null;
     onAddToBatch?.({
-      id: `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      // Reuse the id when editing an existing item so it replaces in place.
+      id: batchItemId ?? `batch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       draft,
       employeeId: empId,
       start: startDate ? new Date(startDate) : null,
@@ -597,7 +614,7 @@ export default function EditJobPanel({
                 onClick={onAdd}
                 title="Add this configured job to the schedule list — it schedules with the rest, in priority order"
               >
-                {employeeId && startDate ? "Add to list (scheduled)" : "Add to list (auto)"}
+                {batchItemId ? "Update in list" : employeeId && startDate ? "Add to list (scheduled)" : "Add to list (auto)"}
               </button>
             </>
           ) : isCreate ? (

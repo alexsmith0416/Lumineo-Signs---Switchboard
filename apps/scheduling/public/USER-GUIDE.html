@@ -399,6 +399,11 @@
   <ol class="steps">
     <li>Set up each job exactly as above (search → tasks → configure), but the button now reads <strong>Add to list</strong>
     instead of Schedule — the job is staged, not placed yet. Repeat <strong>+ Add job</strong> to add as many as you want.</li>
+    <li><strong>Pre-load from the Job Queue</strong> — use <strong>Load from queue</strong> to drop every job in a queue
+    group straight into the list at once, instead of adding them one by one.</li>
+    <li><strong>Click any job in the list to edit it</strong> — the full job card opens so you can set its employee, start
+    date, hours, or any other field (something you couldn't do when the job only lived in the queue). <em>Update in list</em>
+    saves your changes back to that row.</li>
     <li>In the list, <strong>prioritize</strong> the jobs: <strong>drag</strong> them up/down, or <strong>Sort</strong> by
     Release date, Production complete, Install window, or Hours (ascending/descending).</li>
     <li>Pick a <strong>Schedule from</strong> date to aim the whole list at a future week — auto-scheduled jobs start from
@@ -774,6 +779,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 27, 2026</td><td><strong>Load a Job Queue group into the schedule list &amp; edit each job</strong> — in Multiple-jobs mode, <em>Load from queue</em> pre-loads all of a queue group's jobs into the list, and you can now <strong>click any job in the list</strong> to open its card and set the employee, start date, hours, etc. before scheduling — configuring that the queue itself doesn't allow. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>See a day's scheduled hours on hover</strong> — hover any day on a person's row to see hours scheduled vs. capacity (e.g. "6h of 8h · 2h open"), red when over capacity, PTO/off for blocked days. See §4.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-fills the employee <em>and</em> the date</strong> — adding a job by clicking a day cell (Production or Installation) now fills in both that employee and the clicked start date, ready to Schedule. The toolbar <em>+ Add Job</em> button still starts blank. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Auto-schedule respects PTO / block-out cards</strong> — a PTO, Holiday, or other block-out card now makes those days unavailable, so auto/batch scheduling never places a job on a blocked day (even when the block-out is stretched across the week visually). </td></tr>
@@ -839,7 +845,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.5 · Jul 26, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.6 · Jul 27, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

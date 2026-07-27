@@ -250,6 +250,20 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   tracks the hovered day via `dayIndexFromClientX` (works over cards) and renders a
   `.day-hours-tip` pill; `scheduleCtx` (the store context) passed down from
   `CalendarView`. Guide → v2.5.
+- **Also (Jul 27, 2026) — deployed + committed:** connect a Job Queue group to the
+  batch (Multiple-jobs) list + edit staged jobs.
+  - `batch-schedule.ts` `batchItemFromQueueItem(item)` converts a QueueItem →
+    BatchItem (draft via `lineFromQueueItem`, employee/start null = auto).
+  - **Load from queue**: a group dropdown in both `AddJobPanel` (Multiple mode
+    entry point — needed since the empty list was otherwise unreachable) and
+    `BatchListPanel`. Parent calendars read the right queue store
+    (`useProductionQueueStore` / region-based install) and append via a shared
+    `loadGroupIntoBatch`.
+  - **Click-to-edit a staged job**: `BatchListPanel` rows are clickable →
+    `onEditItem` opens `EditJobPanel` in create+batch mode seeded from the item
+    (`batchItemId` + `seedEmployeeId`/`seedStart`); "Update in list" replaces the
+    row by id. Fills the gap that queue-adds can't set employee/start/hours.
+  - Guide → v2.6.
 - **Also (Jul 26, 2026 · latest) — deployed + committed:** clicking a person's day
   cell now pre-fills BOTH the employee AND the clicked Start date in the create
   panel (Production + Installation). `EditJobPanel` create mode seeds `startDate`

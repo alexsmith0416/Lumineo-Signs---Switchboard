@@ -17,7 +17,8 @@ import { cardMoneyValue } from "./JobCard";
 import AddJobPanel from "./AddJobPanel";
 import EditJobPanel from "./EditJobPanel";
 import BatchListPanel from "./BatchListPanel";
-import { scheduleBatch, type BatchItem } from "../services/batch-schedule";
+import { scheduleBatch, batchItemFromQueueItem, type BatchItem } from "../services/batch-schedule";
+import { useInstallQueueStoreWK, useInstallQueueStoreNEK } from "../store/job-queue-store";
 import type { ScheduleLine } from "../engine/types";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
@@ -62,12 +63,26 @@ export default function InstallationCalendar({
   const [batch, setBatch] = useState<BatchItem[]>([]);
   const [showBatchList, setShowBatchList] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
+  const [editBatchItem, setEditBatchItem] = useState<BatchItem | null>(null);
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
   const useStore = region === "WK" ? useInstallationStoreWK : useInstallationStoreNEK;
   const scenarioStore =
     region === "WK" ? useInstallationScenarioStoreWK : useInstallationScenarioStoreNEK;
+  // Region's Job Queue groups (for pre-loading into the batch list).
+  const queueStore = region === "WK" ? useInstallQueueStoreWK : useInstallQueueStoreNEK;
+  const queueGroups = queueStore((s) => s.groups);
+  const loadQueue = queueStore((s) => s.load);
+  useEffect(() => {
+    void loadQueue();
+  }, [loadQueue]);
+  const queueGroupOptions = queueGroups.map((g) => ({ id: g.id, name: g.name, count: g.items.length }));
+  const loadGroupIntoBatch = (groupId: string) => {
+    const g = queueGroups.find((x) => x.id === groupId);
+    if (!g) return;
+    setBatch((b) => [...b, ...g.items.map(batchItemFromQueueItem)]);
+  };
   const weekStart = useStore((s) => s.weekStart);
 
   // "Assist installation" INVERSE: on the install board, a lent production person
@@ -271,6 +286,12 @@ export default function InstallationCalendar({
           batchMode={batchMode}
           onBatchModeChange={setBatchMode}
           batchCount={batch.length}
+          queueGroups={queueGroupOptions}
+          onLoadGroup={(groupId) => {
+            loadGroupIntoBatch(groupId);
+            setAddJobContext(null);
+            setShowBatchList(true);
+          }}
         />
       )}
       {createDraft && (
@@ -309,6 +330,25 @@ export default function InstallationCalendar({
             setBatchMode(false);
           }}
           onClose={() => setShowBatchList(false)}
+          queueGroups={queueGroupOptions}
+          onLoadGroup={loadGroupIntoBatch}
+          onEditItem={(item) => setEditBatchItem(item)}
+        />
+      )}
+      {editBatchItem && (
+        <EditJobPanel
+          line={editBatchItem.draft}
+          mode="create"
+          batchMode
+          batchItemId={editBatchItem.id}
+          seedEmployeeId={editBatchItem.employeeId ?? ""}
+          seedStart={editBatchItem.start}
+          onAddToBatch={(updated) => {
+            setBatch((b) => b.map((x) => (x.id === updated.id ? updated : x)));
+            setEditBatchItem(null);
+          }}
+          onClose={() => setEditBatchItem(null)}
+          useStore={useStore}
         />
       )}
     </>

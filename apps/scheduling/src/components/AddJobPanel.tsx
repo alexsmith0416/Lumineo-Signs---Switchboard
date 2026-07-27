@@ -73,6 +73,10 @@ interface AddJobPanelProps {
   onBatchModeChange?: (v: boolean) => void;
   /** Count of jobs already staged (shown on the Multiple toggle). */
   batchCount?: number;
+  /** Job Queue groups that can be pre-loaded into the Multiple-jobs list. */
+  queueGroups?: { id: string; name: string; count: number }[];
+  /** Import a queue group into the batch list (Multiple mode entry point). */
+  onLoadGroup?: (groupId: string) => void;
   /** BC-only mode: hide the Custom Card / Group Card kind tabs (used when this
    *  panel is reused to add a job to the Job Queue or a group card). */
   bcOnly?: boolean;
@@ -94,6 +98,8 @@ export default function AddJobPanel({
   batchMode = false,
   onBatchModeChange,
   batchCount = 0,
+  queueGroups,
+  onLoadGroup,
   bcOnly = false,
   confirmLabel,
 }: AddJobPanelProps) {
@@ -709,6 +715,27 @@ export default function AddJobPanel({
             >
               Multiple jobs{batchCount > 0 ? ` (${batchCount})` : ""}
             </button>
+          </div>
+        )}
+        {!isTeam && batchMode && queueGroups && queueGroups.length > 0 && onLoadGroup && (
+          <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "8px 12px 0" }}>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Load from queue</span>
+            <select
+              className="form-field__select"
+              style={{ flex: 1, fontSize: 12 }}
+              value=""
+              onChange={(e) => {
+                if (e.target.value) onLoadGroup(e.target.value);
+              }}
+              title="Pre-load every job from a Job Queue group into the list"
+            >
+              <option value="">Choose a group…</option>
+              {queueGroups.map((g) => (
+                <option key={g.id} value={g.id} disabled={g.count === 0}>
+                  {g.name} ({g.count})
+                </option>
+              ))}
+            </select>
           </div>
         )}
         <div style={{ padding: 12 }}>

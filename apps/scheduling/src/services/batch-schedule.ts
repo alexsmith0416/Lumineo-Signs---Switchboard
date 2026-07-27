@@ -6,6 +6,7 @@
  */
 import type { ScheduleContext, ScheduleLine } from "../engine/types";
 import { placeDraft } from "./schedule-draft";
+import { lineFromQueueItem, newId, type QueueItem } from "./job-queue-data";
 
 export interface BatchItem {
   /** Stable list id (for React keys / drag reorder). */
@@ -23,6 +24,24 @@ export interface BatchItem {
   releaseDate: Date | null;
   productionComplete: Date | null;
   installWindow: Date | null;
+}
+
+/** Build a batch list item from a Job Queue item — unscheduled (employee/start
+ *  blank = auto), carrying the item's task text + hours + crew/zip. Target-date
+ *  sort keys start null and fill in if/when the user opens the item to edit it. */
+export function batchItemFromQueueItem(item: QueueItem): BatchItem {
+  const draft = lineFromQueueItem(item, "", item.departmentId || "", new Date());
+  return {
+    id: `batch-q-${newId()}`,
+    draft: { ...draft, employeeId: "" },
+    employeeId: null,
+    start: null,
+    employeeName: null,
+    hours: item.estimatedHours,
+    releaseDate: null,
+    productionComplete: null,
+    installWindow: null,
+  };
 }
 
 export type BatchSortKey = "release" | "production" | "install" | "hours";
