@@ -208,7 +208,38 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 30, 2026 · latest) — deployed + committed: multi-week jobs now render on the following week.**
+- **Last shipped (Jul 30, 2026 · latest) — deployed + committed: split a job card into sections.**
+  Schedule a task in chunks (work it, switch jobs, come back) WITHOUT re-booking
+  its estimate. Right-click a card → **Split into sections…**.
+  - **Model:** `estimatedHours` stays the untouched **pot** on every part; each
+    part's slice is an explicit `overrideHours`; parts link via new
+    `splitGroupId` (`crfdf_splitgroup`, text 100 — run
+    `scripts/add-scheduleline-splitgroup-column.ps1`). 🔴 **Column not created
+    yet** — the app degrades gracefully (guarded like `scheduleSpanCol`; falls
+    back to grouping by same job+task+**employee**, which deliberately does NOT
+    swallow the crew-duplicate case). Run the script to make the link explicit
+    so a part dragged to another person stays in the pot.
+  - **Pure logic:** `services/split-hours.ts` — `potFor`, `splitSiblings`,
+    `taskCommitment`, `splitPartLabels`, `evenSplit`, `isSplittable`.
+    22 tests in `split-hours.test.ts`.
+  - **Placement:** `store.splitScheduleLine(lineId, partHours[])` — part 1 stays
+    put and shrinks; each later part goes to `firstOpenSlot` after the previous
+    one, ctx rebuilt per part so they pack around existing work. Undo/redo +
+    per-line write queue wired.
+  - **UI:** `SplitCardPanel.tsx` (portal dialog, per-part hours, over-estimate
+    warning), `1/2` badge on cards (`splitPartLabels`, one pass per render),
+    and a pot readout under the hours fields in `EditJobPanel`
+    (`HoursPotNote`).
+  - **Re-add is hours-aware:** creating a card for a task that's already partly
+    scheduled shows "8h of this task is already scheduled on <who> (<dates>)"
+    and pre-fills Modified labor hours with the **remainder**. Over-pot is
+    allowed but flagged red (user's call).
+  - Also fixed in passing: the install-card CREATE retry rebuilt nothing (it
+    resent the same payload after dropping a column, so it failed identically);
+    production `createScheduleLine` had no drop-and-retry at all.
+  - Verified in-browser end to end (split → 1/2 + 2/2 cards, pot note, remaining
+    pre-fill). Guide → v2.8. 140 tests green.
+- **Earlier (Jul 30, 2026) — deployed + committed: multi-week jobs now render on the following week.**
   Reported bug: a task scheduled across a week boundary stopped at Friday and was
   missing from the next week's board (its end date said otherwise).
   - **Root cause:** both live sources loaded a week with a *starts-in-this-week*

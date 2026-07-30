@@ -31,6 +31,12 @@ interface JobCardProps {
   onCopy?: () => void;
   /** Right-click menu action: duplicate this card (omitted on read-only boards). */
   onDuplicate?: () => void;
+  /** Right-click menu action: split this card into sections that share its
+   *  estimated-hours pot (omitted on read-only boards and custom cards). */
+  onSplit?: () => void;
+  /** "2/3" when this card is one section of a task split across several cards.
+   *  Computed board-wide by splitPartLabels so the card doesn't rescan. */
+  partLabel?: string;
   /** Right-click menu action: delete this card (omitted on read-only boards). */
   onDelete?: () => void;
   /** While the card is being dragged (move / resize / reorder), suppress the
@@ -123,6 +129,8 @@ export default function JobCard({
   multiDay = false,
   onCopy,
   onDuplicate,
+  onSplit,
+  partLabel,
   onDelete,
   suppressTooltip = false,
 }: JobCardProps) {
@@ -186,7 +194,7 @@ export default function JobCard({
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
   // The context menu opens if there's anything to show: BC links and/or the
   // duplicate/delete actions (present only on editable boards).
-  const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onDelete;
+  const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onSplit || !!onDelete;
 
   const open = () => {
     if (suppressTooltip) return; // don't pop up while dragging this card
@@ -278,6 +286,11 @@ export default function JobCard({
           // flex gap supplies the surrounding space).
           <div className="job-card__header job-card__header--inline">
             <span className="job-card__job-no">{line.jobNo}</span>
+            {partLabel && (
+              <span className="job-card__part" title={`Part ${partLabel.replace("/", " of ")}`}>
+                {partLabel}
+              </span>
+            )}
             {line.customerName && (
               <span className="job-card__customer">{line.customerName}</span>
             )}
@@ -291,6 +304,11 @@ export default function JobCard({
         ) : (
           <div className="job-card__header">
             <span className="job-card__job-no">{line.jobNo}</span>
+            {partLabel && (
+              <span className="job-card__part" title={`Part ${partLabel.replace("/", " of ")}`}>
+                {partLabel}
+              </span>
+            )}
             <span className="job-card__customer">{line.customerName}</span>
           </div>
         )}
@@ -488,6 +506,17 @@ export default function JobCard({
                   }}
                 >
                   Duplicate
+                </button>
+              )}
+              {onSplit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSplit();
+                    setMenu(null);
+                  }}
+                >
+                  Split into sections…
                 </button>
               )}
               {onDelete && (

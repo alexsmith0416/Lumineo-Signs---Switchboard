@@ -341,6 +341,7 @@
     <tr><th>You see</th><th>It means</th></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
     <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation.</td></tr>
+    <tr><td><span class="chip" style="background:#001238;color:#fff">1/2</span> (small badge after the job #)</td><td>This card is <strong>one section of a split task</strong> — part 1 of 2 here. The parts share the task's estimate rather than each booking it in full. See §5.1 <em>Splitting a job into sections</em>.</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
     <tr><td>Pulsing red outline</td><td>The job has a <strong>Red date</strong> — a fixed, drop-dead install date. The outline shows on every board the job appears on so the deadline is never missed.</td></tr>
@@ -412,6 +413,29 @@
     set it up (fixed employee/day, or auto onto the first open slot), and auto-scheduled jobs pack around the ones above them
     so your priority order is respected.</li>
   </ol>
+  <h4>Splitting a job into sections</h4>
+  <p>Sometimes a person works a job, moves onto other jobs, then comes back to it later. Rather than
+  scheduling the job a second time — which would book its <em>whole</em> estimate all over again —
+  <strong>split the card</strong> so the sections share one pot of hours.</p>
+  <ol class="steps">
+    <li><strong>Right-click the card → Split into sections…</strong></li>
+    <li>Set the hours for each part. It opens with the card's hours divided evenly; type over them
+    however you like (e.g. a 24h card as 16h + 8h). Use <strong>+ Add part</strong> for three or more.</li>
+    <li>Click <strong>Split into N</strong>. <strong>Part 1 stays exactly where it is</strong>; each other part is
+    placed automatically at that person's <strong>next opening</strong> — packing around whatever else
+    they already have. Drag any part wherever you want afterwards, including into a future week.</li>
+  </ol>
+  <p>Each part shows a small <strong>1/2</strong>, <strong>2/2</strong> badge on the card so you can see at a
+  glance that it's a section of a bigger task. Open any part and it tells you where it sits:
+  <em>"Part 2 of 2 · this card 8h · other parts 16h · estimate 24h"</em>.</p>
+  <p class="tip"><strong>The estimate never doubles.</strong> The task's <em>Estimated hours</em> stays the
+  BC number on every part — the parts divide it between them in <em>Modified labor hours</em>. And if you
+  add a job task that's <strong>already partly scheduled</strong>, the new card tells you so — <em>"8h of this
+  task is already scheduled on Len Cook Jr (Jul 31–Aug 3)"</em> — and pre-fills the hours box with the
+  <strong>hours left</strong> instead of the full estimate. Type over it if it really is additional work.
+  Going over the estimate is allowed (jobs run long); it's just flagged in red so nobody double-books
+  a task by accident.</p>
+
   <h4>Custom Card (blocking out time)</h4>
   <p>For PTO, holidays, inventory, truck maintenance, certifications — anything that isn't a BC job.</p>
   <ol class="steps">
@@ -779,6 +803,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 30, 2026</td><td><strong>Split a job into sections</strong> — right-click a card → <em>Split into sections…</em> to schedule a task in chunks (work it, go do other jobs, come back) <strong>without re-booking its hours</strong>. Set the hours per part; part 1 stays put and the others land on that person's next opening. Parts are badged <strong>1/2</strong>, <strong>2/2</strong> and share the task's estimate. Adding a task that's already partly scheduled now says so and pre-fills the <strong>hours left</strong> instead of the full estimate. See §5.1.</td></tr>
       <tr><td>Jul 30, 2026</td><td><strong>Fix: multi-week jobs now show on the following week</strong> — a job scheduled long enough to run past Friday stopped at Friday and was <em>missing</em> from the next week's board, even though its end date said it was still running. It now carries over and resumes on Monday with a ◂ arrow, and those carried-over hours count toward that person's day and week load (so auto-schedule no longer treats the day as free). See §4.</td></tr>
       <tr><td>Jul 27, 2026</td><td><strong>Load a Job Queue group into the schedule list &amp; edit each job</strong> — in Multiple-jobs mode, <em>Load from queue</em> pre-loads all of a queue group's jobs into the list, and you can now <strong>click any job in the list</strong> to open its card and set the employee, start date, hours, etc. before scheduling — configuring that the queue itself doesn't allow. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>See a day's scheduled hours on hover</strong> — hover any day on a person's row to see hours scheduled vs. capacity (e.g. "6h of 8h · 2h open"), red when over capacity, PTO/off for blocked days. See §4.</td></tr>
@@ -846,7 +871,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.7 · Jul 30, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.8 · Jul 30, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

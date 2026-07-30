@@ -61,5 +61,6 @@ export function line(partial: Partial<ScheduleLine> & {
     jobSequence: partial.jobSequence ?? 0,
     isCustom: partial.isCustom,
     spanDays: partial.spanDays,
+    splitGroupId: partial.splitGroupId,
   };
 }

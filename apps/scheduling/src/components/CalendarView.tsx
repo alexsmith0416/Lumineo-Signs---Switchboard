@@ -19,6 +19,8 @@ import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
 import AddJobPanel from "./AddJobPanel";
 import GroupPanel from "./GroupPanel";
 import { isGroupCard } from "../services/group-card";
+import { isSplittable, splitPartLabels } from "../services/split-hours";
+import SplitCardPanel from "./SplitCardPanel";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
 import { useLoadsStore } from "../shipping/loads-store";
 import { useClipboardStore } from "../store/clipboard-store";
@@ -404,6 +406,7 @@ export default function CalendarView({
     moveRosterWeek,
     deleteScheduleLine,
     addScheduleLine,
+    splitScheduleLine,
   } = useStore();
 
   // Tracks the line id currently being dragged so a same-day drop / drag-over
@@ -501,6 +504,12 @@ export default function CalendarView({
     const end = emp ? calculateEndTime(start, effectiveHours(copy, emp), emp, ctx, copy.id) : line.endDateTime;
     void addScheduleLine({ ...copy, endDateTime: end });
   };
+
+  // Split a card into sections sharing its estimated-hours pot (see
+  // services/split-hours.ts). The menu entry is hidden for cards with no pot.
+  const [splitting, setSplitting] = useState<ScheduleLine | null>(null);
+  // "2/3" badges for split cards — one pass over the board, not per card.
+  const partLabels = useMemo(() => splitPartLabels(schedule), [schedule]);
 
   // Copy / paste (right-click menu + Ctrl+C / Ctrl+V). Paste duplicates ALL the
   // copied card's fields onto the target person + day (start at the day's 08:00).
@@ -1223,6 +1232,8 @@ export default function CalendarView({
                   }}
                   onCopyLine={readOnly ? undefined : (line) => copyCard(line)}
                   onDuplicateLine={readOnly ? undefined : handleDuplicateLine}
+                  onSplitLine={readOnly ? undefined : (line) => setSplitting(line)}
+                  partLabels={partLabels}
                   onDeleteLine={readOnly ? undefined : handleDeleteLine}
                   onCellContextMenu={
                     readOnly
@@ -1329,6 +1340,22 @@ export default function CalendarView({
           </div>
         </>
       )}
+
+      {splitting && (() => {
+        // Re-read from the board so the dialog sees the card's live hours.
+        const target = schedule.find((l) => l.id === splitting.id) ?? splitting;
+        return (
+          <SplitCardPanel
+            line={target}
+            schedule={schedule}
+            onCancel={() => setSplitting(null)}
+            onSplit={async (partHours) => {
+              await splitScheduleLine(target.id, partHours);
+              setSplitting(null);
+            }}
+          />
+        );
+      })()}
 
       {groupPanelLineId && (() => {
         const gl = schedule.find((l) => l.id === groupPanelLineId);
@@ -1526,6 +1553,9 @@ interface EmployeeRowProps {
   /** Right-click card actions (omitted on read-only boards). */
   onCopyLine?: (line: ScheduleLine) => void;
   onDuplicateLine?: (line: ScheduleLine) => void;
+  onSplitLine?: (line: ScheduleLine) => void;
+  /** lineId → "2/3" for cards that are one section of a split task. */
+  partLabels?: Map<string, string>;
   onDeleteLine?: (line: ScheduleLine) => void;
   /** Right-click a day cell (for Paste). Omitted on read-only boards. */
   onCellContextMenu?: (e: React.MouseEvent, employeeId: string, day: Date) => void;
@@ -1566,6 +1596,8 @@ function EmployeeRow({
   onMoveStart,
   onCopyLine,
   onDuplicateLine,
+  onSplitLine,
+  partLabels,
   onDeleteLine,
   onCellContextMenu,
 }: EmployeeRowProps) {
@@ -1896,6 +1928,10 @@ function EmployeeRow({
             onMoveStart={(newStart) => onMoveStart(card.line, newStart)}
             onCopy={onCopyLine ? () => onCopyLine(card.line) : undefined}
             onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
+            onSplit={
+              onSplitLine && isSplittable(card.line) ? () => onSplitLine(card.line) : undefined
+            }
+            partLabel={partLabels?.get(card.line.id)}
             onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
           />
         ))}
@@ -1929,6 +1965,8 @@ interface GanttCardProps {
   onMoveStart: (newStart: Date) => Promise<void>;
   onCopy?: () => void;
   onDuplicate?: () => void;
+  onSplit?: () => void;
+  partLabel?: string;
   onDelete?: () => void;
 }
 
@@ -1956,6 +1994,8 @@ function GanttCard({
   onMoveStart,
   onCopy,
   onDuplicate,
+  onSplit,
+  partLabel,
   onDelete,
 }: GanttCardProps) {
   const { line, startIdx, spanDays, overflowLeft, overflowRight, lane } = card;
@@ -2129,6 +2169,8 @@ function GanttCard({
         multiDay={spanDays > 1}
         onCopy={onCopy}
         onDuplicate={onDuplicate}
+        onSplit={onSplit}
+        partLabel={partLabel}
         onDelete={onDelete}
         suppressTooltip={dragging || !!movePreview || !!resizePreview}
       />

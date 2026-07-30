@@ -2253,6 +2253,34 @@ input, select, textarea {
   color: var(--text-tertiary);
 }
 
+/* Hours-pot readout under the hours fields: what a task already has scheduled
+   (so a new card pre-fills the leftover) and, on a split card, its part
+   breakdown. See services/split-hours.ts. */
+.hours-pot-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+.hours-pot-note strong { color: var(--text-primary); }
+.hours-pot-note__over {
+  margin-top: 3px;
+  color: var(--lumineo-red);
+  font-weight: 600;
+}
+
+/* Split-part badge on a job card — "2/3" in the card's own text color. */
+.job-card__part {
+  flex: none;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.13);
+  opacity: 0.85;
+}
+
 .form-field__label {
   background: var(--label-bg);
   padding: 8px 10px;

@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store";
-import type { ScheduleContext, ScheduleLine } from "../engine/types";
+import type { Employee, ScheduleContext, ScheduleLine } from "../engine/types";
 import { calculateEndTime } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
 import { useLivePreview } from "../hooks/useLivePreview";
 import { useSettingsStore } from "../store/settings-store";
 import { placeDraft } from "../services/schedule-draft";
+import { potFor, taskCommitment } from "../services/split-hours";
 import type { BatchItem } from "../services/batch-schedule";
 import { useJobTargets } from "../hooks/useJobTargets";
 import ConfirmDialog from "./ConfirmDialog";
@@ -95,9 +96,22 @@ export default function EditJobPanel({
   const [duplicating, setDuplicating] = useState(false);
   const [dupEmployeeIds, setDupEmployeeIds] = useState<Set<string>>(new Set());
 
+  // What this job + task ALREADY has on the board. On a new card this is the
+  // basis for pre-filling the leftover hours instead of the full estimate, so a
+  // task that's been worked in sections isn't re-booked at its whole estimate.
+  // (On an existing card the card itself is excluded — it's not "other" work.)
+  const committed = useMemo(
+    () => taskCommitment(line, schedule, line.id),
+    [line, schedule],
+  );
+  const hoursLeft = Number((line.estimatedHours - committed.hours).toFixed(2));
+  const prefillRemaining = isCreate && committed.hours > 0 && hoursLeft > 0;
+
   // Modified labor hours — the editable override of the fixed BC estimate. Empty
   // means "no override → use the estimate". (Estimated hours itself is read-only.)
-  const [overrideHours, setOverrideHours] = useState(line.overrideHours?.toString() ?? "");
+  const [overrideHours, setOverrideHours] = useState(
+    line.overrideHours?.toString() ?? (prefillRemaining ? String(hoursLeft) : ""),
+  );
   const [jobDescription, setJobDescription] = useState(line.jobDescription ?? "");
   const [taskDescription, setTaskDescription] = useState(line.planningLineDescription ?? "");
   const [crewTrips, setCrewTrips] = useState(line.crewTrips?.toString() ?? "");
@@ -479,6 +493,15 @@ export default function EditJobPanel({
             disabled={readOnly}
           />
         </div>
+        <HoursPotNote
+          line={line}
+          schedule={schedule}
+          isCreate={isCreate}
+          committed={committed}
+          hoursLeft={hoursLeft}
+          thisCardHours={Number.isNaN(hoursNum) ? line.estimatedHours : hoursNum}
+          employees={employees}
+        />
         <div className="form-field">
           <div className="form-field__label">End</div>
           <input
@@ -756,6 +779,86 @@ export default function EditJobPanel({
       </div>
     )}
     </>
+  );
+}
+
+/**
+ * Hours-pot readout under the hours fields.
+ *
+ * Two jobs, one component:
+ *  - **New card** for a task that's already partly scheduled → say so (who and
+ *    when), and note that the hours box was pre-filled with what's left. This is
+ *    what stops a task worked in sections from being re-booked at full estimate.
+ *  - **Existing card** that's one of several parts → show the pot breakdown.
+ *
+ * Either way, going over the estimate is allowed and simply flagged in red.
+ */
+function HoursPotNote({
+  line,
+  schedule,
+  isCreate,
+  committed,
+  hoursLeft,
+  thisCardHours,
+  employees,
+}: {
+  line: ScheduleLine;
+  schedule: ScheduleLine[];
+  isCreate: boolean;
+  committed: { hours: number; lines: ScheduleLine[] };
+  hoursLeft: number;
+  thisCardHours: number;
+  employees: Map<string, Employee>;
+}) {
+  const pot = useMemo(() => potFor(line, schedule), [line, schedule]);
+  const isPart = !isCreate && pot.count > 1;
+  if (!isPart && committed.hours <= 0) return null;
+
+  const h = (n: number) => `${Number(n.toFixed(2))}h`;
+  // Existing card: its own hours are already inside pot.allocated. New card:
+  // add what the user is about to book on top of what's already committed.
+  const total = isCreate ? committed.hours + thisCardHours : pot.allocated;
+  const overBy = Number((total - line.estimatedHours).toFixed(2));
+
+  const who = [
+    ...new Set(
+      committed.lines.map((l) => employees.get(l.employeeId)?.name).filter((n): n is string => !!n),
+    ),
+  ];
+  const span = committed.lines.length
+    ? `${format(committed.lines[0]!.startDateTime, "MMM d")}–${format(
+        committed.lines[committed.lines.length - 1]!.endDateTime,
+        "MMM d",
+      )}`
+    : "";
+
+  return (
+    <div className="form-field form-field--block hours-pot-note">
+      {isPart ? (
+        <div>
+          <strong>
+            Part {pot.index} of {pot.count}
+          </strong>{" "}
+          · this card {h(thisCardHours)} · other parts {h(pot.otherParts)} · estimate{" "}
+          {h(pot.pot)}
+        </div>
+      ) : (
+        <div>
+          <strong>{h(committed.hours)} of this task is already scheduled</strong>
+          {who.length > 0 && <> on {who.join(", ")}</>}
+          {span && <> ({span})</>}.
+          {isCreate && hoursLeft > 0 && (
+            <> Hours below are pre-filled with the {h(hoursLeft)} left — type over it if this is
+              additional work.</>
+          )}
+        </div>
+      )}
+      {overBy > 0.01 && (
+        <div className="hours-pot-note__over">
+          ⚠ {h(total)} of {h(line.estimatedHours)} — {h(overBy)} over the estimate.
+        </div>
+      )}
+    </div>
   );
 }
 

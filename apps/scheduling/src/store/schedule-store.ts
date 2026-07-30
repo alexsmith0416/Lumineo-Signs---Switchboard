@@ -2,8 +2,9 @@ import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { addDays, startOfWeek, endOfWeek, format } from "date-fns";
 import { settleSchedule, diffShift, diffResize, diffResequence } from "../engine/cascade";
 import { detectConflicts } from "../engine/conflicts";
-import { calculateEndTime } from "../engine/time-walker";
+import { calculateEndTime, firstOpenSlot } from "../engine/time-walker";
 import { effectiveHours } from "../engine/capacity";
+import { newSplitGroupId } from "../services/split-hours";
 import { productionDataSource } from "../services/dataverse";
 import {
   liveProductionDataSource,
@@ -74,6 +75,11 @@ export interface ScheduleStoreState {
    *  cascade, no dialog, no hours change. null clears it (back to hours-derived). */
   setTaskSpan: (lineId: string, spanDays: number | null) => Promise<void>;
   addScheduleLine: (line: ScheduleLine) => Promise<void>;
+  /** Split a card into sections that share its estimated-hours pot.
+   *  `partHours[0]` re-sizes the existing card; each later entry becomes a new
+   *  card auto-placed at that employee's next opening after the one before it.
+   *  All parts are linked by one `splitGroupId`. See services/split-hours.ts. */
+  splitScheduleLine: (lineId: string, partHours: number[]) => Promise<void>;
   deleteScheduleLine: (lineId: string) => Promise<void>;
   setWeekStart: (date: Date) => void;
   /** Add a department in memory. Production wires this up to a Dataverse
@@ -593,6 +599,115 @@ export function createScheduleStore(
         console.error("[schedule] create persist failed — resyncing", e);
         void get().loadWeek();
       });
+    },
+
+    splitScheduleLine: async (lineId, partHours) => {
+      const state = get();
+      const original = state.schedule.find((l) => l.id === lineId);
+      if (!original || partHours.length < 1) return;
+      const ds = state.dataSource;
+      const emp = state.employees.get(original.employeeId);
+      // Re-splitting an already-split card keeps the existing group so the two
+      // halves stay in the same pot as their siblings.
+      const groupId = original.splitGroupId ?? newSplitGroupId(original.jobNo);
+      const beforeSchedule = state.schedule;
+
+      // Part 1 stays put and shrinks to its slice. A manual visual span is
+      // cleared on every part — it described the whole card's width, so keeping
+      // it would leave a 4h part still drawn across five days.
+      const first: ScheduleLine = {
+        ...original,
+        overrideHours: partHours[0]!,
+        splitGroupId: groupId,
+        spanDays: null,
+      };
+      let ctx: ScheduleContext = { ...buildContext(state), schedule: beforeSchedule };
+      first.endDateTime = emp
+        ? calculateEndTime(first.startDateTime, effectiveHours(first, emp), emp, ctx, first.id)
+        : original.endDateTime;
+
+      let next = beforeSchedule.map((l) => (l.id === first.id ? first : l));
+      const created: ScheduleLine[] = [];
+      // Each later part lands at the employee's next OPENING after the part
+      // before it — the context is rebuilt each pass so a part packs around the
+      // ones already placed (and around their other jobs), never on top of them.
+      if (emp) {
+        let cursor = first.endDateTime;
+        for (let i = 1; i < partHours.length; i++) {
+          const id = `line-${original.jobNo || "job"}-split-${Date.now()}-${i}-${Math.random()
+            .toString(36)
+            .slice(2, 6)}`;
+          ctx = { ...buildContext(get()), schedule: next };
+          const start = firstOpenSlot(cursor, emp, ctx, id);
+          const part: ScheduleLine = {
+            ...original,
+            id,
+            overrideHours: partHours[i]!,
+            splitGroupId: groupId,
+            spanDays: null,
+            isLocked: false, // freshly placed — the user will likely move it
+            startDateTime: start,
+            preferredStart: start,
+            endDateTime: start,
+          };
+          part.endDateTime = calculateEndTime(start, effectiveHours(part, emp), emp, ctx, id);
+          created.push(part);
+          next = [...next, part];
+          cursor = part.endDateTime;
+        }
+      }
+
+      const afterCtx: ScheduleContext = { ...buildContext(get()), schedule: next };
+      set({ schedule: next, conflicts: detectConflicts(afterCtx) });
+      recordEdit(
+        "Split job",
+        beforeSchedule,
+        next,
+        // Undo: put the original card's hours back and drop the new parts.
+        () =>
+          Promise.all([
+            ds.updateScheduleLine(original.id, {
+              overrideHours: original.overrideHours,
+              endDateTime: original.endDateTime,
+              spanDays: original.spanDays ?? null,
+              splitGroupId: original.splitGroupId ?? null,
+            }),
+            ...created.map((p) => ds.deleteScheduleLine(p.id)),
+          ]),
+        () =>
+          Promise.all([
+            ds.updateScheduleLine(first.id, {
+              overrideHours: first.overrideHours,
+              endDateTime: first.endDateTime,
+              spanDays: null,
+              splitGroupId: groupId,
+            }),
+            ...created.map((p) => ds.createScheduleLine(p)),
+          ]),
+      );
+
+      // Persist through the per-line write queue (see the write-path invariant
+      // in START-HERE: user edits go through the retrying dv* helpers, and the
+      // queue keeps same-line writes in submission order).
+      await queueWrite(first.id, () =>
+        ds.updateScheduleLine(first.id, {
+          overrideHours: first.overrideHours,
+          endDateTime: first.endDateTime,
+          spanDays: null,
+          splitGroupId: groupId,
+        }),
+      ).catch((e) => {
+        console.error("[schedule] split resize persist failed — resyncing", e);
+        void get().loadWeek();
+      });
+      await Promise.all(
+        created.map((p) =>
+          queueWrite(p.id, () => ds.createScheduleLine(p)).catch((e) => {
+            console.error("[schedule] split part persist failed — resyncing", e);
+            void get().loadWeek();
+          }),
+        ),
+      );
     },
 
     deleteScheduleLine: async (lineId) => {

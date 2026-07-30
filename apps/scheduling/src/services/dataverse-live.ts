@@ -194,6 +194,28 @@ async function dvDelete(set: string, id: string): Promise<SdkResult> {
 let scheduleSpanCol = true;
 const missingSpanCol = (msg: string) => scheduleSpanCol && /crfdf_spandays/i.test(msg);
 
+// crfdf_splitgroup (links the parts of a task scheduled in sections) is newer
+// still. Same treatment: drop it and retry rather than failing the whole write.
+// Without it a split's parts keep their correct hours but lose their explicit
+// link on reload — split-hours.ts falls back to same job+task+employee.
+let splitGroupCol = true;
+const missingSplitCol = (msg: string) => splitGroupCol && /crfdf_splitgroup/i.test(msg);
+
+/** Turn off whichever newer column the server just rejected. Returns true when
+ *  something was turned off, i.e. the caller should retry the write without it. */
+function dropMissingCols(msg: string): boolean {
+  let retry = false;
+  if (missingSpanCol(msg)) {
+    scheduleSpanCol = false;
+    retry = true;
+  }
+  if (missingSplitCol(msg)) {
+    splitGroupCol = false;
+    retry = true;
+  }
+  return retry;
+}
+
 async function list(
   entitySet: string,
   opts: { select?: string; filter?: string; orderby?: string } = {},
@@ -252,6 +274,7 @@ function mapLine(r: Row): ScheduleLine {
     estimatedHours: n(r.crfdf_estimatedhours),
     overrideHours: nOrNull(r.crfdf_overridehours),
     spanDays: nOrNull(r.crfdf_spandays),
+    splitGroupId: r.crfdf_splitgroup == null ? null : s(r.crfdf_splitgroup) || null,
     // Team (department-wide) lines store no employee; their runtime resource is
     // the synthetic department lane so the board + engine can key off it.
     employeeId: Boolean(r.crfdf_departmentwide)
@@ -289,6 +312,7 @@ function toRecord(line: Partial<ScheduleLine>): Row {
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;
   if (line.overrideHours !== undefined) rec.crfdf_overridehours = line.overrideHours;
   if (scheduleSpanCol && line.spanDays !== undefined) rec.crfdf_spandays = line.spanDays;
+  if (splitGroupCol && line.splitGroupId !== undefined) rec.crfdf_splitgroup = line.splitGroupId;
   if (line.customerDueDate !== undefined) rec.crfdf_customerduedate = iso(line.customerDueDate);
   if (line.isLocked !== undefined) rec.crfdf_islocked = line.isLocked;
   if (line.jobSequence !== undefined) rec.crfdf_jobsequence = line.jobSequence;
@@ -410,9 +434,8 @@ export const liveProductionDataSource: ScheduleDataSource = {
 
   async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
     let res = await dvUpdate(SET.lines, id, toRecord(changes));
-    if (!res.success && missingSpanCol(res.error?.message ?? "")) {
-      scheduleSpanCol = false; // column not created yet — drop it and retry
-      res = await dvUpdate(SET.lines, id, toRecord(changes));
+    if (!res.success && dropMissingCols(res.error?.message ?? "")) {
+      res = await dvUpdate(SET.lines, id, toRecord(changes)); // retry without it
     }
     if (!res.success) throw new Error(res.error?.message ?? `UpdateRecord(${id}) failed`);
     const body = res.data as Row | undefined;
@@ -430,8 +453,13 @@ export const liveProductionDataSource: ScheduleDataSource = {
 
   async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
     // No crfdf_name — the primary-name column isn't crfdf_name on this table.
-    const rec = toRecord(line);
-    const res = await dvCreate(SET.lines, rec);
+    let res = await dvCreate(SET.lines, toRecord(line));
+    // A split part carries crfdf_splitgroup on CREATE, so the create path needs
+    // the same drop-and-retry the update path has, or splitting would fail
+    // outright on an org where the column hasn't been added yet.
+    if (!res.success && dropMissingCols(res.error?.message ?? "")) {
+      res = await dvCreate(SET.lines, toRecord(line));
+    }
     if (!res.success) throw new Error(res.error?.message ?? `CreateRecord failed`);
     // CreateRecord returns void; the new id is in the response location header
     // which the generated wrapper doesn't surface — return the input line. A
@@ -715,10 +743,9 @@ function createLiveInstallDataSource(
 
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
       let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
-      if (!res.success && (installExtraColsAvailable || missingSpanCol(res.error?.message ?? ""))) {
+      if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
         // Newer columns may be missing — drop them and retry so the edit sticks.
         installExtraColsAvailable = false;
-        if (missingSpanCol(res.error?.message ?? "")) scheduleSpanCol = false;
         res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       }
       if (!res.success) throw new Error(res.error?.message ?? `UpdateInstallCard(${id}) failed`);
@@ -736,12 +763,14 @@ function createLiveInstallDataSource(
     },
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
       const id = uuid();
-      const rec = { crfdf_installcardid: id, ...cardToRecord(line, isNek, true) };
-      let res = await dvCreate(SHIP.cards, rec);
-      if (!res.success && installExtraColsAvailable) {
+      const rec = () => ({ crfdf_installcardid: id, ...cardToRecord(line, isNek, true) });
+      let res = await dvCreate(SHIP.cards, rec());
+      if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
         // Newer columns may be missing — drop them and retry so the card saves.
+        // The record is REBUILT here: the original payload still carried the
+        // columns we just turned off, so resending it would fail identically.
         installExtraColsAvailable = false;
-        res = await dvCreate(SHIP.cards, rec);
+        res = await dvCreate(SHIP.cards, rec());
       }
       if (!res.success) throw new Error(res.error?.message ?? "CreateInstallCard failed");
       const created = { ...line, id };
@@ -829,6 +858,7 @@ function mapCardRecord(r: Row): ScheduleLine {
     estimatedHours: n(r.crfdf_estimatedhours, 8),
     overrideHours: nOrNull(r.crfdf_overridehours),
     spanDays: nOrNull(r.crfdf_spandays),
+    splitGroupId: r.crfdf_splitgroup == null ? null : s(r.crfdf_splitgroup) || null,
     employeeId: s(r["_crfdf_employee_value"]),
     departmentId: String(n(r.crfdf_locationvalue, 6)),
     customerDueDate: null,
@@ -853,6 +883,7 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   if (line.estimatedHours !== undefined) rec.crfdf_estimatedhours = line.estimatedHours;
   if (line.overrideHours !== undefined) rec.crfdf_overridehours = line.overrideHours;
   if (scheduleSpanCol && line.spanDays !== undefined) rec.crfdf_spandays = line.spanDays;
+  if (splitGroupCol && line.splitGroupId !== undefined) rec.crfdf_splitgroup = line.splitGroupId;
   if (line.departmentId !== undefined) rec.crfdf_locationvalue = Number(line.departmentId) || 0;
   if (line.isLocked !== undefined) rec.crfdf_islocked = line.isLocked;
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;

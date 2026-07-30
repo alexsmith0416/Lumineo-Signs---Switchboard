@@ -58,6 +58,11 @@ export interface ScheduleLine {
    *  it can shrink the card below its hours-derived length as well as extend it.
    *  Undefined/null = span from hours. */
   spanDays?: number | null;
+  /** Links the parts of a task scheduled in SECTIONS. Every part carries the
+   *  same group id, the same (unchanged) `estimatedHours` pot, and its own slice
+   *  of it in `overrideHours`. Unset on a normal, whole card. See
+   *  services/split-hours.ts. Persisted as crfdf_splitgroup. */
+  splitGroupId?: string | null;
   employeeId: EmployeeId;
   departmentId: DepartmentId;
   customerDueDate: Date | null;
