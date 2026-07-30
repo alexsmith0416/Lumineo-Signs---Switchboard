@@ -17,6 +17,7 @@
  */
 import type { ResourceAdminInput, ScheduleDataSource } from "./data-source";
 import { isLaneEmployeeId, laneEmployeeId } from "./department-lane";
+import { overlapsWindow, scheduleLineWindowFilter } from "./week-window";
 import {
   INSTALL_LOCATIONS,
   INSTALL_LOCATION_COLORS,
@@ -365,7 +366,9 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
-    const filter = `crfdf_startdatetime ge ${from.toISOString()} and crfdf_startdatetime le ${to.toISOString()}`;
+    // Overlap window, not "starts in this week" — see week-window.ts. A task
+    // that runs across a week boundary must load on BOTH weeks' boards.
+    const filter = scheduleLineWindowFilter(from, to);
     const rows = await list(SET.lines, { filter, orderby: "crfdf_startdatetime asc" });
     const lines = rows.map(mapLine);
     // Overlay the current ship-to / sales-order customer name + outstanding
@@ -699,7 +702,9 @@ function createLiveInstallDataSource(
         };
       });
       setRegionCards(region, all);
-      return all.filter((l) => l.startDateTime >= from && l.startDateTime <= to);
+      // Overlap window (see week-window.ts): a card that starts before this week
+      // but runs into it still belongs on the board.
+      return all.filter((l) => overlapsWindow(l, from, to));
     },
     async loadWorkHours(): Promise<WorkHoursOverride[]> {
       return [];

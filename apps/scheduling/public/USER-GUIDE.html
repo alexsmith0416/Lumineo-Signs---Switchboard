@@ -327,7 +327,7 @@
   <ul>
     <li><strong>Rows</strong> are grouped under a colored <strong>department / location banner</strong> (Metal Shop, Paint, Hutchinson, Wichita…). The banner color also tints that group's cards.</li>
     <li><strong>Columns</strong> are the seven days (Mon–Sun). Weekends are shaded because we don't usually schedule them.</li>
-    <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend. A card that spans several days <strong>un-stacks automatically</strong> to stay short — the job #, customer, and description move onto one line (with " | " between the customer and the description) and its task list runs together with " • " separators instead of one task per row.</li>
+    <li><strong>Cards</strong> show the job number, customer, and task; a bar's <em>width</em> is how long the job takes. An arrow (◂ ▸) means the job continues off the visible week or skips the weekend. A job long enough to run past Friday <strong>keeps going on the next week's board</strong> — click <em>Next ›</em> and you'll see it resume on Monday with a ◂ arrow on its left edge, for as many weeks as it runs. A card that spans several days <strong>un-stacks automatically</strong> to stay short — the job #, customer, and description move onto one line (with " | " between the customer and the description) and its task list runs together with " • " separators instead of one task per row.</li>
     <li><strong>Week navigation</strong> — use <span class="kbd">‹ Prev</span> / <span class="kbd">Next ›</span> to move a week at a time. On the current week, the middle button is <span class="kbd">📅 Go to…</span> — click it to pick any day from a calendar and jump to that week. Once you're on another week it becomes <span class="kbd">Today</span> to jump back.</li>
   </ul>
 
@@ -779,6 +779,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 30, 2026</td><td><strong>Fix: multi-week jobs now show on the following week</strong> — a job scheduled long enough to run past Friday stopped at Friday and was <em>missing</em> from the next week's board, even though its end date said it was still running. It now carries over and resumes on Monday with a ◂ arrow, and those carried-over hours count toward that person's day and week load (so auto-schedule no longer treats the day as free). See §4.</td></tr>
       <tr><td>Jul 27, 2026</td><td><strong>Load a Job Queue group into the schedule list &amp; edit each job</strong> — in Multiple-jobs mode, <em>Load from queue</em> pre-loads all of a queue group's jobs into the list, and you can now <strong>click any job in the list</strong> to open its card and set the employee, start date, hours, etc. before scheduling — configuring that the queue itself doesn't allow. See §5.1.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>See a day's scheduled hours on hover</strong> — hover any day on a person's row to see hours scheduled vs. capacity (e.g. "6h of 8h · 2h open"), red when over capacity, PTO/off for blocked days. See §4.</td></tr>
       <tr><td>Jul 26, 2026</td><td><strong>Clicking a person's day pre-fills the employee <em>and</em> the date</strong> — adding a job by clicking a day cell (Production or Installation) now fills in both that employee and the clicked start date, ready to Schedule. The toolbar <em>+ Add Job</em> button still starts blank. See §5.1.</td></tr>
@@ -845,7 +846,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.6 · Jul 27, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.7 · Jul 30, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -208,7 +208,35 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 26, 2026 · latest) — deployed + committed: no-auto-move edits + smarter auto-schedule.**
+- **Last shipped (Jul 30, 2026 · latest) — deployed + committed: multi-week jobs now render on the following week.**
+  Reported bug: a task scheduled across a week boundary stopped at Friday and was
+  missing from the next week's board (its end date said otherwise).
+  - **Root cause:** both live sources loaded a week with a *starts-in-this-week*
+    filter (`crfdf_startdatetime ge Mon and le Sun`), so a line that started the
+    prior week was never returned for the later week. The grid already handled it
+    (`computeRowCards` clips to col 0 + `overflowLeft` ◂ arrow) — the data just
+    never arrived. **Dev/mock mode returns all lines unfiltered, which is why this
+    only reproduced live.**
+  - **Fix:** new `services/week-window.ts` — `overlapsWindow()` (pure) +
+    `scheduleLineWindowFilter()` (OData). Production board queries the overlap
+    window; installation board's client-side subset uses `overlapsWindow`. The
+    OData filter is two *parenthesized* clauses (not the tighter
+    `start le to and end ge from`) so null-end rows still match as before —
+    unparenthesized, `and` binds tighter and the query widens to every row.
+  - **Also fixed by the same change:** those carried-over hours were missing from
+    the ENGINE context for week 2, so capacity saw Monday as free and
+    auto-schedule could double-book. `getHoursUsedOnDay`/`dayLoad` pro-rate by
+    business-hour overlap, so they now count correctly.
+  - `WeekSummary` Scheduled/utilization switched to summing
+    `dayLoad(emp, day).scheduled` — a spanning job now loads on both weeks, so
+    full-hours attribution would double-count it. Bonus: the week total now
+    equals the sum of the per-day hover readouts.
+  - Tests: `services/week-window.test.ts` (10). 118 green. Guide → v2.7.
+  - Verified in-browser (dev): 56h job on Mon Jul 27 → renders on the week of
+    Aug 3, col 0, Mon–Tue, `gantt-card--overflow-left`. ⚠️ The OData half is
+    unit-tested but only fully provable against live Dataverse — worth a spot
+    check on a real multi-week job on the deployed board.
+- **Earlier (Jul 26, 2026) — deployed + committed: no-auto-move edits + smarter auto-schedule.**
   Fixes two reported bugs: (a) auto-scheduling multiple jobs piled them onto Monday /
   filled the week; (b) editing one card stretched/moved another.
   - **Auto-schedule placement** rewritten: `placeDraft` (case B employee-no-start &

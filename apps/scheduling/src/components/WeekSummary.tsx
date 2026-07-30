@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { addDays, startOfMonth, endOfMonth, startOfWeek } from "date-fns";
-import { getDayCapacity, effectiveHours, isWeekend } from "../engine/capacity";
+import { dayLoad, getDayCapacity, isWeekend } from "../engine/capacity";
 import type { ScheduleContext } from "../engine/types";
 import { cardMoneyValue } from "./JobCard";
 
@@ -55,11 +55,14 @@ export default function WeekSummary({
     const monthEnd = endOfMonth(weekStart);
     const weekEnd = addDays(start, 7);
 
-    for (const line of context.schedule) {
-      const emp = context.employees.get(line.employeeId);
-      if (!emp) continue;
-      if (line.endDateTime >= start && line.startDateTime < weekEnd) {
-        totalScheduled += effectiveHours(line, emp);
+    // Count only the hours that actually land INSIDE this week. A job that
+    // starts one week and runs into the next now loads on both boards, so
+    // charging each week the job's whole hours would double-count it. dayLoad
+    // pro-rates a multi-day card across the days it covers (and drops block-out
+    // cards), so this total is exactly the sum of the per-day hover readouts.
+    for (const emp of context.employees.values()) {
+      for (const day of days) {
+        totalScheduled += dayLoad(emp, day, context).scheduled;
       }
     }
 
