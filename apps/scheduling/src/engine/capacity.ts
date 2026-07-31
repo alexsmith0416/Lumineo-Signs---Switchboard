@@ -35,10 +35,38 @@ export function isWeekend(d: Date): boolean {
   return day === 0 || day === 6;
 }
 
+/**
+ * True when someone has deliberately put work on this day — i.e. a card that
+ * STARTS here. This is what turns a weekend into a working day: the schedule
+ * itself records the decision, so it survives a reload with no extra column.
+ *
+ * A block-out card (PTO / Holiday) never opens a day — the whole point of one
+ * is to take the day away.
+ */
+export function hasManualWorkOn(
+  employeeId: string,
+  date: Date,
+  schedule: ScheduleLine[],
+): boolean {
+  const key = dayKey(date);
+  return schedule.some(
+    (l) => l.employeeId === employeeId && !isBlockoutCard(l) && dayKey(l.startDateTime) === key,
+  );
+}
+
+export interface DayCapacityOptions {
+  /** Force the day to count as a working day even if it's a weekend this person
+   *  doesn't normally work. Set by the walker for a card's OWN start day, which
+   *  is manual by definition and may not be in `ctx.schedule` yet (a draft being
+   *  placed, or a live preview). */
+  manual?: boolean;
+}
+
 export function getDayCapacity(
   employee: Employee,
   date: Date,
   ctx: ScheduleContext,
+  opts?: DayCapacityOptions,
 ): number {
   // Time-efficiency scales an employee's AVAILABLE hours: someone at 80%
   // efficiency has 0.8× their clock hours of usable capacity. (Rate 0 is
@@ -50,7 +78,20 @@ export function getDayCapacity(
   );
   if (override) return override.hours * rate;
 
-  if (isWeekend(date) && !employee.worksWeekends) return 0;
+  // Weekends are off by default — AUTO placement must never choose one (that's
+  // enforced in firstOpenSlot, which ignores the manual escape below). But a
+  // weekend day the user has explicitly dropped a card on IS a working day:
+  // otherwise the card's hours silently roll to Monday and the readouts show
+  // "4h of 0h". Scanning the schedule is the last check so it only ever runs
+  // for a weekend day of someone who doesn't normally work weekends.
+  if (
+    isWeekend(date) &&
+    !employee.worksWeekends &&
+    !opts?.manual &&
+    !hasManualWorkOn(employee.id, date, ctx.schedule)
+  ) {
+    return 0;
+  }
 
   const ot = ctx.overtime
     .filter((o) => o.employeeId === employee.id && o.date === key)

@@ -208,7 +208,32 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   bound `updateSchedule` action) — email drafted in
   `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
   is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 30, 2026 · latest) — deployed + committed: split a job card into sections.**
+- **Last shipped (Jul 31, 2026 · latest) — deployed + committed: manual weekend scheduling.**
+  A card placed on a Sat/Sun didn't stay: a 4h job on Sat Aug 1 reported End =
+  Mon Aug 3 (hours rolled to Monday) and drew smeared across Sat–Sun.
+  - **Root cause:** `getDayCapacity` returns 0 on weekends unless
+    `worksWeekends`, and `calculateEndTime` skips zero-capacity days — so the
+    hours walked past the weekend even though the START was pinned there. The
+    weekend cells were already clickable/droppable; only the engine refused.
+  - **Rule added — "a day you explicitly put a card on is a working day."**
+    `capacity.ts`: new `hasManualWorkOn(empId, date, schedule)` (a non-blockout
+    card STARTING that day) + a `{ manual }` opt on `getDayCapacity`. Derived
+    from `startDateTime`, so it needs **no new column and survives reload**.
+    A PTO/block-out card never opens a day.
+  - `calculateEndTime` passes `manual: sameCalendarDay(cursor, start)` — the
+    card's OWN start day always counts (this also covers drafts/previews not yet
+    in `ctx.schedule`). Later days get no pass: a long Saturday job resumes
+    Monday, never eats Sunday.
+  - 🔴 **AUTO still refuses weekends**: explicit `isWeekend` guard added in
+    `firstOpenSlot` that deliberately ignores the manual escape — someone on a
+    Saturday isn't an invitation to pack more on. `nextWorkStart` intentionally
+    stays capacity-based so same-day resequencing ON a Saturday works.
+  - Falls out for free: `dayLoad` hover reads "4h of 8h · 4h open" (was 0h),
+    WeekSummary capacity picks up the day (440h → 448h), and `computeRowCards`
+    already left weekend-START cards unclipped, so the card now draws on
+    Saturday only.
+  - Tests: `engine/weekend-work.test.ts` (12). 152 green. Guide → v2.9.
+- **Earlier (Jul 30, 2026) — deployed + committed: split a job card into sections.**
   Schedule a task in chunks (work it, switch jobs, come back) WITHOUT re-booking
   its estimate. Right-click a card → **Split into sections…**.
   - **Model:** `estimatedHours` stays the untouched **pot** on every part; each

@@ -436,6 +436,17 @@
   Going over the estimate is allowed (jobs run long); it's just flagged in red so nobody double-books
   a task by accident.</p>
 
+  <h4>Working a Saturday or Sunday</h4>
+  <p>Weekends are shaded and left out of scheduling by default — but you can <strong>put a card on one
+  yourself</strong>. Click a Saturday or Sunday cell on someone's row (or drag a card onto it, or type a
+  weekend date into <em>Start</em>) and the job stays there: the hours land on that day, the card ends
+  that day, and the day counts toward that person's load.</p>
+  <p class="tip"><strong>Only the day you choose opens up.</strong> The rest of the weekend stays off, so a
+  job that runs longer than the day picks up again on Monday rather than rolling into Sunday. And
+  <strong>Auto&nbsp;Schedule never picks a weekend</strong> — even for someone already working that Saturday.
+  Coming in on a weekend is your call to make, not the scheduler's. (If somebody works weekends as a
+  rule, set that on their roster record instead and the scheduler will treat those days normally.)</p>
+
   <h4>Custom Card (blocking out time)</h4>
   <p>For PTO, holidays, inventory, truck maintenance, certifications — anything that isn't a BC job.</p>
   <ol class="steps">
@@ -803,6 +814,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Jul 31, 2026</td><td><strong>You can now schedule on Saturdays and Sundays</strong> — click (or drag onto) a weekend cell and the job <strong>stays there</strong>. Previously its hours quietly rolled to Monday: a 4h job placed on Sat Aug 1 reported an end date of Mon Aug 3 and smeared across the weekend. The day now counts toward that person's hours and capacity. Only the day you pick opens up, and <strong>Auto Schedule still never chooses a weekend</strong>. See §5.1.</td></tr>
       <tr><td>Jul 30, 2026</td><td><strong>Split a job into sections</strong> — right-click a card → <em>Split into sections…</em> to schedule a task in chunks (work it, go do other jobs, come back) <strong>without re-booking its hours</strong>. Set the hours per part; part 1 stays put and the others land on that person's next opening. Parts are badged <strong>1/2</strong>, <strong>2/2</strong> and share the task's estimate. Adding a task that's already partly scheduled now says so and pre-fills the <strong>hours left</strong> instead of the full estimate. See §5.1.</td></tr>
       <tr><td>Jul 30, 2026</td><td><strong>Fix: multi-week jobs now show on the following week</strong> — a job scheduled long enough to run past Friday stopped at Friday and was <em>missing</em> from the next week's board, even though its end date said it was still running. It now carries over and resumes on Monday with a ◂ arrow, and those carried-over hours count toward that person's day and week load (so auto-schedule no longer treats the day as free). See §4.</td></tr>
       <tr><td>Jul 27, 2026</td><td><strong>Load a Job Queue group into the schedule list &amp; edit each job</strong> — in Multiple-jobs mode, <em>Load from queue</em> pre-loads all of a queue group's jobs into the list, and you can now <strong>click any job in the list</strong> to open its card and set the employee, start date, hours, etc. before scheduling — configuring that the queue itself doesn't allow. See §5.1.</td></tr>
@@ -871,7 +883,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.8 · Jul 30, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v2.9 · Jul 31, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

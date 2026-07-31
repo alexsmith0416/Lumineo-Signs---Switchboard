@@ -1,5 +1,5 @@
 import { addDays, startOfDay } from "date-fns";
-import { effectiveHours, getDayCapacity, getHoursUsedOnDay } from "./capacity";
+import { effectiveHours, getDayCapacity, getHoursUsedOnDay, isWeekend } from "./capacity";
 import type { Employee, ScheduleContext, ScheduleLine } from "./types";
 
 const DAY_START_HOUR = 8;
@@ -10,6 +10,14 @@ function rollToNextWorkday(cursor: Date): Date {
   const next = startOfDay(addDays(cursor, 1));
   next.setHours(DAY_START_HOUR, 0, 0, 0);
   return next;
+}
+
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 export function calculateEndTime(
@@ -43,7 +51,14 @@ export function calculateEndTime(
       continue;
     }
 
-    const dayCapacity = getDayCapacity(employee, cursor, ctx);
+    // The card's OWN start day always counts as a working day: the user put it
+    // there on purpose. Without this a job placed on a Saturday has its hours
+    // silently rolled to Monday (the card draws across the weekend but the end
+    // date lands on Monday). Later days get no such pass — a Saturday job that
+    // runs long resumes Monday rather than quietly eating Sunday.
+    const dayCapacity = getDayCapacity(employee, cursor, ctx, {
+      manual: sameCalendarDay(cursor, start),
+    });
     if (dayCapacity <= 0) {
       cursor = rollToNextWorkday(cursor);
       dayCount++;
@@ -122,6 +137,14 @@ export function firstOpenSlot(
   if (cursor.getHours() < DAY_START_HOUR) cursor.setHours(DAY_START_HOUR, 0, 0, 0);
   cursor.setMinutes(0, 0, 0);
   for (let i = 0; i < MAX_DAYS_LOOKAHEAD; i++) {
+    // AUTO placement never chooses a weekend, even one the person is already
+    // working: someone coming in on a Saturday is a deliberate call, not an
+    // invitation for the scheduler to pack more onto it. (getDayCapacity opens
+    // such a day for MANUAL placement — this guard deliberately ignores that.)
+    if (isWeekend(cursor) && !employee.worksWeekends) {
+      cursor = rollToNextWorkday(cursor);
+      continue;
+    }
     const cap = getDayCapacity(employee, cursor, ctx);
     if (cap <= 0) {
       cursor = rollToNextWorkday(cursor);
