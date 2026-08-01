@@ -21,6 +21,10 @@ const HIDE_HEADER_KEY = "lumineo.settings.hideHeader";
 // Whether to draw the faint pulsing red "now" line at the current day + time on
 // the calendars. Default ON.
 const NOW_LINE_KEY = "lumineo.settings.showNowLine";
+// Whether hovering a person's day shows the scheduled-hours readout pill
+// ("6h of 8h · 2h open"). Default ON. Off for anyone who finds it distracting
+// while dragging cards around, or on a wall display.
+const DAY_HOURS_KEY = "lumineo.settings.showDayHours";
 
 function readBool(key: string, fallback: boolean): boolean {
   try {
@@ -46,6 +50,8 @@ interface SettingsState {
   setHideHeader: (value: boolean) => void;
   showNowLine: boolean;
   setShowNowLine: (value: boolean) => void;
+  showDayHours: boolean;
+  setShowDayHours: (value: boolean) => void;
   // Presentation ("TV") mode hides the app's own top + side nav and shows the
   // current screen full-bleed for display on a monitor. Transient by design —
   // it's a mode you drop with ESC, not a saved preference — so it is NOT
@@ -69,6 +75,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setShowNowLine: (value) => {
     writeBool(NOW_LINE_KEY, value);
     set({ showNowLine: value });
+  },
+  showDayHours: readBool(DAY_HOURS_KEY, true),
+  setShowDayHours: (value) => {
+    writeBool(DAY_HOURS_KEY, value);
+    set({ showDayHours: value });
   },
   presentationMode: false,
   setPresentationMode: (value) => set({ presentationMode: value }),

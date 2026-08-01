@@ -340,7 +340,7 @@
   <table>
     <tr><th>You see</th><th>It means</th></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
-    <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation.</td></tr>
+    <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation. Don't want it? Switch it off in <em>Settings → Display → Day hours on hover</em>.</td></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">1/2</span> (small badge after the job #)</td><td>This card is <strong>one section of a split task</strong> — part 1 of 2 here. The parts share the task's estimate rather than each booking it in full. See §5.1 <em>Splitting a job into sections</em>.</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
@@ -645,6 +645,7 @@
     <tr><td>Full screen (Presentation / TV mode)</td><td>Hides everything but the schedule for a shop TV. Press <span class="kbd">Esc</span> to exit.</td></tr>
     <tr><td>Hide the Power Apps header</td><td>Reclaims the purple bar at the very top for more space (reloads the app; deployed app only).</td></tr>
     <tr><td>Current time line</td><td>Shows a faint, softly pulsing red line at the current day &amp; time on the calendars — a quick marker of where "now" is in the week. Only appears on the current week. On by default.</td></tr>
+    <tr><td>Day hours on hover</td><td>Shows the scheduled-hours pill when you hover a day on someone's row (<em>"6h of 8h · 2h open"</em>). Turn it off for a clean board while dragging cards, or on a wall display. On by default. Doesn't affect the job-card hover preview, which is separate.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
   </table>
 
@@ -814,6 +815,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Aug 1, 2026</td><td><strong>The day-hours hover readout can be switched off</strong> — <em>Settings → Display → Day hours on hover</em> turns the "6h of 8h · 2h open" pill on or off (on by default). The job-card hover preview is separate and stays. See §12.</td></tr>
       <tr><td>Jul 31, 2026</td><td><strong>You can now schedule on Saturdays and Sundays</strong> — click (or drag onto) a weekend cell and the job <strong>stays there</strong>. Previously its hours quietly rolled to Monday: a 4h job placed on Sat Aug 1 reported an end date of Mon Aug 3 and smeared across the weekend. The day now counts toward that person's hours and capacity. Only the day you pick opens up, and <strong>Auto Schedule still never chooses a weekend</strong>. See §5.1.</td></tr>
       <tr><td>Jul 30, 2026</td><td><strong>Split a job into sections</strong> — right-click a card → <em>Split into sections…</em> to schedule a task in chunks (work it, go do other jobs, come back) <strong>without re-booking its hours</strong>. Set the hours per part; part 1 stays put and the others land on that person's next opening. Parts are badged <strong>1/2</strong>, <strong>2/2</strong> and share the task's estimate. Adding a task that's already partly scheduled now says so and pre-fills the <strong>hours left</strong> instead of the full estimate. See §5.1.</td></tr>
       <tr><td>Jul 30, 2026</td><td><strong>Fix: multi-week jobs now show on the following week</strong> — a job scheduled long enough to run past Friday stopped at Friday and was <em>missing</em> from the next week's board, even though its end date said it was still running. It now carries over and resumes on Monday with a ◂ arrow, and those carried-over hours count toward that person's day and week load (so auto-schedule no longer treats the day as free). See §4.</td></tr>
@@ -883,7 +885,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v2.9 · Jul 31, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.0 · Aug 1, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -1612,8 +1612,10 @@ function EmployeeRow({
     topPx: number;
   } | null>(null);
   // Weekday index whose scheduled-hours readout is showing (mouse hover). Null =
-  // hidden. Suppressed while dragging so it doesn't fight the drag affordances.
+  // hidden. Suppressed while dragging so it doesn't fight the drag affordances,
+  // and switchable off entirely in Settings → Display.
   const [hoursDayIdx, setHoursDayIdx] = useState<number | null>(null);
+  const showDayHours = useSettingsStore((s) => s.showDayHours);
 
   // Un-stacked cards are auto-height (hug their content), but the passed
   // laneHeight comes from a deliberately-generous wrap ESTIMATE — so a row whose
@@ -1793,14 +1795,22 @@ function EmployeeRow({
         className="employee-row__days"
         ref={daysRef}
         style={{ minHeight: effRowMinHeight }}
-        onMouseMove={(e) => {
-          // Show the scheduled-hours readout for the day under the cursor. Works
-          // over job cards too (mousemove bubbles). Only re-render on day change.
-          if (draggedLineIdRef.current) return; // not while dragging
-          const idx = dayIndexFromClientX(e.clientX);
-          setHoursDayIdx((prev) => (prev === idx ? prev : idx));
-        }}
-        onMouseLeave={() => setHoursDayIdx(null)}
+        onMouseMove={
+          // Skip the handler entirely when the readout is switched off in
+          // Settings — no per-mousemove work at all, rather than tracking the
+          // day and then not rendering it.
+          showDayHours
+            ? (e) => {
+                // Show the scheduled-hours readout for the day under the cursor.
+                // Works over job cards too (mousemove bubbles). Only re-render on
+                // day change.
+                if (draggedLineIdRef.current) return; // not while dragging
+                const idx = dayIndexFromClientX(e.clientX);
+                setHoursDayIdx((prev) => (prev === idx ? prev : idx));
+              }
+            : undefined
+        }
+        onMouseLeave={showDayHours ? () => setHoursDayIdx(null) : undefined}
         onDragLeave={(e) => {
           // Only clear when the drag actually leaves the strip, not when it
           // crosses between child cells/cards inside it.
@@ -1810,7 +1820,7 @@ function EmployeeRow({
           }
         }}
       >
-        {hoursDayIdx !== null && days[hoursDayIdx] && (() => {
+        {showDayHours && hoursDayIdx !== null && days[hoursDayIdx] && (() => {
           const load = dayLoad(emp, days[hoursDayIdx]!, scheduleCtx);
           const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
           const over = load.scheduled - load.capacity;

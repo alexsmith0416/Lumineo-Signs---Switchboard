@@ -13,6 +13,8 @@ export default function SettingsScreen() {
   const setHideHeader = useSettingsStore((s) => s.setHideHeader);
   const showNowLine = useSettingsStore((s) => s.showNowLine);
   const setShowNowLine = useSettingsStore((s) => s.setShowNowLine);
+  const showDayHours = useSettingsStore((s) => s.showDayHours);
+  const setShowDayHours = useSettingsStore((s) => s.setShowDayHours);
   const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
   // Only real admins see + open the Users manager.
   const { realType } = useCurrentUser();
@@ -136,6 +138,32 @@ export default function SettingsScreen() {
 
         <div className="settings-row__status">
           The current-time line is <strong>{showNowLine ? "on" : "off"}</strong>.
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Day hours on hover</div>
+            <div className="settings-row__desc">
+              Hovering a day on someone's row pops up how many hours are scheduled that day
+              against their capacity — <em>“6h of 8h · 2h open”</em>, red when over, and
+              <strong> PTO / off</strong> for blocked days. Turn it off if you'd rather have a
+              clean board while you're dragging cards around, or on a wall display.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showDayHours}
+            aria-label="Day hours on hover"
+            className={"settings-switch" + (showDayHours ? " settings-switch--on" : "")}
+            onClick={() => setShowDayHours(!showDayHours)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          The hover readout is <strong>{showDayHours ? "on" : "off"}</strong>.
         </div>
       </div>
 

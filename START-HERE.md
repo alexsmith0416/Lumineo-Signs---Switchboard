@@ -202,13 +202,36 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   `scripts/add-employee-resourceno-column.ps1`). Flow scaffolded
   (`flows/BCPush_PlanningSteps-clientdata.json` + solution packager
   `_build_pushflow_solution.py` → `BCPushReview_1_0_0_1.zip`).
-  🔴 **BLOCKED:** the `sign365 v1.0` BC API is **read-only** (all business
-  entitysets `Updatable=false`) — can't PATCH. **Next:** infotechConsultingGroup
-  must expose a writable endpoint (editable API page keyed on `systemId`, or a
-  bound `updateSchedule` action) — email drafted in
-  `flows/BCPush-infotech-request.md`. Don't turn the flow on until then; outbox
-  is harmless to leave. Also: app not yet redeployed with the enqueue code.
-- **Last shipped (Jul 31, 2026 · latest) — deployed + committed: manual weekend scheduling.**
+  🔴 **BLOCKED — re-verified against UAT metadata Jul 31, 2026. Two walls, not one:**
+  1. **Read-only.** Every business entityset in `sign365 v1.0` is annotated
+     `Insertable/Updatable/Deletable = false`. Only `subscriptions` +
+     `externaleventsubscriptions` are writable, and the container declares **no
+     `<Action>`/`<Function>`**, so there's no action route either.
+  2. **No addressable row (new finding).** `projectPlanningStep` is keyed on a
+     3-part composite (`auxiliaryIndex1` Guid, `auxiliaryIndex2` String,
+     `auxiliaryIndex3` Guid), no `systemId`, no `@odata.etag`. A correctly-formed
+     keyed GET returns `"The supplied column ID '0' cannot be found in the
+     query"` — the page is backed by a query/temp table, so **no single row
+     exists for PATCH to target even if the read-only flag were flipped.**
+     Flipping `Editable=true` on the current page would not be enough; they need
+     an API page over the real table.
+  **Next:** send the ask in `flows/BCPush-infotech-request.md` (rewritten Jul 31
+  with the full evidence + both wall descriptions). Don't turn the flow on until
+  then; outbox is harmless to leave. Also: app not yet redeployed with the
+  enqueue code.
+  **Postman:** the `Sign365 API (UAT)` collection now has a **Write-back (PATCH)**
+  folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
+  preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
+  the day it's unblocked.
+- **Last shipped (Aug 1, 2026 · latest) — deployed + committed: Settings toggle for the
+  day-hours hover readout.** `showDayHours` in `settings-store.ts` (localStorage
+  `lumineo.settings.showDayHours`, default ON), a switch in
+  `SettingsScreen` → Display, read in `EmployeeRow`. When off, the row's
+  `onMouseMove`/`onMouseLeave` handlers are `undefined` rather than tracking the
+  hovered day and discarding it — no per-mousemove work at all. Only kills the
+  `.day-hours-tip` pill; the job-card hover preview is a separate feature and is
+  untouched. Guide → v3.0.
+- **Earlier (Jul 31, 2026) — deployed + committed: manual weekend scheduling.**
   A card placed on a Sat/Sun didn't stay: a 4h job on Sat Aug 1 reported End =
   Mon Aug 3 (hours rolled to Monday) and drew smeared across Sat–Sun.
   - **Root cause:** `getDayCapacity` returns 0 on weekends unless
