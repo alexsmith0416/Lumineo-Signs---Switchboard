@@ -1,4 +1,5 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
+import { SHAPE_LABELS } from '../data/tables';
 import { fmt, fmtFtIn } from './fields';
 
 // Pure elevation-sketch SVG: sign faces as boxes on the pole(s), footings
@@ -141,7 +142,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const dimX = X(maxHalfX) + 30;
   const dimLX = X(-maxHalfX) - 30;
 
-  const poleLabel = `${input.numColumns} × ${input.columnType === 'P' ? 'pipe' : 'tube'} ${section.name}`;
+  const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
       ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' caisson`
@@ -323,7 +324,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           <g>
             <line x1={lx} y1={midY} x2={lx + 26} y2={midY - 14} stroke={p.dim} strokeWidth={1} />
             <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>
-              upper: {input.numColumns} × {input.columnType === 'P' ? 'pipe' : 'tube'} {transition.section.name}
+              upper: {input.numColumns} × {SHAPE_LABELS[input.columnType].short.toLowerCase()} {transition.section.name}
             </text>
             <text x={X(px) + poleWpx / 2 + 8} y={spliceY + 4} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
               splice {fmtFtIn(transition.spliceFt)} · 2'-0" inside

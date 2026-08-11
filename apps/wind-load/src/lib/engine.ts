@@ -10,6 +10,8 @@ import {
   CE,
   CE_HEIGHTS,
   SEISMIC_Z,
+  SHAPE_LABELS,
+  isAluminum,
   sectionsFor,
   type Exposure,
   type SectionShape,
@@ -315,11 +317,18 @@ export function elementPressure(
 
 // ── Steel column selection (AISC 9th ed. ASD) ───────────────────────────────
 
-/** Base allowable bending stress 0.66·Fy, psi, by section shape. */
+/** Base allowable bending stress, psi, by section shape. */
 export function baseAllowablePsi(shape: SectionShape): number {
-  // Pipe: A53-B Fy=35 ksi → 23,100. Tube: A500-B Fy=46 ksi → 30,360.
-  return shape === 'P' ? 23100 : 30360;
+  // Steel (AISC 9th ed. ASD, 0.66·Fy) — pipe: A53-B Fy=35 ksi → 23,100;
+  // tube: A500-B Fy=46 ksi → 30,360.
+  // Aluminum (Aluminum Design Manual, 6061-T6) — Fcy/Ω = 35/1.65 → 21,200.
+  if (shape === 'P') return 23100;
+  if (shape === 'ALTS') return ALUM_BASE_ALLOWABLE_PSI;
+  return 30360;
 }
+
+/** 6061-T6 allowable bending stress, psi: Fcy 35 ksi / Ω 1.65. */
+export const ALUM_BASE_ALLOWABLE_PSI = 21200;
 
 export function requiredSectionModulus(
   momentLbFt: number,
@@ -346,7 +355,16 @@ export function findSectionByName(name: string, shape: SectionShape): SteelSecti
   return sectionsFor(shape).find((s) => s.name === name) ?? null;
 }
 
-/** Allowable bending stress incl. compactness check (AISC 9th ed. ASD). */
+/**
+ * Allowable bending stress incl. a compactness check.
+ *
+ * Steel follows AISC 9th ed. ASD exactly as the workbook does. Aluminum uses
+ * a deliberately SIMPLIFIED 6061-T6 model — full allowable stress up to a
+ * compact flat-width ratio, then a linear reduction for local buckling up to
+ * the slenderness limit. It is intended for preliminary sizing only; a
+ * licensed engineer must confirm aluminum members against the current
+ * Aluminum Design Manual.
+ */
 export function allowableBendingKsi(
   section: SteelSection,
   shape: SectionShape,
@@ -358,11 +376,35 @@ export function allowableBendingKsi(
       ? { FbKsi: 23.1 * stressIncrease, note: 'd/t < 3300/Fy — compact, Fb = 0.66Fy' }
       : { FbKsi: 21 * stressIncrease, note: 'd/t > 3300/Fy — Fb = 0.6Fy' };
   }
+
+  // Flat width ratio, using the workbook's b/t = (b − 3t)/t convention.
   const bt = (section.odIn - 3 * section.wallIn) / section.wallIn;
+
+  if (shape === 'ALTS') {
+    const base = ALUM_BASE_ALLOWABLE_PSI / 1000; // 21.2 ksi
+    if (bt <= ALUM_COMPACT_BT) {
+      return { FbKsi: base * stressIncrease, note: `b/t ${bt.toFixed(0)} — compact, Fb = Fcy/1.65 (6061-T6)` };
+    }
+    if (bt <= ALUM_SLENDER_BT) {
+      // Linear post-buckling reduction to 60% of the compact allowable.
+      const frac = 1 - 0.4 * ((bt - ALUM_COMPACT_BT) / (ALUM_SLENDER_BT - ALUM_COMPACT_BT));
+      return {
+        FbKsi: base * frac * stressIncrease,
+        note: `b/t ${bt.toFixed(0)} — local buckling reduction (6061-T6, simplified)`,
+      };
+    }
+    return { FbKsi: null, note: `b/t ${bt.toFixed(0)} slender — verify with an engineer` };
+  }
+
   if (bt < 28.01) return { FbKsi: 30.36 * stressIncrease, note: 'b/t < 190/√Fy — compact, Fb = 0.66Fy' };
   if (bt < 35.09) return { FbKsi: 27.6 * stressIncrease, note: 'b/t < 238/√Fy — Fb = 0.6Fy' };
   return { FbKsi: null, note: 'b/t slender — verify with an engineer' };
 }
+
+/** Flat-width ratio below which a 6061-T6 element develops full allowable stress. */
+export const ALUM_COMPACT_BT = 22;
+/** Flat-width ratio above which a 6061-T6 element is treated as slender. */
+export const ALUM_SLENDER_BT = 41;
 
 /**
  * Wind moment about a height h above grade (lb-ft): elements whose centroid
@@ -806,7 +848,11 @@ export function computeDesign(input: DesignInput): DesignResult {
     input.columnSizeName,
   );
   if (momentAtGradeLbFt > 0 && !column.section) {
-    errors.push('No standard pipe/tube size is large enough — add columns or reduce the sign.');
+    errors.push(
+      isAluminum(input.columnType)
+        ? 'No stocked aluminum tube is large enough — add poles, switch to steel, or reduce the sign.'
+        : 'No standard pipe/tube size is large enough — add columns or reduce the sign.',
+    );
   }
   if (column.section && !column.ok && column.FbKsi !== null) {
     warnings.push(
@@ -818,7 +864,7 @@ export function computeDesign(input: DesignInput): DesignResult {
   }
   if (input.columnSizing === 'manual' && input.columnSizeName && column.mode === 'auto') {
     warnings.push(
-      `Pole size "${input.columnSizeName}" isn't a ${input.columnType === 'P' ? 'round pipe' : 'square tube'} size — using the recommended size instead.`,
+      `Pole size "${input.columnSizeName}" isn't a ${SHAPE_LABELS[input.columnType].long.toLowerCase()} size — using the recommended size instead.`,
     );
   }
 
@@ -888,6 +934,29 @@ export function computeDesign(input: DesignInput): DesignResult {
   const basePlate = column.section
     ? basePlateCheck(input, momentAtGradeLbFt, shearAtGradeLb, column.section)
     : null;
+
+  // Aluminum practice notes — these are fabrication/detailing requirements the
+  // steel workbook never had to deal with.
+  if (isAluminum(input.columnType) && column.section) {
+    if (!input.basePlate.enabled && footing) {
+      warnings.push(
+        'Aluminum must not be cast directly against concrete — coat or sleeve the embedded length to isolate it from the alkaline concrete, or mount on a base plate above grade.',
+      );
+    }
+    if (input.basePlate.enabled) {
+      warnings.push(
+        'Base plate, anchor bolt and weld checks assume A36 steel — for an aluminum pole have an engineer confirm the plate, the welded connection (6061-T6 loses strength in the weld heat-affected zone) and isolation from dissimilar metals.',
+      );
+    }
+    if (transition?.section) {
+      warnings.push(
+        'Transition ring plates are specified as steel — on an aluminum pole the splice needs engineered aluminum detailing (weld HAZ strength) and isolation from the steel plates.',
+      );
+    }
+    warnings.push(
+      "Aluminum deflects about 3× as much as steel for the same section (E ≈ 10,000 ksi vs 29,000 ksi) — check sway/deflection, not just stress.",
+    );
+  }
 
   const z = SEISMIC_Z[input.seismicZone] ?? 0.4;
   const fpPsf = z * 1 * 2 * 15; // Fp = Z·I·Cp·Wp (I=1 standard, Cp=2 signs, Wp=15 psf)

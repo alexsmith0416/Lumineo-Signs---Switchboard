@@ -31,7 +31,29 @@ export const SEISMIC_Z: Readonly<Record<number, number>> = {
   4: 0.4,
 };
 
-export type SectionShape = 'P' | 'TS'; // round pipe | square tube
+// Round steel pipe | square steel tube | square aluminum tube.
+export type SectionShape = 'P' | 'TS' | 'ALTS';
+
+export const SHAPE_LABELS: Readonly<Record<SectionShape, { short: string; long: string }>> = {
+  P: { short: 'Pipe', long: 'Round steel pipe' },
+  TS: { short: 'Tube', long: 'Square steel tube' },
+  ALTS: { short: 'Alum tube', long: 'Square aluminum tube' },
+};
+
+export const SHAPE_SPECS: Readonly<Record<SectionShape, string>> = {
+  P: 'ASTM A53 Gr. B (Fy 35 ksi)',
+  TS: 'ASTM A500 Gr. B (Fy 46 ksi)',
+  ALTS: '6061-T6 aluminum (Fcy 35 ksi)',
+};
+
+export function isAluminum(shape: SectionShape): boolean {
+  return shape === 'ALTS';
+}
+
+/** Square sections measure across the flats; only 'P' is round. */
+export function isRound(shape: SectionShape): boolean {
+  return shape === 'P';
+}
 
 export interface SteelSection {
   /** Display name as printed in the workbook, e.g. `10"(.365)` or `8XX.25`. */
@@ -106,8 +128,32 @@ export const TUBE_SECTIONS: readonly SteelSection[] = [
   { name: '16XX.50', sm: 150, sleeveIn: 24, areaSqIn: 30.4, odIn: 16, wallIn: 0.5 },
 ];
 
+// Square aluminum tube, 6061-T6 — the shop's standard sign poles (2", 3" and
+// 4" square, most often 1/8" wall, with heavier walls available when 1/8"
+// doesn't carry the load).
+//
+// Section properties are computed for a square hollow section of outside
+// dimension b and wall t (sharp corners, so slightly conservative vs. the
+// real radiused extrusion):
+//   I = (b⁴ − (b − 2t)⁴) / 12,  S = 2I / b,  A = b² − (b − 2t)²
+// Ordered by section modulus so the auto-size bracket lookup works the same
+// way as the steel tables.
+export const ALUM_TUBE_SECTIONS: readonly SteelSection[] = [
+  { name: '2"×2"×1/8"', sm: 0.5518, sleeveIn: null, areaSqIn: 0.9375, odIn: 2, wallIn: 0.125 },
+  { name: '2"×2"×3/16"', sm: 0.7523, sleeveIn: null, areaSqIn: 1.3594, odIn: 2, wallIn: 0.1875 },
+  { name: '2"×2"×1/4"', sm: 0.9115, sleeveIn: null, areaSqIn: 1.75, odIn: 2, wallIn: 0.25 },
+  { name: '3"×3"×1/8"', sm: 1.3227, sleeveIn: null, areaSqIn: 1.4375, odIn: 3, wallIn: 0.125 },
+  { name: '3"×3"×3/16"', sm: 1.8622, sleeveIn: null, areaSqIn: 2.1094, odIn: 3, wallIn: 0.1875 },
+  { name: '3"×3"×1/4"', sm: 2.3299, sleeveIn: null, areaSqIn: 2.75, odIn: 3, wallIn: 0.25 },
+  { name: '4"×4"×1/8"', sm: 2.4269, sleeveIn: null, areaSqIn: 1.9375, odIn: 4, wallIn: 0.125 },
+  { name: '4"×4"×3/16"', sm: 3.4718, sleeveIn: null, areaSqIn: 2.8594, odIn: 4, wallIn: 0.1875 },
+  { name: '4"×4"×1/4"', sm: 4.4141, sleeveIn: null, areaSqIn: 3.75, odIn: 4, wallIn: 0.25 },
+];
+
 export function sectionsFor(shape: SectionShape): readonly SteelSection[] {
-  return shape === 'P' ? PIPE_SECTIONS : TUBE_SECTIONS;
+  if (shape === 'P') return PIPE_SECTIONS;
+  if (shape === 'ALTS') return ALUM_TUBE_SECTIONS;
+  return TUBE_SECTIONS;
 }
 
 /** Standard specification notes, transcribed from the workbook's "Spec" sheet. */

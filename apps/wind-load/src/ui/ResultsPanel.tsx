@@ -1,5 +1,6 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
 import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
+import { SHAPE_LABELS, isAluminum, isRound } from '../data/tables';
 import { fmt, fmtFtIn, fmtInt } from './fields';
 
 interface Props {
@@ -97,7 +98,7 @@ export function ResultsPanel({ input, result }: Props) {
                 <>
                   <div className="hero-line">
                     <span className="hero-value">
-                      {input.numColumns} × {input.columnType === 'P' ? 'Pipe' : 'Tube'} {r.column.section.name}
+                      {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {r.column.section.name}
                     </span>
                     <Chip ok={r.column.ok} okText="OK" badText="OVERSTRESSED" />
                     {r.column.mode === 'manual' && r.column.autoSection && (
@@ -125,7 +126,7 @@ export function ResultsPanel({ input, result }: Props) {
                   <UtilizationBar ratio={r.column.utilization} />
                   <Row
                     label="Size"
-                    value={`${fmt(r.column.section.odIn, 3)}" ${input.columnType === 'P' ? 'OD' : 'square'} × ${fmt(r.column.section.wallIn, 4)}" wall · ${fmt(r.column.section.areaSqIn)} in² steel`}
+                    value={`${fmt(r.column.section.odIn, 3)}" ${isRound(input.columnType) ? 'OD' : 'square'} × ${fmt(r.column.section.wallIn, 4)}" wall · ${fmt(r.column.section.areaSqIn)} in² ${isAluminum(input.columnType) ? 'aluminum' : 'steel'}`}
                   />
                   {r.column.section.sleeveIn !== null && (
                     <Row label="Splice sleeve depth" value={`${r.column.section.sleeveIn}" (if a stepped column is used)`} />
@@ -160,7 +161,7 @@ export function ResultsPanel({ input, result }: Props) {
                 <div className="hero-line">
                   <span className="hero-value">
                     {r.transition.section
-                      ? `Upper: ${input.numColumns} × ${input.columnType === 'P' ? 'Pipe' : 'Tube'} ${r.transition.section.name}`
+                      ? `Upper: ${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${r.transition.section.name}`
                       : 'No fitting upper size'}
                   </span>
                   <Chip

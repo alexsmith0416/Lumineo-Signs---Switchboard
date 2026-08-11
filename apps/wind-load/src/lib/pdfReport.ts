@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { jsPDF } from 'jspdf';
 
 import type { DesignInput, DesignResult } from './engine';
-import { EXPOSURE_DESCRIPTIONS, SPEC_NOTES } from '../data/tables';
+import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound } from '../data/tables';
 import { fmt, fmtFtIn, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
 
@@ -247,7 +247,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     setFont(12, 'bold', BRAND);
     ensureRoom(16);
     doc.text(
-      `${input.numColumns} × ${input.columnType === 'P' ? 'Pipe' : 'Tube'} ${c.section.name}` +
+      `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${c.section.name}` +
         (c.ok ? '' : '  — OVERSTRESSED'),
       M,
       y,
@@ -269,7 +269,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
         : `fb ${fmt(c.fbKsi ?? 0)} ksi — slender section, verify with an engineer`,
       c.ok ? 'OK' : 'NG',
     );
-    row('Size', `${fmt(c.section.odIn, 3)}" ${input.columnType === 'P' ? 'OD' : 'square'} × ${fmt(c.section.wallIn, 4)}" wall · ${fmt(c.section.areaSqIn)} in² steel`);
+    row('Size', `${fmt(c.section.odIn, 3)}" ${isRound(input.columnType) ? 'OD' : 'square'} × ${fmt(c.section.wallIn, 4)}" wall · ${fmt(c.section.areaSqIn)} in² ${isAluminum(input.columnType) ? 'aluminum' : 'steel'} · ${SHAPE_SPECS[input.columnType]}`);
     if (c.section.sleeveIn !== null) row('Splice sleeve', `${c.section.sleeveIn}" deep (if a stepped column is used)`);
   } else {
     row('Result', 'No standard pipe/tube size carries this load — add poles or reduce the sign.');
@@ -328,7 +328,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     if (tr) {
       if (tr.section) {
         row('Splice', `${fmtFtIn(tr.spliceFt)} above grade · upper pipe extends ${fmt(tr.overlapFt)}' inside the base pipe`);
-        row('Upper pipe', `${input.numColumns} × ${input.columnType === 'P' ? 'Pipe' : 'Tube'} ${tr.section.name} · ${fmt(tr.section.odIn, 3)}" OD fits ${fmt(tr.baseIdIn, 3)}" base ID`, tr.ok ? 'OK' : 'NG');
+        row('Upper pipe', `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${tr.section.name} · ${fmt(tr.section.odIn, 3)}" OD fits ${fmt(tr.baseIdIn, 3)}" base ID`, tr.ok ? 'OK' : 'NG');
         row('Piece lengths', `base ${fmtFtIn(tr.basePipeFt)} · upper ${fmtFtIn(tr.upperPipeFt)} (incl. ${fmt(tr.overlapFt)}' overlap)`, tr.orderOk && tr.haulOk ? 'OK' : 'NG');
         row('Moment at splice', `${fmtInt(tr.momentAtSpliceLbFt)} lb-ft → ${fmt(tr.requiredSm)} in³ required per pole`);
         row('Ring plates', `1/2" steel · outer Ø ${fmt(tr.ringOuterOdIn, 2)}" welded to top of base pipe · inner Ø ${fmt(tr.ringInnerOdIn, 2)}" snug in base pipe ID${tr.ringBoreIn ? ` · bored Ø ${fmt(tr.ringBoreIn, 2)}" for the upper pipe` : ''}`);

@@ -1,5 +1,6 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
 import { fmt, fmtFtIn } from './fields';
+import { SHAPE_LABELS } from '../data/tables';
 import { SKETCH_PALETTES, SketchSvg, sketchAvailable } from './SketchSvg';
 import type { Theme } from './useTheme';
 
@@ -28,7 +29,7 @@ export function SketchPanel({ input, result, theme }: Props) {
   const faces = result.elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const topMax = Math.max(...faces.map((f) => f.topFt));
 
-  const poleLabel = `${input.numColumns} × ${input.columnType === 'P' ? 'pipe' : 'tube'} ${section.name}`;
+  const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
       ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' caisson`

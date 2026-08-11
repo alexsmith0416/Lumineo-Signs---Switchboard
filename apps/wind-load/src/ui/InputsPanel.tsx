@@ -1,6 +1,15 @@
 import type { DesignInput, SignElementInput } from '../lib/engine';
 import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
-import { EXPOSURE_DESCRIPTIONS, sectionsFor, type Exposure } from '../data/tables';
+import {
+  EXPOSURE_DESCRIPTIONS,
+  SHAPE_LABELS,
+  SHAPE_SPECS,
+  isAluminum,
+  isRound,
+  sectionsFor,
+  type Exposure,
+  type SectionShape,
+} from '../data/tables';
 import { FtInField, NumField, fmt } from './fields';
 import { IconPlus, IconTrash } from './icons';
 
@@ -173,25 +182,22 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
             step={1}
             onChange={(v) => set({ numColumns: Math.max(1, Math.round(v)) })}
           />
-          <label>
+          <label className="span-2">
             <span>Pole type</span>
             <div className="seg full" role="tablist" aria-label="Pole type">
-              <button
-                role="tab"
-                aria-selected={input.columnType === 'P'}
-                className={`seg-btn${input.columnType === 'P' ? ' active' : ''}`}
-                onClick={() => set({ columnType: 'P' })}
-              >
-                Round pipe
-              </button>
-              <button
-                role="tab"
-                aria-selected={input.columnType === 'TS'}
-                className={`seg-btn${input.columnType === 'TS' ? ' active' : ''}`}
-                onClick={() => set({ columnType: 'TS' })}
-              >
-                Square tube
-              </button>
+              {(['P', 'TS', 'ALTS'] as const).map((t) => (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={input.columnType === t}
+                  className={`seg-btn${input.columnType === t ? ' active' : ''}`}
+                  // Switching material invalidates a manual size from the old
+                  // table, so clear it and let the picker re-seed.
+                  onClick={() => set({ columnType: t as SectionShape, columnSizeName: null })}
+                >
+                  {t === 'P' ? 'Steel pipe' : t === 'TS' ? 'Steel tube' : 'Aluminum tube'}
+                </button>
+              ))}
             </div>
           </label>
           <label className="span-2">
@@ -224,7 +230,7 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
 
           {input.columnSizing === 'manual' && (
             <label className="span-2">
-              <span>{input.columnType === 'P' ? 'Pipe size' : 'Tube size'}</span>
+              <span>{SHAPE_LABELS[input.columnType].long} size</span>
               <select
                 value={input.columnSizeName ?? ''}
                 onChange={(e) => set({ columnSizeName: e.target.value || null })}
@@ -232,7 +238,8 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
                 <option value="">— select a size —</option>
                 {sectionsFor(input.columnType).map((s) => (
                   <option key={s.name} value={s.name}>
-                    {s.name} · S {fmt(s.sm)} in³ · {fmt(s.odIn, 3)}" {input.columnType === 'P' ? 'OD' : 'sq'} × {fmt(s.wallIn, 4)}" wall
+                    {s.name} · S {fmt(s.sm)} in³ · {fmt(s.odIn, 3)}"{' '}
+                    {isRound(input.columnType) ? 'OD' : 'sq'} × {fmt(s.wallIn, 4)}" wall
                     {recommendedSizeName === s.name ? '  (recommended)' : ''}
                   </option>
                 ))}
@@ -241,11 +248,19 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
           )}
 
           <p className="hint span-2">
-            Pipe: ASTM A53 Gr. B (Fy 35 ksi) · Tube: ASTM A500 Gr. B (Fy 46 ksi).
+            {SHAPE_SPECS[input.columnType]}.
             {input.columnSizing === 'manual'
               ? ' Footing cover, concrete volume, base plate and transition sizing all follow the size you pick.'
               : ' Size is chosen from the wind moment at grade.'}
           </p>
+          {isAluminum(input.columnType) && (
+            <p className="hint span-2 hint-warn">
+              Aluminum allowables use a simplified 6061-T6 model (Fcy/1.65 with a
+              local-buckling reduction) — preliminary sizing only, confirm against
+              the Aluminum Design Manual. Aluminum also can't be cast directly
+              against concrete, and deflects ~3× more than steel.
+            </p>
+          )}
         </div>
       </section>
 

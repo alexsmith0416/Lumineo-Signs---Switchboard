@@ -180,6 +180,13 @@ label .unit { color: var(--text-dim); font-weight: 600; }
   font-weight: 400;
   color: var(--text-dim);
 }
+.hint-warn {
+  color: var(--text-mid);
+  background: var(--status-amber-soft);
+  border-left: 2px solid var(--status-amber);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 6px 8px;
+}
 
 /* ── Shell ────────────────────────────────────────────────────────────────── */
 .app-body {

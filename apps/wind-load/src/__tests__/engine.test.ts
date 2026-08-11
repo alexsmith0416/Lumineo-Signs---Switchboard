@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  allowableBendingKsi,
+  baseAllowablePsi,
   ceAt,
   computeDesign,
   designPressureAt,
@@ -16,7 +18,7 @@ import {
   stagnationPressure,
   type DesignInput,
 } from '../lib/engine';
-import { PIPE_SECTIONS, TUBE_SECTIONS } from '../data/tables';
+import { ALUM_TUBE_SECTIONS, PIPE_SECTIONS, TUBE_SECTIONS } from '../data/tables';
 
 const V = 115; // workbook default basic wind speed
 const CQ = 1.4;
@@ -89,7 +91,7 @@ describe('steel column selection (Column + Tables sheets)', () => {
   });
 
   it('keeps the lookup tables internally consistent', () => {
-    for (const table of [PIPE_SECTIONS, TUBE_SECTIONS]) {
+    for (const table of [PIPE_SECTIONS, TUBE_SECTIONS, ALUM_TUBE_SECTIONS]) {
       for (let i = 1; i < table.length; i++) {
         expect(table[i].sm).toBeGreaterThan(table[i - 1].sm);
         expect(table[i].odIn).toBeGreaterThanOrEqual(table[i - 1].odIn);
@@ -255,6 +257,97 @@ describe('computeDesign end-to-end (20 ft × 10 ft cabinet, top at 25 ft, 2 pipe
   });
 });
 
+describe('aluminum square tube poles', () => {
+  it('lists the stocked sizes with section properties matching the closed-form formulas', () => {
+    expect(ALUM_TUBE_SECTIONS).toHaveLength(9);
+    for (const s of ALUM_TUBE_SECTIONS) {
+      const b = s.odIn;
+      const t = s.wallIn;
+      const inner = b - 2 * t;
+      const I = (b ** 4 - inner ** 4) / 12;
+      expect(s.sm).toBeCloseTo((2 * I) / b, 3);
+      expect(s.areaSqIn).toBeCloseTo(b * b - inner * inner, 3);
+    }
+    // The shop's three standard sizes at the typical 1/8" wall.
+    expect(ALUM_TUBE_SECTIONS.map((s) => s.name)).toEqual(
+      expect.arrayContaining(['2"×2"×1/8"', '3"×3"×1/8"', '4"×4"×1/8"']),
+    );
+  });
+
+  it('uses the 6061-T6 allowable stress, not the steel value', () => {
+    expect(baseAllowablePsi('ALTS')).toBe(21200);
+    expect(baseAllowablePsi('TS')).toBe(30360);
+    // Same moment needs more section in aluminum than in steel tube.
+    const alSm = requiredSectionModulus(20000, 'ALTS', 1, 1.33);
+    const steelSm = requiredSectionModulus(20000, 'TS', 1, 1.33);
+    expect(alSm).toBeGreaterThan(steelSm);
+    expect(alSm).toBeCloseTo((20000 * 12) / (21200 * 1.33), 9);
+  });
+
+  it('reduces the allowable stress for thin-walled sections and flags slender ones', () => {
+    const bySize = (name: string) => ALUM_TUBE_SECTIONS.find((s) => s.name === name)!;
+    // 2x2x1/4 → b/t = 5 (compact), full allowable.
+    const compact = allowableBendingKsi(bySize('2"×2"×1/4"'), 'ALTS', 1);
+    expect(compact.FbKsi).toBeCloseTo(21.2, 6);
+    expect(compact.note).toContain('compact');
+    // 4x4x1/8 → b/t = 29 (past the compact limit), reduced allowable.
+    const reduced = allowableBendingKsi(bySize('4"×4"×1/8"'), 'ALTS', 1);
+    expect(reduced.FbKsi).toBeLessThan(21.2);
+    expect(reduced.FbKsi).toBeGreaterThan(12);
+    expect(reduced.note).toContain('local buckling');
+  });
+
+  it('sizes a small sign in aluminum and warns about concrete contact', () => {
+    const input = baseInput();
+    input.columnType = 'ALTS';
+    input.basePlate.enabled = false;
+    input.elements = [{ id: 'a', label: 'Panel', widthFt: 4, heightFt: 3, topFt: 8 }];
+    input.numColumns = 2;
+    const r = computeDesign(input);
+
+    expect(r.column.section).not.toBeNull();
+    expect(ALUM_TUBE_SECTIONS).toContainEqual(r.column.section);
+    expect(r.column.requiredSm).toBeCloseTo((r.momentAtGradeLbFt * 12) / (21200 * 1.33 * 2), 6);
+    // Direct-burial aluminum needs isolation from the concrete.
+    expect(r.warnings.some((w) => w.includes('must not be cast directly against concrete'))).toBe(true);
+    expect(r.warnings.some((w) => w.includes('deflects'))).toBe(true);
+  });
+
+  it('reports when no stocked aluminum size carries the load', () => {
+    const input = baseInput(); // 20x10 cabinet at 25 ft — far past a 4x4 tube
+    input.columnType = 'ALTS';
+    const r = computeDesign(input);
+    expect(r.column.section).toBeNull();
+    expect(r.errors.some((e) => e.includes('No stocked aluminum tube'))).toBe(true);
+  });
+
+  it('warns that base plate and weld checks assume steel', () => {
+    const input = baseInput();
+    input.columnType = 'ALTS';
+    input.elements = [{ id: 'a', label: 'Panel', widthFt: 4, heightFt: 3, topFt: 8 }];
+    input.basePlate.enabled = true;
+    const r = computeDesign(input);
+    expect(r.warnings.some((w) => w.includes('assume A36 steel'))).toBe(true);
+  });
+
+  it('keeps manual sizing scoped to the aluminum table', () => {
+    const input = baseInput();
+    input.columnType = 'ALTS';
+    input.elements = [{ id: 'a', label: 'Panel', widthFt: 4, heightFt: 3, topFt: 8 }];
+    input.columnSizing = 'manual';
+    input.columnSizeName = '4"×4"×1/4"';
+    const r = computeDesign(input);
+    expect(r.column.mode).toBe('manual');
+    expect(r.column.section?.name).toBe('4"×4"×1/4"');
+
+    // A steel size name is not valid for an aluminum pole.
+    input.columnSizeName = '12"(.375)';
+    const fallback = computeDesign(input);
+    expect(fallback.column.mode).toBe('auto');
+    expect(fallback.warnings.some((w) => w.includes('square aluminum tube'))).toBe(true);
+  });
+});
+
 describe('manual pole sizing', () => {
   it('uses the chosen size and flags it as larger than the recommendation', () => {
     const input = baseInput(); // auto picks 14"(.375), S = 53.2
@@ -289,7 +382,7 @@ describe('manual pole sizing', () => {
     const r = computeDesign(input);
     expect(r.column.mode).toBe('auto');
     expect(r.column.section?.name).toBe('14"(.375)');
-    expect(r.warnings.some((w) => w.includes("isn't a round pipe size"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("isn't a round steel pipe size"))).toBe(true);
   });
 
   it('flows the chosen size through footing volume, base plate and transition', () => {
