@@ -56,7 +56,7 @@ export function isRound(shape: SectionShape): boolean {
 }
 
 export interface SteelSection {
-  /** Display name as printed in the workbook, e.g. `10"(.365)` or `8XX.25`. */
+  /** Display name, e.g. `10"(.365)` for pipe or `8"×8"×1/4"` for tube. */
   name: string;
   /** Section modulus provided, in^3. */
   sm: number;
@@ -100,32 +100,36 @@ export const PIPE_SECTIONS: readonly SteelSection[] = [
 ];
 
 // Square structural tube, ASTM A500 Grade B (Fy = 46 ksi).
-// Name format is side x side x wall, e.g. `8XX.25` = 8" x 8" x 1/4".
+//
+// The workbook wrote these as `8XX.25` (its shorthand for 8" × 8" × 0.25"
+// wall); they are spelled out here as side × side × wall. Section properties
+// are unchanged — only the display name. `findSectionByName` still resolves
+// the old workbook names so designs saved before the rename keep working.
 export const TUBE_SECTIONS: readonly SteelSection[] = [
-  { name: '3XX.19', sm: 1.73, sleeveIn: 12, areaSqIn: 2.02, odIn: 3, wallIn: 0.1875 },
-  { name: '3XX.25', sm: 2.1, sleeveIn: 12, areaSqIn: 2.59, odIn: 3, wallIn: 0.25 },
-  { name: '4XX.19', sm: 3.3, sleeveIn: 12, areaSqIn: 2.77, odIn: 4, wallIn: 0.1875 },
-  { name: '4XX.25', sm: 4.11, sleeveIn: 12, areaSqIn: 3.59, odIn: 4, wallIn: 0.25 },
-  { name: '4XX.31', sm: 4.79, sleeveIn: 12, areaSqIn: 4.36, odIn: 4, wallIn: 0.3125 },
-  { name: '5XX.19', sm: 5.36, sleeveIn: 12, areaSqIn: 3.52, odIn: 5, wallIn: 0.1875 },
-  { name: '5XX.25', sm: 6.78, sleeveIn: 12, areaSqIn: 4.59, odIn: 5, wallIn: 0.25 },
-  { name: '6XX.19', sm: 7.93, sleeveIn: 12, areaSqIn: 4.27, odIn: 6, wallIn: 0.1875 },
-  { name: '6XX.25', sm: 10.1, sleeveIn: 12, areaSqIn: 5.59, odIn: 6, wallIn: 0.25 },
-  { name: '7XX.19', sm: 11, sleeveIn: 12, areaSqIn: 5.02, odIn: 7, wallIn: 0.1875 },
-  { name: '8XX.19', sm: 14.6, sleeveIn: 12, areaSqIn: 5.77, odIn: 8, wallIn: 0.1875 },
-  { name: '8XX.25', sm: 18.8, sleeveIn: 12, areaSqIn: 7.59, odIn: 8, wallIn: 0.25 },
-  { name: '8XX.31', sm: 22.7, sleeveIn: 12, areaSqIn: 9.36, odIn: 8, wallIn: 0.3125 },
-  { name: '8XX.37', sm: 26.4, sleeveIn: 12, areaSqIn: 11.1, odIn: 8, wallIn: 0.375 },
-  { name: '10XX.25', sm: 30.1, sleeveIn: 18, areaSqIn: 9.59, odIn: 10, wallIn: 0.25 },
-  { name: '10XX.31', sm: 36.7, sleeveIn: 18, areaSqIn: 11.9, odIn: 10, wallIn: 0.3125 },
-  { name: '12XX.25', sm: 44.1, sleeveIn: 18, areaSqIn: 11.6, odIn: 12, wallIn: 0.25 },
-  { name: '12XX.31', sm: 54, sleeveIn: 18, areaSqIn: 14.4, odIn: 12, wallIn: 0.3125 },
-  { name: '12XX.37', sm: 63.4, sleeveIn: 18, areaSqIn: 17.1, odIn: 12, wallIn: 0.375 },
-  { name: '14XX.31', sm: 74.6, sleeveIn: 24, areaSqIn: 16.9, odIn: 14, wallIn: 0.3125 },
-  { name: '14XX.37', sm: 87.9, sleeveIn: 24, areaSqIn: 20.1, odIn: 14, wallIn: 0.375 },
-  { name: '16XX.31', sm: 98.6, sleeveIn: 24, areaSqIn: 19.4, odIn: 16, wallIn: 0.3125 },
-  { name: '16XX.37', sm: 116, sleeveIn: 24, areaSqIn: 23.1, odIn: 16, wallIn: 0.375 },
-  { name: '16XX.50', sm: 150, sleeveIn: 24, areaSqIn: 30.4, odIn: 16, wallIn: 0.5 },
+  { name: '3"×3"×3/16"', sm: 1.73, sleeveIn: 12, areaSqIn: 2.02, odIn: 3, wallIn: 0.1875 },
+  { name: '3"×3"×1/4"', sm: 2.1, sleeveIn: 12, areaSqIn: 2.59, odIn: 3, wallIn: 0.25 },
+  { name: '4"×4"×3/16"', sm: 3.3, sleeveIn: 12, areaSqIn: 2.77, odIn: 4, wallIn: 0.1875 },
+  { name: '4"×4"×1/4"', sm: 4.11, sleeveIn: 12, areaSqIn: 3.59, odIn: 4, wallIn: 0.25 },
+  { name: '4"×4"×5/16"', sm: 4.79, sleeveIn: 12, areaSqIn: 4.36, odIn: 4, wallIn: 0.3125 },
+  { name: '5"×5"×3/16"', sm: 5.36, sleeveIn: 12, areaSqIn: 3.52, odIn: 5, wallIn: 0.1875 },
+  { name: '5"×5"×1/4"', sm: 6.78, sleeveIn: 12, areaSqIn: 4.59, odIn: 5, wallIn: 0.25 },
+  { name: '6"×6"×3/16"', sm: 7.93, sleeveIn: 12, areaSqIn: 4.27, odIn: 6, wallIn: 0.1875 },
+  { name: '6"×6"×1/4"', sm: 10.1, sleeveIn: 12, areaSqIn: 5.59, odIn: 6, wallIn: 0.25 },
+  { name: '7"×7"×3/16"', sm: 11, sleeveIn: 12, areaSqIn: 5.02, odIn: 7, wallIn: 0.1875 },
+  { name: '8"×8"×3/16"', sm: 14.6, sleeveIn: 12, areaSqIn: 5.77, odIn: 8, wallIn: 0.1875 },
+  { name: '8"×8"×1/4"', sm: 18.8, sleeveIn: 12, areaSqIn: 7.59, odIn: 8, wallIn: 0.25 },
+  { name: '8"×8"×5/16"', sm: 22.7, sleeveIn: 12, areaSqIn: 9.36, odIn: 8, wallIn: 0.3125 },
+  { name: '8"×8"×3/8"', sm: 26.4, sleeveIn: 12, areaSqIn: 11.1, odIn: 8, wallIn: 0.375 },
+  { name: '10"×10"×1/4"', sm: 30.1, sleeveIn: 18, areaSqIn: 9.59, odIn: 10, wallIn: 0.25 },
+  { name: '10"×10"×5/16"', sm: 36.7, sleeveIn: 18, areaSqIn: 11.9, odIn: 10, wallIn: 0.3125 },
+  { name: '12"×12"×1/4"', sm: 44.1, sleeveIn: 18, areaSqIn: 11.6, odIn: 12, wallIn: 0.25 },
+  { name: '12"×12"×5/16"', sm: 54, sleeveIn: 18, areaSqIn: 14.4, odIn: 12, wallIn: 0.3125 },
+  { name: '12"×12"×3/8"', sm: 63.4, sleeveIn: 18, areaSqIn: 17.1, odIn: 12, wallIn: 0.375 },
+  { name: '14"×14"×5/16"', sm: 74.6, sleeveIn: 24, areaSqIn: 16.9, odIn: 14, wallIn: 0.3125 },
+  { name: '14"×14"×3/8"', sm: 87.9, sleeveIn: 24, areaSqIn: 20.1, odIn: 14, wallIn: 0.375 },
+  { name: '16"×16"×5/16"', sm: 98.6, sleeveIn: 24, areaSqIn: 19.4, odIn: 16, wallIn: 0.3125 },
+  { name: '16"×16"×3/8"', sm: 116, sleeveIn: 24, areaSqIn: 23.1, odIn: 16, wallIn: 0.375 },
+  { name: '16"×16"×1/2"', sm: 150, sleeveIn: 24, areaSqIn: 30.4, odIn: 16, wallIn: 0.5 },
 ];
 
 // Square aluminum tube, 6061-T6 — the shop's standard sign poles (2", 3" and

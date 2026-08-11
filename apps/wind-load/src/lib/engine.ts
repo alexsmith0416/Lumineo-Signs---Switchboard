@@ -350,9 +350,36 @@ export function selectSection(requiredSm: number, shape: SectionShape): SteelSec
   return null;
 }
 
-/** Look up a listed section by its printed name (manual pole sizing). */
+/** Wall-thickness codes used by the workbook's legacy tube names (`8XX.25`). */
+const LEGACY_TUBE_WALLS: Readonly<Record<string, number>> = {
+  '19': 0.1875,
+  '25': 0.25,
+  '31': 0.3125,
+  '37': 0.375,
+  '50': 0.5,
+};
+
+/**
+ * Look up a listed section by its printed name (manual pole sizing).
+ *
+ * Also resolves the workbook's legacy square-tube shorthand (`8XX.25` =
+ * 8" × 8" × 0.25" wall) so designs saved before the sizes were renamed to
+ * readable form still select the right section.
+ */
 export function findSectionByName(name: string, shape: SectionShape): SteelSection | null {
-  return sectionsFor(shape).find((s) => s.name === name) ?? null;
+  const table = sectionsFor(shape);
+  const exact = table.find((s) => s.name === name);
+  if (exact) return exact;
+
+  const legacy = /^(\d+)XX\.(\d+)$/.exec(name.trim());
+  if (legacy) {
+    const side = Number(legacy[1]);
+    const wall = LEGACY_TUBE_WALLS[legacy[2]];
+    if (wall !== undefined) {
+      return table.find((s) => s.odIn === side && s.wallIn === wall) ?? null;
+    }
+  }
+  return null;
 }
 
 /**

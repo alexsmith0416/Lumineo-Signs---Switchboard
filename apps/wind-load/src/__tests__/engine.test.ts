@@ -11,6 +11,7 @@ import {
   computeDesign,
   designPressureAt,
   elementPressure,
+  findSectionByName,
   momentAtHeight,
   requiredSectionModulus,
   selectSection,
@@ -83,11 +84,25 @@ describe('steel column selection (Column + Tables sheets)', () => {
   });
 
   it('selects tube sizes on the workbook brackets', () => {
-    expect(selectSection(2.0, 'TS')?.name).toBe('3XX.25');
-    expect(selectSection(30, 'TS')?.name).toBe('10XX.25');
+    expect(selectSection(2.0, 'TS')?.name).toBe('3"×3"×1/4"');
+    expect(selectSection(30, 'TS')?.name).toBe('10"×10"×1/4"');
     // exact capacity moves to the next size, matching the VLOOKUP table
-    expect(selectSection(30.1, 'TS')?.name).toBe('10XX.31');
+    expect(selectSection(30.1, 'TS')?.name).toBe('10"×10"×5/16"');
     expect(selectSection(151, 'TS')).toBeNull();
+  });
+
+  it('names square tube sizes readably and still resolves the workbook shorthand', () => {
+    // The workbook wrote `8XX.25`; the app spells it out. Designs saved with
+    // the old name must still find the same section.
+    expect(TUBE_SECTIONS.some((s) => s.name.includes('XX'))).toBe(false);
+    const readable = findSectionByName('8"×8"×1/4"', 'TS');
+    expect(readable).not.toBeNull();
+    expect(readable!.odIn).toBe(8);
+    expect(readable!.wallIn).toBe(0.25);
+    expect(findSectionByName('8XX.25', 'TS')).toBe(readable);
+    expect(findSectionByName('16XX.50', 'TS')?.name).toBe('16"×16"×1/2"');
+    expect(findSectionByName('9XX.25', 'TS')).toBeNull(); // no such size
+    expect(findSectionByName('8XX.99', 'TS')).toBeNull(); // unknown wall code
   });
 
   it('keeps the lookup tables internally consistent', () => {
@@ -378,7 +393,7 @@ describe('manual pole sizing', () => {
   it('falls back to the recommendation when the name is not in the shape table', () => {
     const input = baseInput();
     input.columnSizing = 'manual';
-    input.columnSizeName = '8XX.25'; // a TUBE size while columnType is pipe
+    input.columnSizeName = '8"×8"×1/4"'; // a TUBE size while columnType is pipe
     const r = computeDesign(input);
     expect(r.column.mode).toBe('auto');
     expect(r.column.section?.name).toBe('14"(.375)');

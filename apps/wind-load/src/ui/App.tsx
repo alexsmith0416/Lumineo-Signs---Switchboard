@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { computeDesign, type DesignInput } from '../lib/engine';
+import { computeDesign, findSectionByName, type DesignInput } from '../lib/engine';
 import { InputsPanel, newElement } from './InputsPanel';
 import { ResultsPanel } from './ResultsPanel';
 import { SketchPanel } from './SketchPanel';
@@ -60,9 +60,16 @@ function loadSaved(): DesignInput {
     const parsed = JSON.parse(raw) as Partial<DesignInput>;
     // Merge over defaults so newly added fields pick up sane values.
     const base = defaultInput();
+    // Migrate a pole size saved under the workbook's old shorthand (`8XX.25`)
+    // to the readable name, so the size picker shows the right option.
+    const shape = parsed.columnType ?? base.columnType;
+    const savedSize = parsed.columnSizeName
+      ? (findSectionByName(parsed.columnSizeName, shape)?.name ?? parsed.columnSizeName)
+      : null;
     return {
       ...base,
       ...parsed,
+      columnSizeName: savedSize,
       elements: Array.isArray(parsed.elements) && parsed.elements.length > 0
         ? parsed.elements
         : base.elements,
