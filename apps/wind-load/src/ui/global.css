@@ -438,6 +438,7 @@ label .unit { color: var(--text-dim); font-weight: 600; }
 .chip-green { background: var(--status-green-soft); color: var(--status-green); }
 .chip-red { background: var(--status-red-soft); color: var(--status-red); }
 .chip-amber { background: var(--status-amber-soft); color: var(--status-amber); }
+.chip-neutral { background: var(--accent-brand-soft); color: var(--accent-brand); }
 
 /* Utilization bar (progress pattern, DESIGN.md §6.7) */
 .util { display: flex; align-items: center; gap: 10px; margin: 8px 0; }

@@ -1,12 +1,14 @@
 import type { DesignInput, SignElementInput } from '../lib/engine';
 import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
-import { EXPOSURE_DESCRIPTIONS, type Exposure } from '../data/tables';
+import { EXPOSURE_DESCRIPTIONS, sectionsFor, type Exposure } from '../data/tables';
 import { FtInField, NumField, fmt } from './fields';
 import { IconPlus, IconTrash } from './icons';
 
 interface Props {
   input: DesignInput;
   onChange: (next: DesignInput) => void;
+  /** The size auto-sizing recommends, so manual mode can label it. */
+  recommendedSizeName?: string | null;
 }
 
 let elementSeq = 0;
@@ -21,7 +23,7 @@ export function newElement(): SignElementInput {
   };
 }
 
-export function InputsPanel({ input, onChange }: Props) {
+export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
@@ -192,8 +194,57 @@ export function InputsPanel({ input, onChange }: Props) {
               </button>
             </div>
           </label>
+          <label className="span-2">
+            <span>Pole size</span>
+            <div className="seg full" role="tablist" aria-label="Pole sizing">
+              <button
+                role="tab"
+                aria-selected={input.columnSizing === 'auto'}
+                className={`seg-btn${input.columnSizing === 'auto' ? ' active' : ''}`}
+                onClick={() => set({ columnSizing: 'auto' })}
+              >
+                Recommend for me
+              </button>
+              <button
+                role="tab"
+                aria-selected={input.columnSizing === 'manual'}
+                className={`seg-btn${input.columnSizing === 'manual' ? ' active' : ''}`}
+                onClick={() =>
+                  set({
+                    columnSizing: 'manual',
+                    // Seed the picker with the current recommendation.
+                    columnSizeName: input.columnSizeName ?? recommendedSizeName ?? null,
+                  })
+                }
+              >
+                Choose a size
+              </button>
+            </div>
+          </label>
+
+          {input.columnSizing === 'manual' && (
+            <label className="span-2">
+              <span>{input.columnType === 'P' ? 'Pipe size' : 'Tube size'}</span>
+              <select
+                value={input.columnSizeName ?? ''}
+                onChange={(e) => set({ columnSizeName: e.target.value || null })}
+              >
+                <option value="">— select a size —</option>
+                {sectionsFor(input.columnType).map((s) => (
+                  <option key={s.name} value={s.name}>
+                    {s.name} · S {fmt(s.sm)} in³ · {fmt(s.odIn, 3)}" {input.columnType === 'P' ? 'OD' : 'sq'} × {fmt(s.wallIn, 4)}" wall
+                    {recommendedSizeName === s.name ? '  (recommended)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <p className="hint span-2">
-            Pipe: ASTM A53 Gr. B (Fy 35 ksi) · Tube: ASTM A500 Gr. B (Fy 46 ksi)
+            Pipe: ASTM A53 Gr. B (Fy 35 ksi) · Tube: ASTM A500 Gr. B (Fy 46 ksi).
+            {input.columnSizing === 'manual'
+              ? ' Footing cover, concrete volume, base plate and transition sizing all follow the size you pick.'
+              : ' Size is chosen from the wind moment at grade.'}
           </p>
         </div>
       </section>
