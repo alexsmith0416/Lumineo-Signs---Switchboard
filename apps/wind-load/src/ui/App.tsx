@@ -21,6 +21,8 @@ function defaultInput(): DesignInput {
     elements: [{ ...newElement(), label: 'Sign cabinet', widthFt: 10, heightFt: 5, topFt: 20 }],
     numColumns: 1,
     columnType: 'P',
+    columnSizing: 'auto',
+    columnSizeName: null,
     stressIncrease: 1.33,
     footingType: 'round',
     numFootings: 1,
@@ -141,7 +143,11 @@ export function App() {
           <SpecsView />
         ) : (
           <div className="calc-grid">
-            <InputsPanel input={input} onChange={setInput} />
+            <InputsPanel
+              input={input}
+              onChange={setInput}
+              recommendedSizeName={result.column.autoSection?.name ?? null}
+            />
             {view === 'calc' ? (
               <ResultsPanel input={input} result={result} />
             ) : (

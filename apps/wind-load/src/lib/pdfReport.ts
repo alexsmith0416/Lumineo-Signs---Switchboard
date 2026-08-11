@@ -242,7 +242,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
 
   // ── Pole ─────────────────────────────────────────────────────────────────
   const c = result.column;
-  sectionTitle('Recommended pole');
+  sectionTitle(c.mode === 'manual' ? 'Pole (specified size)' : 'Recommended pole');
   if (c.section) {
     setFont(12, 'bold', BRAND);
     ensureRoom(16);
@@ -253,6 +253,14 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
       y,
     );
     y += 16;
+    if (c.mode === 'manual' && c.autoSection) {
+      row(
+        'Sizing',
+        c.autoSection.name === c.section.name
+          ? 'Specified by the estimator — matches the calculated recommendation.'
+          : `Specified by the estimator · calculated recommendation is ${c.autoSection.name} (${fmt(c.autoSection.sm)} in³)`,
+      );
+    }
     row('Section modulus', `${fmt(c.requiredSm)} in³ required · ${fmt(c.section.sm)} in³ provided (per pole)`);
     row(
       'Bending stress',
@@ -285,6 +293,13 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     row('Design load', `M ${fmtInt(f.momentPerFootingLbFt)} lb-ft / footing · P = M/h = ${fmtInt(f.equivalentLoadLb)} lb at h ${fmt(f.centroidFt, 1)} ft`);
     row('Lateral soil', `S1 ${fmtInt(f.s1Psf)} psf at D/3 (2 × ${fmtInt(input.lateralSoilPsf)} psf/ft, isolated pole)`);
     row('Soil bearing', `q max ${fmtInt(f.qMaxPsf)} psf vs allowed ${fmtInt(f.qAllowedPsf)} psf`, f.bearingOk ? 'OK' : 'NG');
+    if (result.column.section) {
+      row(
+        'Concrete cover',
+        `needs ≥ ${fmt(f.minWidthForCoverFt)}' across for 3" cover around the ${fmt(result.column.section.odIn, 3)}" pole`,
+        f.coverOk ? 'OK' : 'NG',
+      );
+    }
     row('Concrete', `${fmt(f.volumePerFootingYd3, 2)} yd³ / footing · ${fmt(f.totalVolumeYd3, 2)} yd³ all footings (±)`);
     const mp = result.mowPad;
     if (mp) {

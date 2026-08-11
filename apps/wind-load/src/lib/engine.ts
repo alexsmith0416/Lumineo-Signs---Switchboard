@@ -73,6 +73,10 @@ export interface DesignInput {
 
   numColumns: number;
   columnType: SectionShape;
+  /** 'auto' sizes the pole from the wind moment; 'manual' uses columnSizeName. */
+  columnSizing: 'auto' | 'manual';
+  /** Chosen section name when columnSizing is 'manual' (e.g. `12"(.375)`). */
+  columnSizeName: string | null;
   /** Allowable stress increase for short-duration wind loads (UBC: 1.33). */
   stressIncrease: number;
 
@@ -121,6 +125,12 @@ export interface WindRow {
 export interface ColumnResult {
   requiredSm: number;
   section: SteelSection | null;
+  /** How the section was chosen. */
+  mode: 'auto' | 'manual';
+  /** The size auto-sizing would pick — shown alongside a manual override. */
+  autoSection: SteelSection | null;
+  /** Manual choice provides less section modulus than the auto recommendation. */
+  belowRecommended: boolean;
   /** Actual bending stress, ksi. */
   fbKsi: number | null;
   /** Allowable bending stress incl. wind increase, ksi (null = slender, no value). */
@@ -152,6 +162,10 @@ export interface FootingResult {
   /** Concrete quantities. */
   volumePerFootingYd3: number;
   totalVolumeYd3: number;
+  /** Minimum footing size for 3" concrete cover around the pole, ft. */
+  minWidthForCoverFt: number;
+  /** Footing clears the pole by at least 3" all round. */
+  coverOk: boolean;
 }
 
 export interface BasePlateResult {
@@ -327,6 +341,11 @@ export function selectSection(requiredSm: number, shape: SectionShape): SteelSec
   return null;
 }
 
+/** Look up a listed section by its printed name (manual pole sizing). */
+export function findSectionByName(name: string, shape: SectionShape): SteelSection | null {
+  return sectionsFor(shape).find((s) => s.name === name) ?? null;
+}
+
 /** Allowable bending stress incl. compactness check (AISC 9th ed. ASD). */
 export function allowableBendingKsi(
   section: SteelSection,
@@ -361,13 +380,26 @@ function columnCheck(
   shape: SectionShape,
   numColumns: number,
   stressIncrease: number,
+  sizing: 'auto' | 'manual',
+  sizeName: string | null,
 ): ColumnResult {
   const requiredSm = requiredSectionModulus(momentLbFt, shape, numColumns, stressIncrease);
-  const section = selectSection(requiredSm, shape);
+  const autoSection = selectSection(requiredSm, shape);
+  // A manual choice that isn't in the current shape's table (e.g. after
+  // switching pipe → tube) falls back to the auto pick.
+  const manualSection = sizing === 'manual' && sizeName ? findSectionByName(sizeName, shape) : null;
+  const mode: 'auto' | 'manual' = manualSection ? 'manual' : 'auto';
+  const section = manualSection ?? autoSection;
+  const belowRecommended =
+    manualSection !== null && autoSection !== null && manualSection.sm < autoSection.sm;
+
   if (!section || momentLbFt <= 0) {
     return {
       requiredSm,
       section: momentLbFt > 0 ? section : null,
+      mode,
+      autoSection: momentLbFt > 0 ? autoSection : null,
+      belowRecommended: false,
       fbKsi: null,
       FbKsi: null,
       compactness: '',
@@ -382,6 +414,9 @@ function columnCheck(
   return {
     requiredSm,
     section,
+    mode,
+    autoSection,
+    belowRecommended,
     fbKsi,
     FbKsi,
     compactness,
@@ -431,6 +466,11 @@ export function solveEmbedment(
 
 const CONCRETE_PCF = 150;
 
+/** Trim trailing zeros from an inch dimension for message text. */
+function fmtIn(n: number): string {
+  return String(Number(n.toFixed(3)));
+}
+
 function footingCheck(
   input: DesignInput,
   momentAtGradeLbFt: number,
@@ -472,6 +512,15 @@ function footingCheck(
   const displaced = Math.PI * (columnOdIn / 12 / 2) ** 2 * embedFt;
   const volumePerFootingYd3 = Math.max(0, planArea * d - displaced) / 27;
 
+  // The footing must clear the pole by the 3" minimum concrete cover all
+  // round (Spec sheet), so a bigger pole forces a bigger hole.
+  const minWidthForCoverFt = (columnOdIn + 6) / 12;
+  const smallestPlanDimFt =
+    input.footingType === 'round'
+      ? input.caissonDiaFt
+      : Math.min(input.pierWidthFt, input.pierLengthFt);
+  const coverOk = smallestPlanDimFt >= minWidthForCoverFt;
+
   return {
     momentPerFootingLbFt: momentPerFooting,
     centroidFt,
@@ -487,6 +536,8 @@ function footingCheck(
     bearingOk: qAllowedPsf > qMaxPsf,
     volumePerFootingYd3,
     totalVolumeYd3: volumePerFootingYd3 * n,
+    minWidthForCoverFt,
+    coverOk,
   };
 }
 
@@ -751,12 +802,24 @@ export function computeDesign(input: DesignInput): DesignResult {
     input.columnType,
     input.numColumns,
     input.stressIncrease,
+    input.columnSizing,
+    input.columnSizeName,
   );
   if (momentAtGradeLbFt > 0 && !column.section) {
     errors.push('No standard pipe/tube size is large enough — add columns or reduce the sign.');
   }
   if (column.section && !column.ok && column.FbKsi !== null) {
-    warnings.push('Selected column exceeds its allowable bending stress — verify with an engineer.');
+    warnings.push(
+      column.mode === 'manual'
+        ? `Chosen pole ${column.section.name} is overstressed (fb ${(column.fbKsi ?? 0).toFixed(1)} ksi > Fb ${column.FbKsi.toFixed(1)} ksi)` +
+            `${column.autoSection ? ` — ${column.autoSection.name} or larger is required` : ''}.`
+        : 'Selected column exceeds its allowable bending stress — verify with an engineer.',
+    );
+  }
+  if (input.columnSizing === 'manual' && input.columnSizeName && column.mode === 'auto') {
+    warnings.push(
+      `Pole size "${input.columnSizeName}" isn't a ${input.columnType === 'P' ? 'round pipe' : 'square tube'} size — using the recommended size instead.`,
+    );
   }
 
   const footing = column.section
@@ -767,6 +830,12 @@ export function computeDesign(input: DesignInput): DesignResult {
   }
   if (footing && !footing.bearingOk) {
     warnings.push('Soil bearing check failed (q max > q allowed) — enlarge the footing or confirm soil values.');
+  }
+  if (footing && !footing.coverOk && column.section) {
+    warnings.push(
+      `Footing is too small for the ${fmtIn(column.section.odIn)}" pole — it needs to be at least ` +
+        `${footing.minWidthForCoverFt.toFixed(2)} ft across to keep 3" of concrete cover around the steel.`,
+    );
   }
 
   const mowPad = mowPadCheck(input);

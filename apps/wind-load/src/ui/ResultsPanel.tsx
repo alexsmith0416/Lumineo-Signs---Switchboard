@@ -89,7 +89,9 @@ export function ResultsPanel({ input, result }: Props) {
           </div>
 
           <section className="panel">
-            <h2 className="panel-caption">Recommended Pole</h2>
+            <h2 className="panel-caption">
+              {r.column.mode === 'manual' ? 'Pole (your size)' : 'Recommended Pole'}
+            </h2>
             <div className="panel-body">
               {r.column.section ? (
                 <>
@@ -98,6 +100,15 @@ export function ResultsPanel({ input, result }: Props) {
                       {input.numColumns} × {input.columnType === 'P' ? 'Pipe' : 'Tube'} {r.column.section.name}
                     </span>
                     <Chip ok={r.column.ok} okText="OK" badText="OVERSTRESSED" />
+                    {r.column.mode === 'manual' && r.column.autoSection && (
+                      <span className="chip chip-neutral">
+                        {r.column.autoSection.name === r.column.section.name
+                          ? 'MATCHES RECOMMENDATION'
+                          : r.column.belowRecommended
+                            ? `SMALLER THAN ${r.column.autoSection.name}`
+                            : `LARGER THAN ${r.column.autoSection.name}`}
+                      </span>
+                    )}
                   </div>
                   <Row
                     label="Section modulus"
@@ -218,6 +229,13 @@ export function ResultsPanel({ input, result }: Props) {
                   value={`q max ${fmtInt(r.footing.qMaxPsf)} psf vs allowed ${fmtInt(r.footing.qAllowedPsf)} psf`}
                   chip={<Chip ok={r.footing.bearingOk} />}
                 />
+                {r.column.section && (
+                  <Row
+                    label="Concrete cover"
+                    value={`needs ≥ ${fmt(r.footing.minWidthForCoverFt)}' across for 3" cover around the ${fmt(r.column.section.odIn, 3)}" pole`}
+                    chip={<Chip ok={r.footing.coverOk} okText={'3" COVER OK'} badText="TOO TIGHT" />}
+                  />
+                )}
                 <Row
                   label="Concrete"
                   value={`${fmt(r.footing.volumePerFootingYd3, 2)} yd³ / footing · ${fmt(r.footing.totalVolumeYd3, 2)} yd³ all footings (±)`}

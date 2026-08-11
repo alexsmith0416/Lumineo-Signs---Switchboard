@@ -142,6 +142,8 @@ function baseInput(): DesignInput {
     ],
     numColumns: 2,
     columnType: 'P',
+    columnSizing: 'auto',
+    columnSizeName: null,
     stressIncrease: 1.33,
     footingType: 'round',
     numFootings: 2,
@@ -250,6 +252,75 @@ describe('computeDesign end-to-end (20 ft × 10 ft cabinet, top at 25 ft, 2 pipe
     input.pierLengthFt = 4;
     const r = computeDesign(input);
     expect(r.footing!.effectiveWidthFt).toBeCloseTo(5, 9);
+  });
+});
+
+describe('manual pole sizing', () => {
+  it('uses the chosen size and flags it as larger than the recommendation', () => {
+    const input = baseInput(); // auto picks 14"(.375), S = 53.2
+    input.columnSizing = 'manual';
+    input.columnSizeName = '18"(.375)';
+    const r = computeDesign(input);
+    expect(r.column.mode).toBe('manual');
+    expect(r.column.section?.name).toBe('18"(.375)');
+    expect(r.column.autoSection?.name).toBe('14"(.375)');
+    expect(r.column.belowRecommended).toBe(false);
+    // Stress is computed against the CHOSEN section, not the recommendation.
+    expect(r.column.fbKsi).toBeCloseTo((r.momentAtGradeLbFt * 12) / (89.6 * 2 * 1000), 6);
+    expect(r.column.ok).toBe(true);
+  });
+
+  it('allows an undersized pole but reports it overstressed with a warning', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '6"(.280)';
+    const r = computeDesign(input);
+    expect(r.column.section?.name).toBe('6"(.280)');
+    expect(r.column.belowRecommended).toBe(true);
+    expect(r.column.ok).toBe(false);
+    expect((r.column.utilization ?? 0)).toBeGreaterThan(1);
+    expect(r.warnings.some((w) => w.includes('overstressed') && w.includes('14"(.375)'))).toBe(true);
+  });
+
+  it('falls back to the recommendation when the name is not in the shape table', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '8XX.25'; // a TUBE size while columnType is pipe
+    const r = computeDesign(input);
+    expect(r.column.mode).toBe('auto');
+    expect(r.column.section?.name).toBe('14"(.375)');
+    expect(r.warnings.some((w) => w.includes("isn't a round pipe size"))).toBe(true);
+  });
+
+  it('flows the chosen size through footing volume, base plate and transition', () => {
+    const auto = computeDesign(baseInput());
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '20"(.375)';
+    const manual = computeDesign(input);
+
+    // Footing depth is load-driven (unchanged), but the bigger pole displaces
+    // more concrete and demands a wider hole for cover.
+    expect(manual.footing!.depthFt).toBeCloseTo(auto.footing!.depthFt, 9);
+    expect(manual.footing!.volumePerFootingYd3).toBeLessThan(auto.footing!.volumePerFootingYd3);
+    expect(manual.footing!.minWidthForCoverFt).toBeCloseTo((20 + 6) / 12, 9);
+    // Base plate geometry keys off the column OD.
+    expect(manual.basePlate!.plateNIn).toBe(28);
+    expect(manual.basePlate!.boltLineSpacingIn).toBe(24);
+  });
+
+  it('checks 3-inch concrete cover against the smallest footing dimension', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '20"(.375)'; // needs 26" = 2.167 ft across
+    input.caissonDiaFt = 2;
+    const tight = computeDesign(input);
+    expect(tight.footing!.coverOk).toBe(false);
+    expect(tight.warnings.some((w) => w.includes('3" of concrete cover'))).toBe(true);
+
+    input.caissonDiaFt = 3;
+    const ok = computeDesign(input);
+    expect(ok.footing!.coverOk).toBe(true);
   });
 });
 
