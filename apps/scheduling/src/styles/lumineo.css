@@ -3137,9 +3137,54 @@ input, select, textarea {
   gap: 4px;
 }
 .load-item--pickup { border-left: 3px solid var(--status-amber); }
+.load-item--dragging { opacity: 0.5; border-color: var(--accent-brand); }
+/* Where the dragged item will land. */
+.load-item--drop { border-color: var(--accent-brand); box-shadow: 0 -2px 0 0 var(--accent-brand); }
 .load-item__top { display: flex; align-items: center; gap: 6px; }
+.load-item__grip {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: grab;
+}
+.load-item__grip:active { cursor: grabbing; }
+.load-item__grip:focus-visible { outline: 2px solid var(--accent-brand); border-radius: 3px; }
+.load-item__pos {
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.load-items__hint { font-weight: 400; font-size: 10px; color: var(--text-tertiary); margin-left: 8px; }
 .load-item__loaded { display: inline-flex; }
-.load-item__jobno { font-size: 10px; font-weight: 700; color: var(--text-secondary); min-width: 46px; }
+.load-item__jobno {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 46px;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  padding: 2px 4px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.load-item__jobno:hover:not(:disabled) { border-color: var(--border); background: var(--input-bg); }
+.load-item__jobno:disabled { cursor: default; }
+.load-item__jobno--empty { color: var(--text-tertiary); font-weight: 600; }
+.load-item__jobedit { display: flex; gap: 6px; align-items: flex-start; }
+.load-item__jobclear { flex-shrink: 0; padding: 4px 8px; font-size: 11px; }
 .load-item__field {
   background: var(--input-bg);
   border: 1px solid var(--border);
@@ -3253,7 +3298,13 @@ input, select, textarea {
   vertical-align: top;
 }
 .load-print__table th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-.load-print__chk { width: 24px; text-align: center; }
+.load-print__chk { width: 46px; text-align: center; }
+/* The driver writes in this column, so hold it wide even when the stored notes
+   are short/empty — an auto-sized column would collapse to nothing. */
+.load-print__notes { width: 40%; }
+/* Give Description a floor so the wide Notes column doesn't squeeze what's
+   actually being shipped down to one word per line. */
+.load-print__desc { width: 22%; }
 .load-print__general { margin-top: 12px; font-size: 12px; }
 .load-print__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 

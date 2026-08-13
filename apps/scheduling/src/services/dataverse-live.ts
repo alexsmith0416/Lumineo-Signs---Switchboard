@@ -988,35 +988,41 @@ export async function fetchShipmentLoads(): Promise<ShipmentLoad[]> {
   });
 }
 
+// All shipment writes below go through the retrying dv* helpers: a load is
+// edited field-by-field as the user types, and a reorder rewrites several rows
+// at once — a transient blip mid-reorder would otherwise leave the saved order
+// half-applied and scramble the list on the next reload.
 export async function createLoadRecord(load: ShipmentLoad): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_shipmentloadid: load.id, ...loadToRecord(load) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SHIP.loads, rec);
+  const res = await dvCreate(SHIP.loads, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createLoad failed");
 }
 export async function updateLoadRecord(id: string, patch: Partial<ShipmentLoad>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SHIP.loads, id, loadToRecord(patch));
+  const res = await dvUpdate(SHIP.loads, id, loadToRecord(patch));
   if (!res.success) throw new Error(res.error?.message ?? "updateLoad failed");
 }
 export async function deleteLoadRecord(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  await S.DeleteRecordWithOrganization(org, SHIP.loads, id);
+  await dvDelete(SHIP.loads, id);
 }
 export async function createItemRecord(loadId: string, item: ShipmentItem, sort: number): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_shipmentitemid: item.id, ...itemToRecord(item, sort, loadId) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SHIP.items, rec);
+  const res = await dvCreate(SHIP.items, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createItem failed");
 }
 export async function updateItemRecord(id: string, patch: Partial<ShipmentItem>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SHIP.items, id, itemToRecord(patch, undefined, undefined));
+  const res = await dvUpdate(SHIP.items, id, itemToRecord(patch, undefined, undefined));
   if (!res.success) throw new Error(res.error?.message ?? "updateItem failed");
 }
+/** Persist a load's item order. Writes only the rows whose position changed. */
+export async function updateItemSortRecords(entries: Array<{ id: string; sort: number }>): Promise<void> {
+  const results = await Promise.all(
+    entries.map(async (e) => dvUpdate(SHIP.items, e.id, { crfdf_sortorder: e.sort })),
+  );
+  const failed = results.find((r) => !r.success);
+  if (failed) throw new Error(failed.error?.message ?? "reorderItems failed");
+}
 export async function deleteItemRecord(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  await S.DeleteRecordWithOrganization(org, SHIP.items, id);
+  await dvDelete(SHIP.items, id);
 }
 
 // ---------------------------------------------------------------------------

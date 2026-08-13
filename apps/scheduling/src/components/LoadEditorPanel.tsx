@@ -37,7 +37,14 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = f
   const addItem = useLoadsStore((s) => s.addItem);
   const updateItem = useLoadsStore((s) => s.updateItem);
   const removeItem = useLoadsStore((s) => s.removeItem);
+  const moveItem = useLoadsStore((s) => s.moveItem);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Item drag-reorder. `armed` is the row whose grip is held down — rows are
+  // only `draggable` while their grip is pressed, so the text fields inside
+  // stay selectable (HTML5 drag on the whole row would swallow that).
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [armed, setArmed] = useState<string | null>(null);
   // Week shown in the day-picker. Null = follow the load's own week; set by the
   // ‹ / › arrows so a load can be moved to a different week, not just another day
   // in the same week.
@@ -143,13 +150,36 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = f
         <div className="load-items">
           <div className="load-items__head">
             <span>Items ({load.items.length})</span>
+            {!readOnly && load.items.length > 1 && (
+              <span className="load-items__hint">Drag ⠿ to set the order they're loaded &amp; printed</span>
+            )}
           </div>
 
-          {load.items.map((it) => (
+          {load.items.map((it, i) => (
             <ItemRow
               key={it.id}
               item={it}
+              index={i}
+              count={load.items.length}
               readOnly={readOnly}
+              dragging={dragIdx === i}
+              dropTarget={dragIdx !== null && dragIdx !== i && overIdx === i}
+              armed={armed === it.id}
+              onArm={(on) => setArmed(on ? it.id : null)}
+              onDragStart={() => setDragIdx(i)}
+              onDragOver={() => setOverIdx(i)}
+              onDrop={() => {
+                if (dragIdx !== null) moveItem(load.id, dragIdx, i);
+                setDragIdx(null);
+                setOverIdx(null);
+                setArmed(null);
+              }}
+              onDragEnd={() => {
+                setDragIdx(null);
+                setOverIdx(null);
+                setArmed(null);
+              }}
+              onMove={(to) => moveItem(load.id, i, to)}
               onChange={(patch) => updateItem(load.id, it.id, patch)}
               onRemove={() => removeItem(load.id, it.id)}
             />
@@ -208,18 +238,83 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = f
 
 function ItemRow({
   item,
+  index,
+  count,
   onChange,
   onRemove,
+  onMove,
+  onArm,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  armed = false,
+  dragging = false,
+  dropTarget = false,
   readOnly = false,
 }: {
   item: ShipmentItem;
+  index: number;
+  count: number;
   onChange: (patch: Partial<ShipmentItem>) => void;
   onRemove: () => void;
+  onMove: (to: number) => void;
+  onArm: (on: boolean) => void;
+  onDragStart: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  armed?: boolean;
+  dragging?: boolean;
+  dropTarget?: boolean;
   readOnly?: boolean;
 }) {
+  const [editingJob, setEditingJob] = useState(false);
+
+  const cls =
+    "load-item" +
+    (item.kind === "pickup" ? " load-item--pickup" : "") +
+    (dragging ? " load-item--dragging" : "") +
+    (dropTarget ? " load-item--drop" : "");
+
   return (
-    <div className={`load-item${item.kind === "pickup" ? " load-item--pickup" : ""}`}>
+    <div
+      className={cls}
+      draggable={armed && !readOnly}
+      onDragStart={onDragStart}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+    >
       <div className="load-item__top">
+        {!readOnly && (
+          <button
+            type="button"
+            className="load-item__grip"
+            title="Drag to reorder — or focus and use ↑ / ↓"
+            aria-label={`Item ${index + 1} of ${count}. Press the up or down arrow key to move it.`}
+            onMouseDown={() => onArm(true)}
+            onMouseUp={() => onArm(false)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                onMove(index - 1);
+              } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                onMove(index + 1);
+              }
+            }}
+          >
+            ⠿
+          </button>
+        )}
+        <span className="load-item__pos" title={`Stop ${index + 1}`}>{index + 1}</span>
         <label className="load-item__loaded" title="Mark loaded">
           <input
             type="checkbox"
@@ -228,7 +323,15 @@ function ItemRow({
             disabled={readOnly}
           />
         </label>
-        <span className="load-item__jobno">{item.jobNo ?? "—"}</span>
+        <button
+          type="button"
+          className={`load-item__jobno${item.jobNo ? "" : " load-item__jobno--empty"}`}
+          title={readOnly ? undefined : item.jobNo ? "Change the job number" : "Attach a BC job"}
+          disabled={readOnly}
+          onClick={() => setEditingJob((v) => !v)}
+        >
+          {item.jobNo ?? "+ Job #"}
+        </button>
         <input
           className="load-item__field load-item__cust"
           type="text"
@@ -254,6 +357,43 @@ function ItemRow({
           <button type="button" className="load-item__remove" title="Remove" onClick={onRemove}>×</button>
         )}
       </div>
+
+      {editingJob && !readOnly && (
+        <div className="load-item__jobedit">
+          <JobSearch
+            autoFocus
+            placeholder="Job # or customer — picking one refills the details…"
+            onPick={(job) => {
+              // Changing the job changes the job's details with it; the
+              // shipping-specific fields (location, notes, loaded) stay put.
+              onChange({ jobNo: job.jobNo, customerName: job.customerName, description: job.description });
+              setEditingJob(false);
+            }}
+            onCommitText={(text) => {
+              // A job number BC search can't reach yet — take it as typed and
+              // leave the customer/description the user already has.
+              onChange({ jobNo: text });
+              setEditingJob(false);
+            }}
+            onCancel={() => setEditingJob(false)}
+          />
+          {item.jobNo && (
+            <button
+              type="button"
+              className="btn-secondary load-item__jobclear"
+              title="Detach the job number and keep this as a manual item"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange({ jobNo: null });
+                setEditingJob(false);
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <textarea
         className="load-item__field load-item__desc"
         rows={1}

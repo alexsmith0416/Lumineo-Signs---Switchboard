@@ -1,12 +1,23 @@
 import { useEffect, useState } from "react";
 import { searchJobs, type BcJob } from "../shipping/bc-jobs";
 
+interface JobSearchProps {
+  onPick: (job: BcJob) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  /** Enter with text typed but nothing picked — accept the raw job number as
+   *  typed (a job BC search can't reach yet). Omitted = Enter does nothing. */
+  onCommitText?: (text: string) => void;
+  /** Escape / blur-away, so a caller can close an inline editor. */
+  onCancel?: () => void;
+}
+
 /**
  * BC job lookup for adding shipment items. Type a job number / customer, pick a
  * result, and the parent prefills the item (job, customer, description). Backed
  * by a mock today; the same surface swaps to a live BC query later.
  */
-export default function JobSearch({ onPick }: { onPick: (job: BcJob) => void }) {
+export default function JobSearch({ onPick, placeholder, autoFocus, onCommitText, onCancel }: JobSearchProps) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<BcJob[]>([]);
@@ -31,13 +42,30 @@ export default function JobSearch({ onPick }: { onPick: (job: BcJob) => void }) 
         className="form-field__input job-search__input"
         type="text"
         value={q}
-        placeholder="Search BC job # or customer…"
+        autoFocus={autoFocus}
+        placeholder={placeholder ?? "Search BC job # or customer…"}
         onChange={(e) => {
           setQ(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => {
+          // Let a menu click land first (it fires on mousedown).
+          setTimeout(() => {
+            setOpen(false);
+            onCancel?.();
+          }, 150);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onCommitText) {
+            e.preventDefault();
+            const text = q.trim();
+            if (text) onCommitText(text);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel?.();
+          }
+        }}
       />
       {open && results.length > 0 && (
         <div className="job-search__menu">

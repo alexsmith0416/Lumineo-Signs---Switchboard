@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { addDays, startOfWeek } from "date-fns";
-import { defaultLoadName, type ItemKind, type ShipmentItem, type ShipmentLoad } from "./types";
+import { defaultLoadName, reorderItems, type ItemKind, type ShipmentItem, type ShipmentLoad } from "./types";
 import {
   createItemRecord,
   createLoadRecord,
@@ -8,6 +8,7 @@ import {
   deleteLoadRecord,
   fetchShipmentLoads,
   updateItemRecord,
+  updateItemSortRecords,
   updateLoadRecord,
 } from "../services/dataverse-live";
 
@@ -96,6 +97,8 @@ interface LoadsState {
   deleteLoad: (id: string) => void;
   addItem: (loadId: string, partial?: Partial<ShipmentItem>) => string;
   updateItem: (loadId: string, itemId: string, patch: Partial<ShipmentItem>) => void;
+  /** Move an item to another position in the load (drag or keyboard). */
+  moveItem: (loadId: string, from: number, to: number) => void;
   removeItem: (loadId: string, itemId: string) => void;
 }
 
@@ -180,6 +183,28 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
     }));
     if (live && load) {
       updateItemRecord(itemId, patch).catch(err("updateItem"));
+      persistHeader(load);
+    }
+  },
+
+  moveItem: (loadId, from, to) => {
+    const before = get().loads.find((l) => l.id === loadId)?.items ?? [];
+    const after = reorderItems(before, from, to);
+    if (after === before) return; // out-of-range / no-op move
+
+    let load: ShipmentLoad | undefined;
+    set((s) => ({
+      loads: s.loads.map((l) => (l.id === loadId ? (load = withAutoName({ ...l, items: after })) : l)),
+    }));
+
+    if (live && load) {
+      // Only the rows that actually shifted need a new sort order.
+      const moved = after
+        .map((it, i) => ({ id: it.id, sort: i }))
+        .filter((e, i) => before[i]?.id !== e.id);
+      if (moved.length) updateItemSortRecords(moved).catch(err("moveItem"));
+      // An auto-named load names itself from its stops in order, so a reorder
+      // can rename it ("Dodge City & Garden City" → "Garden City & Dodge City").
       persistHeader(load);
     }
   },

@@ -52,6 +52,17 @@ export const STATUS_LABEL: Record<ShipmentStatus, string> = {
   delivered: "Delivered",
 };
 
+/** Move one item to another position in the load's list (the order the driver
+ *  works the run, and the order it prints). Pure; out-of-range moves are a
+ *  no-op and return the original array. */
+export function reorderItems(items: ShipmentItem[], from: number, to: number): ShipmentItem[] {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return items;
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved!);
+  return next;
+}
+
 /** Unique, in-order, non-empty locations from a list of items. */
 export function uniqueLocations(items: ShipmentItem[]): string[] {
   const seen = new Set<string>();

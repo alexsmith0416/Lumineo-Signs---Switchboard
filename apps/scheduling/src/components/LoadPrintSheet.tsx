@@ -6,7 +6,8 @@ import { printMarkup } from "../services/print";
 /**
  * Printable loading list for a single load — mirrors the Excel sheet
  * (route header, ship date, Job/Customer/Description/Location/Notes, pickups
- * flagged, with a check-off box for the loader). Shown as an overlay preview;
+ * flagged, with Loaded + Order check-off boxes for the loader and a wide Notes
+ * column to write in). Shown as an overlay preview;
  * Print triggers window.print(), and @media print shows only the sheet.
  */
 export default function LoadPrintSheet({
@@ -32,31 +33,33 @@ export default function LoadPrintSheet({
         <table className="load-print__table">
           <thead>
             <tr>
-              <th className="load-print__chk">✓</th>
+              <th className="load-print__chk">Loaded</th>
+              <th className="load-print__chk">Order</th>
               <th>Job No.</th>
               <th>Customer</th>
-              <th>Description</th>
+              <th className="load-print__desc">Description</th>
               {showLocation && <th>Location</th>}
-              <th>Notes</th>
+              <th className="load-print__notes">Notes</th>
             </tr>
           </thead>
           <tbody>
             {load.items.map((it) => (
               <tr key={it.id}>
                 <td className="load-print__chk">☐</td>
+                <td className="load-print__chk">☐</td>
                 <td>{it.jobNo ?? "—"}</td>
                 <td>{it.customerName}</td>
-                <td>
+                <td className="load-print__desc">
                   {it.kind === "pickup" && <strong>* PICK-UP * </strong>}
                   {it.description}
                 </td>
                 {showLocation && <td>{it.location}</td>}
-                <td>{it.notes}</td>
+                <td className="load-print__notes">{it.notes}</td>
               </tr>
             ))}
             {load.items.length === 0 && (
               <tr>
-                <td colSpan={showLocation ? 6 : 5} style={{ textAlign: "center", color: "#888" }}>
+                <td colSpan={showLocation ? 7 : 6} style={{ textAlign: "center", color: "#888" }}>
                   No items on this load.
                 </td>
               </tr>
