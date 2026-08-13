@@ -223,7 +223,37 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
   preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
   the day it's unblocked.
-- **Last shipped (Aug 1, 2026 · latest) — deployed + committed: Settings toggle for the
+- **Last shipped (Aug 13, 2026 · latest) — deployed + committed: shipping load items —
+  reorder, editable job #, richer print sheet.**
+  - **Reorder** — `reorderItems` (pure, in `shipping/types.ts`) + `moveItem` in
+    `loads-store.ts`; drag the new ⠿ grip in `LoadEditorPanel` or focus it and
+    press ↑/↓. Rows are only `draggable` **while the grip is held** so the text
+    fields inside stay selectable. Order flows to the printed sheet and the
+    install board's `ShipmentItemsPanel` for free (both render `load.items` in
+    array order). ✅ **No Dataverse script needed** — `crfdf_sortorder` already
+    existed and was already read back sorted; only the write side was missing
+    (`updateItemSortRecords`, writes just the rows that shifted).
+  - ⚠️ Reordering an **auto-named** load can rename it — `defaultLoadName` lists
+    stops in item order. Deliberate (name follows the route); typing a name
+    still overrides it.
+  - **Editable job #** — the job number on an item is now a button:
+    pick a BC result (customer + description follow the job; location/notes/
+    loaded stay), type a number + **Enter** for a job BC search can't reach yet,
+    or **Clear** to detach. `JobSearch` gained `onCommitText`/`onCancel`/
+    `autoFocus`/`placeholder`.
+  - **Print sheet** — two tick columns (**Loaded**, **Order**) and Notes pinned
+    at **35%** so write-in space doesn't depend on what's typed (63px → 259px
+    when empty). Description floored at 22% or the wider Notes column wrapped it
+    to 5 lines. Not done (offer stands): a min row height for real write space.
+  - **Also:** shipment writes now go through the retrying `dv*` helpers (were
+    calling the SDK directly, against the write-path invariant) — a reorder
+    rewrites several rows at once, so a blip mid-reorder would half-apply the
+    saved order.
+  - Verified in-browser end to end (drag, keyboard, all 4 job-# paths, print).
+    Tests: `shipping/reorder-items.test.ts` (8). 160 green. Guide → **v3.1** —
+    incl. a **new §5.15** documenting the Shipping board (it had never been
+    documented; only the read-only truck-card popup was).
+- **Earlier (Aug 1, 2026) — deployed + committed: Settings toggle for the
   day-hours hover readout.** `showDayHours` in `settings-store.ts` (localStorage
   `lumineo.settings.showDayHours`, default ON), a switch in
   `SettingsScreen` → Display, read in `EmployeeRow`. When off, the row's
