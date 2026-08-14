@@ -32,8 +32,8 @@ export function SketchPanel({ input, result, theme }: Props) {
   const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
-      ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' caisson`
-      : `${input.numFootings} × ${fmt(input.pierWidthFt)}' × ${fmt(input.pierLengthFt)}' pier`;
+      ? `${input.numFootings} × Ø ${fmt(footing.diameterFt)}' caisson`
+      : `${input.numFootings} × ${fmt(footing.planWidthFt)}' × ${fmt(footing.planLengthFt)}' pier`;
 
   return (
     <div className="results-col">

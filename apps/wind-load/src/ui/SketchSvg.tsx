@@ -110,7 +110,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const topMax = Math.max(...faces.map((f) => f.topFt));
   const widest = Math.max(...faces.map((f) => f.widthFt));
   const depth = footing.depthFt;
-  const footWFt = input.footingType === 'round' ? input.caissonDiaFt : input.pierWidthFt;
+  const footWFt = input.footingType === 'round' ? footing.diameterFt : footing.planWidthFt;
   const poleWFt = section.odIn / 12;
 
   const poleXs = layoutXs(input.numColumns, widest);
@@ -145,8 +145,8 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
-      ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' caisson`
-      : `${input.numFootings} × ${fmt(input.pierWidthFt)}' × ${fmt(input.pierLengthFt)}' pier`;
+      ? `${input.numFootings} × Ø ${fmt(footing.diameterFt)}' caisson`
+      : `${input.numFootings} × ${fmt(footing.planWidthFt)}' × ${fmt(footing.planLengthFt)}' pier`;
 
   const earthId = `${idPrefix}-earth`;
   const concId = `${idPrefix}-conc`;

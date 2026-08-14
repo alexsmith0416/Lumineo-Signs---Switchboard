@@ -25,6 +25,8 @@ function defaultInput(): DesignInput {
     columnSizeName: null,
     stressIncrease: 1.33,
     footingType: 'round',
+    footingSizing: 'auto',
+    footingClearanceIn: 12,
     numFootings: 1,
     lateralSoilPsf: 200,
     bearingPsf: 1330,
@@ -154,6 +156,15 @@ export function App() {
               input={input}
               onChange={setInput}
               recommendedSizeName={result.column.autoSection?.name ?? null}
+              autoPlan={
+                result.footing
+                  ? {
+                      diaFt: result.footing.diameterFt,
+                      widthFt: result.footing.planWidthFt,
+                      lengthFt: result.footing.planLengthFt,
+                    }
+                  : null
+              }
             />
             {view === 'calc' ? (
               <ResultsPanel input={input} result={result} />

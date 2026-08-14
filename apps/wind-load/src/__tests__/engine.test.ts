@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   allowableBendingKsi,
+  autoFootingWidthFt,
   baseAllowablePsi,
   ceAt,
   computeDesign,
@@ -163,6 +164,9 @@ function baseInput(): DesignInput {
     columnSizeName: null,
     stressIncrease: 1.33,
     footingType: 'round',
+    // Tests pin the classic behavior (typed-in hole) unless they opt into auto.
+    footingSizing: 'manual',
+    footingClearanceIn: 12,
     numFootings: 2,
     lateralSoilPsf: 200,
     bearingPsf: 1330,
@@ -429,6 +433,65 @@ describe('manual pole sizing', () => {
     input.caissonDiaFt = 3;
     const ok = computeDesign(input);
     expect(ok.footing!.coverOk).toBe(true);
+  });
+});
+
+describe('footing sized from the pole', () => {
+  it('rounds up to the next standard auger that clears the pole', () => {
+    // 12" clearance = 6" of concrete all round.
+    expect(autoFootingWidthFt(8.625, 12)).toBeCloseTo(24 / 12, 9); // needs 20.6" → 24"
+    expect(autoFootingWidthFt(10.75, 12)).toBeCloseTo(24 / 12, 9); // needs 22.75" → 24"
+    expect(autoFootingWidthFt(14, 12)).toBeCloseTo(30 / 12, 9); // needs 26" → 30"
+    expect(autoFootingWidthFt(20, 12)).toBeCloseTo(36 / 12, 9); // needs 32" → 36"
+    // A wider clearance pushes it to the next auger.
+    expect(autoFootingWidthFt(10.75, 24)).toBeCloseTo(36 / 12, 9); // needs 34.75" → 36"
+  });
+
+  it('changes the hole — and therefore depth and volume — when the pole changes', () => {
+    const small = baseInput();
+    small.footingSizing = 'auto';
+    small.columnSizing = 'manual';
+    small.columnSizeName = '10"(.365)';
+    const big = { ...small, columnSizeName: '20"(.375)' };
+
+    const rSmall = computeDesign(small);
+    const rBig = computeDesign(big);
+
+    // The hole follows the pole...
+    expect(rSmall.footing!.diameterFt).toBeCloseTo(2, 9); // 24" auger
+    expect(rBig.footing!.diameterFt).toBeCloseTo(3, 9); // 36" auger
+    expect(rSmall.footing!.autoSized).toBe(true);
+    // ...a wider hole develops lateral resistance sooner, so it gets shallower,
+    // while the larger plan area still means more concrete.
+    expect(rBig.footing!.depthFt).toBeLessThan(rSmall.footing!.depthFt);
+    expect(rBig.footing!.volumePerFootingYd3).toBeGreaterThan(rSmall.footing!.volumePerFootingYd3);
+    // Auto sizing always satisfies the 3" cover check.
+    expect(rSmall.footing!.coverOk).toBe(true);
+    expect(rBig.footing!.coverOk).toBe(true);
+  });
+
+  it('leaves the typed-in size alone in manual mode', () => {
+    const input = baseInput(); // manual, Ø 3'
+    input.columnSizing = 'manual';
+    const a = computeDesign({ ...input, columnSizeName: '10"(.365)' });
+    const b = computeDesign({ ...input, columnSizeName: '20"(.375)' });
+    expect(a.footing!.diameterFt).toBe(3);
+    expect(b.footing!.diameterFt).toBe(3);
+    expect(a.footing!.autoSized).toBe(false);
+    // Depth is load-driven, so it does NOT move with the pole when the hole is fixed.
+    expect(a.footing!.depthFt).toBeCloseTo(b.footing!.depthFt, 9);
+  });
+
+  it('measures the mow pad clearance against the auto-sized hole', () => {
+    const input = baseInput();
+    input.footingSizing = 'auto';
+    input.columnSizing = 'manual';
+    input.columnSizeName = '14"(.375)'; // → 30" auger = 2.5 ft
+    input.mowPad = { enabled: true, widthFt: 3, lengthFt: 3, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.footing!.diameterFt).toBeCloseTo(2.5, 9);
+    expect(r.mowPad!.requiredWidthFt).toBeCloseTo(3, 9); // 2.5' + 6"
+    expect(r.mowPad!.sizeOk).toBe(true);
   });
 });
 

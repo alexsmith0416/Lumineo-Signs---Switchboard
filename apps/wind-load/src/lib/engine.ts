@@ -83,6 +83,10 @@ export interface DesignInput {
   stressIncrease: number;
 
   footingType: FootingType;
+  /** 'auto' sizes the hole from the pole; 'manual' uses the dimensions below. */
+  footingSizing: 'auto' | 'manual';
+  /** Total concrete clearance around the pole when auto-sizing, in (12 = 6" all round). */
+  footingClearanceIn: number;
   numFootings: number;
   /** Allowable passive lateral soil resistance, psf per ft of depth (UBC 18-1-A). */
   lateralSoilPsf: number;
@@ -168,6 +172,11 @@ export interface FootingResult {
   minWidthForCoverFt: number;
   /** Footing clears the pole by at least 3" all round. */
   coverOk: boolean;
+  /** Plan dimensions actually used (derived from the pole when auto-sized). */
+  diameterFt: number;
+  planWidthFt: number;
+  planLengthFt: number;
+  autoSized: boolean;
 }
 
 export interface BasePlateResult {
@@ -494,6 +503,52 @@ function columnCheck(
   };
 }
 
+// ── Footing plan size ───────────────────────────────────────────────────────
+
+/** Standard auger / form diameters, in. Auto-sizing rounds up to one of these. */
+export const AUGER_DIAMETERS_IN: readonly number[] = [12, 18, 24, 30, 36, 42, 48, 60, 72];
+
+/**
+ * Smallest standard auger that clears the pole by `clearanceIn` total
+ * (half of it on each side), as feet. Falls back to the next 6" increment
+ * above the largest listed auger.
+ */
+export function autoFootingWidthFt(poleOdIn: number, clearanceIn: number): number {
+  const needed = poleOdIn + Math.max(0, clearanceIn);
+  const stock = AUGER_DIAMETERS_IN.find((d) => d >= needed);
+  return (stock ?? Math.ceil(needed / 6) * 6) / 12;
+}
+
+/** Footing plan dimensions actually used by the calculation. */
+export interface FootingPlan {
+  /** Round caisson diameter, ft. */
+  diaFt: number;
+  /** Rectangular pier width (∥ sign face), ft. */
+  widthFt: number;
+  /** Rectangular pier length (⊥ sign face), ft. */
+  lengthFt: number;
+  /** True when these were derived from the pole size rather than typed in. */
+  auto: boolean;
+}
+
+/**
+ * Resolve the footing plan size. In 'auto' mode every plan dimension is driven
+ * by the pole's outside dimension, so changing the pole changes the hole (and
+ * therefore the embedment depth and concrete volume).
+ */
+export function resolveFootingPlan(input: DesignInput, poleOdIn: number | null): FootingPlan {
+  if (input.footingSizing === 'auto' && poleOdIn !== null) {
+    const w = autoFootingWidthFt(poleOdIn, input.footingClearanceIn);
+    return { diaFt: w, widthFt: w, lengthFt: w, auto: true };
+  }
+  return {
+    diaFt: input.caissonDiaFt,
+    widthFt: input.pierWidthFt,
+    lengthFt: input.pierLengthFt,
+    auto: false,
+  };
+}
+
 // ── Pole footing embedment (UBC 1994 §1806.7, nonconstrained) ───────────────
 
 export interface EmbedmentSolution {
@@ -542,6 +597,7 @@ function fmtIn(n: number): string {
 
 function footingCheck(
   input: DesignInput,
+  plan: FootingPlan,
   momentAtGradeLbFt: number,
   elements: ElementResult[],
   columnOdIn: number,
@@ -559,16 +615,16 @@ function footingCheck(
 
   const b =
     input.footingType === 'round'
-      ? input.caissonDiaFt
-      : Math.hypot(input.pierWidthFt, input.pierLengthFt);
+      ? plan.diaFt
+      : Math.hypot(plan.widthFt, plan.lengthFt);
 
   const emb = solveEmbedment(p, centroidFt, b, input.lateralSoilPsf);
   const d = emb.depthFt;
 
   const planArea =
     input.footingType === 'round'
-      ? Math.PI * (input.caissonDiaFt / 2) ** 2
-      : input.pierWidthFt * input.pierLengthFt;
+      ? Math.PI * (plan.diaFt / 2) ** 2
+      : plan.widthFt * plan.lengthFt;
 
   const signWeightLb = input.signWeightLb ?? 15 * totalArea;
   const footingWeightLb = planArea * d * CONCRETE_PCF;
@@ -585,9 +641,7 @@ function footingCheck(
   // round (Spec sheet), so a bigger pole forces a bigger hole.
   const minWidthForCoverFt = (columnOdIn + 6) / 12;
   const smallestPlanDimFt =
-    input.footingType === 'round'
-      ? input.caissonDiaFt
-      : Math.min(input.pierWidthFt, input.pierLengthFt);
+    input.footingType === 'round' ? plan.diaFt : Math.min(plan.widthFt, plan.lengthFt);
   const coverOk = smallestPlanDimFt >= minWidthForCoverFt;
 
   return {
@@ -607,6 +661,10 @@ function footingCheck(
     totalVolumeYd3: volumePerFootingYd3 * n,
     minWidthForCoverFt,
     coverOk,
+    diameterFt: plan.diaFt,
+    planWidthFt: plan.widthFt,
+    planLengthFt: plan.lengthFt,
+    autoSized: plan.auto,
   };
 }
 
@@ -615,7 +673,7 @@ function footingCheck(
 /** Minimum clearance of the pad past the footing on each plan axis, ft (6"). */
 export const MOW_PAD_CLEARANCE_FT = 0.5;
 
-function mowPadCheck(input: DesignInput): MowPadResult | null {
+function mowPadCheck(input: DesignInput, plan: FootingPlan): MowPadResult | null {
   const mp = input.mowPad;
   if (!mp.enabled) return null;
 
@@ -624,8 +682,8 @@ function mowPadCheck(input: DesignInput): MowPadResult | null {
   // frame bears on soil and the pour can't seep under it.
   const [footAlongFace, footAcross] =
     input.footingType === 'round'
-      ? [input.caissonDiaFt, input.caissonDiaFt]
-      : [input.pierWidthFt, input.pierLengthFt];
+      ? [plan.diaFt, plan.diaFt]
+      : [plan.widthFt, plan.lengthFt];
   const requiredLengthFt = footAlongFace + MOW_PAD_CLEARANCE_FT;
   const requiredWidthFt = footAcross + MOW_PAD_CLEARANCE_FT;
   const sizeOk = mp.lengthFt >= requiredLengthFt && mp.widthFt >= requiredWidthFt;
@@ -895,8 +953,11 @@ export function computeDesign(input: DesignInput): DesignResult {
     );
   }
 
+  // Resolve the hole size first — in auto mode it follows the chosen pole, so
+  // the embedment solve and concrete volume both move with the pole size.
+  const footingPlan = resolveFootingPlan(input, column.section?.odIn ?? null);
   const footing = column.section
-    ? footingCheck(input, momentAtGradeLbFt, elements, column.section.odIn)
+    ? footingCheck(input, footingPlan, momentAtGradeLbFt, elements, column.section.odIn)
     : null;
   if (footing && !footing.converged) {
     warnings.push('Footing depth solve did not converge — treat the footing result as invalid.');
@@ -911,7 +972,7 @@ export function computeDesign(input: DesignInput): DesignResult {
     );
   }
 
-  const mowPad = mowPadCheck(input);
+  const mowPad = mowPadCheck(input, footingPlan);
   if (mowPad && !mowPad.sizeOk) {
     warnings.push(
       `Mow pad is too small for the footing — every pad dimension must clear the footing by at least 6" ` +

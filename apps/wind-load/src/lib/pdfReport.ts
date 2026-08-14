@@ -283,8 +283,8 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     ensureRoom(16);
     doc.text(
       input.footingType === 'round'
-        ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' × ${fmtFtIn(f.depthFt)} deep`
-        : `${input.numFootings} × ${fmt(input.pierWidthFt)}' × ${fmt(input.pierLengthFt)}' × ${fmtFtIn(f.depthFt)} deep`,
+        ? `${input.numFootings} × Ø ${fmt(f.diameterFt)}' × ${fmtFtIn(f.depthFt)} deep`
+        : `${input.numFootings} × ${fmt(f.planWidthFt)}' × ${fmt(f.planLengthFt)}' × ${fmtFtIn(f.depthFt)} deep`,
       M,
       y,
     );

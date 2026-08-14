@@ -18,6 +18,8 @@ interface Props {
   onChange: (next: DesignInput) => void;
   /** The size auto-sizing recommends, so manual mode can label it. */
   recommendedSizeName?: string | null;
+  /** Footing plan dimensions the engine resolved, for the auto-size readout. */
+  autoPlan?: { diaFt: number; widthFt: number; lengthFt: number } | null;
 }
 
 let elementSeq = 0;
@@ -32,7 +34,7 @@ export function newElement(): SignElementInput {
   };
 }
 
-export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
+export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
@@ -289,6 +291,38 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
             </div>
           </label>
 
+          <label className="span-2">
+            <span>Footing size</span>
+            <div className="seg full" role="tablist" aria-label="Footing sizing">
+              <button
+                role="tab"
+                aria-selected={input.footingSizing === 'auto'}
+                className={`seg-btn${input.footingSizing === 'auto' ? ' active' : ''}`}
+                onClick={() => set({ footingSizing: 'auto' })}
+              >
+                Size from pole
+              </button>
+              <button
+                role="tab"
+                aria-selected={input.footingSizing === 'manual'}
+                className={`seg-btn${input.footingSizing === 'manual' ? ' active' : ''}`}
+                onClick={() =>
+                  set({
+                    footingSizing: 'manual',
+                    // Seed the boxes with whatever auto just produced.
+                    ...(autoPlan
+                      ? input.footingType === 'round'
+                        ? { caissonDiaFt: autoPlan.diaFt }
+                        : { pierWidthFt: autoPlan.widthFt, pierLengthFt: autoPlan.lengthFt }
+                      : {}),
+                  })
+                }
+              >
+                Enter it myself
+              </button>
+            </div>
+          </label>
+
           <NumField
             label="Number of footings"
             value={input.numFootings}
@@ -296,7 +330,16 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
             step={1}
             onChange={(v) => set({ numFootings: Math.max(1, Math.round(v)) })}
           />
-          {input.footingType === 'round' ? (
+
+          {input.footingSizing === 'auto' ? (
+            <NumField
+              label="Concrete around pole"
+              suffix="in total"
+              value={input.footingClearanceIn}
+              min={0}
+              onChange={(v) => set({ footingClearanceIn: Math.max(0, v) })}
+            />
+          ) : input.footingType === 'round' ? (
             <FtInField
               label="Caisson diameter"
               value={input.caissonDiaFt}
@@ -315,6 +358,18 @@ export function InputsPanel({ input, onChange, recommendedSizeName }: Props) {
                 onChange={(v) => set({ pierLengthFt: v })}
               />
             </>
+          )}
+
+          {input.footingSizing === 'auto' && (
+            <p className="hint span-2">
+              {autoPlan
+                ? `Hole follows the pole: ${fmt(input.footingClearanceIn / 2)}" of concrete all round, rounded up to the next standard auger — currently ${
+                    input.footingType === 'round'
+                      ? `Ø ${fmt(autoPlan.diaFt * 12, 0)}" (${fmt(autoPlan.diaFt)}')`
+                      : `${fmt(autoPlan.widthFt)}' × ${fmt(autoPlan.lengthFt)}'`
+                  }. Depth and concrete volume update with it.`
+                : 'Enter the sign dimensions and the hole will size itself from the recommended pole.'}
+            </p>
           )}
           <NumField
             label="Lateral soil resistance"

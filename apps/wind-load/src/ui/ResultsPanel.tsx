@@ -211,8 +211,8 @@ export function ResultsPanel({ input, result }: Props) {
                 <div className="hero-line">
                   <span className="hero-value">
                     {input.footingType === 'round'
-                      ? `${input.numFootings} × Ø ${fmt(input.caissonDiaFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`
-                      : `${input.numFootings} × ${fmt(input.pierWidthFt)}' × ${fmt(input.pierLengthFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`}
+                      ? `${input.numFootings} × Ø ${fmt(r.footing.diameterFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`
+                      : `${input.numFootings} × ${fmt(r.footing.planWidthFt)}' × ${fmt(r.footing.planLengthFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`}
                   </span>
                   <Chip ok={r.footing.bearingOk} okText="BEARING OK" badText="BEARING NG" />
                 </div>
