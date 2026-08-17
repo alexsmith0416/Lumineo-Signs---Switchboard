@@ -223,7 +223,29 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
   preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
   the day it's unblocked.
-- **Last shipped (Aug 13, 2026 · latest) — deployed + committed: shipping load items —
+- **Last shipped (Aug 16, 2026 · latest) — deployed + committed: user-defined tick-box
+  columns on a load's printed shipping list.** The sheet's two hardcoded columns
+  (Loaded/Order) are now a picked set.
+  - `shipping/print-columns.ts` — pure library/selection logic (normalize,
+    case-insensitive add/remove/toggle, `visibleCheckColumns` orders by the
+    library so the sheet doesn't reshuffle with click order + drops selections
+    whose option was deleted). No-ops return the input **by identity** so the
+    store can skip a write. 17 tests.
+  - `PrintColumnsPicker.tsx` — multi-select on the print preview. 🔴 **Lives
+    OUTSIDE `.load-print__sheet` on purpose** — `printMarkup` copies that
+    element's `outerHTML` into the print window, so anything inside it goes to
+    paper. New `.load-print__stack` wraps bar + sheet.
+  - **Persistence: `settings-store` → localStorage** (`lumineo.settings.
+    printCheckOptions` / `.printCheckColumns`), i.e. **per device, applies to
+    every printed load**. Deliberate — no Dataverse table to create. ⚠️ Not
+    shared across users; moving it to Dataverse is the open upgrade if the team
+    wants one list. Per-load (rather than global) selection is the other option.
+  - **Capped at 6** — each tick column costs Notes width (259px @2, 205px @4,
+    142px @6). Tick headers tightened to 9px/slim padding (+78px back at 4).
+    **Open offer: switch the sheet to landscape past ~4 columns** — buys far
+    more than tuning. Cap is `MAX_CHECK_COLUMNS`.
+  - Verified in-browser incl. survival of a full reload. Guide → **v3.2**.
+- **Earlier (Aug 13, 2026) — deployed + committed: shipping load items —
   reorder, editable job #, richer print sheet.**
   - **Reorder** — `reorderItems` (pure, in `shipping/types.ts`) + `moveItem` in
     `loads-store.ts`; drag the new ⠿ grip in `LoadEditorPanel` or focus it and
