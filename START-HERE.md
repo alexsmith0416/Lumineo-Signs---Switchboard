@@ -246,7 +246,20 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
   preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
   the day it's unblocked.
-- **Last shipped (Aug 16, 2026 · latest) — deployed + committed: user-defined tick-box
+- **Last shipped (Aug 16, 2026 · latest) — deployed + committed: THE "my edit didn't
+  take the first time" BUG IS FIXED.** Full write-up in the **Write-path invariant**
+  section above — read that before touching a write path. Short version: the host
+  bridge *rejects* when cold (first action after load) and `writeWithRetry` only
+  looked at *returned* failures, so it never retried; then `catch → loadWeek()`
+  reloaded the board and erased the optimistic edit. Retry now covers thrown +
+  returned, classification is inverted (retry unless positively permanent), all 55
+  writes go through `dv*`, no store reverts on failure, and `SaveStatus` surfaces a
+  failure with a retry. Three tests enforce it. Guide → v3.3.
+  - ⚠️ **Couldn't repro the live failure from here** (needs the deployed host), so
+    this fixes the whole class rather than one error string. If it ever recurs the
+    banner shows the real message and the console logs each retry — **get that
+    message**, it names the actual cause.
+- **Earlier (Aug 16, 2026) — deployed + committed: user-defined tick-box
   columns on a load's printed shipping list.** The sheet's two hardcoded columns
   (Loaded/Order) are now a picked set.
   - `shipping/print-columns.ts` — pure library/selection logic (normalize,
