@@ -24,6 +24,7 @@ import {
 } from "../services/roster-overrides";
 import { useSettingsStore } from "./settings-store";
 import { useHistoryStore } from "./history-store";
+import { reportWriteFailure } from "./write-status-store";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -220,10 +221,7 @@ export function createScheduleStore(
         overtime: s.overtime,
       };
       set({ schedule: sched, conflicts: detectConflicts(ctx) });
-      void track(persist()).catch((e) => {
-        console.error("[schedule] undo/redo persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      void track(persist()).catch((e) => reportWriteFailure("Undo / redo", e, persist));
     };
 
     /** Record one undoable edit: `before`/`after` are full-board snapshots for
@@ -443,29 +441,28 @@ export function createScheduleStore(
           () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, shiftPayload(l)))),
         );
       }
-      await Promise.all(
-        toPersist.map((line) =>
-          queueWrite(line.id, () =>
-            ds.updateScheduleLine(line.id, {
-              startDateTime: line.startDateTime,
-              endDateTime: line.endDateTime,
-              employeeId: line.employeeId,
-              departmentId: line.departmentId,
-              departmentWide: line.departmentWide ?? false,
-            }),
+      const writeShift = (): Promise<unknown> =>
+        Promise.all(
+          toPersist.map((line) =>
+            queueWrite(line.id, () =>
+              ds.updateScheduleLine(line.id, {
+                startDateTime: line.startDateTime,
+                endDateTime: line.endDateTime,
+                employeeId: line.employeeId,
+                departmentId: line.departmentId,
+                departmentWide: line.departmentWide ?? false,
+              }),
+            ),
           ),
-        ),
-      )
+        );
+      await writeShift()
         .then(() => {
           // A team/individual boundary crossing changes which resource owns the
           // line — reload so the lane resource is present and the board settles
           // to a true fixpoint (end times, lane membership).
           if (boundaryChanged) void get().loadWeek();
         })
-        .catch((e) => {
-          console.error("[schedule] shift persist failed — resyncing", e);
-          void get().loadWeek();
-        });
+        .catch((e) => reportWriteFailure("Move job card", e, writeShift));
     },
 
     resequenceDay: async (orderedLineIds) => {
@@ -505,14 +502,13 @@ export function createScheduleStore(
         () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, shiftPayload(l)))),
       );
 
-      await Promise.all(
-        toPersist.map((line) =>
-          queueWrite(line.id, () => ds.updateScheduleLine(line.id, shiftPayload(line))),
-        ),
-      ).catch((e) => {
-        console.error("[schedule] resequence persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      const writeOrder = (): Promise<unknown> =>
+        Promise.all(
+          toPersist.map((line) =>
+            queueWrite(line.id, () => ds.updateScheduleLine(line.id, shiftPayload(line))),
+          ),
+        );
+      await writeOrder().catch((e) => reportWriteFailure("Reorder the day", e, writeOrder));
     },
 
     updateTaskHours: async (lineId, overrideHours, cascade = true) => {
@@ -548,20 +544,19 @@ export function createScheduleStore(
           ),
         () => Promise.all(toPersist.map((l) => ds.updateScheduleLine(l.id, resizePayload(l)))),
       );
-      await Promise.all(
-        toPersist.map((line) =>
-          queueWrite(line.id, () =>
-            ds.updateScheduleLine(line.id, {
-              startDateTime: line.startDateTime,
-              endDateTime: line.endDateTime,
-              overrideHours: line.overrideHours,
-            }),
+      const writeResize = (): Promise<unknown> =>
+        Promise.all(
+          toPersist.map((line) =>
+            queueWrite(line.id, () =>
+              ds.updateScheduleLine(line.id, {
+                startDateTime: line.startDateTime,
+                endDateTime: line.endDateTime,
+                overrideHours: line.overrideHours,
+              }),
+            ),
           ),
-        ),
-      ).catch((e) => {
-        console.error("[schedule] resize persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+        );
+      await writeResize().catch((e) => reportWriteFailure("Change job hours", e, writeResize));
     },
 
     setTaskSpan: async (lineId, spanDays) => {
@@ -572,12 +567,9 @@ export function createScheduleStore(
       );
       set({ schedule: after });
       const ds = state.dataSource;
-      await queueWrite(lineId, () => ds.updateScheduleLine(lineId, { spanDays: spanDays ?? null })).catch(
-        (e) => {
-          console.error("[schedule] span persist failed — resyncing", e);
-          void get().loadWeek();
-        },
-      );
+      const writeSpan = (): Promise<unknown> =>
+        queueWrite(lineId, () => ds.updateScheduleLine(lineId, { spanDays: spanDays ?? null }));
+      await writeSpan().catch((e) => reportWriteFailure("Resize job card", e, writeSpan));
     },
 
     addScheduleLine: async (line) => {
@@ -595,10 +587,9 @@ export function createScheduleStore(
         () => ds.deleteScheduleLine(line.id),
         () => ds.createScheduleLine(line),
       );
-      await queueWrite(line.id, () => ds.createScheduleLine(line)).catch((e) => {
-        console.error("[schedule] create persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      const writeCreate = (): Promise<unknown> =>
+        queueWrite(line.id, () => ds.createScheduleLine(line));
+      await writeCreate().catch((e) => reportWriteFailure("Add job card", e, writeCreate));
     },
 
     splitScheduleLine: async (lineId, partHours) => {
@@ -689,23 +680,24 @@ export function createScheduleStore(
       // Persist through the per-line write queue (see the write-path invariant
       // in START-HERE: user edits go through the retrying dv* helpers, and the
       // queue keeps same-line writes in submission order).
-      await queueWrite(first.id, () =>
-        ds.updateScheduleLine(first.id, {
-          overrideHours: first.overrideHours,
-          endDateTime: first.endDateTime,
-          spanDays: null,
-          splitGroupId: groupId,
-        }),
-      ).catch((e) => {
-        console.error("[schedule] split resize persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      const writeSplitFirst = (): Promise<unknown> =>
+        queueWrite(first.id, () =>
+          ds.updateScheduleLine(first.id, {
+            overrideHours: first.overrideHours,
+            endDateTime: first.endDateTime,
+            spanDays: null,
+            splitGroupId: groupId,
+          }),
+        );
+      await writeSplitFirst().catch((e) =>
+        reportWriteFailure("Split job card", e, writeSplitFirst),
+      );
       await Promise.all(
         created.map((p) =>
-          queueWrite(p.id, () => ds.createScheduleLine(p)).catch((e) => {
-            console.error("[schedule] split part persist failed — resyncing", e);
-            void get().loadWeek();
-          }),
+          ((writePart: () => Promise<unknown>) =>
+            writePart().catch((e) => reportWriteFailure("Split job card", e, writePart)))(() =>
+            queueWrite(p.id, () => ds.createScheduleLine(p)),
+          ),
         ),
       );
     },
@@ -728,10 +720,9 @@ export function createScheduleStore(
           () => ds.deleteScheduleLine(removed.id),
         );
       }
-      await queueWrite(lineId, () => ds.deleteScheduleLine(lineId)).catch((e) => {
-        console.error("[schedule] delete persist failed — resyncing", e);
-        void get().loadWeek();
-      });
+      const writeDelete = (): Promise<unknown> =>
+        queueWrite(lineId, () => ds.deleteScheduleLine(lineId));
+      await writeDelete().catch((e) => reportWriteFailure("Delete job card", e, writeDelete));
     },
 
     addDepartment: (dept) => {

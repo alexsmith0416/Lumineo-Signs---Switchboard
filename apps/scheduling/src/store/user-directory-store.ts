@@ -6,6 +6,7 @@ import {
   updateAppUser,
 } from "../services/dataverse-live";
 import type { UserType } from "../services/current-user";
+import { persistOrReport } from "./write-status-store";
 
 /**
  * The editable login-role directory (crfdf_appuser). Loaded once at startup and
@@ -92,10 +93,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
     const users = [...get().users, user];
     set({ users, byEmail: indexByEmail(users) });
     if (LIVE) {
-      void createAppUser({ id: user.id, email: clean, userType, displayName }).catch((e) => {
-        console.error("[user-directory] add failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Add user", () => createAppUser({ id: user.id, email: clean, userType, displayName }));
     }
   },
 
@@ -106,10 +104,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
     );
     set({ users, byEmail: indexByEmail(users) });
     if (LIVE) {
-      void updateAppUser(id, { ...changes, ...(email ? { email } : {}) }).catch((e) => {
-        console.error("[user-directory] update failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Edit user", () => updateAppUser(id, { ...changes, ...(email ? { email } : {}) }));
     }
   },
 
@@ -117,10 +112,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
     const users = get().users.filter((u) => u.id !== id);
     set({ users, byEmail: indexByEmail(users) });
     if (LIVE) {
-      void deleteAppUser(id).catch((e) => {
-        console.error("[user-directory] remove failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Delete card preset", () => deleteAppUser(id));
     }
   },
 }));

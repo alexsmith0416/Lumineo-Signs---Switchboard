@@ -6,6 +6,7 @@ import {
   type QueueItem,
   type QueueKind,
 } from "../services/job-queue-data";
+import { persistOrReport } from "./write-status-store";
 
 export interface JobQueueState {
   kind: QueueKind;
@@ -73,28 +74,19 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
         items: [],
       };
       set({ groups: [...get().groups, group] });
-      void ds.createGroup(group).catch((e) => {
-        console.error("[queue] createGroup failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Add queue group", () => ds.createGroup(group));
     },
 
     updateGroup: (id, changes) => {
       set({ groups: get().groups.map((g) => (g.id === id ? { ...g, ...changes } : g)) });
-      void ds.updateGroup(id, changes).catch((e) => {
-        console.error("[queue] updateGroup failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Edit queue group", () => ds.updateGroup(id, changes));
     },
 
     deleteGroup: (id) => {
       const group = get().groups.find((g) => g.id === id);
       const itemIds = group?.items.map((i) => i.id) ?? [];
       set({ groups: get().groups.filter((g) => g.id !== id) });
-      void ds.deleteGroup(id, itemIds).catch((e) => {
-        console.error("[queue] deleteGroup failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Delete queue group", () => ds.deleteGroup(id, itemIds));
     },
 
     toggleCollapsed: (id) => {
@@ -128,10 +120,7 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
           g.id === item.groupId ? { ...g, items: [...g.items, item] } : g,
         ),
       });
-      void ds.createItem(item).catch((e) => {
-        console.error("[queue] createItem failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Add job to queue", () => ds.createItem(item));
     },
 
     updateItem: (id, changes) => {
@@ -141,20 +130,14 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
           items: g.items.map((it) => (it.id === id ? { ...it, ...changes } : it)),
         })),
       });
-      void ds.updateItem(id, changes).catch((e) => {
-        console.error("[queue] updateItem failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Edit queued job", () => ds.updateItem(id, changes));
     },
 
     removeItem: (id) => {
       set({
         groups: get().groups.map((g) => ({ ...g, items: g.items.filter((it) => it.id !== id) })),
       });
-      void ds.deleteItem(id).catch((e) => {
-        console.error("[queue] deleteItem failed — resyncing", e);
-        void get().load(true);
-      });
+      void persistOrReport("Remove job from queue", () => ds.deleteItem(id));
     },
 
     moveItem: (itemId, toGroupId, toIndex) => {

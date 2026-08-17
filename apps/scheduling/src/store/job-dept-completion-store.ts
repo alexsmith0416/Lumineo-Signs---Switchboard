@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persistOrReport } from "./write-status-store";
 
 /**
  * Per-job department completions (crfdf_jobdeptcompletion) that drive the
@@ -64,13 +65,11 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
       return { byJob: { ...s.byJob, [jobNo]: forJob } };
     });
     if (!LIVE) return;
-    try {
+    await persistOrReport(done ? "Complete a department" : "Un-complete a department", async () => {
       const m = await import("../services/dataverse-live");
-      if (done) await m.addJobDeptCompletion(jobNo, deptKey, by);
-      else await m.removeJobDeptCompletion(jobNo, deptKey);
-    } catch (e) {
-      console.error("[job-dept-completion] write failed — resyncing", e);
-      void get().load(true);
-    }
+      return done
+        ? m.addJobDeptCompletion(jobNo, deptKey, by)
+        : m.removeJobDeptCompletion(jobNo, deptKey);
+    });
   },
 }));

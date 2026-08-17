@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persistOrReport } from "./write-status-store";
 
 /**
  * Per-job department overrides (crfdf_jobdeptoverride) that let an editor edit
@@ -65,13 +66,10 @@ export const useJobDeptOverrideStore = create<JobDeptOverrideState>((set, get) =
       return { byJob: { ...s.byJob, [jobNo]: forJob } };
     });
     if (!LIVE) return;
-    try {
+    await persistOrReport("Edit production stage", async () => {
       const m = await import("../services/dataverse-live");
-      await m.setJobDeptOverride(jobNo, deptKey, o.included, o.active);
-    } catch (e) {
-      console.error("[job-dept-override] write failed — resyncing", e);
-      void get().load(true);
-    }
+      return m.setJobDeptOverride(jobNo, deptKey, o.included, o.active);
+    });
   },
 
   clearOverride: async (jobNo, deptKey) => {
@@ -82,12 +80,9 @@ export const useJobDeptOverrideStore = create<JobDeptOverrideState>((set, get) =
       return { byJob: { ...s.byJob, [jobNo]: forJob } };
     });
     if (!LIVE) return;
-    try {
+    await persistOrReport("Reset production stage", async () => {
       const m = await import("../services/dataverse-live");
-      await m.clearJobDeptOverride(jobNo, deptKey);
-    } catch (e) {
-      console.error("[job-dept-override] clear failed — resyncing", e);
-      void get().load(true);
-    }
+      return m.clearJobDeptOverride(jobNo, deptKey);
+    });
   },
 }));

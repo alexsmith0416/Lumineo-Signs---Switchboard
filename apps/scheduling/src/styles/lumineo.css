@@ -3320,6 +3320,59 @@ input, select, textarea {
 /* Give Description a floor so the wide Notes column doesn't squeeze what's
    actually being shipped down to one word per line. */
 .load-print__desc { width: 22%; }
+/* ---- background-save status (bottom-right) ---- */
+.save-status {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 90;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.save-status--pending {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.save-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-brand);
+  animation: save-pulse 1.1s ease-in-out infinite;
+}
+@keyframes save-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.save-status--failed {
+  width: 320px;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--status-red);
+  border-left: 4px solid var(--status-red);
+  color: var(--text-primary);
+}
+.save-status__title { font-weight: 700; margin-bottom: 6px; }
+.save-status__body { margin-bottom: 10px; }
+.save-status__item { font-size: 12px; }
+.save-status__why {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  word-break: break-word;
+}
+.save-status__actions { display: flex; gap: 8px; justify-content: flex-end; }
+.save-status__actions > button { padding: 5px 12px; font-size: 12px; }
+@media print {
+  .save-status { display: none !important; }
+}
+
 /* ---- printed-sheet tick-box column picker (screen only) ---- */
 .print-cols { position: relative; display: flex; align-items: center; gap: 6px; }
 .print-cols__label { font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.3px; }

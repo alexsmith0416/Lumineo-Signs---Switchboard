@@ -17,6 +17,12 @@
  */
 import type { ResourceAdminInput, ScheduleDataSource } from "./data-source";
 import { isLaneEmployeeId, laneEmployeeId } from "./department-lane";
+import {
+  WRITE_ATTEMPTS,
+  isRetryableWriteError,
+  writeErrorMessage,
+  writeRetryDelay,
+} from "./dv-write";
 import { overlapsWindow, scheduleLineWindowFilter } from "./week-window";
 import {
   INSTALL_LOCATIONS,
@@ -136,36 +142,48 @@ async function sdk(): Promise<{ S: Svc; org: string }> {
 
 const isOrgUrlError = (msg: string) => /organization url/i.test(msg);
 
-// A write is "transient" when a retry is likely to succeed — network blips,
-// throttling, gateway errors, a stale org URL. These are exactly the failures
-// behind the "my edit didn't take, but it worked when I did it again" reports:
-// the store's catch reloads the board (erasing the optimistic edit) instead of
-// retrying. Retrying here is the automatic "do it again" so the reload never
-// fires for a transient blip.
-const isTransientWrite = (msg: string): boolean =>
-  isOrgUrlError(msg) ||
-  /\b(429|500|502|503|504)\b|timeout|timed out|network|socket|ECONN|ETIMEDOUT|fetch failed|throttl|too many requests|temporarily|unavailable|transient|connection/i.test(
-    msg,
-  );
-
 interface SdkResult {
   success: boolean;
   error?: { message?: string };
   data?: unknown;
 }
 
-/** Run a Dataverse write, retrying transient failures a few times with backoff.
- *  `op` re-acquires sdk() each attempt so an org-URL re-resolve takes effect. */
-async function writeWithRetry(op: () => Promise<SdkResult>, attempts = 3): Promise<SdkResult> {
-  let res = await op();
-  let tries = 1;
-  while (!res.success && tries < attempts && isTransientWrite(res.error?.message ?? "")) {
-    if (isOrgUrlError(res.error?.message ?? "")) _sdkPromise = null; // force org re-resolve
-    await new Promise((r) => setTimeout(r, 150 * tries)); // 150ms, 300ms
-    res = await op();
-    tries++;
+/**
+ * Run a Dataverse write, retrying anything that isn't positively permanent.
+ *
+ * Handles BOTH failure shapes, which is the whole point: the SDK returns
+ * `{success:false}` for connector-level errors but the host bridge REJECTS when
+ * it isn't ready (the first write after load). The old version only looked at
+ * the returned shape, so a rejection escaped unretried and the caller's board
+ * reload erased the user's edit. See services/dv-write.ts for the policy.
+ */
+async function writeWithRetry(
+  op: () => Promise<SdkResult>,
+  attempts = WRITE_ATTEMPTS,
+): Promise<SdkResult> {
+  let lastMessage = "";
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    let res: SdkResult;
+    try {
+      res = await op();
+    } catch (e) {
+      // A thrown/rejected call — treat it exactly like a failed result.
+      res = { success: false, error: { message: writeErrorMessage(e) } };
+    }
+    if (res.success) {
+      if (attempt > 1) console.info(`[dv] write succeeded on attempt ${attempt}`);
+      return res;
+    }
+
+    lastMessage = res.error?.message ?? "";
+    if (!isRetryableWriteError(lastMessage)) return res; // the request itself is wrong
+    if (attempt === attempts) break;
+
+    if (isOrgUrlError(lastMessage)) _sdkPromise = null; // force an org re-resolve
+    console.warn(`[dv] write attempt ${attempt} failed, retrying — ${lastMessage || "(no message)"}`);
+    await new Promise((r) => setTimeout(r, writeRetryDelay(attempt)));
   }
-  return res;
+  return { success: false, error: { message: lastMessage } };
 }
 
 /** Retrying Dataverse write helpers — use for user-edit writes so a transient
@@ -477,21 +495,15 @@ export const liveProductionDataSource: ScheduleDataSource = {
   // → crfdf_department1, same target as the schedule-line lookup, so the same
   // nav property + entity set bind works here).
   async createResource(input: ResourceAdminInput): Promise<void> {
-    const { S, org } = await sdk();
-    const rec = employeeRecord(input);
-    const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, SET.employees, rec);
+    const res = await dvCreate(SET.employees, employeeRecord(input));
     if (!res.success) throw new Error(res.error?.message ?? `CreateEmployee failed`);
   },
   async updateResource(id: string, input: ResourceAdminInput): Promise<void> {
-    const { S, org } = await sdk();
-    const res = await S.UpdateRecordWithOrganization(
-      PREFER_WRITE, ACCEPT, org, SET.employees, id, employeeRecord(input),
-    );
+    const res = await dvUpdate(SET.employees, id, employeeRecord(input));
     if (!res.success) throw new Error(res.error?.message ?? `UpdateEmployee(${id}) failed`);
   },
   async deleteResource(id: string): Promise<void> {
-    const { S, org } = await sdk();
-    const res = await S.DeleteRecordWithOrganization(org, SET.employees, id);
+    const res = await dvDelete(SET.employees, id);
     if (!res.success) throw new Error(res.error?.message ?? `DeleteEmployee(${id}) failed`);
   },
 };
@@ -605,7 +617,6 @@ export async function createAssistRow(input: {
   days: number[];
   halves?: Record<number, "am" | "pm">;
 }): Promise<void> {
-  const { S, org } = await sdk();
   const rec: Row = {
     crfdf_employeename: input.name,
     crfdf_region: input.regionIsNek,
@@ -623,7 +634,7 @@ export async function createAssistRow(input: {
   if (halfEntries.length > 0) {
     rec.crfdf_assisthalves = halfEntries.map(([d, h]) => `${d}:${h}`).join(",");
   }
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, INSTALL_SET, rec);
+  const res = await dvCreate(INSTALL_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createAssistRow failed");
 }
 
@@ -633,26 +644,22 @@ export async function updateAssistRow(
   id: string,
   input: { days: number[]; halves?: Record<number, "am" | "pm"> },
 ): Promise<void> {
-  const { S, org } = await sdk();
   const halfEntries = Object.entries(input.halves ?? {});
   const withHalves: Row = {
     crfdf_assistdays: input.days.join(","),
     // Explicitly clear the half column when no half days remain.
     crfdf_assisthalves: halfEntries.map(([d, h]) => `${d}:${h}`).join(","),
   };
-  let res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, INSTALL_SET, id, withHalves);
+  let res = await dvUpdate(INSTALL_SET, id, withHalves);
   if (!res.success) {
     // Older orgs may not have crfdf_assisthalves provisioned — retry days only.
-    res = await S.UpdateRecordWithOrganization(
-      PREFER_WRITE, ACCEPT, org, INSTALL_SET, id, { crfdf_assistdays: input.days.join(",") },
-    );
+    res = await dvUpdate(INSTALL_SET, id, { crfdf_assistdays: input.days.join(",") });
   }
   if (!res.success) throw new Error(res.error?.message ?? `updateAssistRow(${id}) failed`);
 }
 
 export async function removeAssistRow(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.DeleteRecordWithOrganization(org, INSTALL_SET, id);
+  const res = await dvDelete(INSTALL_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? "removeAssistRow failed");
 }
 
@@ -787,22 +794,15 @@ function createLiveInstallDataSource(
     // crfdf_InstallationEmployees. Region/location are scalar columns (Two
     // Option / Picklist), so no @odata.bind — just plain values.
     async createResource(input: ResourceAdminInput): Promise<void> {
-      const { S, org } = await sdk();
-      const res = await S.CreateRecordWithOrganization(
-        PREFER_WRITE, ACCEPT, org, INSTALL_SET, installRecord(input),
-      );
+      const res = await dvCreate(INSTALL_SET, installRecord(input));
       if (!res.success) throw new Error(res.error?.message ?? `CreateCrew failed`);
     },
     async updateResource(id: string, input: ResourceAdminInput): Promise<void> {
-      const { S, org } = await sdk();
-      const res = await S.UpdateRecordWithOrganization(
-        PREFER_WRITE, ACCEPT, org, INSTALL_SET, id, installRecord(input),
-      );
+      const res = await dvUpdate(INSTALL_SET, id, installRecord(input));
       if (!res.success) throw new Error(res.error?.message ?? `UpdateCrew(${id}) failed`);
     },
     async deleteResource(id: string): Promise<void> {
-      const { S, org } = await sdk();
-      const res = await S.DeleteRecordWithOrganization(org, INSTALL_SET, id);
+      const res = await dvDelete(INSTALL_SET, id);
       if (!res.success) throw new Error(res.error?.message ?? `DeleteCrew(${id}) failed`);
     },
   };
@@ -1072,8 +1072,7 @@ function pushToRecord(p: BcPlanningPush): Row {
 export async function enqueueBcPush(push: BcPlanningPush | null): Promise<void> {
   if (!push) return;
   try {
-    const { S, org } = await sdk();
-    await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, BCPUSH_SET, pushToRecord(push));
+    await dvCreate(BCPUSH_SET, pushToRecord(push));
   } catch (e) {
     console.warn("[bc-sync] enqueue failed (non-blocking)", e);
   }
@@ -1585,42 +1584,36 @@ export async function fetchQueueGroups(kind: QueueKind): Promise<QueueGroup[]> {
 }
 
 export async function createQueueGroup(g: QueueGroup): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_jobqueuegroupid: g.id, ...queueGroupToRecord(g) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.groups, rec);
+  const res = await dvCreate(QUEUE.groups, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createQueueGroup failed");
 }
 
 export async function updateQueueGroup(id: string, changes: Partial<QueueGroup>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.groups, id, queueGroupToRecord(changes));
+  const res = await dvUpdate(QUEUE.groups, id, queueGroupToRecord(changes));
   if (!res.success) throw new Error(res.error?.message ?? `updateQueueGroup(${id}) failed`);
 }
 
 /** Delete a group and all of its parked items. */
 export async function deleteQueueGroup(id: string, itemIds: string[]): Promise<void> {
-  const { S, org } = await sdk();
-  await Promise.all(itemIds.map((iid) => S.DeleteRecordWithOrganization(org, QUEUE.items, iid)));
-  const res = await S.DeleteRecordWithOrganization(org, QUEUE.groups, id);
+  await Promise.all(itemIds.map((iid) => dvDelete(QUEUE.items, iid)));
+  const res = await dvDelete(QUEUE.groups, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteQueueGroup(${id}) failed`);
 }
 
 export async function createQueueItem(it: QueueItem): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_jobqueueitemid: it.id, ...queueItemToRecord(it) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.items, rec);
+  const res = await dvCreate(QUEUE.items, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createQueueItem failed");
 }
 
 export async function updateQueueItem(id: string, changes: Partial<QueueItem>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, QUEUE.items, id, queueItemToRecord(changes));
+  const res = await dvUpdate(QUEUE.items, id, queueItemToRecord(changes));
   if (!res.success) throw new Error(res.error?.message ?? `updateQueueItem(${id}) failed`);
 }
 
 export async function deleteQueueItem(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.DeleteRecordWithOrganization(org, QUEUE.items, id);
+  const res = await dvDelete(QUEUE.items, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteQueueItem(${id}) failed`);
 }
 
@@ -1668,21 +1661,18 @@ export async function fetchCardPresets(kind: PresetKind): Promise<SavedCardPrese
 }
 
 export async function createCardPreset(p: SavedCardPreset): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_customcardpresetid: p.id, ...cardPresetToRecord(p) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, CARD_PRESET_SET, rec);
+  const res = await dvCreate(CARD_PRESET_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createCardPreset failed");
 }
 
 export async function updateCardPreset(id: string, changes: Partial<SavedCardPreset>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, CARD_PRESET_SET, id, cardPresetToRecord(changes));
+  const res = await dvUpdate(CARD_PRESET_SET, id, cardPresetToRecord(changes));
   if (!res.success) throw new Error(res.error?.message ?? `updateCardPreset(${id}) failed`);
 }
 
 export async function deleteCardPreset(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.DeleteRecordWithOrganization(org, CARD_PRESET_SET, id);
+  const res = await dvDelete(CARD_PRESET_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteCardPreset(${id}) failed`);
 }
 
@@ -1728,21 +1718,18 @@ export async function fetchAppUsers(): Promise<AppUserRow[]> {
 }
 
 export async function createAppUser(u: AppUserRow): Promise<void> {
-  const { S, org } = await sdk();
   const rec = { crfdf_appuserid: u.id, ...appUserToRecord(u) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, APPUSER_SET, rec);
+  const res = await dvCreate(APPUSER_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createAppUser failed");
 }
 
 export async function updateAppUser(id: string, changes: Partial<AppUserRow>): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, APPUSER_SET, id, appUserToRecord(changes));
+  const res = await dvUpdate(APPUSER_SET, id, appUserToRecord(changes));
   if (!res.success) throw new Error(res.error?.message ?? `updateAppUser(${id}) failed`);
 }
 
 export async function deleteAppUser(id: string): Promise<void> {
-  const { S, org } = await sdk();
-  const res = await S.DeleteRecordWithOrganization(org, APPUSER_SET, id);
+  const res = await dvDelete(APPUSER_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteAppUser(${id}) failed`);
 }
 
@@ -1786,17 +1773,16 @@ export async function fetchRosterOverrides(boardKind: string, weekStart: string)
 }
 
 export async function upsertRosterOverride(o: RosterOverride): Promise<void> {
-  const { S, org } = await sdk();
   // One row per (employee, week, board): update in place if present.
   const existing = await list(RO_SET, { filter: roMatch(o) }).catch(() => [] as Row[]);
   if (existing.length > 0) {
     const id = s(existing[0]!.crfdf_rosteroverrideid);
-    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, RO_SET, id, rosterOverrideToRecord(o));
+    const res = await dvUpdate(RO_SET, id, rosterOverrideToRecord(o));
     if (!res.success) throw new Error(res.error?.message ?? "upsertRosterOverride(update) failed");
     return;
   }
   const rec = { crfdf_rosteroverrideid: o.id, ...rosterOverrideToRecord(o) };
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, RO_SET, rec);
+  const res = await dvCreate(RO_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "upsertRosterOverride(create) failed");
 }
 
@@ -1805,12 +1791,11 @@ export async function deleteRosterOverrideFor(
   weekStart: string,
   employeeId: string,
 ): Promise<void> {
-  const { S, org } = await sdk();
   const existing = await list(RO_SET, { filter: roMatch({ employeeId, boardKind, weekStart }) }).catch(
     () => [] as Row[],
   );
   await Promise.all(
-    existing.map((r) => S.DeleteRecordWithOrganization(org, RO_SET, s(r.crfdf_rosteroverrideid))),
+    existing.map((r) => dvDelete(RO_SET, s(r.crfdf_rosteroverrideid))),
   );
 }
 
@@ -1918,7 +1903,6 @@ export async function fetchJobDeptCompletions(): Promise<JobDeptCompletion[]> {
 
 /** Mark a job's department complete (upsert by job + dept), stamping who + when. */
 export async function addJobDeptCompletion(jobNo: string, deptKey: string, completedBy: string): Promise<void> {
-  const { S, org } = await sdk();
   const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
   const existing = await list(JOBDEPT_SET, { filter: match }).catch(() => [] as Row[]);
   const rec: Row = {
@@ -1930,23 +1914,22 @@ export async function addJobDeptCompletion(jobNo: string, deptKey: string, compl
   };
   if (existing.length > 0) {
     const id = s(existing[0]!.crfdf_jobdeptcompletionid);
-    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, id, rec);
+    const res = await dvUpdate(JOBDEPT_SET, id, rec);
     if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(update) failed");
     void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
     return;
   }
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBDEPT_SET, { crfdf_jobdeptcompletionid: uuid(), ...rec });
+  const res = await dvCreate(JOBDEPT_SET, { crfdf_jobdeptcompletionid: uuid(), ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(create) failed");
   void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
 }
 
 /** Un-complete a job's department (delete the completion row(s)). */
 export async function removeJobDeptCompletion(jobNo: string, deptKey: string): Promise<void> {
-  const { S, org } = await sdk();
   const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
   const existing = await list(JOBDEPT_SET, { filter: match }).catch(() => [] as Row[]);
   await Promise.all(
-    existing.map((r) => S.DeleteRecordWithOrganization(org, JOBDEPT_SET, s(r.crfdf_jobdeptcompletionid))),
+    existing.map((r) => dvDelete(JOBDEPT_SET, s(r.crfdf_jobdeptcompletionid))),
   );
   void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: false }));
 }
@@ -1988,7 +1971,6 @@ export async function setJobDeptOverride(
   included: boolean,
   active: boolean,
 ): Promise<void> {
-  const { S, org } = await sdk();
   const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
   const existing = await list(JOBOVR_SET, { filter: match }).catch(() => [] as Row[]);
   const rec: Row = {
@@ -2000,21 +1982,20 @@ export async function setJobDeptOverride(
   };
   if (existing.length > 0) {
     const id = s(existing[0]!.crfdf_jobdeptoverrideid);
-    const res = await S.UpdateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBOVR_SET, id, rec);
+    const res = await dvUpdate(JOBOVR_SET, id, rec);
     if (!res.success) throw new Error(res.error?.message ?? "setJobDeptOverride(update) failed");
     return;
   }
-  const res = await S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, JOBOVR_SET, { crfdf_jobdeptoverrideid: uuid(), ...rec });
+  const res = await dvCreate(JOBOVR_SET, { crfdf_jobdeptoverrideid: uuid(), ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "setJobDeptOverride(create) failed");
 }
 
 /** Delete the override row(s) for a (job, dept) — back to the BC default. */
 export async function clearJobDeptOverride(jobNo: string, deptKey: string): Promise<void> {
-  const { S, org } = await sdk();
   const match = `crfdf_jobno eq '${odataLit(jobNo)}' and crfdf_deptid eq '${odataLit(deptKey)}'`;
   const existing = await list(JOBOVR_SET, { filter: match }).catch(() => [] as Row[]);
   await Promise.all(
-    existing.map((r) => S.DeleteRecordWithOrganization(org, JOBOVR_SET, s(r.crfdf_jobdeptoverrideid))),
+    existing.map((r) => dvDelete(JOBOVR_SET, s(r.crfdf_jobdeptoverrideid))),
   );
 }
 

@@ -4,6 +4,7 @@ import {
   type PresetKind,
   type SavedCardPreset,
 } from "../services/custom-card-data";
+import { persistOrReport } from "./write-status-store";
 
 /**
  * Saved custom-card presets, per board family (production / installation). The
@@ -49,19 +50,13 @@ export const useCardPresetsStore = create<CardPresetsState>((set, get) => ({
     set((s) => ({
       byKind: { ...s.byKind, [preset.kind]: [...s.byKind[preset.kind], preset] },
     }));
-    void ds.createPreset(preset).catch((e) => {
-      console.error("[card-presets] save failed — resyncing", e);
-      void get().load(preset.kind, true);
-    });
+    void persistOrReport("Save card preset", () => ds.createPreset(preset));
   },
 
   remove: async (id, kind) => {
     set((s) => ({
       byKind: { ...s.byKind, [kind]: s.byKind[kind].filter((p) => p.id !== id) },
     }));
-    void ds.deletePreset(id).catch((e) => {
-      console.error("[card-presets] remove failed — resyncing", e);
-      void get().load(kind, true);
-    });
+    void persistOrReport("Delete card preset", () => ds.deletePreset(id));
   },
 }));

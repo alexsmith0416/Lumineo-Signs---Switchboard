@@ -50,25 +50,48 @@ data/        mock fixtures for the stubbed services
 generated/   generated Dataverse model/service types
 ```
 
-### ⚠️ Write-path invariant (avoid the "my edit didn't take, but worked the 2nd time" bug)
+### ⚠️ Write-path invariant — "my edit didn't take, but worked the 2nd time"
 
-Stores update **optimistically** (change the UI now, persist in the background) and,
-on a write failure, **reload the board** (`loadWeek()` / `load()`) to resync — which
-**erases the optimistic edit**. So a *transient* Dataverse blip (network, throttle,
-gateway, stale org URL) silently reverts the user's action; redoing it usually
-works. To prevent this:
+**This bug is fixed (Aug 16, 2026) and now has TESTS holding the line. Read this
+before touching any write path.**
 
-- **All user-edit writes go through the retrying helpers** in
-  `services/dataverse-live.ts` — `dvUpdate` / `dvCreate` / `dvDelete` (they wrap the
-  SDK call in `writeWithRetry`, which retries transient failures with backoff before
-  bubbling up). **Do not** call `S.UpdateRecordWithOrganization` / `CreateRecord` /
-  `DeleteRecord` directly for an edit path — a transient failure there will trigger a
-  board reload that discards the edit.
-- Keep the store's reload-on-failure as the *last-resort* resync only (after retries
-  exhausted = a real error), never the first response to a blip.
-- When adding a NEW editable action (input, date picker, drag/resize, toggle), route
-  its persistence through `dv*` and confirm a simulated transient failure doesn't wipe
-  the optimistic change.
+The symptom: make a change → the board "quick loads" → the change is gone → do it
+again and it sticks. Root cause was two-layered:
+
+1. A write failed, and the store's failure handler **reloaded the board**, which
+   **overwrote the optimistic edit** with pre-edit server state. A save problem
+   showed up as *silently discarded work* — the worst possible framing.
+2. Writes failed far more often than they should have:
+   - `writeWithRetry` only inspected a **returned** `{success:false}`. The Power
+     Apps host bridge (`client.executeAsync`) **REJECTS** when it isn't warm —
+     which is exactly the first action after load. A rejection blew past the
+     retry entirely. **This is why it was always the first action.**
+   - Retry was gated on a **whitelist** of transient-looking message text; any
+     unanticipated message (or an empty one) counted as permanent.
+   - The invariant said "all writes go through `dv*`" but nothing enforced it —
+     **36 of 58 write calls had drifted to raw `S.*RecordWithOrganization`**,
+     including install-assist and roster edits.
+
+The rules now, in force:
+
+- **A failed write NEVER reverts the UI.** Stores call
+  `persistOrReport(label, op)` / `reportWriteFailure(...)` from
+  `store/write-status-store.ts`. The edit stays on screen, the failure is
+  recorded with its retry, and `SaveStatus` tells the user. **Do not** add
+  `catch → loadWeek()` / `catch → load()` back to any edit path.
+- **Every Dataverse write goes through `dvCreate`/`dvUpdate`/`dvDelete`** in
+  `services/dataverse-live.ts`. They retry on BOTH failure shapes (returned and
+  thrown), 5 attempts, ~3s of backoff, and retry **anything not positively
+  recognised as permanent** (`services/dv-write.ts`). Never call
+  `S.*RecordWithOrganization` directly — `write-path.test.ts` fails the build if
+  you do.
+- Tests that enforce all of the above (don't delete them):
+  - `services/write-path.test.ts` — no direct SDK writes outside the 3 helpers.
+  - `services/dv-write.test.ts` — retry classification, incl. "unknown error ⇒ retry".
+  - `store/optimistic-edit.test.ts` — a failing write keeps the edit on screen
+    (verified to FAIL against the old reload behaviour).
+- When adding a NEW editable action, persist via `persistOrReport` and add a case
+  to `optimistic-edit.test.ts`.
 
 ## 3. Run it locally
 

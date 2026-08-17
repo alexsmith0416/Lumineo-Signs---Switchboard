@@ -4,6 +4,7 @@ import {
   getJobScheduleDataSource,
   type JobSchedule,
 } from "../services/job-schedule-data";
+import { persistOrReport } from "./write-status-store";
 
 /**
  * Per-job schedule dates (release / scheduled install / red), loaded once and
@@ -56,9 +57,6 @@ export const useJobScheduleStore = create<JobScheduleState>((set, get) => ({
     const cur = get().byJob[jobNo] ?? emptyJobSchedule(jobNo);
     const next: JobSchedule = { ...cur, ...changes, jobNo };
     set((s) => ({ byJob: { ...s.byJob, [jobNo]: next } }));
-    void ds.upsert(next).catch((e) => {
-      console.error("[job-schedule] upsert failed — resyncing", e);
-      void get().load(true);
-    });
+    void persistOrReport("Save job dates", () => ds.upsert(next));
   },
 }));

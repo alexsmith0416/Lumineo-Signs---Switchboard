@@ -12,6 +12,7 @@ import MyScheduleScreen from "./components/MyScheduleScreen";
 import SettingsScreen from "./components/SettingsScreen";
 import HelpScreen from "./components/HelpScreen";
 import DemoBanner from "./components/DemoBanner";
+import SaveStatus from "./components/SaveStatus";
 import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
@@ -152,6 +153,7 @@ export default function App() {
           onMenu={() => setDrawerOpen(true)}
           minimal={presentationMode}
         />
+        <SaveStatus />
         {!presentationMode && <ImpersonationBanner />}
         {!presentationMode && <DemoBanner />}
         <div className="app-content">

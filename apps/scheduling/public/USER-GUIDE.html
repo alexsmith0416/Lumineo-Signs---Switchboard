@@ -817,6 +817,13 @@
   <h2 id="faq"><span class="num">11</span>FAQs &amp; Tips</h2><div class="rule"></div>
   <h4>Do my changes save automatically?</h4>
   <p>Yes. Every move, resize, add, edit, and delete saves to the shared database in the background — there's no "Save" button for the board.</p>
+  <h4>What if a change doesn't save?</h4>
+  <p>Your change <strong>stays on screen</strong> and the app retries in the background. If it still can't save, a
+  red <strong>"1 change hasn't saved"</strong> box appears in the bottom-right corner naming what didn't go through,
+  with a <strong>Try again</strong> button. Nothing you did is thrown away or quietly undone.</p>
+  <p class="tip">This is the fix for the old annoyance where an action "didn't take" the first time and you had to
+  repeat it — the board would reload and wipe out what you'd just done. It no longer reloads behind you: if you don't
+  see that red box, it saved.</p>
   <h4>Will other people see my changes right away?</h4>
   <p>Changes save immediately; teammates see them the next time their board loads or refreshes.</p>
   <h4>What's the difference between locking a card and turning cascade off?</h4>
@@ -874,6 +881,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Aug 16, 2026</td><td><strong>Fix: changes stick the first time</strong> — the long-standing annoyance where an action (stretching a card to a second day, shrinking it back, adding install help, changing an end date…) "didn't take" until you did it twice. A background save that hiccuped made the board reload, and the reload wiped out what you'd just done. Saves now retry properly, and a save that fails <strong>no longer reverts your change</strong> — it stays on screen and a red <em>"hasn't saved"</em> box with a <strong>Try again</strong> button appears in the corner. If you don't see that box, it saved. See §11.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Choose your own tick-box columns on a printed load</strong> — the print preview has a <strong>Tick boxes ▾</strong> menu: tick which columns print, and <strong>add your own</strong> (Strapped, Tarped, Paperwork, Photo…) with a name of your choosing. Added names are saved for next time and can be removed with <strong>×</strong>; <em>Loaded</em> and <em>Order</em> are always available. Your picks apply to every load you print from that device, up to six columns. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>Printed shipping list: two tick boxes and a bigger notes column</strong> — every line on a load's printed sheet now has a <strong>Loaded</strong> box <em>and</em> an <strong>Order</strong> box, so it can be checked off twice. The <strong>Notes</strong> column is much wider (and stays wide even when nothing's typed in it) to leave the driver real room to write. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>Order the items in a shipping load, and fix an item's job number</strong> — items in a load are now numbered and can be <strong>dragged by the ⠿ grip</strong> (or moved with <span class="kbd">↑</span>/<span class="kbd">↓</span>) into whatever order you want them loaded — that's the order they <strong>print</strong> on the driver's sheet too. And an item's <strong>job # is now editable</strong>: click it to attach a job to a manual item or swap the wrong job out, and the item's customer + description update to that job's details. Type a number and press Enter for a job the search can't reach; <em>Clear</em> detaches it. See §5.15.</td></tr>
@@ -948,7 +956,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.2 · Aug 16, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.3 · Aug 16, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
