@@ -3271,10 +3271,17 @@ input, select, textarea {
   padding: 24px;
   overflow: auto;
 }
+.load-print__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(800px, 100%);
+}
+.load-print__bar { display: flex; justify-content: flex-end; }
 .load-print__sheet {
   background: #fff;
   color: #111;
-  width: min(800px, 100%);
+  width: 100%;
   border-radius: 8px;
   padding: 28px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
@@ -3298,13 +3305,83 @@ input, select, textarea {
   vertical-align: top;
 }
 .load-print__table th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+/* Tick columns stay as tight as their label allows — every pixel they take is a
+   pixel off the Notes column the driver writes in. */
 .load-print__chk { width: 46px; text-align: center; }
+.load-print__table th.load-print__chk {
+  font-size: 9px;
+  padding: 5px 3px;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
 /* The driver writes in this column, so hold it wide even when the stored notes
    are short/empty — an auto-sized column would collapse to nothing. */
 .load-print__notes { width: 40%; }
 /* Give Description a floor so the wide Notes column doesn't squeeze what's
    actually being shipped down to one word per line. */
 .load-print__desc { width: 22%; }
+/* ---- printed-sheet tick-box column picker (screen only) ---- */
+.print-cols { position: relative; display: flex; align-items: center; gap: 6px; }
+.print-cols__label { font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.3px; }
+.print-cols__toggle {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.print-cols__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  width: 250px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+}
+.print-cols__menu-head {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.print-cols__row { display: flex; align-items: center; gap: 4px; }
+.print-cols__opt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 3px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 0;
+}
+.print-cols__opt > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.print-cols__opt--disabled { opacity: 0.45; cursor: not-allowed; }
+.print-cols__del {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.print-cols__del:hover { color: var(--status-red); }
+.print-cols__note { font-size: 10px; color: var(--text-tertiary); padding: 2px 3px 0; }
+.print-cols__add { display: flex; gap: 5px; margin-top: 7px; border-top: 1px solid var(--border); padding-top: 8px; }
+.print-cols__add > input { flex: 1; min-width: 0; font-size: 12px; padding: 4px 6px; }
+.print-cols__add > button { flex-shrink: 0; padding: 4px 10px; font-size: 11px; }
+
 .load-print__general { margin-top: 12px; font-size: 12px; }
 .load-print__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
@@ -3414,6 +3491,10 @@ input, select, textarea {
     border-radius: 0;
   }
   .load-print__actions { display: none !important; }
+  /* Belt and braces: the picker lives outside the markup Print copies, but if
+     the whole overlay is ever printed directly it must not appear on paper. */
+  .load-print__bar { display: none !important; }
+  .load-print__stack { display: block; width: 100%; }
 }
 @media (max-width: 380px) {
   .calendar-header-row,

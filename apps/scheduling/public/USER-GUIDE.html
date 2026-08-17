@@ -665,10 +665,24 @@
     <strong>Deliver / Pickup</strong>, location, and loading notes, and tick items off as they're loaded.</li>
     <li><strong>Print</strong> gives the driver a shipping list of the load, in order.</li>
   </ul>
-  <p>The printed sheet has <strong>two tick boxes on every line</strong> — <strong>Loaded</strong> and
-  <strong>Order</strong> — so the load can be checked off twice (once as it's loaded, once against the order), and a
-  wide <strong>Notes</strong> column with room to write on the truck. Anything typed into an item's loading notes is
-  printed there; the rest of the column is blank space for the driver.</p>
+  <p>The printed sheet has a wide <strong>Notes</strong> column with room to write on the truck. Anything typed into an
+  item's loading notes is printed there; the rest of the column is blank space for the driver.</p>
+
+  <h4>Choosing the tick boxes that print</h4>
+  <p>Every line on the printed sheet gets a <strong>tick box per column</strong> — out of the box, <strong>Loaded</strong>
+  and <strong>Order</strong>. You choose which columns print, and you can build up your own list of them:</p>
+  <ul>
+    <li>On the print preview, open the <strong>Tick boxes ▾</strong> menu (top right).</li>
+    <li><strong>Tick any column</strong> in the list to put it on the sheet, untick to take it off.</li>
+    <li><strong>Add your own</strong> — type a name in the box at the bottom (<em>Strapped</em>, <em>Tarped</em>,
+    <em>Paperwork</em>, <em>Photo</em>…) and press <span class="kbd">Enter</span> or <strong>Add</strong>. It's saved to
+    the list for next time and ticked straight away.</li>
+    <li><strong>×</strong> next to a name you added removes it from the list. <em>Loaded</em> and <em>Order</em> are
+    always offered, so they can only be unticked, not deleted.</li>
+  </ul>
+  <p class="tip">Your choice sticks and applies to <strong>every</strong> load you print from this device — set it once
+  and forget it. Bear in mind each tick column takes width from the <strong>Notes</strong> column: two or three leaves
+  plenty of writing room, and the sheet stops you at six.</p>
 
   <h4>Putting the items in the order you want</h4>
   <p>Items are numbered <strong>1, 2, 3…</strong> down the left — the order they're loaded, and the order they
@@ -860,6 +874,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Aug 16, 2026</td><td><strong>Choose your own tick-box columns on a printed load</strong> — the print preview has a <strong>Tick boxes ▾</strong> menu: tick which columns print, and <strong>add your own</strong> (Strapped, Tarped, Paperwork, Photo…) with a name of your choosing. Added names are saved for next time and can be removed with <strong>×</strong>; <em>Loaded</em> and <em>Order</em> are always available. Your picks apply to every load you print from that device, up to six columns. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>Printed shipping list: two tick boxes and a bigger notes column</strong> — every line on a load's printed sheet now has a <strong>Loaded</strong> box <em>and</em> an <strong>Order</strong> box, so it can be checked off twice. The <strong>Notes</strong> column is much wider (and stays wide even when nothing's typed in it) to leave the driver real room to write. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>Order the items in a shipping load, and fix an item's job number</strong> — items in a load are now numbered and can be <strong>dragged by the ⠿ grip</strong> (or moved with <span class="kbd">↑</span>/<span class="kbd">↓</span>) into whatever order you want them loaded — that's the order they <strong>print</strong> on the driver's sheet too. And an item's <strong>job # is now editable</strong>: click it to attach a job to a manual item or swap the wrong job out, and the item's customer + description update to that job's details. Type a number and press Enter for a job the search can't reach; <em>Clear</em> detaches it. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>The Shipping board is now documented</strong> — a new §5.15 covers building a load end to end: creating one, how the load name writes itself, adding BC-job and manual items, statuses, and printing the driver's shipping list.</td></tr>
@@ -933,7 +948,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.1 · Aug 13, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.2 · Aug 16, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -1,7 +1,10 @@
 import { useRef } from "react";
 import { format } from "date-fns";
 import { loadLocations, type ShipmentLoad } from "../shipping/types";
+import { visibleCheckColumns } from "../shipping/print-columns";
+import { useSettingsStore } from "../store/settings-store";
 import { printMarkup } from "../services/print";
+import PrintColumnsPicker from "./PrintColumnsPicker";
 
 /**
  * Printable loading list for a single load — mirrors the Excel sheet
@@ -20,9 +23,19 @@ export default function LoadPrintSheet({
   const locations = loadLocations(load);
   const showLocation = locations.length > 1;
   const sheetRef = useRef<HTMLDivElement>(null);
+  const checkOptions = useSettingsStore((s) => s.printCheckOptions);
+  const checkSelected = useSettingsStore((s) => s.printCheckColumns);
+  const checkColumns = visibleCheckColumns(checkSelected, checkOptions);
+  const colCount = checkColumns.length + (showLocation ? 5 : 4);
   return (
     <div className="load-print" onClick={onClose}>
-      <div className="load-print__sheet" ref={sheetRef} onClick={(e) => e.stopPropagation()}>
+      <div className="load-print__stack" onClick={(e) => e.stopPropagation()}>
+      {/* Outside the sheet on purpose: Print copies the sheet's markup into a
+          new window, and this control has no business going with it. */}
+      <div className="load-print__bar">
+        <PrintColumnsPicker />
+      </div>
+      <div className="load-print__sheet" ref={sheetRef}>
         <div className="load-print__head">
           <div className="load-print__title">{load.name.toUpperCase()} — SHIPPING LIST</div>
           <div className="load-print__date">Shipping Date: {format(load.shipDate, "M/d/yy")}</div>
@@ -33,8 +46,9 @@ export default function LoadPrintSheet({
         <table className="load-print__table">
           <thead>
             <tr>
-              <th className="load-print__chk">Loaded</th>
-              <th className="load-print__chk">Order</th>
+              {checkColumns.map((c) => (
+                <th key={c} className="load-print__chk">{c}</th>
+              ))}
               <th>Job No.</th>
               <th>Customer</th>
               <th className="load-print__desc">Description</th>
@@ -45,8 +59,9 @@ export default function LoadPrintSheet({
           <tbody>
             {load.items.map((it) => (
               <tr key={it.id}>
-                <td className="load-print__chk">☐</td>
-                <td className="load-print__chk">☐</td>
+                {checkColumns.map((c) => (
+                  <td key={c} className="load-print__chk">☐</td>
+                ))}
                 <td>{it.jobNo ?? "—"}</td>
                 <td>{it.customerName}</td>
                 <td className="load-print__desc">
@@ -59,7 +74,7 @@ export default function LoadPrintSheet({
             ))}
             {load.items.length === 0 && (
               <tr>
-                <td colSpan={showLocation ? 7 : 6} style={{ textAlign: "center", color: "#888" }}>
+                <td colSpan={colCount} style={{ textAlign: "center", color: "#888" }}>
                   No items on this load.
                 </td>
               </tr>
@@ -83,6 +98,7 @@ export default function LoadPrintSheet({
             Print
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
