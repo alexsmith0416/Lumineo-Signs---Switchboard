@@ -6,6 +6,7 @@ import {
 } from "../store/schedule-store";
 import { useJobScheduleStore } from "../store/job-schedule-store";
 import { useAssistStore } from "../store/assist-store";
+import { hiddenInstallEmployeeIds } from "../services/assist-mirror";
 import type { AssistHalf } from "../services/dataverse-live";
 import {
   useInstallationScenarioStoreNEK,
@@ -133,6 +134,32 @@ export default function InstallationCalendar({
   const nekSchedule = useInstallationStoreNEK((s) => s.schedule);
   const nekWeekStart = useInstallationStoreNEK((s) => s.weekStart);
 
+  /**
+   * An assist row is a ONE-WEEK loan, but it's stored as an ordinary
+   * installation-employee row — so without this it sat on the roster for every
+   * future week. Hide the ones not lent for the week on screen, on top of
+   * whatever the user has hidden by hand.
+   */
+  const schedule = useStore((s) => s.schedule);
+  const outOfWeekAssistIds = useMemo(() => {
+    const from = startOfWeek(weekStart, { weekStartsOn: 1 });
+    const to = addDays(from, 6);
+    to.setHours(23, 59, 59, 999);
+    return hiddenInstallEmployeeIds(
+      [...employees.values()],
+      assistRows,
+      weekMonday,
+      schedule,
+      from,
+      to,
+    );
+  }, [employees, assistRows, weekMonday, schedule, weekStart]);
+
+  const effectiveHiddenEmployeeIds = useMemo(
+    () => new Set([...hiddenEmployeeIds, ...outOfWeekAssistIds]),
+    [hiddenEmployeeIds, outOfWeekAssistIds],
+  );
+
   const combinedThisWeek = (() => {
     const ws = region === "WK" ? wkWeekStart : nekWeekStart;
     const wsEnd = new Date(ws.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -254,7 +281,8 @@ export default function InstallationCalendar({
         enableJobQueue={!readOnly}
         scenarioStore={scenarioStore}
         hiddenDeptIds={hiddenDeptIds}
-        hiddenEmployeeIds={hiddenEmployeeIds}
+        // The user's own hidden set PLUS assist rows lent for another week.
+        hiddenEmployeeIds={effectiveHiddenEmployeeIds}
         enableResourceAdmin={!readOnly}
         installRegionIsNek={region === "NEK"}
         rosterUnlockable={!readOnly}

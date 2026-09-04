@@ -619,12 +619,47 @@
   </ul>
 
   <h3>5.10 &nbsp;Assist Installation (lending people across departments)</h3>
-  <p>Some days a Production person works with an install crew. Right-click their name → <strong>Assist Installation</strong>,
-  pick the region (WK / NEK) and the days — each day can be <strong>All</strong>, <strong>AM</strong>, or <strong>PM</strong>.
-  Their Production day is greyed (labeled <strong>Installation</strong>) for the lent half; the open half still takes a
-  Production job. And on the <strong>Installation board</strong>, that person now shows a <strong>Production</strong>
-  filler on the days/halves they're back in the shop — so their install row doesn't look empty. Come back anytime to
-  <strong>Edit days</strong> (drop a day or change AM/PM) or <strong>Remove assist</strong>.</p>
+  <p>Some days a Production person works with an install crew. Right-click their name &rarr;
+  <strong>Assist Installation</strong>, pick the region (WK / NEK) and the days &mdash; each day can be
+  <strong>All</strong>, <strong>AM</strong>, or <strong>PM</strong>. On the <strong>Installation board</strong> they
+  show as a crew row for that week, with a <strong>Production</strong> filler on the days/halves they're back in the
+  shop so their row doesn't look empty. Come back anytime to <strong>Edit days</strong> (drop a day or change AM/PM)
+  or <strong>Remove assist</strong>.</p>
+
+  <p class="tip"><strong>A loan is for one week only.</strong> The person appears on the Installation roster for the
+  week you lent them and no other &mdash; page forward and they're gone. (They used to linger on every future week's
+  Installation board; that's fixed.) To lend them again next week, set the assist up on that week.</p>
+
+  <h4>Their install jobs now show on the Production board too</h4>
+  <p>A lent person can plan their whole week from their own board. Their install jobs are drawn
+  <strong>on their Production row</strong>, on the days they're lent, each badged with how much of the day it takes:</p>
+  <ul>
+    <li><span class="kbd">Install</span> &mdash; a whole day with the install crew.</li>
+    <li><span class="kbd">Install AM</span> / <span class="kbd">Install PM</span> &mdash; only that half; the other
+    half is still theirs for Production work.</li>
+  </ul>
+  <p>These cards have a <strong>dashed edge</strong> to set them apart from Production jobs, and are
+  <strong>read-only here</strong> &mdash; hover or click for the detail, but move, resize and delete are off, because
+  the job belongs to the Installation board. Change it there and Production follows.</p>
+  <p class="tip">A full lent day still <strong>blocks</strong> Production scheduling exactly as before &mdash; you just
+  now see <em>what</em> they're doing instead of a plain grey "Installation" block. An AM/PM day still leaves the other
+  half open for a Production job.</p>
+
+  <h4>Putting a shipping load on a Production employee</h4>
+  <p>Most of the company reads the <strong>Installation board</strong> to see what's being installed <em>and</em> what's
+  going out on a truck. So a load run by someone in Production needs to be on both boards &mdash; and now it is:</p>
+  <ul>
+    <li>On <strong>Production</strong>, <em>+ Add Job</em> &rarr; <strong>Custom Card</strong> now has the same
+    <strong>Shipment load</strong> picker the Installation board has. Pick the load, pick the person, and
+    <strong>Schedule</strong>.</li>
+    <li>The load is created on the <strong>Installation board</strong> as a &#128666; truck card, and that person is
+    <strong>added to the Installation schedule</strong> for that day &mdash; just as if you'd lent them.</li>
+    <li>It comes straight back onto their <strong>Production row</strong> too, so their week reads correctly from
+    either board.</li>
+  </ul>
+  <p class="tip">A shipment card doesn't get an <em>Install</em> badge &mdash; the blue &#128666; truck card already
+  says it's a load. And this only works one way: an <strong>Installation</strong> employee scheduled for a load stays
+  on the Installation board, and does not appear on Production.</p>
 
   <h3>5.11 &nbsp;Scenario Sandbox</h3>
   <p>A safe copy of the board for "what-if" planning. Make changes, see the impact, and only <strong>commit</strong> them
@@ -950,6 +985,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 4, 2026</td><td><strong>A lent employee's install work now shows on the Production board</strong> &mdash; when someone is lent to Installation, their install jobs are drawn on their own Production row, badged <em>Install</em>, <em>Install AM</em> or <em>Install PM</em>, so they can plan their whole week from one board. Those cards are read-only there (the job belongs to Installation), and a full lent day still blocks Production scheduling. <strong>Fix:</strong> a loan is now genuinely one week &mdash; a lent person used to stay on the Installation roster for every future week. <strong>Also:</strong> Production's <em>Custom Card</em> gained the <strong>Shipment load</strong> picker, so a truck run can be put on a production employee &mdash; it lands on the Installation board, adds them there, and shows on Production too. See &sect;5.10.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>Take a project back off a load, and wider staging lists</strong> — open a load and <strong>drag an item out by its ⠿ grip</strong> onto a staging list to pull it off that run and put it back in staging; dropping it inside the panel still just reorders it within the load. The staging lists are also <strong>half again as wide</strong>, so you can read more of each project's customer and description without it truncating. See §5.16.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>Staging board on the Shipping screen</strong> — a kanban of your own lists now sits under the week, holding projects that are <strong>built and waiting to ship</strong>. Make as many lists as you like, name and color them however you plan (by readiness, by destination…), reorder them, and drag project cards between them or up and down inside one. To put a project on a truck, <strong>drag its card onto a day</strong> (starts a new load) or <strong>onto an existing load</strong> — the load editor opens with it already added, and the project leaves staging. It's one master board: paging to another week doesn't change it. See §5.16.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Fix: changes stick the first time</strong> — the long-standing annoyance where an action (stretching a card to a second day, shrinking it back, adding install help, changing an end date…) "didn't take" until you did it twice. A background save that hiccuped made the board reload, and the reload wiped out what you'd just done. Saves now retry properly, and a save that fails <strong>no longer reverts your change</strong> — it stays on screen and a red <em>"hasn't saved"</em> box with a <strong>Try again</strong> button appears in the corner. If you don't see that box, it saved. See §11.</td></tr>
@@ -1027,7 +1063,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.5 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.6 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

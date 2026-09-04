@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { fetchAssistRows, type AssistAssignment } from "../services/dataverse-live";
+import { mockAssistRows } from "../data/mock-assist";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -14,7 +15,12 @@ interface AssistState {
 export const useAssistStore = create<AssistState>((set) => ({
   rows: [],
   refresh: async () => {
-    if (!LIVE) return;
+    // Dev: the whole assist mechanism is Dataverse-backed, so without a fixture
+    // none of the cross-board behaviour is visible locally (see mock-assist.ts).
+    if (!LIVE) {
+      set({ rows: mockAssistRows() });
+      return;
+    }
     try {
       set({ rows: await fetchAssistRows() });
     } catch {

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { addDays, format, startOfWeek } from "date-fns";
 import { useScheduleStore } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
+import { useInstallCardsStore } from "../services/install-cards";
+import { mirroredLinesByEmployee } from "../services/assist-mirror";
+import { placeShipmentOnProductionEmployee } from "../services/lend-shipment";
 import type { AssistHalf } from "../services/dataverse-live";
 import { KIND_META } from "../services/data-source";
 import { isLaneEmployeeId, laneDeptId } from "../services/department-lane";
@@ -79,6 +82,18 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
     return m;
   }, [assistRows, weekMonday]);
 
+  // A lent employee's install work, drawn read-only on their production row so
+  // the production board shows their whole week (see services/assist-mirror.ts).
+  // Both regions, because a person can be lent to either.
+  const wkCards = useInstallCardsStore((s) => s.wk);
+  const nekCards = useInstallCardsStore((s) => s.nek);
+  const mirroredLines = useMemo(() => {
+    const from = startOfWeek(weekStart, { weekStartsOn: 1 });
+    const to = addDays(from, 6);
+    to.setHours(23, 59, 59, 999);
+    return mirroredLinesByEmployee(assistRows, [...wkCards, ...nekCards], weekMonday, from, to);
+  }, [assistRows, wkCards, nekCards, weekMonday, weekStart]);
+
   return (
     <>
       <CalendarView
@@ -86,6 +101,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         kindMeta={KIND_META.production}
         readOnly={readOnly}
         assistDaysByEmployee={assistDaysByEmployee}
+        mirroredLinesByEmployee={mirroredLines}
         showInvoice={showMoney}
         showTotalValue={showMoney}
         bannerSlot={bannerSlot}
@@ -171,6 +187,9 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
           initialDepartmentId={addJobContext.departmentId}
           onClose={() => setAddJobContext(null)}
           onConfigure={(draft) => setCreateDraft(draft)}
+          onShipmentToInstall={async (employee, line) => {
+            await placeShipmentOnProductionEmployee({ employee, line });
+          }}
           batchMode={batchMode}
           onBatchModeChange={setBatchMode}
           batchCount={batch.length}

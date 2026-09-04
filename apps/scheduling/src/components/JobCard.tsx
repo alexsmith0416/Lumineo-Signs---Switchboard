@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { differenceInMinutes, format } from "date-fns";
 import type { Conflict, Department, Employee, ScheduleLine } from "../engine/types";
 import { effectiveHours } from "../engine/capacity";
+import { mirrorBadgeLabel } from "../services/assist-mirror";
 import { lookupZip } from "../services/zip-geo";
 import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentCardDesc, shipmentSummary } from "../shipping/types";
@@ -220,7 +221,7 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={group ? undefined : open}
         onMouseLeave={group ? undefined : close}
@@ -235,6 +236,18 @@ export default function JobCard({
             : undefined
         }
       >
+        {/* Mirrored from the Installation board. A shipment load is already a
+            blue truck card, which reads as shipping on its own — badging it
+            "Install" as well would be misleading, so only real install work
+            gets the badge. */}
+        {line.mirrorOf && !line.shipmentLoadId && (
+          <span
+            className="job-card__mirror"
+            title="Scheduled on the Installation board — open it there to change it"
+          >
+            {mirrorBadgeLabel(line.mirrorHalf)}
+          </span>
+        )}
         {group ? (
           <>
             <div className="job-card__group-title">{group.title || "Group"}</div>

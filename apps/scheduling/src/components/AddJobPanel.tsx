@@ -24,7 +24,7 @@ import { useCardPresetsStore } from "../store/card-presets-store";
 import { makeLaneEmployee } from "../services/department-lane";
 import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentSummary } from "../shipping/types";
-import type { ScheduleLine } from "../engine/types";
+import type { Employee, ScheduleLine } from "../engine/types";
 import GroupCardBody from "./GroupCardBody";
 import { encodeGroup, groupColorFor, type GroupMember } from "../services/group-card";
 
@@ -77,6 +77,13 @@ interface AddJobPanelProps {
   queueGroups?: { id: string; name: string; count: number }[];
   /** Import a queue group into the batch list (Multiple mode entry point). */
   onLoadGroup?: (groupId: string) => void;
+  /**
+   * Production only: a custom card with a shipment load attached is not a
+   * production job — it's a truck run. The parent creates it on the Installation
+   * board and lends the employee for that day, instead of writing a production
+   * line. Absent = the load picker still shows but behaves like a plain card.
+   */
+  onShipmentToInstall?: (employee: Employee, line: ScheduleLine) => Promise<void>;
   /** BC-only mode: hide the Custom Card / Group Card kind tabs (used when this
    *  panel is reused to add a job to the Job Queue or a group card). */
   bcOnly?: boolean;
@@ -101,6 +108,7 @@ export default function AddJobPanel({
   queueGroups,
   onLoadGroup,
   bcOnly = false,
+  onShipmentToInstall,
   confirmLabel,
 }: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
@@ -571,11 +579,20 @@ export default function AddJobPanel({
         ctxForEngine,
       );
 
-      await addScheduleLine({
+      const built = {
         ...tempLine,
         id: `custom-${emp.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         endDateTime: end,
-      });
+      };
+
+      // A shipment load put on a production employee belongs on the Installation
+      // board (that's where the company looks for what's going out), and comes
+      // back to Production as a mirrored card. See services/lend-shipment.ts.
+      if (kind === "production" && customShipmentLoadId && onShipmentToInstall) {
+        await onShipmentToInstall(emp, built);
+      } else {
+        await addScheduleLine(built);
+      }
     }
     onClose();
   };
@@ -1021,7 +1038,7 @@ export default function AddJobPanel({
               Build your own
             </div>
 
-            {kind === "installation" && (
+            {(kind === "installation" || kind === "production") && (
               <div className="form-field">
                 <div className="form-field__label">Shipment load (optional)</div>
                 <select

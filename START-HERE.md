@@ -283,7 +283,56 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     the board untouched, dark mode). 213 tests green. Guide → **v3.4**, new **§5.16**.
   - **Open follow-ups:** no BC auto-fill for a list (the dialog's "coming soon"
     field is still a placeholder, shared with the Job Queue).
-- **Also (Sep 4, 2026 · latest) — deployed + committed: drag a project back OFF a
+- **Last shipped (Sep 4, 2026 · latest) — deployed + committed: a lent employee's
+  install work now shows on the PRODUCTION board, + shipment loads on production
+  people. Also fixes the "assist sticks to every future week" bug.**
+  - **Why:** most of the company reads the Install board to see what's going out;
+    a production employee reads Production to see their own week. A lent person's
+    install work existed only on Install, so their production row was a grey
+    "Installation" block with no idea what the work was.
+  - 🔴 **The assist week-scoping BUG (user-reported, confirmed):** an assist is a
+    one-week loan but is stored as an ordinary `crfdf_installationemployees` row,
+    and the install `loadEmployees()` returned **every** assist row with no week
+    filter — so a lent person sat on the install roster forever. Only the
+    *fillers* were week-scoped. Fixed via `hiddenInstallEmployeeIds`, unioned into
+    the CalendarView's `hiddenEmployeeIds` (the VisibilityMenu still shows only the
+    user's own hidden set). **A wrong-week row with cards that week still shows**,
+    so pre-existing work can never be orphaned into an invisible row.
+  - **Mirroring** (`services/assist-mirror.ts`, pure, 24 tests): install cards are
+    re-homed onto the lent person's production row with `mirrorOf: "installation"`
+    + `mirrorHalf`. Render-only — **never persisted, never in an engine context**
+    (the assist day already blocks capacity; counting the card again would
+    double-book). Read-only on production: `readOnly || !!line.mirrorOf`, and
+    copy/duplicate/split/delete are all withheld.
+  - Confirmed design decisions (user chose): a full lent day **still blocks**
+    production scheduling; an AM/PM day leaves the other half open; mirrors are
+    **read-only** on production; shipment-load region is **always WK**.
+  - **Shipment load on a production employee:** the Add panel's "Shipment load"
+    picker now shows on Production too. `services/lend-shipment.ts` creates the
+    card on the **WK install board** and lends the person for that day (reusing
+    their existing assist row for that week rather than making a second one), so
+    it mirrors back to production for free. One-way: an install employee on a load
+    never appears on production. No `Install` badge on shipment cards — the blue
+    🚚 card already reads as a load.
+  - 🔴 **Dev mode couldn't exercise ANY of this** (assist store returned [] and the
+    install-card cache was never populated by the mock source), so it was live-only
+    and unverifiable — the same trap that hid the multi-week-job bug. Added
+    `data/mock-assist.ts` (mutable, so runtime lends work), made the mock install
+    source publish to the card cache on load AND on create/update/delete like the
+    live one, resolved its assist roster **at call time** (an import-time list
+    never shows a runtime lend), and moved `hydrateInstallCards()` out of the
+    `if (!LIVE) return` guard in `App.tsx` — the Production mirror and the Shipping
+    "Scheduled" badge both read that cache and can't wait for the Install board to
+    be opened first.
+  - Verified in-browser end to end: badges + dashed cards on production, full day
+    blocked / AM day still addable, filler text suppressed behind a mirrored card,
+    lent rows vanish next week (both hand-lent and shipment-created), and the
+    shipment round trip Production → Install → mirrored back. 246 tests green.
+    Guide → **v3.6** (§5.10 rewritten).
+  - **Open follow-ups:** a NEK shipment run must be moved by hand on the install
+    board (region is hardcoded WK by choice); mirrors are one-way (no editing from
+    production, by choice).
+- **Earlier (Sep 4, 2026) — deployed + committed: drag a project back OFF a
   load into staging, and staging lists 1.5x wider.**
   - **The round trip closes.** Drag a load item by its ⠿ grip out of the load
     editor onto a staging list → it leaves the load and comes back as a staged

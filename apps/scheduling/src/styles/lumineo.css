@@ -2593,6 +2593,29 @@ input, select, textarea {
 }
 .load-card__print:hover { color: var(--accent-brand); background: var(--bg-tertiary); }
 
+/* --- Mirrored install work on a production row -----------------------------
+   A lent employee's install cards are drawn on their production row read-only.
+   The dashed edge says "this isn't a production job"; the badge says which part
+   of the day they're lent for. */
+.job-card--mirror {
+  outline: 1px dashed currentColor;
+  outline-offset: -2px;
+  cursor: default;
+}
+.job-card__mirror {
+  float: right;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.28);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 /* --- Drop targets for a project dragged off the staging board -------------
    A day column takes a subtle dashed outline (it means "start a new load
    here"); a load card takes a stronger solid one, so when the pointer is over a

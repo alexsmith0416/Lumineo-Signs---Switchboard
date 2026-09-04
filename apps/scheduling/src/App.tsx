@@ -16,7 +16,7 @@ import SaveStatus from "./components/SaveStatus";
 import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
-import { hydrateInstallCardCache } from "./services/dataverse-live";
+import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser } from "./services/current-user";
 import { useSettingsStore } from "./store/settings-store";
 import { useJobScheduleStore } from "./store/job-schedule-store";
@@ -110,12 +110,17 @@ export default function App() {
     prevImpRef.current = impId;
   }, [impId, userLoading, defaultView]);
 
-  // Live: load shipping loads + the install-card cache (for the Scheduled badge)
-  // from Dataverse once at startup.
+  // Live: load shipping loads from Dataverse once at startup.
   useEffect(() => {
     if (!LIVE) return;
     void useLoadsStore.getState().hydrate();
-    void hydrateInstallCardCache().catch(() => {});
+  }, []);
+
+  // Install-card cache, in BOTH modes (it resolves its own source). Read by the
+  // Shipping "Scheduled" badge and the Production board's mirrored rows, neither
+  // of which can wait for the Installation board to be opened first.
+  useEffect(() => {
+    void hydrateInstallCards().catch(() => {});
   }, []);
 
   // Per-job schedule dates (release/target/red) — loaded once, overlaid by jobNo.

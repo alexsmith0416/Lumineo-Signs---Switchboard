@@ -117,6 +117,14 @@ interface CalendarViewProps {
    *  "am"/"pm" half tints half the cell, labels "Install AM/PM", and still lets
    *  a production job land the other half. */
   assistDaysByEmployee?: Map<string, Map<number, AssistHalf>>;
+  /**
+   * Read-only cards from the OTHER board drawn on a person's row, keyed by
+   * employee id — install work shown on a lent production employee's row (see
+   * services/assist-mirror.ts). They render and open like normal cards but
+   * can't be moved, and they are NOT in `schedule`, so the engine never counts
+   * them: the assist day already blocks that person's capacity.
+   */
+  mirroredLinesByEmployee?: Map<string, ScheduleLine[]>;
   /** Filler label for assist cells. Production board shows where a lent person
    *  IS ("Installation"); the install board shows the inverse ("Production"). */
   assistFiller?: { full: string; half: string };
@@ -383,6 +391,7 @@ export default function CalendarView({
   installRegionIsNek,
   rosterUnlockable = false,
   assistDaysByEmployee,
+  mirroredLinesByEmployee,
   assistFiller = { full: "Installation", half: "Install" },
   enableJobQueue = false,
   installLayout = false,
@@ -1140,7 +1149,12 @@ export default function CalendarView({
               return (laneRow ? [laneRow, ...emps] : emps);
             })().map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
-              const cards = computeRowCards(empLines, days[0]!, !emp.worksWeekends);
+              const mirrored = mirroredLinesByEmployee?.get(emp.id) ?? [];
+              const cards = computeRowCards(
+                mirrored.length ? [...empLines, ...mirrored] : empLines,
+                days[0]!,
+                !emp.worksWeekends,
+              );
               // laneHeight is a first-pass ESTIMATE; EmployeeRow measures the real
               // card heights on mount and tightens the row to fit (so an un-stacked
               // card's row doesn't reserve blank space below it).
@@ -1652,6 +1666,16 @@ function EmployeeRow({
   const maxLane = cards.reduce((m, c) => Math.max(m, c.lane), 0);
   const laneFloor = cardLayout === "stacked" ? 60 : 40;
   const effLaneHeight = Math.max(laneFloor, measuredLaneHeight ?? laneHeight);
+
+  // Day columns that already show a mirrored (other-board) card.
+  const mirroredDayIdx = useMemo(() => {
+    const out = new Set<number>();
+    for (const c of cards) {
+      if (!c.line.mirrorOf) continue;
+      for (let d = 0; d < c.spanDays; d++) out.add(c.startIdx + d);
+    }
+    return out;
+  }, [cards]);
   const effRowMinHeight = (maxLane + 1) * effLaneHeight + 8;
 
   // Map a pointer x-coordinate to a 0–6 day index within the row's day strip.
@@ -1862,6 +1886,10 @@ function EmployeeRow({
         )}
         {days.map((day, i) => {
           const weekend = isWeekend(day);
+          // Once the actual install card is drawn on this day, the generic
+          // "Installation" filler is noise behind it — the day stays blocked,
+          // it just no longer needs a label to say what it's blocked for.
+          const mirroredHere = mirroredDayIdx.has(i);
           // Assist: "full" blocks the whole day (greyed, no drop); "am"/"pm"
           // tints half the cell but still lets a production job land the other
           // half, so those days aren't blocked.
@@ -1896,8 +1924,10 @@ function EmployeeRow({
                   : undefined
               }
             >
-              {assistFull && <span className="day-cell__assist">{assistFiller.full}</span>}
-              {assistPartial && (
+              {assistFull && !mirroredHere && (
+                <span className="day-cell__assist">{assistFiller.full}</span>
+              )}
+              {assistPartial && !mirroredHere && (
                 <span className="day-cell__assist day-cell__assist--half">
                   {assistFiller.half} {assistHalf === "am" ? "AM" : "PM"}
                 </span>
@@ -1914,7 +1944,8 @@ function EmployeeRow({
             department={departments.get(card.line.departmentId)}
             employee={emp}
             conflicts={conflicts}
-            readOnly={readOnly}
+            // A mirror belongs to the other board — it opens, but never moves.
+            readOnly={readOnly || !!card.line.mirrorOf}
             laneHeight={effLaneHeight}
             cardLayout={cardLayout}
             showInvoice={showInvoice}
@@ -1936,13 +1967,22 @@ function EmployeeRow({
             onResize={(newHours) => onResize(card.line, newHours)}
             onSpan={(days) => onSpan(card.line, days)}
             onMoveStart={(newStart) => onMoveStart(card.line, newStart)}
-            onCopy={onCopyLine ? () => onCopyLine(card.line) : undefined}
-            onDuplicate={onDuplicateLine ? () => onDuplicateLine(card.line) : undefined}
+            // Every mutating action is withheld from a mirror — it's the other
+            // board's card, and copy/duplicate/split/delete here would either
+            // write to the wrong store or silently create a production line.
+            onCopy={onCopyLine && !card.line.mirrorOf ? () => onCopyLine(card.line) : undefined}
+            onDuplicate={
+              onDuplicateLine && !card.line.mirrorOf ? () => onDuplicateLine(card.line) : undefined
+            }
             onSplit={
-              onSplitLine && isSplittable(card.line) ? () => onSplitLine(card.line) : undefined
+              onSplitLine && !card.line.mirrorOf && isSplittable(card.line)
+                ? () => onSplitLine(card.line)
+                : undefined
             }
             partLabel={partLabels?.get(card.line.id)}
-            onDelete={onDeleteLine ? () => onDeleteLine(card.line) : undefined}
+            onDelete={
+              onDeleteLine && !card.line.mirrorOf ? () => onDeleteLine(card.line) : undefined
+            }
           />
         ))}
       </div>

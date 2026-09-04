@@ -115,6 +115,17 @@ export interface ScheduleLine {
   // schedule (links back to the load in the shipping store).
   shipmentLoadId?: string | null;
 
+  // --- Mirroring (render-only; never persisted, never in an engine context) ---
+  // A lent ("assist") production employee does their install work on the
+  // Installation board, but needs to see it on their own Production row so one
+  // board shows their whole week. Those cards are copied onto the production row
+  // with `mirrorOf` set: they are read-only there, and are NOT part of the
+  // production schedule the engine reasons about (the assist day already blocks
+  // capacity, so counting them again would double-book the day).
+  mirrorOf?: "installation";
+  /** Which part of the day they're lent for — drives the Day/AM/PM badge. */
+  mirrorHalf?: "full" | "am" | "pm";
+
   // The user's last-explicit position for this line. Cascade uses this as
   // the floor: a pushed task pulls back to its preferred position when
   // the cause moves back. Defaults to `startDateTime` on load. Set to
