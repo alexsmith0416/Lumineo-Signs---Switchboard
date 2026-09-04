@@ -246,7 +246,45 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
   preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
   the day it's unblocked.
-- **Last shipped (Aug 16, 2026 · latest) — deployed + committed: THE "my edit didn't
+- **Last shipped (Sep 4, 2026 · latest) — built + verified in-browser, NOT yet deployed:
+  Shipping "Staging" kanban.** A master board of user-named, color-coded lists under
+  the week's day columns, holding projects that are built and waiting for a truck.
+  Drag a card onto a day (new load) or onto an existing load → it becomes a load
+  item, the load editor opens, and the card leaves staging.
+  - ✅ **No Dataverse work needed.** It reuses the existing job-queue tables with a
+    new `kind` value `"shipping"` (`crfdf_kind` is a plain string column), so there
+    is no script to run and it works live immediately. A staged card carries only
+    jobNo / customer / description — the scheduling-shaped columns (hours,
+    department, crew, ZIP) stay 0/empty. **Nothing is smuggled**: stop location,
+    Deliver/Pickup and loading notes are per-run decisions, which is exactly why the
+    load editor opens on drop.
+  - `shipping/stage.ts` — pure mapping + drag bookkeeping (`stageItemFromJob`,
+    `shipmentItemFromStage`, `reorderGroupIds`, `findStagedItem`, `stagedCount`).
+    17 tests. `shipmentItemFromStage` maps a blank job no to **null**, not `""` —
+    that's what the load editor's "+ Job #" empty state and the printed sheet test.
+  - `ShippingStageBoard.tsx` — the board. `ShippingBoard.tsx` owns the drop targets
+    (it owns the loads store + editor); new `DayColumn` sub-component so a drop
+    highlight doesn't re-render all seven days.
+  - 🔴 **`DND_SHIP_STAGE` must stay lowercase** (`text/shipstageid`) — the HTML5 drag
+    store lowercases type keys, so a mixed-case constant silently never matches in
+    `dataTransfer.types`. Deliberately distinct from the calendar queue's
+    `text/queueitemid` so the two drag systems can't accept each other's cards.
+  - **Also fixed in passing: `loads-store` now writes through `persistOrReport`**
+    (was `.catch(console.error)`, i.e. silent). This became load-bearing: a dropped
+    card leaves staging immediately, so a silently-failed load write would have
+    looked exactly like lost work. Now it surfaces in `SaveStatus`.
+  - `GroupDialog` extracted from `JobQueuePanel` → shared `QueueGroupDialog.tsx`
+    with a `noun` prop ("list" for shipping, "group" for the calendar queues).
+  - ⚠️ The staging edit button needed its **own** style — `.job-queue__icon-btn` is
+    white-on-translucent-white for the navy queue header and is invisible on the
+    light staging bar. Use `.ship-stage__icon-btn`.
+  - Verified in-browser end to end (drop on day, drop on existing load, cross-list
+    drag, within-list reorder, list add/recolor/reorder/delete, week paging leaves
+    the board untouched, dark mode). 213 tests green. Guide → **v3.4**, new **§5.16**.
+  - **Open follow-ups:** staging cards can't be dragged back OFF a load into
+    staging (one-way today); no BC auto-fill for a list (the dialog's "coming soon"
+    field is still a placeholder, shared with the Job Queue).
+- **Earlier (Aug 16, 2026) — deployed + committed: THE "my edit didn't
   take the first time" BUG IS FIXED.** Full write-up in the **Write-path invariant**
   section above — read that before touching a write path. Short version: the host
   bridge *rejects* when cold (first action after load) and `writeWithRetry` only

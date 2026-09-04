@@ -11,23 +11,33 @@ import {
   updateItemSortRecords,
   updateLoadRecord,
 } from "../services/dataverse-live";
+import { persistOrReport } from "../store/write-status-store";
 
 // Deployed / forced-live → persist to Dataverse; plain dev/tests → in-memory.
 const live = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const err = (where: string) => (e: unknown) => console.error(`[ship] ${where}`, e);
+
+// Every write reports through the shared save-status store rather than only
+// console.error: a failure has to reach the user, never revert the UI. This
+// matters most for a project dragged off the staging board — it leaves staging
+// as soon as it lands on a load, so a silently-dropped write would look exactly
+// like lost work. (See the write-path invariant in START-HERE.md.)
+const report = (label: string, op: () => Promise<unknown>) => void persistOrReport(label, op);
 
 const uid = (_p: string) => crypto.randomUUID();
 
 /** Persist a load's header (called after any local change that may rename it). */
 function persistHeader(load: ShipmentLoad) {
   if (!live) return;
-  updateLoadRecord(load.id, {
-    name: load.name,
-    autoName: load.autoName,
-    shipDate: load.shipDate,
-    status: load.status,
-    generalNotes: load.generalNotes,
-  }).catch(err("updateLoad"));
+  report("Save load", () =>
+    updateLoadRecord(load.id, {
+      name: load.name,
+      autoName: load.autoName,
+      shipDate: load.shipDate,
+      status: load.status,
+      generalNotes: load.generalNotes,
+    }),
+  );
 }
 
 /** Refresh an auto-named load's name from its current date + items. */
@@ -123,7 +133,7 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
   addLoad: (shipDate) => {
     const load = autoLoad({ id: uid("L"), shipDate, status: "planned", autoName: true, generalNotes: "", items: [] });
     set((s) => ({ loads: [...s.loads, load] }));
-    if (live) createLoadRecord(load).catch(err("createLoad"));
+    if (live) report("Add load", () => createLoadRecord(load));
     return load.id;
   },
 
@@ -148,9 +158,11 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
     set((s) => ({ loads: s.loads.filter((l) => l.id !== id) }));
     if (live && load) {
       // Delete items first (the lookup doesn't cascade-delete), then the load.
-      Promise.all(load.items.map((it) => deleteItemRecord(it.id)))
-        .then(() => deleteLoadRecord(id))
-        .catch(err("deleteLoad"));
+      report("Delete load", () =>
+        Promise.all(load.items.map((it) => deleteItemRecord(it.id))).then(() =>
+          deleteLoadRecord(id),
+        ),
+      );
     }
   },
 
@@ -163,7 +175,10 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
       ),
     }));
     if (live && load) {
-      createItemRecord(loadId, item, load.items.length - 1).catch(err("createItem"));
+      // Index captured now, not inside the retry closure — a retry must resend
+      // the position this item had when it was added.
+      const sortOrder = load.items.length - 1;
+      report("Add item to load", () => createItemRecord(loadId, item, sortOrder));
       persistHeader(load);
     }
     return item.id;
@@ -182,7 +197,7 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
       ),
     }));
     if (live && load) {
-      updateItemRecord(itemId, patch).catch(err("updateItem"));
+      report("Edit load item", () => updateItemRecord(itemId, patch));
       persistHeader(load);
     }
   },
@@ -202,7 +217,7 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
       const moved = after
         .map((it, i) => ({ id: it.id, sort: i }))
         .filter((e, i) => before[i]?.id !== e.id);
-      if (moved.length) updateItemSortRecords(moved).catch(err("moveItem"));
+      if (moved.length) report("Reorder load items", () => updateItemSortRecords(moved));
       // An auto-named load names itself from its stops in order, so a reorder
       // can rename it ("Dodge City & Garden City" → "Garden City & Dodge City").
       persistHeader(load);
@@ -219,7 +234,7 @@ export const useLoadsStore = create<LoadsState>((set, get) => ({
       ),
     }));
     if (live && load) {
-      deleteItemRecord(itemId).catch(err("removeItem"));
+      report("Remove load item", () => deleteItemRecord(itemId));
       persistHeader(load);
     }
   },

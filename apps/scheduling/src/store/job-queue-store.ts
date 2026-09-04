@@ -179,3 +179,6 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
 export const useProductionQueueStore = createJobQueueStore("production");
 export const useInstallQueueStoreWK = createJobQueueStore("install-wk");
 export const useInstallQueueStoreNEK = createJobQueueStore("install-nek");
+/** Shipping's always-on staging kanban (below the week's load columns). Unlike
+ *  the calendar queues it isn't week-scoped — it's one master board. */
+export const useShippingQueueStore = createJobQueueStore("shipping");

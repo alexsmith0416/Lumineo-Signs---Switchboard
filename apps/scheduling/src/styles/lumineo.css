@@ -2581,6 +2581,163 @@ input, select, textarea {
 }
 .load-card__print:hover { color: var(--accent-brand); background: var(--bg-tertiary); }
 
+/* --- Drop targets for a project dragged off the staging board -------------
+   A day column takes a subtle dashed outline (it means "start a new load
+   here"); a load card takes a stronger solid one, so when the pointer is over a
+   card inside a highlighted column it's unambiguous which one will receive the
+   drop. */
+.ship-col__body--drop {
+  outline: 2px dashed var(--lumineo-navy);
+  outline-offset: -4px;
+  border-radius: 6px;
+}
+.ship-col__drop-hint {
+  color: var(--lumineo-navy);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 4px;
+}
+.load-card--drop {
+  outline: 2px solid var(--lumineo-red);
+  outline-offset: 1px;
+}
+
+/* --- Staging kanban (below the week) --------------------------------------
+   A master board of user-named, color-coded lists holding projects that are
+   built and waiting for a truck. Not week-scoped: paging the week above leaves
+   it alone. */
+.ship-stage {
+  margin-top: 14px;
+  border-top: 1px solid var(--grid-line);
+  padding-top: 10px;
+}
+.ship-stage__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px 8px;
+}
+.ship-stage__title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.ship-stage__count {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ship-stage__sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+/* NOT `.job-queue__icon-btn` — that one is white-on-translucent-white for the
+   navy Job Queue header, which is invisible on this light bar. */
+.ship-stage__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--grid-line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.ship-stage__icon-btn:hover {
+  border-color: var(--lumineo-navy);
+  color: var(--lumineo-navy);
+}
+.ship-stage__icon-btn--on {
+  background: var(--lumineo-navy);
+  border-color: var(--lumineo-navy);
+  color: #fff;
+}
+.ship-stage__error {
+  font-size: 11px;
+  color: var(--lumineo-red);
+  padding: 0 2px 8px;
+}
+.ship-stage__cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.ship-stage__empty-all {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  padding: 18px 8px;
+}
+.ship-stage__add-col {
+  flex: 0 0 190px;
+  align-self: stretch;
+  min-height: 120px;
+  border: 1px dashed var(--grid-line);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ship-stage__add-col:hover {
+  border-color: var(--lumineo-navy);
+  color: var(--lumineo-navy);
+}
+
+.stage-col {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--grid-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+/* A collapsed list shrinks to its header so it stops eating width. */
+.stage-col--collapsed { flex-basis: 190px; }
+.stage-col__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+.stage-col__head--dragging { opacity: 0.5; }
+.stage-col__body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-tertiary);
+  /* Tall enough to be an easy drop target when empty, capped so a long list
+     scrolls inside itself instead of pushing the page down. */
+  min-height: 150px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.stage-col__body--drop {
+  outline: 2px dashed var(--lumineo-navy);
+  outline-offset: -3px;
+}
+.stage-col__add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* The staged card is the queue card minus the hours column — a shipment has no
+   labor hours, so `.jq-card__side` holds only the remove button. */
+.stage-card { border-left-color: var(--accent-brand); }
+
 /* Shipment "view all items" popup — one card per delivery / pickup line, with a
    colored left accent (navy = delivery, amber = pickup) and labeled fields. */
 /* 8px padding on every side = the same gap used between the cards, so they're
@@ -3524,7 +3681,8 @@ input, select, textarea {
   .switchboard-sidebar,
   .app-topbar,
   .sub-nav,
-  .ship-board {
+  .ship-board,
+  .ship-stage {
     display: none !important;
   }
   .load-print {

@@ -304,8 +304,10 @@
 
   <!-- ============================================================ -->
   <h2 id="overview"><span class="num">03</span>Dashboard Overview</h2><div class="rule"></div>
-  <p>Each calendar is a <strong>Gantt-style board</strong>: a row per person (Production), per crew grouped by location
-  (Installation), or per truck (Shipping), with job cards spanning the days they run.</p>
+  <p>Production and Installation are <strong>Gantt-style boards</strong>: a row per person (Production) or per crew
+  grouped by location (Installation), with job cards spanning the days they run. <strong>Shipping</strong> works
+  differently — a column per day holding that day's <strong>loads</strong> (truck runs), with a
+  <strong>Staging</strong> board of projects waiting for a truck underneath it (5.15, 5.16).</p>
 
   <div class="sketch" aria-hidden="true">
     <div class="sketch__top"><span>Production · Week of Jul 13</span><span>‹ Prev · Today · Next ›</span></div>
@@ -708,6 +710,61 @@
     <li><strong>Clear</strong> detaches the job number and leaves the item as a manual one.</li>
   </ul>
 
+  <h3>5.16 &nbsp;Staging — projects waiting for a truck</h3>
+  <p>Under the week sits the <strong>Staging</strong> board: a set of lists holding projects that are
+  <strong>built and waiting to ship</strong>, before anyone has decided which run they go on. It's the shipping
+  equivalent of the Job Queue on the calendars (5.8), except it's <strong>always on screen</strong> rather than a panel
+  you open.</p>
+  <p class="tip"><strong>It's one master board, the same on every week.</strong> Paging the week above with
+  <em>&lsaquo; Prev</em> / <em>Next &rsaquo;</em> doesn't change it — a project sits in staging until you put it on a
+  load, no matter which week you're looking at.</p>
+
+  <h4>Your own lists</h4>
+  <p>The lists are yours to define — name them however you plan: by readiness (<em>Ready to Ship</em>,
+  <em>Waiting on Parts</em>), by destination (<em>Dodge City Run</em>, <em>NEK</em>), by anything else that helps.</p>
+  <ul>
+    <li>Click the <strong>pencil</strong> at the right of the Staging bar to turn on list editing.</li>
+    <li><strong>+ Add list</strong> creates one — give it a name and a <strong>header color</strong> from the swatches,
+    or mix your own background and text color.</li>
+    <li>On each header, <strong>✎</strong> renames or recolors it, <strong>✕</strong> deletes it (you're asked first,
+    and told how many staged projects go with it), and the <strong>⠿ grip</strong> drags the whole list left or right
+    to reorder the board.</li>
+    <li>The <strong>▾ caret</strong> on a header collapses a list you're not using, so it stops taking up width.</li>
+    <li>Click the pencil again when you're done — the edit controls hide and the board goes back to normal.</li>
+  </ul>
+
+  <h4>Putting projects into staging</h4>
+  <ul>
+    <li><strong>+ Add project</strong> at the bottom of a list, then search a BC job # or customer and pick it — the
+    job number, customer, and description come along.</li>
+    <li>Need something BC can't find yet? Type it and press <span class="kbd">Enter</span> to stage it by name.</li>
+    <li><strong>Click a card</strong> to edit it — attach or change its job #, fix the customer, reword the
+    description. <strong>✕</strong> on a card removes it from staging.</li>
+  </ul>
+
+  <h4>Ordering and moving cards</h4>
+  <ul>
+    <li><strong>Drag a card up or down</strong> inside its list to set the order you want to work through it — it drops
+    above whichever card you release it on.</li>
+    <li><strong>Drag a card into another list</strong> to move it — say from <em>Waiting on Parts</em> across to
+    <em>Ready to Ship</em> once it's finished.</li>
+  </ul>
+
+  <h4>Putting a staged project on a truck</h4>
+  <p>This is the point of the board. Drag a card <strong>up</strong> onto the week:</p>
+  <ul>
+    <li><strong>Drop it on a day</strong> (any empty space in that day's column) — a <strong>new load</strong> is
+    created on that day with the project already on it, and the load editor opens so you can set the stop location,
+    Deliver/Pickup, and loading notes.</li>
+    <li><strong>Drop it on an existing load</strong> — the project is <strong>added to that load</strong> and the
+    editor opens on it. The load card outlines in red as you hover it, so you can see which one will take the drop.</li>
+    <li>Either way the project <strong>leaves the staging board</strong> — it's on a truck now, so it's no longer
+    waiting for one.</li>
+  </ul>
+  <p class="tip">Staging deliberately doesn't carry a stop location or Deliver/Pickup: those are decisions about
+  <em>this particular run</em>, which is why the load editor opens the moment you drop. Fill them in there and the
+  printed sheet is ready for the driver.</p>
+
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
@@ -802,11 +859,11 @@
   <table>
     <tr><th>Symptom</th><th>Likely cause</th><th>What to do</th></tr>
     <tr><td>Blank white screen after opening</td><td>The app is still loading, or a stale cached version</td><td>Wait a few seconds, then refresh the page. If it persists, close the tab and reopen the link.</td></tr>
-    <tr><td>An edit "didn't take" / reverted</td><td>Brief network hiccup while saving</td><td>Just redo the change — saves are now serialized, so a second attempt sticks. If it keeps happening, refresh.</td></tr>
+    <tr><td>An edit "didn't take" / reverted</td><td>Fixed — the board no longer reloads over your change</td><td><strong>Don't redo it.</strong> Your edit stays on screen and saves in the background. If it truly failed you'll get the red <strong>"1 change hasn't saved"</strong> box in the bottom-right — click <strong>Try again</strong> there (see 11 &nbsp;FAQs). No red box means it saved.</td></tr>
     <tr><td>I can't edit anything (no drag, no Add)</td><td>Your role is view-only</td><td>Only Admin/Ops can edit. Ask an admin to adjust your role in Manage users if you need edit access.</td></tr>
     <tr><td>I don't see $ amounts</td><td>By design — $ is Admin/Ops only</td><td>Nothing to fix; dollar values are hidden for non-admin roles.</td></tr>
     <tr><td>Weather chip is blank</td><td>No ZIP on the card, or forecast not yet synced</td><td>Add the install ZIP in Edit Job; the forecast refreshes on a schedule.</td></tr>
-    <tr><td>A saved custom card / user edit didn't persist</td><td>Rare — the backing table was briefly unreachable</td><td>Retry the save. If it still won't stick, contact support so we can check the connection.</td></tr>
+    <tr><td>A saved custom card / user edit didn't persist</td><td>Rare — the backing table was briefly unreachable</td><td>Click <strong>Try again</strong> in the red save box. If it still won't stick, send support the message shown in that box — it names the actual cause.</td></tr>
     <tr><td>Next week looks empty</td><td>You've navigated past the loaded range</td><td>Use <span class="kbd">Today</span> to return; if a week truly looks wrong, refresh to reload it.</td></tr>
     <tr><td>The purple bar is taking up space</td><td>Power Apps player header is showing</td><td>Settings → Display → <em>Hide the Power Apps header</em>.</td></tr>
   </table>
@@ -868,6 +925,7 @@
     <tr><td>Final install</td><td>The install card whose day sets the job's scheduled install date.</td></tr>
     <tr><td>Job tasks</td><td>The job's BC planning-line tasks, shown as a checklist on the card — highlighted when on the card, greyed when their department is done.</td></tr>
     <tr><td>Group card</td><td>A container card placed on the board that holds a list of BC jobs (shown as pills). Has a title + optional description, auto-colors to its department/location, and is movable/resizable. Replaced the old "Fill-in Jobs" list.</td></tr>
+    <tr><td>Staging (Shipping)</td><td>The always-on board of lists under the Shipping week, holding projects that are built and waiting for a truck. One master board — the same on every week. Drag a card onto a day or a load to put it on a run.</td></tr>
     <tr><td>Assist</td><td>Temporarily lending a Production person to an Installation crew for a day or half-day.</td></tr>
     <tr><td>Custom card</td><td>A non-BC block of time — PTO, Holiday, Inventory, etc.</td></tr>
     <tr><td>Roster override</td><td>A "just this week" placement for a person, separate from their permanent spot.</td></tr>
@@ -881,6 +939,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 4, 2026</td><td><strong>Staging board on the Shipping screen</strong> — a kanban of your own lists now sits under the week, holding projects that are <strong>built and waiting to ship</strong>. Make as many lists as you like, name and color them however you plan (by readiness, by destination…), reorder them, and drag project cards between them or up and down inside one. To put a project on a truck, <strong>drag its card onto a day</strong> (starts a new load) or <strong>onto an existing load</strong> — the load editor opens with it already added, and the project leaves staging. It's one master board: paging to another week doesn't change it. See §5.16.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Fix: changes stick the first time</strong> — the long-standing annoyance where an action (stretching a card to a second day, shrinking it back, adding install help, changing an end date…) "didn't take" until you did it twice. A background save that hiccuped made the board reload, and the reload wiped out what you'd just done. Saves now retry properly, and a save that fails <strong>no longer reverts your change</strong> — it stays on screen and a red <em>"hasn't saved"</em> box with a <strong>Try again</strong> button appears in the corner. If you don't see that box, it saved. See §11.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Choose your own tick-box columns on a printed load</strong> — the print preview has a <strong>Tick boxes ▾</strong> menu: tick which columns print, and <strong>add your own</strong> (Strapped, Tarped, Paperwork, Photo…) with a name of your choosing. Added names are saved for next time and can be removed with <strong>×</strong>; <em>Loaded</em> and <em>Order</em> are always available. Your picks apply to every load you print from that device, up to six columns. See §5.15.</td></tr>
       <tr><td>Aug 13, 2026</td><td><strong>Printed shipping list: two tick boxes and a bigger notes column</strong> — every line on a load's printed sheet now has a <strong>Loaded</strong> box <em>and</em> an <strong>Order</strong> box, so it can be checked off twice. The <strong>Notes</strong> column is much wider (and stays wide even when nothing's typed in it) to leave the driver real room to write. See §5.15.</td></tr>
@@ -956,7 +1015,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.3 · Aug 16, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.4 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

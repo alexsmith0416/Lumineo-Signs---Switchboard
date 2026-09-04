@@ -7,6 +7,7 @@ import type { ScheduleLine } from "../engine/types";
 import AddJobPanel from "./AddJobPanel";
 import JobTaskPicker from "./JobTaskPicker";
 import { QueueEditIcon, QueueToggleIcon } from "./QueueIcons";
+import QueueGroupDialog from "./QueueGroupDialog";
 
 /** Build a queue item from the draft the unified Add panel produces. */
 function queueItemFromDraft(draft: ScheduleLine, group: QueueGroup): QueueItem {
@@ -41,16 +42,6 @@ const DND_QUEUE_GROUP = "text/queuegroupid";
 // case-insensitive, so reads work either way.)
 const DND_LINE = "text/lineid";
 
-// Group header color choices (bg + matching text).
-const GROUP_COLORS: Array<{ color: string; textColor: string }> = [
-  { color: "#F6A623", textColor: "#5B3A00" },
-  { color: "#4A90D9", textColor: "#08243F" },
-  { color: "#2E9B6B", textColor: "#06301F" },
-  { color: "#E8151B", textColor: "#FFFFFF" },
-  { color: "#6E5BD6", textColor: "#FFFFFF" },
-  { color: "#141464", textColor: "#FFFFFF" },
-  { color: "#E4E7EC", textColor: "#2A2F3A" },
-];
 
 interface JobQueuePanelProps {
   useQueueStore: UseJobQueueStore;
@@ -173,7 +164,7 @@ export default function JobQueuePanel({
       </aside>
 
       {dialog && (
-        <GroupDialog
+        <QueueGroupDialog
           initial={dialog.mode === "edit" ? dialog.group : undefined}
           onCancel={() => setDialog(null)}
           onSave={(vals) => {
@@ -424,97 +415,6 @@ function QueueCard({
             ✕
           </button>
         )}
-      </div>
-    </div>
-  );
-}
-
-// --- Add / edit group dialog ----------------------------------------------
-function GroupDialog({
-  initial,
-  onCancel,
-  onSave,
-}: {
-  initial?: QueueGroup;
-  onCancel: () => void;
-  onSave: (vals: { name: string; color: string; textColor: string }) => void;
-}) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [color, setColor] = useState(initial?.color ?? GROUP_COLORS[0]!.color);
-  const [textColor, setTextColor] = useState(initial?.textColor ?? GROUP_COLORS[0]!.textColor);
-
-  return (
-    <div className="modal-scrim" onClick={onCancel}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 380 }}>
-        <div className="modal-card__title">{initial ? "Edit group" : "New group"}</div>
-        <div className="modal-card__body">
-          <div className="form-field">
-            <div className="form-field__label">Group name</div>
-            <input
-              className="form-field__input"
-              value={name}
-              autoFocus
-              placeholder="e.g. Needs Scheduled"
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && name.trim()) onSave({ name, color, textColor });
-              }}
-            />
-          </div>
-          <div className="form-field">
-            <div className="form-field__label">Header color</div>
-            <div className="jq-swatches">
-              {GROUP_COLORS.map((c) => (
-                <button
-                  key={c.color}
-                  type="button"
-                  className={"jq-swatch" + (c.color === color ? " jq-swatch--on" : "")}
-                  style={{ background: c.color }}
-                  aria-label={c.color}
-                  onClick={() => {
-                    setColor(c.color);
-                    setTextColor(c.textColor);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="form-field">
-            <div className="form-field__label">Custom color</div>
-            <div className="jq-color-builder">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                title="Header background"
-              />
-              <div className="jq-color-builder__preview" style={{ background: color, color: textColor }}>
-                {name.trim() || "Preview"}
-              </div>
-              <input
-                type="color"
-                value={textColor}
-                onChange={(e) => setTextColor(e.target.value)}
-                title="Header text color"
-              />
-            </div>
-          </div>
-          <div className="form-field">
-            <div className="form-field__label">Auto-fill from BC</div>
-            <button className="form-field__input" type="button" disabled title="Planned">
-              Set up a BC filter — coming soon
-            </button>
-          </div>
-        </div>
-        <div className="modal-card__actions">
-          <button className="btn-secondary" onClick={onCancel}>
-            Cancel
-          </button>
-          <button className="btn-primary" disabled={!name.trim()} onClick={() => onSave({ name, color, textColor })}>
-            {initial ? "Save" : "Add group"}
-          </button>
-        </div>
       </div>
     </div>
   );

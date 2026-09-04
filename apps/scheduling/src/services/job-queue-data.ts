@@ -9,8 +9,15 @@ import type { ScheduleLine } from "../engine/types";
  * ScheduleLine minus its placement (employee/date), so dropping onto the board
  * creates a line and dropping a card back into a group stores it — a clean
  * round-trip.
+ *
+ * The Shipping board's staging kanban reuses this same model (kind "shipping"),
+ * so it needs no table of its own. A staged card is a project waiting for a
+ * truck: job no + customer + description only. Its stop location,
+ * delivery/pickup kind, and loading notes are load-time decisions made in the
+ * load editor once it's dropped onto a load — so nothing is smuggled into the
+ * scheduling-shaped fields (hours/department/crew stay 0/empty).
  */
-export type QueueKind = "production" | "install-wk" | "install-nek";
+export type QueueKind = "production" | "install-wk" | "install-nek" | "shipping";
 
 export interface QueueItem {
   id: string;
@@ -131,6 +138,13 @@ export const DEFAULT_GROUP_TEMPLATES: Array<Pick<QueueGroup, "name" | "color" | 
   { name: "Ready to Schedule", color: "#4A90D9", textColor: "#08243F" },
 ];
 
+/** Shipping staging starts with destination-shaped lists instead. */
+export const SHIPPING_GROUP_TEMPLATES: Array<Pick<QueueGroup, "name" | "color" | "textColor">> = [
+  { name: "Ready to Ship", color: "#2E9B6B", textColor: "#06301F" },
+  { name: "Waiting on Parts", color: "#F6A623", textColor: "#5B3A00" },
+  { name: "Will Call / Pickup", color: "#4A90D9", textColor: "#08243F" },
+];
+
 // --- Live source (Dataverse) -------------------------------------------------
 const liveQueueDataSource: QueueDataSource = {
   async loadGroups(kind) {
@@ -165,7 +179,8 @@ const liveQueueDataSource: QueueDataSource = {
 
 // --- Mock source (dev / tests) — in-memory, persists for the session ---------
 function seedMockGroups(kind: QueueKind): QueueGroup[] {
-  const groups = DEFAULT_GROUP_TEMPLATES.map((t, i) => ({
+  const templates = kind === "shipping" ? SHIPPING_GROUP_TEMPLATES : DEFAULT_GROUP_TEMPLATES;
+  const groups = templates.map((t, i) => ({
     ...t,
     id: newId(),
     kind,
@@ -173,6 +188,32 @@ function seedMockGroups(kind: QueueKind): QueueGroup[] {
     sortOrder: i,
     items: [] as QueueItem[],
   }));
+  if (kind === "shipping") {
+    groups[0]!.items = [
+      {
+        id: newId(), groupId: groups[0]!.id, jobNo: "J36388", customerName: "Kwik Shop - Wichita",
+        jobDescription: "", planningLineDescription: "(2) Pylon faces", estimatedHours: 0,
+        departmentId: "", crewPersons: null, crewTrucks: null, crewTrips: null, installZip: null,
+        invoiceAmount: null, isCustom: false, customColor: null, customTextColor: null, sortOrder: 0,
+      },
+      {
+        id: newId(), groupId: groups[0]!.id, jobNo: "J34773", customerName: "Western Motor",
+        jobDescription: "", planningLineDescription: "(1) J-Bolt Form & (1) Rebar Cage",
+        estimatedHours: 0, departmentId: "", crewPersons: null, crewTrucks: null, crewTrips: null,
+        installZip: null, invoiceAmount: null, isCustom: false, customColor: null,
+        customTextColor: null, sortOrder: 1,
+      },
+    ];
+    groups[1]!.items = [
+      {
+        id: newId(), groupId: groups[1]!.id, jobNo: "J35454", customerName: "Lumineo Signs",
+        jobDescription: "", planningLineDescription: "(1) 4x8 ACM Sign", estimatedHours: 0,
+        departmentId: "", crewPersons: null, crewTrucks: null, crewTrips: null, installZip: null,
+        invoiceAmount: null, isCustom: false, customColor: null, customTextColor: null, sortOrder: 0,
+      },
+    ];
+    return groups;
+  }
   if (kind === "production") {
     groups[0]!.items = [
       {
