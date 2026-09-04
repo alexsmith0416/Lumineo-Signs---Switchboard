@@ -246,8 +246,8 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
   preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
   the day it's unblocked.
-- **Last shipped (Sep 4, 2026 · latest) — built + verified in-browser, NOT yet deployed:
-  Shipping "Staging" kanban.** A master board of user-named, color-coded lists under
+- **Last shipped (Sep 4, 2026 · latest) — deployed + committed: Shipping "Staging"
+  kanban.** A master board of user-named, color-coded lists under
   the week's day columns, holding projects that are built and waiting for a truck.
   Drag a card onto a day (new load) or onto an existing load → it becomes a load
   item, the load editor opens, and the card leaves staging.
