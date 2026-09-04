@@ -281,9 +281,35 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   - Verified in-browser end to end (drop on day, drop on existing load, cross-list
     drag, within-list reorder, list add/recolor/reorder/delete, week paging leaves
     the board untouched, dark mode). 213 tests green. Guide → **v3.4**, new **§5.16**.
-  - **Open follow-ups:** staging cards can't be dragged back OFF a load into
-    staging (one-way today); no BC auto-fill for a list (the dialog's "coming soon"
+  - **Open follow-ups:** no BC auto-fill for a list (the dialog's "coming soon"
     field is still a placeholder, shared with the Job Queue).
+- **Also (Sep 4, 2026 · latest) — deployed + committed: drag a project back OFF a
+  load into staging, and staging lists 1.5x wider.**
+  - **The round trip closes.** Drag a load item by its ⠿ grip out of the load
+    editor onto a staging list → it leaves the load and comes back as a staged
+    card. `stageItemFromShipmentItem` is the inverse of `shipmentItemFromStage`;
+    per-run fields (location / kind / loaded / notes) are deliberately dropped.
+  - 🔴 **The trick that makes it possible:** the load editor is a full-screen
+    `.slide-over` scrim (z-index 100), so staging underneath can't normally get
+    the drop. On item dragstart, `ShippingBoard` sets `itemDragging` →
+    `.slide-over--drag-through` puts `pointer-events: none` on the scrim (panel
+    re-enabled to `auto`) and lightens the dim. **No z-index games** — with
+    pointer-events off, hit-testing falls through regardless of stacking.
+    Verified with `elementFromPoint` mid-drag: it resolves inside `.ship-stage`.
+  - **One gesture, two drops.** The same grip drag can land inside the panel
+    (reorder, uses `dragIdx` state) or on a staging list (uses the new
+    `DND_LOAD_ITEM` dataTransfer key). Where you release decides. Both verified.
+  - `DND_LOAD_ITEM` = `text/loaditemid`, lowercase for the same reason as
+    `DND_SHIP_STAGE`. A load item is only addressable as (load, item), so the ids
+    travel joined by `|` via `encodeLoadItemRef` / `decodeLoadItemRef` (both UUIDs,
+    never contain the separator; malformed payloads decode to null).
+  - ⚠️ **Playwright cannot drive this drag** — the row is only `draggable` while
+    the grip is held (`armed`), which needs a React re-render between mousedown and
+    dragstart, so `dragTo` fails. Verified instead by dispatching real `DragEvent`s
+    with a `DataTransfer` via `browser_evaluate`. Same limitation as the left-edge
+    resize handle. If you touch this, test it that way (or by hand).
+  - Lists widened 240px → **360px** (collapsed 190 → 285, `+ Add list` 190 → 285).
+  - 222 tests green. Guide → **v3.5**.
 - **Earlier (Aug 16, 2026) — deployed + committed: THE "my edit didn't
   take the first time" BUG IS FIXED.** Full write-up in the **Write-path invariant**
   section above — read that before touching a write path. Short version: the host

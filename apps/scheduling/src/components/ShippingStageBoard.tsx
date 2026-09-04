@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import type { QueueGroup, QueueItem } from "../services/job-queue-data";
 import { useShippingQueueStore } from "../store/job-queue-store";
 import {
+  DND_LOAD_ITEM,
   DND_SHIP_STAGE,
+  decodeLoadItemRef,
   reorderGroupIds,
   stageItemFromJob,
   stageItemFromManual,
@@ -26,9 +28,18 @@ import { QueueEditIcon } from "./QueueIcons";
 interface ShippingStageBoardProps {
   /** View-only: no dragging, no add/edit/remove. */
   readOnly?: boolean;
+  /**
+   * An item was dragged off a load (from the load editor) onto a list. The
+   * parent owns the loads store, so it does the actual move; this board only
+   * reports where it landed.
+   */
+  onReturnToStaging?: (loadId: string, itemId: string, groupId: string, index: number) => void;
 }
 
-export default function ShippingStageBoard({ readOnly = false }: ShippingStageBoardProps) {
+export default function ShippingStageBoard({
+  readOnly = false,
+  onReturnToStaging,
+}: ShippingStageBoardProps) {
   const groups = useShippingQueueStore((s) => s.groups);
   const loading = useShippingQueueStore((s) => s.loading);
   const loaded = useShippingQueueStore((s) => s.loaded);
@@ -106,6 +117,7 @@ export default function ShippingStageBoard({ readOnly = false }: ShippingStageBo
             onOpenCard={setEditCard}
             onRemoveCard={removeItem}
             onMoveCard={moveItem}
+            onReturnToStaging={onReturnToStaging}
             dragging={groupDragId === group.id}
             groupDragActive={groupDragId != null}
             onGroupDragStart={() => setGroupDragId(group.id)}
@@ -206,6 +218,7 @@ interface StageColumnProps {
   onOpenCard: (item: QueueItem) => void;
   onRemoveCard: (id: string) => void;
   onMoveCard: (itemId: string, toGroupId: string, toIndex: number) => void;
+  onReturnToStaging?: (loadId: string, itemId: string, groupId: string, index: number) => void;
   dragging: boolean;
   groupDragActive: boolean;
   onGroupDragStart: () => void;
@@ -224,6 +237,7 @@ function StageColumn({
   onOpenCard,
   onRemoveCard,
   onMoveCard,
+  onReturnToStaging,
   dragging,
   groupDragActive,
   onGroupDragStart,
@@ -233,11 +247,22 @@ function StageColumn({
   const [dropActive, setDropActive] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  const canDropHere = (e: React.DragEvent) => e.dataTransfer.types.includes(DND_SHIP_STAGE);
+  // Two things can land in a list: a staged card moving between lists, and an
+  // item being pulled back off a load.
+  const canDropHere = (e: React.DragEvent) =>
+    e.dataTransfer.types.includes(DND_SHIP_STAGE) ||
+    (!!onReturnToStaging && e.dataTransfer.types.includes(DND_LOAD_ITEM));
 
   const acceptDrop = (e: React.DragEvent, index: number) => {
-    const itemId = e.dataTransfer.getData(DND_SHIP_STAGE);
-    if (itemId) onMoveCard(itemId, group.id, index);
+    const stagedId = e.dataTransfer.getData(DND_SHIP_STAGE);
+    if (stagedId) {
+      onMoveCard(stagedId, group.id, index);
+      return;
+    }
+    const ref = decodeLoadItemRef(e.dataTransfer.getData(DND_LOAD_ITEM));
+    if (ref && onReturnToStaging) {
+      onReturnToStaging(ref.loadId, ref.itemId, group.id, index);
+    }
   };
 
   const headerDraggable = editing && canEdit;
@@ -385,7 +410,12 @@ function StageCard({
         e.dataTransfer.effectAllowed = "move";
       }}
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes(DND_SHIP_STAGE)) e.preventDefault();
+        if (
+          e.dataTransfer.types.includes(DND_SHIP_STAGE) ||
+          e.dataTransfer.types.includes(DND_LOAD_ITEM)
+        ) {
+          e.preventDefault();
+        }
       }}
       onDrop={onDropBefore}
       title={canEdit ? "Click to edit · drag onto a day or a load to add it" : undefined}

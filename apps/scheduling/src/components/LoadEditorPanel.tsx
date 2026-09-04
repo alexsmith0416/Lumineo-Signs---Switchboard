@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import { useLoadsStore } from "../shipping/loads-store";
 import { STATUS_LABEL, STATUS_ORDER, type ShipmentItem, type ShipmentStatus } from "../shipping/types";
+import { DND_LOAD_ITEM, encodeLoadItemRef } from "../shipping/stage";
 import JobSearch from "./JobSearch";
 import LocationSelect from "./LocationSelect";
 import ConfirmDialog from "./ConfirmDialog";
@@ -12,6 +13,14 @@ interface LoadEditorPanelProps {
   onPrint: () => void;
   /** View-only: disable every field and hide add/remove/delete (Print stays). */
   readOnly?: boolean;
+  /**
+   * An item is mid-drag, so the backdrop stops swallowing pointer events and
+   * the staging board underneath can receive the drop. The panel itself stays
+   * interactive, so reordering within the load still works.
+   */
+  dragThrough?: boolean;
+  /** Told when an item drag starts / ends, so the parent can set dragThrough. */
+  onItemDragChange?: (dragging: boolean) => void;
 }
 
 // Week ‹ / › arrows that flank the day picker — sized to match the day buttons.
@@ -30,7 +39,14 @@ const weekArrowStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = false }: LoadEditorPanelProps) {
+export default function LoadEditorPanel({
+  loadId,
+  onClose,
+  onPrint,
+  readOnly = false,
+  dragThrough = false,
+  onItemDragChange,
+}: LoadEditorPanelProps) {
   const load = useLoadsStore((s) => s.loads.find((l) => l.id === loadId));
   const updateLoad = useLoadsStore((s) => s.updateLoad);
   const deleteLoad = useLoadsStore((s) => s.deleteLoad);
@@ -56,7 +72,10 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = f
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
 
   return (
-    <div className="slide-over" onClick={onClose}>
+    <div
+      className={"slide-over" + (dragThrough ? " slide-over--drag-through" : "")}
+      onClick={onClose}
+    >
       <div className="slide-over__panel slide-over__panel--wide" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
           {readOnly ? "View load" : "Edit load"}
@@ -166,18 +185,29 @@ export default function LoadEditorPanel({ loadId, onClose, onPrint, readOnly = f
               dropTarget={dragIdx !== null && dragIdx !== i && overIdx === i}
               armed={armed === it.id}
               onArm={(on) => setArmed(on ? it.id : null)}
-              onDragStart={() => setDragIdx(i)}
+              onDragStart={(e) => {
+                setDragIdx(i);
+                // Also announce it as a load item, so a staging list can take
+                // it back off the load. Reordering inside the panel doesn't
+                // read this — it uses dragIdx — so both drops stay possible
+                // from the one gesture.
+                e.dataTransfer.setData(DND_LOAD_ITEM, encodeLoadItemRef(load.id, it.id));
+                e.dataTransfer.effectAllowed = "move";
+                onItemDragChange?.(true);
+              }}
               onDragOver={() => setOverIdx(i)}
               onDrop={() => {
                 if (dragIdx !== null) moveItem(load.id, dragIdx, i);
                 setDragIdx(null);
                 setOverIdx(null);
                 setArmed(null);
+                onItemDragChange?.(false);
               }}
               onDragEnd={() => {
                 setDragIdx(null);
                 setOverIdx(null);
                 setArmed(null);
+                onItemDragChange?.(false);
               }}
               onMove={(to) => moveItem(load.id, i, to)}
               onChange={(patch) => updateItem(load.id, it.id, patch)}
@@ -260,7 +290,7 @@ function ItemRow({
   onRemove: () => void;
   onMove: (to: number) => void;
   onArm: (on: boolean) => void;
-  onDragStart: () => void;
+  onDragStart: (e: React.DragEvent) => void;
   onDragOver: () => void;
   onDrop: () => void;
   onDragEnd: () => void;

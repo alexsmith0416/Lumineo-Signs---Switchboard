@@ -8,7 +8,12 @@ import LoadEditorPanel from "./LoadEditorPanel";
 import LoadPrintSheet from "./LoadPrintSheet";
 import ShippingStageBoard from "./ShippingStageBoard";
 import { useShippingQueueStore } from "../store/job-queue-store";
-import { DND_SHIP_STAGE, findStagedItem, shipmentItemFromStage } from "../shipping/stage";
+import {
+  DND_SHIP_STAGE,
+  findStagedItem,
+  shipmentItemFromStage,
+  stageItemFromShipmentItem,
+} from "../shipping/stage";
 
 /**
  * Shipping Schedule — a weekly board whose cards are LOADS (truck runs), not
@@ -31,8 +36,12 @@ export default function ShippingBoard({ readOnly = false }: ShippingBoardProps =
   const loads = useLoadsStore((s) => s.loads);
   const addLoad = useLoadsStore((s) => s.addLoad);
   const addItem = useLoadsStore((s) => s.addItem);
+  const removeItem = useLoadsStore((s) => s.removeItem);
 
   const [editId, setEditId] = useState<string | null>(null);
+  // An item is being dragged out of the open load editor: drop the backdrop's
+  // pointer events so the staging board underneath can catch it.
+  const [itemDragging, setItemDragging] = useState(false);
   const [printId, setPrintId] = useState<string | null>(null);
 
   const days = useMemo(
@@ -80,6 +89,28 @@ export default function ShippingBoard({ readOnly = false }: ShippingBoardProps =
     const d = new Date(day);
     d.setHours(8, 0, 0, 0);
     dropStagedOnLoad(addLoad(d), stageId);
+  };
+
+  /**
+   * The reverse trip: an item dragged out of a load and dropped on a staging
+   * list. It becomes a staged card again and leaves the load.
+   *
+   * Staged first, removed second — so a project is never in neither place, even
+   * for an instant. Its location / Deliver-vs-Pickup / loading notes are let go
+   * with the load; they described that run.
+   */
+  const returnToStaging = (loadId: string, itemId: string, groupId: string, index: number) => {
+    const item = loads.find((l) => l.id === loadId)?.items.find((i) => i.id === itemId);
+    if (!item) return;
+    const queue = useShippingQueueStore.getState();
+    const group = queue.groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const card = stageItemFromShipmentItem(item, groupId, group.items.length);
+    queue.addItem(card);
+    // addItem appends; honour where it was actually dropped.
+    if (index < group.items.length) queue.moveItem(card.id, groupId, index);
+    removeItem(loadId, itemId);
+    setItemDragging(false);
   };
 
   const stageIdFrom = (e: React.DragEvent): string | null =>
@@ -130,7 +161,10 @@ export default function ShippingBoard({ readOnly = false }: ShippingBoardProps =
         ))}
       </div>
 
-      <ShippingStageBoard readOnly={readOnly} />
+      <ShippingStageBoard
+        readOnly={readOnly}
+        onReturnToStaging={readOnly ? undefined : returnToStaging}
+      />
 
       {editId && (
         <LoadEditorPanel
@@ -138,6 +172,8 @@ export default function ShippingBoard({ readOnly = false }: ShippingBoardProps =
           onClose={() => setEditId(null)}
           onPrint={() => setPrintId(editId)}
           readOnly={readOnly}
+          dragThrough={itemDragging}
+          onItemDragChange={setItemDragging}
         />
       )}
       {printLoad && <LoadPrintSheet load={printLoad} onClose={() => setPrintId(null)} />}

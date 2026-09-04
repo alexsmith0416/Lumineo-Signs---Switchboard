@@ -2184,6 +2184,18 @@ input, select, textarea {
   z-index: 100;
 }
 
+/* While an item is being dragged out of the load editor, the backdrop must
+   stop swallowing pointer events so the staging board underneath can receive
+   the drop. The panel keeps its own, so reordering inside the load still works.
+   The dim lightens too, as a cue that the page behind is live. */
+.slide-over--drag-through {
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.08);
+}
+.slide-over--drag-through .slide-over__panel {
+  pointer-events: auto;
+}
+
 .slide-over__panel {
   width: 480px;
   background: var(--bg-primary);
@@ -2676,7 +2688,7 @@ input, select, textarea {
   padding: 18px 8px;
 }
 .ship-stage__add-col {
-  flex: 0 0 190px;
+  flex: 0 0 285px;
   align-self: stretch;
   min-height: 120px;
   border: 1px dashed var(--grid-line);
@@ -2693,7 +2705,9 @@ input, select, textarea {
 }
 
 .stage-col {
-  flex: 0 0 240px;
+  /* 360px, not 240 — wide enough to read a customer + description without
+     truncating. Four lists still fit a 1600px board before it scrolls. */
+  flex: 0 0 360px;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--grid-line);
@@ -2702,7 +2716,7 @@ input, select, textarea {
   background: var(--surface-raised);
 }
 /* A collapsed list shrinks to its header so it stops eating width. */
-.stage-col--collapsed { flex-basis: 190px; }
+.stage-col--collapsed { flex-basis: 285px; }
 .stage-col__head {
   display: flex;
   align-items: center;

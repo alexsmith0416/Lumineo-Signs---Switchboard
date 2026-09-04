@@ -27,6 +27,35 @@ import type { ShipmentItem } from "./types";
 export const DND_SHIP_STAGE = "text/shipstageid";
 
 /**
+ * Drag payload key for an item being pulled back OFF a load (from the load
+ * editor) and returned to staging. Lowercase for the same reason as
+ * DND_SHIP_STAGE, and separate from it so a staging list can tell "this card is
+ * moving between lists" from "this project is coming back off a truck".
+ */
+export const DND_LOAD_ITEM = "text/loaditemid";
+
+/**
+ * A load item is only addressable as (load, item), and `dataTransfer` values
+ * are strings — so the two ids travel joined. Both are UUIDs, which never
+ * contain the separator.
+ */
+const REF_SEP = "|";
+
+export function encodeLoadItemRef(loadId: string, itemId: string): string {
+  return `${loadId}${REF_SEP}${itemId}`;
+}
+
+/** Parse a ref back, or null if it isn't one (empty payload, wrong key, junk). */
+export function decodeLoadItemRef(ref: string): { loadId: string; itemId: string } | null {
+  const at = ref.indexOf(REF_SEP);
+  if (at <= 0) return null;
+  const loadId = ref.slice(0, at);
+  const itemId = ref.slice(at + REF_SEP.length);
+  if (!loadId || !itemId) return null;
+  return { loadId, itemId };
+}
+
+/**
  * A staged card carries only what a shipment needs to identify the project.
  * The scheduling-shaped fields of QueueItem (hours, department, crew, ZIP)
  * are not meaningful for a truck load and are left at their empty values.
@@ -90,6 +119,28 @@ export function shipmentItemFromStage(item: QueueItem): Partial<ShipmentItem> {
     jobNo: item.jobNo.trim() || null,
     customerName: item.customerName,
     description: item.planningLineDescription,
+  };
+}
+
+/**
+ * The staged card a load item becomes when it's dragged back off a load — the
+ * inverse of `shipmentItemFromStage`.
+ *
+ * The item's location / kind / loaded tick / loading notes are dropped on
+ * purpose: they described the run it just left. If it goes out again on a
+ * different load it gets a fresh set, which is the whole reason staging doesn't
+ * carry them.
+ */
+export function stageItemFromShipmentItem(
+  item: ShipmentItem,
+  groupId: string,
+  sortOrder: number,
+): QueueItem {
+  return {
+    ...baseStageItem(groupId, sortOrder),
+    jobNo: item.jobNo ?? "",
+    customerName: item.customerName,
+    planningLineDescription: item.description,
   };
 }
 

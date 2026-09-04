@@ -765,6 +765,17 @@
   <em>this particular run</em>, which is why the load editor opens the moment you drop. Fill them in there and the
   printed sheet is ready for the driver.</p>
 
+  <h4>Taking a project back off a load</h4>
+  <p>Changed your mind, or the load got too full? Send a project back to staging without losing it:</p>
+  <ul>
+    <li>Open the load, then <strong>drag the item by its ⠿ grip</strong> out of the panel and drop it on whichever
+    staging list you want it in. The page behind the panel un-dims while you drag, so you can see where it's going.</li>
+    <li>The item <strong>leaves the load</strong> and comes back as a staged card, ready to go on a different run.</li>
+  </ul>
+  <p class="tip">Dropping the item <em>inside</em> the panel still just reorders it within the load — same grip, and
+  where you let go decides which one you meant. Note that its stop location, Deliver/Pickup and loading notes are
+  <strong>not</strong> kept: they described the run it just left, so you set them fresh next time it goes out.</p>
+
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
@@ -939,6 +950,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 4, 2026</td><td><strong>Take a project back off a load, and wider staging lists</strong> — open a load and <strong>drag an item out by its ⠿ grip</strong> onto a staging list to pull it off that run and put it back in staging; dropping it inside the panel still just reorders it within the load. The staging lists are also <strong>half again as wide</strong>, so you can read more of each project's customer and description without it truncating. See §5.16.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>Staging board on the Shipping screen</strong> — a kanban of your own lists now sits under the week, holding projects that are <strong>built and waiting to ship</strong>. Make as many lists as you like, name and color them however you plan (by readiness, by destination…), reorder them, and drag project cards between them or up and down inside one. To put a project on a truck, <strong>drag its card onto a day</strong> (starts a new load) or <strong>onto an existing load</strong> — the load editor opens with it already added, and the project leaves staging. It's one master board: paging to another week doesn't change it. See §5.16.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Fix: changes stick the first time</strong> — the long-standing annoyance where an action (stretching a card to a second day, shrinking it back, adding install help, changing an end date…) "didn't take" until you did it twice. A background save that hiccuped made the board reload, and the reload wiped out what you'd just done. Saves now retry properly, and a save that fails <strong>no longer reverts your change</strong> — it stays on screen and a red <em>"hasn't saved"</em> box with a <strong>Try again</strong> button appears in the corner. If you don't see that box, it saved. See §11.</td></tr>
       <tr><td>Aug 16, 2026</td><td><strong>Choose your own tick-box columns on a printed load</strong> — the print preview has a <strong>Tick boxes ▾</strong> menu: tick which columns print, and <strong>add your own</strong> (Strapped, Tarped, Paperwork, Photo…) with a name of your choosing. Added names are saved for next time and can be removed with <strong>×</strong>; <em>Loaded</em> and <em>Order</em> are always available. Your picks apply to every load you print from that device, up to six columns. See §5.15.</td></tr>
@@ -1015,7 +1027,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.4 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.5 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

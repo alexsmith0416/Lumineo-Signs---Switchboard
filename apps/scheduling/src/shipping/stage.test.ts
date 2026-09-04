@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  DND_LOAD_ITEM,
   DND_SHIP_STAGE,
+  decodeLoadItemRef,
+  encodeLoadItemRef,
   findStagedItem,
+  stageItemFromShipmentItem,
   reorderGroupIds,
   shipmentItemFromStage,
   stageItemFromJob,
@@ -9,6 +13,7 @@ import {
   stagedCount,
 } from "./stage";
 import type { QueueGroup, QueueItem } from "../services/job-queue-data";
+import type { ShipmentItem } from "./types";
 
 const JOB = { jobNo: "J36388", customerName: "Kwik Shop - Wichita", description: "(2) Pylon faces" };
 
@@ -144,5 +149,105 @@ describe("findStagedItem", () => {
     const a = stageItemFromJob(JOB, "g1", 0);
     expect(findStagedItem([group("g1", [a])], "nope")).toBeUndefined();
     expect(findStagedItem([], a.id)).toBeUndefined();
+  });
+});
+
+describe("DND_LOAD_ITEM", () => {
+  it("is lowercase and distinct from the staging key", () => {
+    expect(DND_LOAD_ITEM).toBe(DND_LOAD_ITEM.toLowerCase());
+    expect(DND_LOAD_ITEM).not.toBe(DND_SHIP_STAGE);
+  });
+});
+
+describe("load item refs", () => {
+  it("round-trips a load + item id", () => {
+    const ref = encodeLoadItemRef("load-1", "item-9");
+    expect(decodeLoadItemRef(ref)).toEqual({ loadId: "load-1", itemId: "item-9" });
+  });
+
+  it("round-trips real uuids", () => {
+    const a = crypto.randomUUID();
+    const b = crypto.randomUUID();
+    expect(decodeLoadItemRef(encodeLoadItemRef(a, b))).toEqual({ loadId: a, itemId: b });
+  });
+
+  // A drop target reads whatever string is on the drag; anything that isn't a
+  // ref must be rejected rather than half-parsed into a bogus lookup.
+  it("rejects payloads that are not refs", () => {
+    expect(decodeLoadItemRef("")).toBeNull();
+    expect(decodeLoadItemRef("no-separator")).toBeNull();
+    expect(decodeLoadItemRef("|missing-load")).toBeNull();
+    expect(decodeLoadItemRef("missing-item|")).toBeNull();
+  });
+});
+
+describe("stageItemFromShipmentItem", () => {
+  const loadItem: ShipmentItem = {
+    id: "i1",
+    jobNo: "J36388",
+    customerName: "Kwik Shop - Wichita",
+    description: "(2) Pylon faces",
+    notes: "Back door, ask for Dale",
+    location: "Wichita",
+    kind: "pickup",
+    loaded: true,
+  };
+
+  it("carries job no, customer, and description into a list", () => {
+    const staged = stageItemFromShipmentItem(loadItem, "g1", 2);
+    expect(staged.jobNo).toBe("J36388");
+    expect(staged.customerName).toBe("Kwik Shop - Wichita");
+    expect(staged.planningLineDescription).toBe("(2) Pylon faces");
+    expect(staged.groupId).toBe("g1");
+    expect(staged.sortOrder).toBe(2);
+  });
+
+  // location / kind / loaded / notes described the run it just left. A staged
+  // card has no field for any of them, so the check is that nothing smuggled
+  // them into a scheduling field instead.
+  it("drops the per-run details", () => {
+    const staged = stageItemFromShipmentItem(loadItem, "g1", 0);
+    expect(staged).not.toHaveProperty("location");
+    expect(staged).not.toHaveProperty("kind");
+    expect(staged).not.toHaveProperty("loaded");
+    expect(staged).not.toHaveProperty("notes");
+    expect(staged.jobDescription).toBe("");
+    expect(staged.departmentId).toBe("");
+    expect(staged.estimatedHours).toBe(0);
+    expect(staged.isCustom).toBe(false);
+    expect(staged.installZip).toBeNull();
+  });
+
+  // A manual load item has jobNo null; QueueItem uses "" for absent.
+  it("turns a null job number into an empty string", () => {
+    const manual = { ...loadItem, jobNo: null };
+    expect(stageItemFromShipmentItem(manual, "g1", 0).jobNo).toBe("");
+  });
+
+  it("round-trips a project out to a load and back", () => {
+    const staged = stageItemFromJob(JOB, "g1", 0);
+    const onLoad = shipmentItemFromStage(staged);
+    const back = stageItemFromShipmentItem(
+      { ...onLoad, id: "i1", notes: "", location: "", kind: "delivery", loaded: false } as ShipmentItem,
+      "g2",
+      0,
+    );
+    expect(back.jobNo).toBe(staged.jobNo);
+    expect(back.customerName).toBe(staged.customerName);
+    expect(back.planningLineDescription).toBe(staged.planningLineDescription);
+    expect(back.groupId).toBe("g2");
+  });
+
+  it("round-trips a manual project without inventing a job number", () => {
+    const staged = stageItemFromManual("Transformers", "(2) Transformers", "g1", 0);
+    const onLoad = shipmentItemFromStage(staged);
+    expect(onLoad.jobNo).toBeNull();
+    const back = stageItemFromShipmentItem(
+      { ...onLoad, id: "i1", notes: "", location: "", kind: "delivery", loaded: false } as ShipmentItem,
+      "g1",
+      0,
+    );
+    expect(back.jobNo).toBe("");
+    expect(back.customerName).toBe("Transformers");
   });
 });
