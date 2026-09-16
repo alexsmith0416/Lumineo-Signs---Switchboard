@@ -1,0 +1,183 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_bcpush"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "comment": "BCPush_JobCompletion - drains crfdf_bcpushqueue rows of kind 'job' and PATCHes the BC job. This is the ONE write-back path that works today: sign365 opened `jobs` for write on Sep 11 2026, and `job` is keyed on `no`, so jobs('<jobNo>') addresses a single row directly - no Resolve step needed (unlike BCPush_PlanningSteps, which is still blocked). Writes `complete` + `icgSgpCompletionDate` only; deliberately NOT `status`, which has posting/billing consequences in BC.",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Bc_ApiBase": {
+          "type": "String",
+          "defaultValue": "https://api.businesscentral.dynamics.com/v2.0/luminousneon.com/UAT/api/infotechConsultingGroup/sign365/v1.0"
+        },
+        "Bc_CompanyId": {
+          "type": "String",
+          "defaultValue": "4738bfb5-a06d-ec11-bf27-000d3a132a9e"
+        },
+        "Bc_Tenant": {
+          "type": "String",
+          "defaultValue": "fe0182fa-d183-46ab-8493-9e8ea9c3d0b8"
+        },
+        "Bc_Audience": {
+          "type": "String",
+          "defaultValue": "https://api.businesscentral.dynamics.com"
+        },
+        "Bc_ClientId": {
+          "type": "String",
+          "defaultValue": "34a4de23-4db0-48d9-a941-285c9c2f9b5d"
+        },
+        "Bc_ClientSecret": {
+          "type": "String",
+          "defaultValue": "<< store in Key Vault / secure env var - do NOT commit >>"
+        }
+      },
+      "triggers": {
+        "When_a_push_row_is_added": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_bcpushqueue",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "crfdf_status"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Only_pending_job_rows": {
+          "type": "If",
+          "runAfter": {},
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/crfdf_status']",
+                  "pending"
+                ]
+              },
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/crfdf_kind']",
+                  "job"
+                ]
+              },
+              {
+                "not": {
+                  "equals": [
+                    "@coalesce(triggerOutputs()?['body/crfdf_jobno'], '')",
+                    ""
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Try": {
+              "type": "Scope",
+              "runAfter": {},
+              "actions": {
+                "Patch_Job": {
+                  "type": "Http",
+                  "runAfter": {},
+                  "inputs": {
+                    "method": "PATCH",
+                    "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/jobs('@{triggerOutputs()?['body/crfdf_jobno']}')",
+                    "headers": {
+                      "Content-Type": "application/json",
+                      "If-Match": "*"
+                    },
+                    "body": "@json(concat('{\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), ',\"icgSgpCompletionDate\":\"', if(and(equals(triggerOutputs()?['body/crfdf_complete'], true), not(empty(coalesce(triggerOutputs()?['body/crfdf_enddatetime'], '')))), formatDateTime(triggerOutputs()?['body/crfdf_enddatetime'], 'yyyy-MM-dd'), '0001-01-01'), '\"}'))",
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "authority": "https://login.microsoftonline.com",
+                      "tenant": "@parameters('Bc_Tenant')",
+                      "audience": "@parameters('Bc_Audience')",
+                      "clientId": "@parameters('Bc_ClientId')",
+                      "secret": "@parameters('Bc_ClientSecret')"
+                    }
+                  }
+                },
+                "Mark_Synced": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {
+                    "Patch_Job": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcpushqueues",
+                      "recordId": "@triggerOutputs()?['body/crfdf_bcpushqueueid']",
+                      "item/crfdf_status": "synced",
+                      "item/crfdf_statusmessage": "@concat('job ', triggerOutputs()?['body/crfdf_jobno'], ' complete=', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'))"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              }
+            },
+            "Catch": {
+              "type": "Scope",
+              "runAfter": {
+                "Try": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "actions": {
+                "Mark_Failed": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_bcpushqueues",
+                      "recordId": "@triggerOutputs()?['body/crfdf_bcpushqueueid']",
+                      "item/crfdf_status": "failed",
+                      "item/crfdf_statusmessage": "@concat('BC job push failed - HTTP ', string(coalesce(outputs('Patch_Job')?['statusCode'], 0)), '. ', substring(coalesce(string(body('Patch_Job')), ''), 0, min(length(coalesce(string(body('Patch_Job')), '')), 300)))"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        }
+      }
+    }
+  }
+}

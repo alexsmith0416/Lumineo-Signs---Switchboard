@@ -22,8 +22,21 @@ interface JobDeptCompletionState {
   load: (force?: boolean) => Promise<void>;
   completedKeys: (jobNo: string) => Set<string>;
   stampFor: (jobNo: string, deptKey: string) => CompletionStamp | undefined;
-  /** Mark (or un-mark) a department complete for a job, stamping who + when. */
-  setComplete: (jobNo: string, deptKey: string, by: string, done: boolean) => Promise<void>;
+  /**
+   * Mark (or un-mark) a department complete for a job, stamping who + when.
+   *
+   * `allStepKeys` is the stepper's full included set. Pass it and the store
+   * will also push JOB-level completion to BC when this toggle makes the last
+   * department complete (or re-opens a job that was complete). Omit it and
+   * only the department row is written — no job push.
+   */
+  setComplete: (
+    jobNo: string,
+    deptKey: string,
+    by: string,
+    done: boolean,
+    allStepKeys?: readonly string[],
+  ) => Promise<void>;
 }
 
 export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, get) => ({
@@ -56,8 +69,12 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
   completedKeys: (jobNo) => new Set(Object.keys(get().byJob[jobNo] ?? {})),
   stampFor: (jobNo, deptKey) => get().byJob[jobNo]?.[deptKey],
 
-  setComplete: async (jobNo, deptKey, by, done) => {
+  setComplete: async (jobNo, deptKey, by, done, allStepKeys) => {
     if (!jobNo || !deptKey) return;
+    // Capture the pre-edit set so we can tell whether THIS toggle flipped the
+    // whole job over the line — a job push should fire on the transition only,
+    // not on every department click while the job is already complete.
+    const before = new Set(Object.keys(get().byJob[jobNo] ?? {}));
     set((s) => {
       const forJob = { ...(s.byJob[jobNo] ?? {}) };
       if (done) forJob[deptKey] = { by, date: new Date() };
@@ -71,5 +88,21 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
         ? m.addJobDeptCompletion(jobNo, deptKey, by)
         : m.removeJobDeptCompletion(jobNo, deptKey);
     });
+
+    // JOB-level BC write-back. Fire-and-forget, and deliberately AFTER the
+    // department write: if that write failed it's already reported, and the
+    // job push would be pushing a state the board doesn't actually hold.
+    if (!allStepKeys?.length) return;
+    const after = new Set(Object.keys(get().byJob[jobNo] ?? {}));
+    const [{ allStepsComplete, buildJobPush }, m] = await Promise.all([
+      import("../services/bc-planning-sync"),
+      import("../services/dataverse-live"),
+    ]);
+    const wasComplete = allStepsComplete(allStepKeys, before);
+    const isComplete = allStepsComplete(allStepKeys, after);
+    if (wasComplete === isComplete) return;
+    void m.enqueueBcPush(
+      buildJobPush({ jobNo, complete: isComplete, completedBy: by, completedDate: new Date() }),
+    );
   },
 }));

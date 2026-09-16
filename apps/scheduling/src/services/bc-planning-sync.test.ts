@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduleLine } from "../engine/types";
 import {
+  allStepsComplete,
   buildCompletionPush,
+  buildJobPush,
   buildSchedulePush,
   pushRowName,
   shouldSyncLine,
@@ -90,5 +92,66 @@ describe("buildCompletionPush", () => {
 describe("pushRowName", () => {
   it("labels the outbox row job · step", () => {
     expect(pushRowName(buildSchedulePush(line())!)).toBe("J32865 · Vinyl Install Only");
+  });
+});
+
+describe("allStepsComplete", () => {
+  it("is true only when every included step is done", () => {
+    expect(allStepsComplete(["P", "V", "I"], new Set(["P", "V", "I"]))).toBe(true);
+    expect(allStepsComplete(["P", "V", "I"], new Set(["P", "V"]))).toBe(false);
+  });
+
+  it("ignores completions for steps the stepper doesn't include", () => {
+    // An editor removed "I" from this job, so it can't hold the job open —
+    // and a stale completion row for it can't close the job on its own either.
+    expect(allStepsComplete(["P", "V"], new Set(["P", "V", "I"]))).toBe(true);
+  });
+
+  it("treats an empty step list as NOT complete", () => {
+    // A job with no stepper hasn't finished anything. Returning true here would
+    // push complete=true to BC for every job that has no production steps.
+    expect(allStepsComplete([], new Set())).toBe(false);
+    expect(allStepsComplete([], new Set(["P"]))).toBe(false);
+  });
+});
+
+describe("buildJobPush", () => {
+  it("builds a job-completion push carrying the date in endDateTime", () => {
+    const push = buildJobPush({
+      jobNo: "J32865",
+      complete: true,
+      completedBy: "Amy Wing",
+      completedDate: new Date("2026-09-14T17:00:00Z"),
+    });
+    expect(push).toMatchObject({
+      kind: "job",
+      jobNo: "J32865",
+      complete: true,
+      planningStep: "",
+      deptKey: "",
+      assignedTo: "",
+      assignedToName: "Amy Wing",
+    });
+    expect(push?.endDateTime).toBe("2026-09-14T17:00:00.000Z");
+    expect(push?.startDateTime).toBeNull();
+  });
+
+  it("carries no completion date when re-opening", () => {
+    const push = buildJobPush({ jobNo: "J32865", complete: false });
+    expect(push?.complete).toBe(false);
+    expect(push?.endDateTime).toBeNull();
+  });
+
+  it("defaults the completion date to now", () => {
+    expect(buildJobPush({ jobNo: "J32865", complete: true })?.endDateTime).not.toBeNull();
+  });
+
+  it("returns null without a job no", () => {
+    expect(buildJobPush({ jobNo: "", complete: true })).toBeNull();
+  });
+
+  it("never carries BC's status field — that's a BC-owner decision", () => {
+    const push = buildJobPush({ jobNo: "J32865", complete: true });
+    expect(Object.keys(push!)).not.toContain("status");
   });
 });

@@ -1040,9 +1040,18 @@ const BC = {
 // ---------------------------------------------------------------------------
 // The Code App can only talk to Dataverse (its lone connector), so we don't
 // call the BC API from the browser. Instead a board commit drops a "pending"
-// row here; a Dataverse-triggered Power Automate flow (BCPush_PlanningSteps)
-// drains it, PATCHes the sign365 projectPlanningEntries API, and writes the
-// row's status back. See flows/BCPush_PlanningSteps.md.
+// row here; a Dataverse-triggered Power Automate flow drains it, PATCHes the
+// sign365 API, and writes the row's status back.
+//
+// `crfdf_kind` routes the row to a flow, and is a plain string column, so
+// adding a kind needs NO Dataverse script:
+//   "schedule" / "completion" → planning STEPS. Still blocked — that entity is
+//      read-only in sign365 and has no addressable row. Nothing drains these;
+//      they queue harmlessly. See flows/BCPush-infotech-request.md.
+//   "job" → PATCH jobs('<jobNo>'), which IS writable as of Sep 11, 2026.
+//      Drained by BCPush_JobCompletion. Reuses existing columns:
+//      crfdf_complete = the flag, crfdf_enddatetime = the completion date.
+// See flows/BCPush_PlanningSteps.md + flows/BCPush_JobCompletion.md.
 const BCPUSH_SET = "crfdf_bcpushqueues";
 
 function pushToRecord(p: BcPlanningPush): Row {
@@ -1065,9 +1074,10 @@ function pushToRecord(p: BcPlanningPush): Row {
 }
 
 /**
- * Enqueue a BC planning-step push. FIRE-AND-FORGET by contract: enqueuing must
- * never block or fail a board commit, so all errors are swallowed + logged. A
- * null push (non-BC / custom line) is a no-op.
+ * Enqueue a BC push (planning step or job — see `crfdf_kind` above).
+ * FIRE-AND-FORGET by contract: enqueuing must never block or fail a board
+ * commit, so all errors are swallowed + logged. A null push (non-BC / custom
+ * line, or a job push with no job no) is a no-op.
  */
 export async function enqueueBcPush(push: BcPlanningPush | null): Promise<void> {
   if (!push) return;

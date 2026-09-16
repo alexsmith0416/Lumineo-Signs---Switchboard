@@ -22,7 +22,16 @@
  */
 import type { ScheduleLine } from "../engine/types";
 
-export type BcPushKind = "schedule" | "completion";
+/**
+ * ── Which of these can actually reach BC today (Sep 14, 2026) ────────────────
+ * Only `"job"`. The sign365 API opened `jobs` + `projectPlanningLines` for write
+ * on Sep 11, 2026, but `projectPlanningSteps`/`projectPlanningEntries` — where
+ * start/end/assignedTo/started/complete live — are STILL read-only and still
+ * have no addressable single row. So `"schedule"` and `"completion"` rows keep
+ * queuing harmlessly (nothing drains them) while `"job"` rows are drainable now.
+ * See flows/BCPush-infotech-request.md.
+ */
+export type BcPushKind = "schedule" | "completion" | "job";
 
 /** A transport-agnostic instruction to update one BC planning step. */
 export interface BcPlanningPush {
@@ -107,6 +116,59 @@ export function buildCompletionPush(input: {
     assignedToName: input.completedBy ?? "",
     complete: input.complete,
     // Completing (or re-opening) a dept implies it was at least started.
+    started: true,
+    sourceLineId: "",
+  };
+}
+
+/**
+ * Whether every step the stepper shows for a job is complete.
+ *
+ * `allStepKeys` is the stepper's *included* set (BC-derived departments +
+ * editor overrides + Install), so a dept an editor removed can't hold the job
+ * open. An empty step list is NOT complete — a job with no stepper at all
+ * hasn't finished anything, and treating it as done would push `complete` to BC
+ * for every non-production job.
+ */
+export function allStepsComplete(
+  allStepKeys: readonly string[],
+  completedKeys: ReadonlySet<string>,
+): boolean {
+  if (allStepKeys.length === 0) return false;
+  return allStepKeys.every((k) => completedKeys.has(k));
+}
+
+/**
+ * Build a JOB-level completion push — the one BC write-back that works today.
+ *
+ * Targets `jobs('<jobNo>')` on the sign365 API, which is writable and keyed on
+ * `no`. Only `complete` and the completion date are consumed by the flow;
+ * `started`/`assignedTo`/`planningStep` are step-level concepts and are left
+ * blank. The completion date rides in `endDateTime` so the outbox needs no new
+ * column.
+ *
+ * Deliberately does NOT carry BC's `status` field: flipping a job to
+ * `Completed` in BC has posting/billing consequences that belong to whoever
+ * runs BC, not to a board click. Ask before adding it.
+ */
+export function buildJobPush(input: {
+  jobNo: string;
+  complete: boolean;
+  completedBy?: string;
+  completedDate?: Date | null;
+}): BcPlanningPush | null {
+  if (!input.jobNo) return null;
+  return {
+    kind: "job",
+    jobNo: input.jobNo,
+    planningStep: "",
+    deptKey: "",
+    startDateTime: null,
+    // Completion date for BC's icgSgpCompletionDate; null when re-opening.
+    endDateTime: input.complete ? iso(input.completedDate ?? new Date()) : null,
+    assignedTo: "",
+    assignedToName: input.completedBy ?? "",
+    complete: input.complete,
     started: true,
     sourceLineId: "",
   };

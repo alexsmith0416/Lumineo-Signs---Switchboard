@@ -215,37 +215,65 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **In progress (Jul 22, 2026) — BC write-back (scheduler → Business Central):**
-  building the path to push a job task's start/end + assignee + started/complete
-  back to BC's Project Planning. **Client scaffold done & committed** (not
-  deployed): `services/bc-planning-sync.ts` (pure builders + tests),
-  `enqueueBcPush()` in `dataverse-live.ts` writes an **outbox** row
-  (`crfdf_bcpushqueue`, table created live) on every commit; assignee resolves
-  from `crfdf_employee1.crfdf_no` (add/back-fill via
-  `scripts/add-employee-resourceno-column.ps1`). Flow scaffolded
-  (`flows/BCPush_PlanningSteps-clientdata.json` + solution packager
-  `_build_pushflow_solution.py` → `BCPushReview_1_0_0_1.zip`).
-  🔴 **BLOCKED — re-verified against UAT metadata Jul 31, 2026. Two walls, not one:**
-  1. **Read-only.** Every business entityset in `sign365 v1.0` is annotated
-     `Insertable/Updatable/Deletable = false`. Only `subscriptions` +
-     `externaleventsubscriptions` are writable, and the container declares **no
-     `<Action>`/`<Function>`**, so there's no action route either.
-  2. **No addressable row (new finding).** `projectPlanningStep` is keyed on a
-     3-part composite (`auxiliaryIndex1` Guid, `auxiliaryIndex2` String,
-     `auxiliaryIndex3` Guid), no `systemId`, no `@odata.etag`. A correctly-formed
-     keyed GET returns `"The supplied column ID '0' cannot be found in the
-     query"` — the page is backed by a query/temp table, so **no single row
-     exists for PATCH to target even if the read-only flag were flipped.**
-     Flipping `Editable=true` on the current page would not be enough; they need
-     an API page over the real table.
-  **Next:** send the ask in `flows/BCPush-infotech-request.md` (rewritten Jul 31
-  with the full evidence + both wall descriptions). Don't turn the flow on until
-  then; outbox is harmless to leave. Also: app not yet redeployed with the
-  enqueue code.
-  **Postman:** the `Sign365 API (UAT)` collection now has a **Write-back (PATCH)**
-  folder (`…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json`) —
-  preflight/metadata check, composite-key finder, and the 5 PATCHes ready to run
-  the day it's unblocked.
+- **In progress (Sep 14, 2026) — BC write-back (scheduler → Business Central).**
+  Goal: push a job task's start/end + assignee + started/complete back to BC's
+  Project Planning. **Half of it now works.**
+  - ✅ **SHIPPED THIS SESSION (not yet deployed): job-level completion.** Infotech's
+    **Sep 11, 2026** collection (`…/Postman/UAT/NEW 9.11.26/`) made `jobs` and
+    `projectPlanningLines` writable. `job` is keyed on `no`, so `jobs('J32865')`
+    addresses one row — no resolve, no composite key. Completing the LAST
+    department on the production stepper now enqueues a `kind:"job"` outbox row
+    and `flows/BCPush_JobCompletion-clientdata.json` PATCHes
+    `{complete, icgSgpCompletionDate}`. Reopening reverses it.
+    **`status` deliberately NOT written** (posting/billing consequences).
+    ✅ **No Dataverse script** — `crfdf_kind` is a plain string column, so the new
+    kind reuses the existing outbox table (same trick as shipping's `kind:"shipping"`).
+    Pure logic + 8 tests in `bc-planning-sync.ts` (`allStepsComplete`, `buildJobPush`);
+    transition-only firing lives in `job-dept-completion-store.ts`. 254 tests green.
+    Guide → **v3.7**.
+  - 🔴 **STILL BLOCKED: the per-step schedule push** (start/end/assignee). Re-verified
+    against live UAT `$metadata` Sep 14: `projectPlanningSteps` +
+    `projectPlanningEntries` are **still** `Updatable=false`, still no addressable
+    row (keyed GET → `"The supplied column ID '0' cannot be found in the query"`,
+    no ETag), still no `<Action>`/`<Function>`. `projectPlanningLine` — the one that
+    DID open — has no `assignedTo`, no start/end, no `started`/`complete`; it's
+    quantity/cost data. So `"schedule"`/`"completion"` outbox rows keep queuing
+    harmlessly with nothing draining them.
+  - ⚠️ **Their two PATCH samples are both broken** — worth telling them:
+    `jobs(<guid>)` fails (`"Error in query syntax"` — key is the job-no string);
+    its body sets `orderedBy`, which appears **0 times** in the metadata; and
+    `projectPlanningLines('26200')` uses a **non-unique key** — `no` is the G/L
+    account no. and **14,030 rows share it**, with the keyed GET silently returning
+    the first. That set is now `Deletable=true` too. Documented in the request doc.
+  - ✅ **Write permission CONFIRMED (Sep 14) — `scripts/bc-uat-write-proof.ps1` run
+    against `J25036`.** PATCH `jobs('J25036')` accepted + persisted on re-read, then
+    restored. The existing read credentials already carry write, so **nothing is
+    needed from Infotech for the job flow.** The same run pinned BC's own wording for
+    the other three findings: step PATCH → `BadRequest_MethodNotImplemented`
+    *"Entity does not support modifying data."*; `jobs(<guid>)` → *"Error in query
+    syntax"*; `orderedBy` → *"The property 'orderedBy' does not exist on type
+    'Microsoft.NAV.job'."*
+  - ✅ **Packed into the solution (Sep 14).** `_build_pushflow_solution.py` now emits
+    BOTH flows → **`BCPushReview_1_0_0_2.zip`** (Downloads, outside the repo).
+    New flow GUID `30905c4a-f9b4-4424-91e6-b0046a3216b4`, registered as a
+    `<Workflow>` + `<RootComponent type="29">`, sharing the existing
+    `new_sharedcommondataserviceforapps_bcpush` connection reference. Packed with
+    **`pac solution pack`** — staging is now the pac unpacked-SOURCE layout
+    (`Other/Solution.xml`, `Other/Customizations.xml`, `Workflows/`), not the flat
+    in-zip layout the old script wrote, so it round-trips with `pac solution unpack`.
+    🔴 **No unpacked solution is kept in the repo — the script IS the source of
+    truth and rmtrees its staging dir each run. Edit the script, not the staged copy.**
+    The secret is injected from `$env:BC_CLIENT_SECRET` into the staged copy only;
+    without it the build still succeeds with a placeholder.
+  - **Next:** (a) send `flows/BCPush-infotech-request.md` (rewritten Sep 14 — narrowed
+    ask + the three sample defects, with BC's exact error text); (b) import the zip,
+    map the connection ref, turn on **only** BCPush_JobCompletion, validate on UAT;
+    (c) redeploy the app (the enqueue code has never been pushed) and run one real
+    job end to end — the enqueue path is live-only, so dev can't exercise it;
+    (d) before production, move the secret to a Key Vault-backed environment
+    variable (needs a vault + SP grant + an extra flow step — see BCPush_JobCompletion.md).
+  **Postman:** `…/Postman/UAT/Sign365 API - with PATCH.postman_collection.json` still
+  holds the older hand-built write-back folder; Infotech's own is in `NEW 9.11.26/`.
 - **Last shipped (Sep 4, 2026 · latest) — deployed + committed: Shipping "Staging"
   kanban.** A master board of user-named, color-coded lists under
   the week's day columns, holding projects that are built and waiting for a truck.

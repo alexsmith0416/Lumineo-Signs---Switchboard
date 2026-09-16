@@ -498,6 +498,12 @@
     its stamp; editors get a <strong>Reopen</strong> button there.</li>
     <li>When a step completes, that card <strong>recedes</strong> on the board, and the department's tasks in the
     Job tasks list (5.6) grey out as done.</li>
+    <li><strong>Finishing the last department marks the job complete in Business Central.</strong> When every
+    department on a job's stepper is done, the scheduler writes that back to BC — the job is flagged
+    <strong>complete</strong> and stamped with the completion date. You don't do anything extra; it happens on the
+    click that closes the last step. <strong>Reopening</strong> a department un-flags it in BC the same way. Note the
+    job's BC <em>status</em> is left alone — only the complete flag and date are written, so nothing gets posted or
+    billed on your behalf.</li>
     <li><strong>At a glance</strong> — <strong>hover any job card</strong> (Production or Installation, and the job pills
     inside a group card) to see the stepper right in the preview, so you can read a job's production progress without
     opening it.</li>
@@ -985,6 +991,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 14, 2026</td><td><strong>Finishing a job's last department now marks it complete in Business Central</strong> &mdash; the production stepper writes back to BC. When the final department on a job is completed, the BC job is flagged <strong>complete</strong> and stamped with the completion date, automatically; reopening a department reverses it. This is the first thing the scheduler writes <em>into</em> BC rather than just reading out of it. The job's BC <em>status</em> is deliberately left untouched, so nothing is posted or billed on your behalf. See &sect;5.4.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>A lent employee's install work now shows on the Production board</strong> &mdash; when someone is lent to Installation, their install jobs are drawn on their own Production row, badged <em>Install</em>, <em>Install AM</em> or <em>Install PM</em>, so they can plan their whole week from one board. Those cards are read-only there (the job belongs to Installation), and a full lent day still blocks Production scheduling. <strong>Fix:</strong> a loan is now genuinely one week &mdash; a lent person used to stay on the Installation roster for every future week. <strong>Also:</strong> Production's <em>Custom Card</em> gained the <strong>Shipment load</strong> picker, so a truck run can be put on a production employee &mdash; it lands on the Installation board, adds them there, and shows on Production too. See &sect;5.10.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>Take a project back off a load, and wider staging lists</strong> — open a load and <strong>drag an item out by its ⠿ grip</strong> onto a staging list to pull it off that run and put it back in staging; dropping it inside the panel still just reorders it within the load. The staging lists are also <strong>half again as wide</strong>, so you can read more of each project's customer and description without it truncating. See §5.16.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>Staging board on the Shipping screen</strong> — a kanban of your own lists now sits under the week, holding projects that are <strong>built and waiting to ship</strong>. Make as many lists as you like, name and color them however you plan (by readiness, by destination…), reorder them, and drag project cards between them or up and down inside one. To put a project on a truck, <strong>drag its card onto a day</strong> (starts a new load) or <strong>onto an existing load</strong> — the load editor opens with it already added, and the project leaves staging. It's one master board: paging to another week doesn't change it. See §5.16.</td></tr>
@@ -1063,7 +1070,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.6 · Sep 4, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.7 · Sep 14, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

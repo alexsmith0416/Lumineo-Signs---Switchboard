@@ -1,14 +1,27 @@
 # BCPush_PlanningSteps — write scheduler changes back to Business Central
 
-> 🔴 **BLOCKED (2026-07-22):** the `sign365 v1.0` API is **read-only** — every
-> business `EntitySet` (`projectPlanningSteps`, `projectPlanningEntries`, …) has
-> `Insertable=false / Updatable=false / Deletable=false` in `$metadata`, so the
-> PATCH below is rejected (405). **Do not turn this flow on** until
-> infotechConsultingGroup exposes a writable endpoint (editable API page keyed on
-> `systemId`, or a bound `updateSchedule` action). Ask drafted in
-> `BCPush-infotech-request.md`. The app-side outbox is harmless to keep running
-> (it only records intended pushes). `projectPlanningEntry` also uses a 7-part
-> composite key, so its URI below is a placeholder pending the writable surface.
+> 🔴 **STILL BLOCKED — re-verified 2026-09-14** against live UAT `$metadata`
+> after Infotech's Sep 11 collection update.
+>
+> The API is **no longer read-only across the board**: `jobs` and
+> `projectPlanningLines` are now `Insertable/Updatable/Deletable = true`. But
+> **the two entities this flow needs are unchanged** —
+> `projectPlanningSteps` and `projectPlanningEntries` are still
+> `Insertable=false / Updatable=false / Deletable=false`, and
+> `projectPlanningLine` carries none of the fields we write (no `assignedTo`,
+> no start/end, no `started`/`complete` — it's quantity/cost data).
+>
+> A keyed GET on a step also still fails with *"The supplied column ID '0'
+> cannot be found in the query"*, and step rows have no ETag — so there is
+> still no addressable single row for PATCH to target, and still no
+> `<Action>`/`<Function>` in the container.
+>
+> **Do not turn this flow on.** Evidence + the narrowed ask are in
+> `BCPush-infotech-request.md`; re-verify with
+> `scripts/bc-uat-write-proof.ps1`. The app-side outbox is harmless to keep
+> running (it only records intended pushes). `projectPlanningEntry` also uses a
+> 7-part composite key, so its URI below is a placeholder pending the writable
+> surface.
 
 This is the **write-back half** of the BC integration. The existing `BCSync_*`
 flows are read-only (BC → Dataverse). This flow is the only path that writes

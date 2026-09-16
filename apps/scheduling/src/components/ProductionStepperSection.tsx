@@ -70,6 +70,10 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
     [canEdit, prod, hasInstall, overrides],
   );
 
+  // The job's full included step set — passed to setComplete so the store can
+  // tell when the last department closes and push job completion to BC.
+  const stepKeys = useMemo(() => steps.map((s) => s.key), [steps]);
+
   if (!info) return null;
   // Nothing to show unless there are steps or an editor can add some.
   if (steps.length === 0 && !canEdit) return null;
@@ -143,7 +147,7 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
                 <button
                   type="button"
                   className="btn-secondary job-stepper__btn"
-                  onClick={() => void setComplete(jobNo, selected.key, me, false)}
+                  onClick={() => void setComplete(jobNo, selected.key, me, false, stepKeys)}
                 >
                   Reopen
                 </button>
@@ -154,7 +158,7 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
               type="button"
               className="job-stepper__complete"
               onClick={() => {
-                void setComplete(jobNo, selected.key, me, true);
+                void setComplete(jobNo, selected.key, me, true, stepKeys);
                 setSelectedKey(null);
               }}
             >
