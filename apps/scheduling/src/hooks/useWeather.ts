@@ -13,8 +13,8 @@ function localDateKey(d: Date): string {
 
 /** Live weather for an install ZIP on a specific day, read from the
  *  lum_weathercaches table (per-day forecast rows keyed by ZIP + lum_date,
- *  refreshed by WeatherCache_Refresh). Falls back to the ZIP's legacy dateless
- *  row when there's no forecast for that day. Returns null in dev/mock mode —
+ *  refreshed by WeatherCache_Refresh). Null when there's no forecast for that
+ *  day (e.g. beyond the 7-day NWS horizon). Returns null in dev/mock mode —
  *  callers fall back to the deterministic mock. */
 export function useWeather(
   zip: string | null | undefined,
@@ -30,9 +30,7 @@ export function useWeather(
     let alive = true;
     void weatherByZip().then((m) => {
       if (!alive) return;
-      const z = zip.trim();
-      const dated = dateKey ? m.get(`${z}|${dateKey}`) : undefined;
-      setInfo(dated ?? m.get(z) ?? null);
+      setInfo(dateKey ? m.get(`${zip.trim()}|${dateKey}`) ?? null : null);
     });
     return () => {
       alive = false;

@@ -1378,8 +1378,8 @@ export async function fetchActiveJobs(from: Date): Promise<ActiveJob[]> {
   return out;
 }
 
-// Session cache: install ZIP → current weather (lum_weathercaches, keyed by
-// lum_location = ZIP; refreshed by the WeatherCache_Refresh flow).
+// Session cache: install ZIP + day → forecast (lum_weathercaches, one row per
+// lum_location = ZIP per lum_date; written by the WeatherCache_Refresh flow).
 export interface WeatherInfo {
   tempF: number;
   condition: string;
@@ -1389,32 +1389,48 @@ export interface WeatherInfo {
 // DateOnly (lum_date) comes back as "2026-07-13" (or full ISO); keep the day part.
 const weatherDateKey = (v: unknown): string => s(v).trim().slice(0, 10);
 
-// Map keyed BOTH ways: per-day forecast rows under `${zip}|${yyyy-mm-dd}`, and a
-// legacy per-ZIP current-conditions row (no lum_date) under `${zip}`. useWeather
-// prefers the dated row for the card's day, then falls back to the ZIP row.
+/** How far back to read forecast rows. The flow never deletes old rows, so the
+ *  table grows ~one row per ZIP per day; an unfiltered read passed Dataverse's
+ *  5000-row page and silently dropped the CURRENT forecasts (Sep 2026). */
+export const WEATHER_LOOKBACK_DAYS = 14;
+
+/** Server-side filter for the weather read: dated rows from `today` minus the
+ *  lookback onward. Legacy dateless rows are excluded — the flow stopped writing
+ *  them in Jul 2026, so they only ever showed months-old conditions. */
+export function weatherFilter(today: Date): string {
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - WEATHER_LOOKBACK_DAYS);
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `lum_date ge ${key}`;
+}
+
+/** Map of per-day forecasts keyed `${zip}|${yyyy-mm-dd}`. */
+export function buildWeatherMap(rows: Row[]): Map<string, WeatherInfo> {
+  const m = new Map<string, WeatherInfo>();
+  for (const r of rows) {
+    const loc = s(r.lum_location).trim();
+    const date = weatherDateKey(r.lum_date);
+    if (!loc || !date) continue;
+    m.set(`${loc}|${date}`, {
+      tempF: n(r.lum_tempf),
+      condition: s(r.lum_conditiontext),
+      iconUrl: s(r.lum_iconurl),
+      humidity: n(r.lum_humidity),
+    });
+  }
+  return m;
+}
+
 let weatherPromise: Promise<Map<string, WeatherInfo>> | null = null;
 export function weatherByZip(): Promise<Map<string, WeatherInfo>> {
   if (!weatherPromise) {
-    weatherPromise = (async () => {
-      const rows = await list("lum_weathercaches", {
-        select: "lum_location,lum_date,lum_tempf,lum_conditiontext,lum_iconurl,lum_humidity",
-      });
-      const m = new Map<string, WeatherInfo>();
-      for (const r of rows) {
-        const loc = s(r.lum_location).trim();
-        if (!loc) continue;
-        const info: WeatherInfo = {
-          tempF: n(r.lum_tempf),
-          condition: s(r.lum_conditiontext),
-          iconUrl: s(r.lum_iconurl),
-          humidity: n(r.lum_humidity),
-        };
-        const date = weatherDateKey(r.lum_date);
-        if (date) m.set(`${loc}|${date}`, info); // per-day forecast row
-        else if (!m.has(loc)) m.set(loc, info); // legacy dateless fallback
-      }
-      return m;
-    })().catch(() => new Map<string, WeatherInfo>());
+    weatherPromise = list("lum_weathercaches", {
+      select: "lum_location,lum_date,lum_tempf,lum_conditiontext,lum_iconurl,lum_humidity",
+      filter: weatherFilter(new Date()),
+      // Newest first, so if the page cap is ever hit it's the oldest days that drop.
+      orderby: "lum_date desc",
+    })
+      .then(buildWeatherMap)
+      .catch(() => new Map<string, WeatherInfo>());
   }
   return weatherPromise;
 }

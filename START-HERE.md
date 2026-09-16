@@ -215,7 +215,26 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
+- **Last shipped (Sep 16, 2026 · latest) — deployed + committed: weather chips fixed.**
+  Symptom: install cards showed no weather, or July's conditions. `WeatherCache_Refresh`
+  was healthy (ran every 6h, forecasts for all 66 job ZIPs) — the bug was the READ.
+  The flow upserts one row per ZIP per day and **never deletes**, so
+  `lum_weathercaches` reached **6,244 rows**; `weatherByZip()` did one un-paged
+  `list()` and Dataverse caps a page at **5000**, silently dropping the current days.
+  - Fix: server-side `lum_date ge <today − 14d>` + `orderby lum_date desc`
+    (`weatherFilter`, `buildWeatherMap` in `dataverse-live.ts`, 4 tests in
+    `weather-cache.test.ts`). The legacy **dateless** fallback is gone — those rows
+    stopped updating in July and could only ever show stale weather.
+  - 🔴 **Every other `list()` in `dataverse-live.ts` is also un-paged** — any table
+    that grows past 5000 rows will truncate the same silent way. Filter or page it.
+  - **Open follow-up:** add a delete-old-rows step to `WeatherCache_Refresh`; the
+    table still grows ~66 rows/day. Harmless to the app now, just untidy.
+  - Diagnosis tip: `pac env fetch --xml "<fetch aggregate='true'>…"` uses the
+    active pac profile — no device-code sign-in needed for read-only Dataverse checks.
 - **In progress (Sep 14, 2026) — BC write-back (scheduler → Business Central).**
+  **Update Sep 16: the app side is now DEPLOYED** — completing a job's last
+  department enqueues the `kind:"job"` row live. Remaining work is the flow
+  import/validation (next steps (b) + (d) below).
   Goal: push a job task's start/end + assignee + started/complete back to BC's
   Project Planning. **Half of it now works.**
   - ✅ **SHIPPED THIS SESSION (not yet deployed): job-level completion.** Infotech's
