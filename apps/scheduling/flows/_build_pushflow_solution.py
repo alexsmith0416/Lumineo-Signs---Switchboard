@@ -136,6 +136,12 @@ def stage_flow_json(src: str, dest_path: str, secret: str | None) -> list[str]:
     notes: list[str] = []
     with open(os.path.join(FLOWS, src), encoding="utf-8") as fh:
         doc = json.load(fh)
+    # The importer rejects a flow without these ("Flow clientdata is in invalid
+    # format ... Required property 'schemaVersion' not found") - fail the build
+    # here instead of at import time.
+    missing = [k for k in ("schemaVersion", "properties") if k not in doc]
+    if missing:
+        raise SystemExit(f"{src}: missing required top-level key(s) {missing}")
     params = doc["properties"]["definition"]["parameters"]
 
     if "Bc_ClientId" in params:
