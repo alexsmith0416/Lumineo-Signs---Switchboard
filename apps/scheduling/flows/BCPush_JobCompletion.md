@@ -73,9 +73,14 @@ repo, so a secret-bearing zip can't be committed) containing both push flows:
 | `BCPush_JobCompletion` | `30905c4a-f9b4-4424-91e6-b0046a3216b4` | turn **ON** |
 
 Both are registered as `<Workflow>` elements in `Customizations.xml` and as
-`<RootComponent type="29">` in `Solution.xml`, and share the existing
-`new_sharedcommondataserviceforapps_bcpush` connection reference — already in
-the environment from the sibling flow, so there's nothing to add there.
+`<RootComponent type="29">` in `Solution.xml`, and share one
+`new_sharedcommondataserviceforapps_bcpush` connection reference, which the
+solution itself creates. (As of Sep 16, 2026 **nothing from this solution is in
+the environment yet** — no flow, no connection reference.)
+
+`BCPush_PlanningSteps` is listed in `IMPORT_OFF`, so it imports **switched off**;
+`BCPush_JobCompletion` imports on. A flow imported ON would fire on every new
+schedule/completion row and mark it failed.
 
 Then:
 
@@ -111,6 +116,10 @@ Three options, worst to best:
    production; options 1–2 are fine for UAT validation.
 
 ## Verifying
+
+`scripts/bc-job-status.ps1 -JobNo J25036` is **read-only**: prints a BC job's
+`complete`, `icgSgpCompletionDate` and `status`. Run it before and after a test
+push.
 
 `scripts/bc-uat-write-proof.ps1` proves the PATCH path end to end against
 `J25036` ("TEST OPPORTUNITY INFOTECH - do not use") and restores the value it

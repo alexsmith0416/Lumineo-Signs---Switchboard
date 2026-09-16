@@ -33,8 +33,8 @@ BCPush_JobCompletion.md.
 
 On import (maker portal -> Solutions -> Import solution):
   - map the one connection reference to your Dataverse connection
-  - open each flow, confirm the Bc_* parameters, and turn ON only
-    BCPush_JobCompletion
+  - BCPush_JobCompletion imports ON; BCPush_PlanningSteps imports OFF
+    (IMPORT_OFF) - leave it off
 """
 import json
 import os
@@ -71,6 +71,12 @@ FLOW_DEFS = [
 ]
 
 
+# Flows that must import switched OFF. A solution import activates any flow whose
+# <StateCode> is 1, and BCPush_PlanningSteps would then fire on every new
+# schedule/completion outbox row and mark it failed (its BC entity is read-only).
+IMPORT_OFF = {"BCPush_PlanningSteps"}
+
+
 def dest_json(name: str, guid: str) -> str:
     """Packager convention: <FlowName>-<UPPERCASE-GUID>.json"""
     return f"{name}-{guid.upper()}.json"
@@ -86,6 +92,8 @@ def xa(s: str) -> str:
 
 
 def workflow_block(name: str, guid: str, src: str, desc: str) -> str:
+    # StateCode 1/StatusCode 2 = Activated; 0/1 = Draft (off).
+    state, status = (0, 1) if name in IMPORT_OFF else (1, 2)
     name, desc = xa(name), xa(desc)
     return f'''<Workflow WorkflowId="{{{guid}}}" Name="{name}" Description="{desc}">
       <JsonFileName>/Workflows/{dest_json(name, guid)}</JsonFileName>
@@ -99,8 +107,8 @@ def workflow_block(name: str, guid: str, src: str, desc: str) -> str:
       <TriggerOnDelete>0</TriggerOnDelete>
       <AsyncAutodelete>0</AsyncAutodelete>
       <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
-      <StateCode>1</StateCode>
-      <StatusCode>2</StatusCode>
+      <StateCode>{state}</StateCode>
+      <StatusCode>{status}</StatusCode>
       <RunAs>1</RunAs>
       <IsTransacted>1</IsTransacted>
       <IntroducedVersion>1.0</IntroducedVersion>
