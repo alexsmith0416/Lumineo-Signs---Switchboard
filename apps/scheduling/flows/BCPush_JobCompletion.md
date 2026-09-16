@@ -45,6 +45,18 @@ already exist. **Nothing to run.**
 
 ## Trigger scoping
 
+The trigger fires when a row is **added, or when its `crfdf_status` changes**
+(message 4 + `filteringattributes = crfdf_status`). Two reasons:
+
+- **Retry:** set a `failed` row's Status back to `pending` and it re-runs.
+- **Hand-made rows:** the maker-portal grid saves a new row as soon as the first
+  cell is typed, so a create-only trigger saw it half-blank and skipped it forever
+  (seen Sep 16, 2026). Editing Status afterwards now picks it up.
+
+No loop: the flow's own `synced`/`failed` write re-fires it, but the
+`status = "pending"` condition makes that run a no-op. Edits to any other
+column don't fire it at all.
+
 The flow shares the outbox table with `BCPush_PlanningSteps`, so its condition
 is three-way: `status = "pending"` **and** `kind = "job"` **and** a non-empty
 job no. The planning-step rows keep queuing untouched — if that flow is ever

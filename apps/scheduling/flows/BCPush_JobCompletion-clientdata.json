@@ -54,9 +54,10 @@
           "type": "OpenApiConnectionWebhook",
           "inputs": {
             "parameters": {
-              "subscriptionRequest/message": 1,
+              "subscriptionRequest/message": 4,
               "subscriptionRequest/entityname": "crfdf_bcpushqueue",
-              "subscriptionRequest/scope": 4
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "crfdf_status"
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
