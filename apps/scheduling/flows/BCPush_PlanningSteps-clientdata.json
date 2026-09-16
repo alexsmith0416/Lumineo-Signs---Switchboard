@@ -2,8 +2,12 @@
   "properties": {
     "connectionReferences": {
       "shared_commondataserviceforapps": {
-        "api": { "name": "shared_commondataserviceforapps" },
-        "connection": { "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_bcpush" },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_bcpush"
+        },
         "runtimeSource": "embedded"
       }
     },
@@ -12,8 +16,14 @@
       "contentVersion": "1.0.0.0",
       "comment": "BCPush_PlanningSteps — drains the crfdf_bcpushqueue outbox and PATCHes the sign365 projectPlanningEntries API. See BCPush_PlanningSteps.md. crfdf_assignedto already holds the BC resource no (resolved in-app from crfdf_employee1.crfdf_no) and is passed straight to BC's assignedTo. TODOs before go-live: (1) fill the Bc_* parameters below (secret should come from Key Vault / an environment variable, not inline); (2) confirm the entry key is 'systemId' (else change Patch_* URIs).",
       "parameters": {
-        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
-        "$connections": { "defaultValue": {}, "type": "Object" },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
         "Bc_ApiBase": {
           "type": "String",
           "defaultValue": "https://api.businesscentral.dynamics.com/v2.0/luminousneon.com/UAT/api/infotechConsultingGroup/sign365/v1.0"
@@ -41,26 +51,31 @@
       },
       "triggers": {
         "When_a_push_row_is_added": {
-          "type": "OpenApiConnection",
+          "type": "OpenApiConnectionWebhook",
           "inputs": {
             "parameters": {
               "subscriptionRequest/message": 1,
               "subscriptionRequest/entityname": "crfdf_bcpushqueue",
-              "subscriptionRequest/scope": 4,
-              "subscriptionRequest/filteringattributes": "crfdf_status"
+              "subscriptionRequest/scope": 4
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
               "operationId": "SubscribeWebhookTrigger",
               "connectionName": "shared_commondataserviceforapps"
-            }
+            },
+            "authentication": "@parameters('$authentication')"
           }
         }
       },
       "actions": {
         "Only_pending": {
           "type": "If",
-          "expression": { "equals": ["@triggerOutputs()?['body/crfdf_status']", "pending"] },
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/crfdf_status']",
+              "pending"
+            ]
+          },
           "runAfter": {},
           "actions": {
             "Try": {
@@ -74,11 +89,17 @@
                 },
                 "Resolve_Entry": {
                   "type": "Http",
-                  "runAfter": { "Build_Filter": ["Succeeded"] },
+                  "runAfter": {
+                    "Build_Filter": [
+                      "Succeeded"
+                    ]
+                  },
                   "inputs": {
                     "method": "GET",
                     "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries?$filter=@{encodeUriComponent(outputs('Build_Filter'))}",
-                    "headers": { "Accept": "application/json" },
+                    "headers": {
+                      "Accept": "application/json"
+                    },
                     "authentication": {
                       "type": "ActiveDirectoryOAuth",
                       "authority": "https://login.microsoftonline.com",
@@ -91,8 +112,17 @@
                 },
                 "Check_Found": {
                   "type": "If",
-                  "runAfter": { "Resolve_Entry": ["Succeeded"] },
-                  "expression": { "greater": ["@length(coalesce(body('Resolve_Entry')?['value'], json('[]')))", 0] },
+                  "runAfter": {
+                    "Resolve_Entry": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": {
+                    "greater": [
+                      "@length(coalesce(body('Resolve_Entry')?['value'], json('[]')))",
+                      0
+                    ]
+                  },
                   "actions": {
                     "For_each_entry": {
                       "type": "Foreach",
@@ -102,7 +132,12 @@
                         "Kind_is_schedule": {
                           "type": "If",
                           "runAfter": {},
-                          "expression": { "equals": ["@triggerOutputs()?['body/crfdf_kind']", "schedule"] },
+                          "expression": {
+                            "equals": [
+                              "@triggerOutputs()?['body/crfdf_kind']",
+                              "schedule"
+                            ]
+                          },
                           "actions": {
                             "Patch_Schedule": {
                               "type": "Http",
@@ -110,7 +145,10 @@
                               "inputs": {
                                 "method": "PATCH",
                                 "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries(@{items('For_each_entry')?['systemId']})",
-                                "headers": { "Content-Type": "application/json", "If-Match": "*" },
+                                "headers": {
+                                  "Content-Type": "application/json",
+                                  "If-Match": "*"
+                                },
                                 "body": "@json(concat('{\"startDateTime\":\"', triggerOutputs()?['body/crfdf_startdatetime'], '\",\"endDateTime\":\"', triggerOutputs()?['body/crfdf_enddatetime'], '\",\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), if(empty(triggerOutputs()?['body/crfdf_assignedto']), '', concat(',\"assignedTo\":\"', triggerOutputs()?['body/crfdf_assignedto'], '\"')), '}'))",
                                 "authentication": {
                                   "type": "ActiveDirectoryOAuth",
@@ -131,7 +169,10 @@
                                 "inputs": {
                                   "method": "PATCH",
                                   "uri": "@{parameters('Bc_ApiBase')}/companies(@{parameters('Bc_CompanyId')})/projectPlanningEntries(@{items('For_each_entry')?['systemId']})",
-                                  "headers": { "Content-Type": "application/json", "If-Match": "*" },
+                                  "headers": {
+                                    "Content-Type": "application/json",
+                                    "If-Match": "*"
+                                  },
                                   "body": "@json(concat('{\"complete\":', if(triggerOutputs()?['body/crfdf_complete'], 'true', 'false'), '}'))",
                                   "authentication": {
                                     "type": "ActiveDirectoryOAuth",
@@ -150,7 +191,11 @@
                     },
                     "Mark_Synced": {
                       "type": "OpenApiConnection",
-                      "runAfter": { "For_each_entry": ["Succeeded"] },
+                      "runAfter": {
+                        "For_each_entry": [
+                          "Succeeded"
+                        ]
+                      },
                       "inputs": {
                         "parameters": {
                           "entityName": "crfdf_bcpushqueues",
@@ -192,7 +237,12 @@
             },
             "Catch": {
               "type": "Scope",
-              "runAfter": { "Try": ["Failed", "TimedOut"] },
+              "runAfter": {
+                "Try": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
               "actions": {
                 "Mark_Failed": {
                   "type": "OpenApiConnection",
@@ -214,7 +264,9 @@
               }
             }
           },
-          "else": { "actions": {} }
+          "else": {
+            "actions": {}
+          }
         }
       }
     }

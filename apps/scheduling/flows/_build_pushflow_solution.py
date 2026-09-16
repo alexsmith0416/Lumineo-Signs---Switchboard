@@ -142,6 +142,14 @@ def stage_flow_json(src: str, dest_path: str, secret: str | None) -> list[str]:
     missing = [k for k in ("schemaVersion", "properties") if k not in doc]
     if missing:
         raise SystemExit(f"{src}: missing required top-level key(s) {missing}")
+    # A Dataverse row trigger (SubscribeWebhookTrigger) must be typed
+    # OpenApiConnectionWebhook. Typed OpenApiConnection it imports, but turning
+    # it on fails: "The 'recurrence' property of template trigger ... is not
+    # defined" - the engine treats it as a polling trigger.
+    for tname, trg in doc["properties"]["definition"]["triggers"].items():
+        op = trg.get("inputs", {}).get("host", {}).get("operationId")
+        if op == "SubscribeWebhookTrigger" and trg.get("type") != "OpenApiConnectionWebhook":
+            raise SystemExit(f"{src}: trigger {tname} must be type OpenApiConnectionWebhook")
     params = doc["properties"]["definition"]["parameters"]
 
     if "Bc_ClientId" in params:

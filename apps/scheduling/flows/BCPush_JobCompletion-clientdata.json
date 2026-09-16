@@ -51,19 +51,19 @@
       },
       "triggers": {
         "When_a_push_row_is_added": {
-          "type": "OpenApiConnection",
+          "type": "OpenApiConnectionWebhook",
           "inputs": {
             "parameters": {
               "subscriptionRequest/message": 1,
               "subscriptionRequest/entityname": "crfdf_bcpushqueue",
-              "subscriptionRequest/scope": 4,
-              "subscriptionRequest/filteringattributes": "crfdf_status"
+              "subscriptionRequest/scope": 4
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
               "operationId": "SubscribeWebhookTrigger",
               "connectionName": "shared_commondataserviceforapps"
-            }
+            },
+            "authentication": "@parameters('$authentication')"
           }
         }
       },
