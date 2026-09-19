@@ -103,6 +103,22 @@ Step rows still carry no `@odata.etag`. The container still declares **no
 So: flipping `Editable = true` on the current step page remains insufficient on
 its own — there is still no single addressable row for `PATCH` to target.
 
+**Update (Sep 16, 2026) — there IS a persisted table behind the steps.** Running
+Page Inspection on the Project Planning subform in the BC client returns:
+
+```
+Page:  ICG.IPP.ProjectPlanningSubform (71441978, ListPart)
+Table: ICG.IPP.ProjectPlanningStep (71441976)
+```
+
+This corrects our earlier reading. We had inferred from the keyed-GET failure that
+the step page sat over a query or temp source; it does not — it is backed by an
+ordinary table with real primary key fields. So the missing handle is a property of
+**how the API page exposes the table**, not a limitation of the underlying data.
+That should make the ask below considerably cheaper: an API page keyed on table
+71441976's own primary key would give us both the addressable row and, with
+`Editable = true`, the write.
+
 ## 3. Three defects in the Sep 11 samples
 
 Both new PATCH requests in the shipped collection fail as written. Worth
@@ -210,12 +226,17 @@ still returns
 
 > The supplied column ID '0' cannot be found in the query.
 
-and step rows carry no ETag. That's the same result we reported in July, and it
-suggests the page is over a query/temp source rather than a persisted table — so
-setting `Editable = true` alone probably won't be enough. A single stable
-handle (a `SystemId`, or any unique key you'd prefer we address) would solve it.
-There are also still no `<Action>`/`<Function>` definitions in the container, in
-case an AL action is easier on your side than a writable page.
+and step rows carry no ETag. That's the same result we reported in July.
+
+We'd assumed that meant the page was over a query or temp source, but Page
+Inspection says otherwise — the subform
+(`ICG.IPP.ProjectPlanningSubform`, 71441978) is backed by the table
+**`ICG.IPP.ProjectPlanningStep` (71441976)**, which has real primary key fields.
+So there's a persisted row there to address; it's just not reachable through the
+API page as currently keyed. A single stable handle — a `SystemId`, the table's
+own primary key, or any unique key you'd prefer we use — would solve it. There
+are also still no `<Action>`/`<Function>` definitions in the container, in case an
+AL action is easier on your side than a writable page.
 
 **3. 🔴 Worth checking independently of our project: the planning-line PATCH key
 isn't unique.**

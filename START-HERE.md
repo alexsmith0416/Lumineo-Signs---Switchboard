@@ -215,6 +215,101 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
+- **ACTIVE (Sep 16, 2026) — BC Planning Step write-back: going around Infotech's
+  read-only API page.** Instead of waiting on Infotech, publish **our own BC web
+  service page directly over the underlying table**. Page Inspection on the Project
+  Planning subform gives the real objects:
+  - Page `ICG.IPP.ProjectPlanningSubform` (71441978, ListPart) →
+    Table **`ICG.IPP.ProjectPlanningStep` (71441976)**.
+  - 🟢 **This corrects the standing theory.** We had inferred from the keyed-GET
+    failure (`"The supplied column ID '0' cannot be found in the query"`, no ETag)
+    that the step page sat over a query/temp source. It does **not** — there's an
+    ordinary table with real primary keys behind it. So both walls fall at once:
+    our own page controls `ModifyAllowed` (beats `Updatable=false`) and the table's
+    own primary key gives the addressable row. `BCPush-infotech-request.md` has been
+    corrected to say this (§2 + the email draft) — it still hasn't been sent.
+  - 🔴 **BLOCKED on a BC permission, not an Entra one.** Editing the permission-set
+    lines on the *Microsoft Entra Application Card* for **"PowerApps Permissions"**
+    (client ID `34a4de23-4db0-48d9-a941-285c9c2f9b5d`) fails with *"you must be
+    granted either the SUPER or SECURITY permission set."* Ask an admin for
+    **SECURITY** (narrower than SUPER). The erroring line is `ICG.PROJECTPLANNING`,
+    scoped to company **Luminous Neon**; the other three rows (D365 BUS FULL ACCESS,
+    ICG.SGPN365, LOGIN) are all-companies.
+  - ⚠️ Second gate on the same card: **State must be set to `Disabled`** before the
+    lines are editable, then back to `Enabled` + **Grant Consent**. The `BCSync_*`
+    read flows share that client ID and will fail while it's Disabled — schedule it.
+  - ✅ **The page IS published** as web service **`LumineoPlanningSteps`**
+    (`scripts/bc-odata-step-probe.ps1` lists every published service on a miss).
+  - 🔴 **FULLY DIAGNOSED Sep 18 — one blocker left, and it's a BC grant.**
+    A GET on the service returns HTTP 403:
+    ```
+    Sorry, the current permissions prevented the action.
+    (TableData 71442000 ICG.IPS.ProjectSchedulerSetup
+     General Scheduler Setup Read: Infotech Project Scheduler)
+    ```
+    The S2S app needs a permission set from **Infotech Project Scheduler**
+    (`ICG.IPS`) — a THIRD Infotech extension, separate from Project Planning
+    (`ICG.IPP`, where step table 71441976 lives) and Sign365. The app card carries
+    D365 BUS FULL ACCESS, ICG.PROJECTPLANNING, ICG.SGPN365, LOGIN — nothing from
+    Scheduler. `D365 BUS FULL ACCESS` does NOT cover third-party extension tables,
+    which is why the ICG sets are listed individually.
+    - **The set to add is `ICG.IPS.GENERAL`** (System scope). ⚠️ Searching the
+      Permission Sets page for "Project Scheduler" finds NOTHING — the sets are
+      named `ICG.IPS.GENERAL` / `ICG.IPS.ADMIN`. **Filter on `icg` instead.**
+    - Prefer the System set over a User-Defined copy: a copy is frozen at today's
+      table list and silently misses tables added by an ICG upgrade.
+  - 🔴 **BLOCKED: `asmith@lumineosigns.com` lacks SUPER/SECURITY in BC.** Typing the
+    `ICG.IPS.GENERAL` line onto the Entra Application Card for **"PowerApps
+    Permissions"** (client ID `34a4de23-4db0-48d9-a941-285c9c2f9b5d`) fails with
+    *"you must be granted either the SUPER or SECURITY permission set."*
+    **Nothing further can be done on this thread without that grant.** Ask for
+    **SECURITY** (narrower than SUPER).
+  - ⚠️ Also on that card: **State must be `Disabled`** before edits, then back to
+    `Enabled` + **Grant Consent**. The `BCSync_*` read flows share that client ID and
+    fail while it's Disabled — schedule the window.
+  - ⚠️ **Ask for the WRITE set in the same request.** Test 4 (the PATCH) needs
+    Modify on table 71441976, owned by Project Planning. Check whether
+    `ICG.PROJECTPLANNING` grants Modify on 71441976; if not, the card needs
+    **`ICG.PROJPLANNING.ADM`** instead. Same GENERAL/ADMIN split as the IPS pair.
+    Discovering this later costs a second admin round-trip AND a second outage.
+  - ⚠️ Expect to iterate: BC reports missing table permissions ONE AT A TIME.
+  - ⚠️ Caveats: writing to another extension's table skips ICG's own page/API logic
+    (table triggers still fire), and an ICG upgrade can change the schema under us.
+    A vendor-sanctioned writable API page stays the durable fix — **still send the
+    request doc**.
+  - 📌 **RESUME HERE ONCE THE GRANT LANDS** — in order:
+    1. **Add the permission set.** Entra Application Card → "PowerApps Permissions"
+       → State `Disabled` → New Line → `ICG.IPS.GENERAL` → State `Enabled` →
+       **Grant Consent**. (If it was granted for you, just verify the line is there.)
+    2. **Probe read:** `cd apps/scheduling` then
+       `pwsh -File scripts/bc-odata-step-probe.ps1`
+       - Another 403 naming a different table ⇒ add that table's set too, repeat.
+       - TEST 2 prints the field list — **confirm `assignedTo`, start/end and
+         `started`/`complete` are actually there.** If they're missing, the page's
+         source expressions need widening before anything else matters.
+       - TEST 3 answers the big one: does a keyed GET resolve ONE row with an ETag?
+         That's the wall the sign365 API page could never get past.
+    3. **Probe write:** `pwsh -File scripts/bc-odata-step-probe.ps1 -Write -Field assignedTo`
+       (uses a field name from TEST 2; reads the value first and restores it).
+       - *"Entity does not support modifying data"* ⇒ not a permission issue at all;
+         our own page has `ModifyAllowed = false`. Fix it in the page and republish.
+       - A permission error ⇒ need `ICG.PROJPLANNING.ADM` (Modify on 71441976).
+    4. **Rewire the flow.** `BCPush_PlanningSteps-clientdata.json` still points at the
+       sign365 API path. Change base URL + row addressing to the OData form:
+       ```
+       was:  …/api/infotechConsultingGroup/sign365/v1.0/companies(4738bfb5-…)/projectPlanningSteps(…)
+       now:  …/ODataV4/Company('Luminous%20Neon')/LumineoPlanningSteps(<key from TEST 3>)
+       ```
+       Auth is UNCHANGED — same registration, same `.default` scope, only the path
+       differs. Rebuild via `_build_pushflow_solution.py`, import, validate on UAT.
+    5. **Drain the backlog.** `kind:"schedule"` outbox rows have been queuing with
+       nothing consuming them since Sep 14 — that's the first real end-to-end test.
+    6. **Send `flows/BCPush-infotech-request.md`** regardless. The workaround is not
+       the durable fix, and their non-unique `projectPlanningLines` key (14,030 rows
+       share `no='26200'`) is worth reporting whatever we do.
+  - **Files:** internal admin ask → `flows/BC-permission-request.md` (NOT sent);
+    vendor ask → `flows/BCPush-infotech-request.md` (NOT sent);
+    probe → `scripts/bc-odata-step-probe.ps1`.
 - **Last shipped (Sep 16, 2026 · latest) — deployed + committed: weather chips fixed.**
   Symptom: install cards showed no weather, or July's conditions. `WeatherCache_Refresh`
   was healthy (ran every 6h, forecasts for all 66 job ZIPs) — the bug was the READ.
