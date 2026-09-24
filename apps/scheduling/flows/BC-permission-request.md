@@ -1,8 +1,21 @@
 # BC permission request — internal (to our BC admin)
 
-**Status:** not yet sent as of Sep 18, 2026.
-**Blocks:** the entire Planning Step write-back workaround. Nothing on that thread
-can progress until this is granted — see the ACTIVE block in `START-HERE.md`.
+**Status: CLOSED — GRANTED Sep 22, 2026.** Kept for the record and as the
+template for the identical change that must be made in **Production** (see the
+PRODUCTION CUTOVER block in `START-HERE.md`).
+
+What was granted: `asmith@lumineosigns.com` received **SECURITY**, and the
+"PowerApps Permissions" app card received **`ICG.IPS.GENERAL`** (cleared the 403
+on table 71442000) and **`ICG.PROJPLANNING.ADM`** (Modify on 71441976/71441977 —
+`ICG.PROJECTPLANNING` grants only Read on 71441976, which was the write gap).
+
+⚠️ The permissions were necessary but **not sufficient**: probing afterwards
+showed table 71441976 is the step *catalogue*, not the per-job schedule, so the
+write target is still unresolved. See the ACTIVE block in `START-HERE.md`.
+
+🧹 **Over-grant to undo:** `SECURITY` was also added to the *app card*. The
+service principal never needed it — only Alex's user did. Remove it, and do not
+repeat it in Production.
 
 Distinct from `BCPush-infotech-request.md`, which goes to **Infotech** and asks for a
 writable API page. This one goes to **our own BC admin** and asks for permissions on

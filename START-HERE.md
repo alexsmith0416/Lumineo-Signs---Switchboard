@@ -215,101 +215,247 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **ACTIVE (Sep 16, 2026) — BC Planning Step write-back: going around Infotech's
-  read-only API page.** Instead of waiting on Infotech, publish **our own BC web
-  service page directly over the underlying table**. Page Inspection on the Project
-  Planning subform gives the real objects:
-  - Page `ICG.IPP.ProjectPlanningSubform` (71441978, ListPart) →
-    Table **`ICG.IPP.ProjectPlanningStep` (71441976)**.
-  - 🟢 **This corrects the standing theory.** We had inferred from the keyed-GET
-    failure (`"The supplied column ID '0' cannot be found in the query"`, no ETag)
-    that the step page sat over a query/temp source. It does **not** — there's an
-    ordinary table with real primary keys behind it. So both walls fall at once:
-    our own page controls `ModifyAllowed` (beats `Updatable=false`) and the table's
-    own primary key gives the addressable row. `BCPush-infotech-request.md` has been
-    corrected to say this (§2 + the email draft) — it still hasn't been sent.
-  - 🔴 **BLOCKED on a BC permission, not an Entra one.** Editing the permission-set
-    lines on the *Microsoft Entra Application Card* for **"PowerApps Permissions"**
-    (client ID `34a4de23-4db0-48d9-a941-285c9c2f9b5d`) fails with *"you must be
-    granted either the SUPER or SECURITY permission set."* Ask an admin for
-    **SECURITY** (narrower than SUPER). The erroring line is `ICG.PROJECTPLANNING`,
-    scoped to company **Luminous Neon**; the other three rows (D365 BUS FULL ACCESS,
-    ICG.SGPN365, LOGIN) are all-companies.
-  - ⚠️ Second gate on the same card: **State must be set to `Disabled`** before the
-    lines are editable, then back to `Enabled` + **Grant Consent**. The `BCSync_*`
-    read flows share that client ID and will fail while it's Disabled — schedule it.
-  - ✅ **The page IS published** as web service **`LumineoPlanningSteps`**
-    (`scripts/bc-odata-step-probe.ps1` lists every published service on a miss).
-  - 🔴 **FULLY DIAGNOSED Sep 18 — one blocker left, and it's a BC grant.**
-    A GET on the service returns HTTP 403:
-    ```
-    Sorry, the current permissions prevented the action.
-    (TableData 71442000 ICG.IPS.ProjectSchedulerSetup
-     General Scheduler Setup Read: Infotech Project Scheduler)
-    ```
-    The S2S app needs a permission set from **Infotech Project Scheduler**
-    (`ICG.IPS`) — a THIRD Infotech extension, separate from Project Planning
-    (`ICG.IPP`, where step table 71441976 lives) and Sign365. The app card carries
-    D365 BUS FULL ACCESS, ICG.PROJECTPLANNING, ICG.SGPN365, LOGIN — nothing from
-    Scheduler. `D365 BUS FULL ACCESS` does NOT cover third-party extension tables,
-    which is why the ICG sets are listed individually.
-    - **The set to add is `ICG.IPS.GENERAL`** (System scope). ⚠️ Searching the
-      Permission Sets page for "Project Scheduler" finds NOTHING — the sets are
-      named `ICG.IPS.GENERAL` / `ICG.IPS.ADMIN`. **Filter on `icg` instead.**
-    - Prefer the System set over a User-Defined copy: a copy is frozen at today's
-      table list and silently misses tables added by an ICG upgrade.
-  - 🔴 **BLOCKED: `asmith@lumineosigns.com` lacks SUPER/SECURITY in BC.** Typing the
-    `ICG.IPS.GENERAL` line onto the Entra Application Card for **"PowerApps
-    Permissions"** (client ID `34a4de23-4db0-48d9-a941-285c9c2f9b5d`) fails with
-    *"you must be granted either the SUPER or SECURITY permission set."*
-    **Nothing further can be done on this thread without that grant.** Ask for
-    **SECURITY** (narrower than SUPER).
-  - ⚠️ Also on that card: **State must be `Disabled`** before edits, then back to
-    `Enabled` + **Grant Consent**. The `BCSync_*` read flows share that client ID and
-    fail while it's Disabled — schedule the window.
-  - ⚠️ **Ask for the WRITE set in the same request.** Test 4 (the PATCH) needs
-    Modify on table 71441976, owned by Project Planning. Check whether
-    `ICG.PROJECTPLANNING` grants Modify on 71441976; if not, the card needs
-    **`ICG.PROJPLANNING.ADM`** instead. Same GENERAL/ADMIN split as the IPS pair.
-    Discovering this later costs a second admin round-trip AND a second outage.
-  - ⚠️ Expect to iterate: BC reports missing table permissions ONE AT A TIME.
-  - ⚠️ Caveats: writing to another extension's table skips ICG's own page/API logic
-    (table triggers still fire), and an ICG upgrade can change the schema under us.
-    A vendor-sanctioned writable API page stays the durable fix — **still send the
-    request doc**.
-  - 📌 **RESUME HERE ONCE THE GRANT LANDS** — in order:
-    1. **Add the permission set.** Entra Application Card → "PowerApps Permissions"
-       → State `Disabled` → New Line → `ICG.IPS.GENERAL` → State `Enabled` →
-       **Grant Consent**. (If it was granted for you, just verify the line is there.)
-    2. **Probe read:** `cd apps/scheduling` then
-       `pwsh -File scripts/bc-odata-step-probe.ps1`
-       - Another 403 naming a different table ⇒ add that table's set too, repeat.
-       - TEST 2 prints the field list — **confirm `assignedTo`, start/end and
-         `started`/`complete` are actually there.** If they're missing, the page's
-         source expressions need widening before anything else matters.
-       - TEST 3 answers the big one: does a keyed GET resolve ONE row with an ETag?
-         That's the wall the sign365 API page could never get past.
-    3. **Probe write:** `pwsh -File scripts/bc-odata-step-probe.ps1 -Write -Field assignedTo`
-       (uses a field name from TEST 2; reads the value first and restores it).
-       - *"Entity does not support modifying data"* ⇒ not a permission issue at all;
-         our own page has `ModifyAllowed = false`. Fix it in the page and republish.
-       - A permission error ⇒ need `ICG.PROJPLANNING.ADM` (Modify on 71441976).
-    4. **Rewire the flow.** `BCPush_PlanningSteps-clientdata.json` still points at the
-       sign365 API path. Change base URL + row addressing to the OData form:
-       ```
-       was:  …/api/infotechConsultingGroup/sign365/v1.0/companies(4738bfb5-…)/projectPlanningSteps(…)
-       now:  …/ODataV4/Company('Luminous%20Neon')/LumineoPlanningSteps(<key from TEST 3>)
-       ```
-       Auth is UNCHANGED — same registration, same `.default` scope, only the path
-       differs. Rebuild via `_build_pushflow_solution.py`, import, validate on UAT.
-    5. **Drain the backlog.** `kind:"schedule"` outbox rows have been queuing with
-       nothing consuming them since Sep 14 — that's the first real end-to-end test.
-    6. **Send `flows/BCPush-infotech-request.md`** regardless. The workaround is not
-       the durable fix, and their non-unique `projectPlanningLines` key (14,030 rows
-       share `no='26200'`) is worth reporting whatever we do.
-  - **Files:** internal admin ask → `flows/BC-permission-request.md` (NOT sent);
-    vendor ask → `flows/BCPush-infotech-request.md` (NOT sent);
-    probe → `scripts/bc-odata-step-probe.ps1`.
+- **ACTIVE (Sep 22, 2026) — BC Planning Step write-back. The permission wall is
+  DOWN; the target table was WRONG.** Two things changed today: every BC
+  permission blocker is resolved and the "no addressable row" wall is genuinely
+  cleared — but probing proved we were aiming all of it at the **step catalogue**
+  rather than the per-job schedule. Read the 🔴 block before writing anything.
+  - ✅ **PERMISSIONS: DONE (Sep 22).** `asmith@lumineosigns.com` was granted
+    **SECURITY** by the admin. The Entra Application Card **"PowerApps
+    Permissions"** (client ID `34a4de23-4db0-48d9-a941-285c9c2f9b5d`) now carries
+    `D365 BUS FULL ACCESS`, `ICG.IPS.ADMIN`, `ICG.IPS.GENERAL`,
+    `ICG.PROJECTPLANNING`, `ICG.PROJPLANNING.ADM`, `ICG.SGPN365`, `LOGIN`,
+    `SECURITY` — all System scope, Company blank (all companies). State was set
+    `Disabled` → lines edited → `Enabled` → **Grant Consent**.
+    - `ICG.IPS.GENERAL` cleared the HTTP 403 on table 71442000
+      (`ICG.IPS.ProjectSchedulerSetup`). Confirmed: TEST 1 now passes.
+    - `ICG.PROJPLANNING.ADM` was required and **is a strict superset** of
+      `ICG.PROJECTPLANNING`: it grants Read/Insert/**Modify**/Delete on
+      **71441976 AND 71441977**, where `ICG.PROJECTPLANNING` grants only **Read**
+      on 71441976. That read-only line was the write gap. Exports of both sets
+      are in `~/Downloads/ICG.* (System) - Permissions.xlsx`.
+    - 🧹 **Cleanup owed (not yet done):** `SECURITY` on the *app card* lets the
+      service principal assign permission sets to users — it was only ever needed
+      on Alex's **user**, not the app. Remove it. `ICG.PROJECTPLANNING` is now
+      redundant next to `ICG.PROJPLANNING.ADM`; same for `ICG.IPS.GENERAL` vs
+      `ICG.IPS.ADMIN` (verify ADMIN is a true superset before dropping GENERAL).
+    - ⚠️ Editing the card requires State `Disabled` first. The `BCSync_*` read
+      flows share that client ID and fail for the duration — schedule the window.
+  - ✅ **The sign365 "no addressable row" wall is DOWN on our own page.**
+    `LumineoPlanningSteps` (published over page 71441976) keys on **`Code`**, type
+    **`Edm.Guid`**, and a keyed GET returns ONE row **with an `@odata.etag`**.
+    - 🔴 **The key literal must be UNQUOTED.**
+      `LumineoPlanningSteps(7dbf996c-d2e6-47e1-a161-34f505198438)` → OK.
+      `LumineoPlanningSteps('7dbf996c-…')` → `"Error in query syntax"`.
+      `LumineoPlanningSteps(Code=7dbf996c-…)` also OK. The quoted form is what
+      made this look like the same wall as sign365. It isn't.
+    - 🔴 **`scripts/bc-odata-step-probe.ps1` TEST 3 reports a FALSE NEGATIVE.** It
+      only looks for a literal `SystemId` property and bails with "No SystemId on
+      the row" — our page exposes `Code` instead. Ignore that line, or fix the
+      script to fall back to the `$metadata` `<Key>`.
+    - Every field we need is exposed and typed: `Assigned_To`, `Start_Date`,
+      `Start_Time`, `End_Date`, `End_Time`, `Due_Date`, `Duration`, `Started`,
+      `Complete`, `Completed_Date`, `Completed_By`, `Quick_Notes`.
+  - 🔴 **WRONG TABLE — this overturns the Sep 16 "corrected standing theory".**
+    That note claimed Page Inspection proved 71441976 was an ordinary per-job
+    table with real primary keys. The keys are real; the **rows are not per-job**.
+    Table **71441976 `ICG.IPP.ProjectPlanningStep` is the step CATALOGUE** — the
+    company's 35 standard workflow stages, shared by every job. Evidence:
+    - Exactly **35 rows**, one per stage name (Sales, Sketch, Sketch Review,
+      Estimating, … Vinyl, Final Assembly, Crating, Install, Service,
+      Complete-Need Paperwork), every one `SystemCreatedAt` 2026-08-24 in a single
+      batch. Two "Survey" rows — the production and install phases.
+    - **Every row has zeroed schedule fields**: `Start_Date` `0001-01-01`,
+      `Started` false, `Assigned_To` `""`, `Complete` false.
+    - Same GUID, different data: sign365's `projectPlanningSteps` reports
+      "Vinyl Install Only" as `started: true`, `startDate: 2024-03-13`; our page's
+      row `851226ac-c820-4fe8-8588-097870ce9c5d` for the same step is all zeros.
+      **Our page is not reading the row that holds the schedule.**
+    - `auxiliaryIndex1`/`3`/`5` on `projectPlanningEntries` is the **step-type**
+      GUID, **shared across jobs** — not a row handle. 13 distinct jobs (J32865,
+      J35067, J35160, J35481, J36528, J36732, J36808, J36812, J37094, J37613,
+      J37648, J37865, J37905) all carry `aux1 = 851226ac-…` = catalogue row
+      "Vinyl Install Only". Over 500 rows pulled: **1 distinct aux1**.
+    - All four published planning services return the **identical** 35 rows —
+      ours plus Infotech's own `Job_Card_ExcelICGIPPProjectPlanningSubform`,
+      `Job_ListICGPPIProjectPlanningSubform`,
+      `Job_Card_ExcelICGPPIProjectPlanningSubform`. So this is not our page being
+      built wrong; these subforms inherit job context from the parent page and
+      carry none of it over OData.
+    - ⛔ **DO NOT PATCH `LumineoPlanningSteps`.** Setting `Start_Date` or
+      `Assigned_To` on `851226ac-…` rewrites the template shared by all 13+ jobs
+      using that step, and schedules none of them. `bc-odata-step-probe.ps1
+      -Write` defaults to `-Field assignedTo` on row 1 (`Sales`) — it does restore
+      the value, but it writes to the catalogue and **would have reported
+      success**, sending the next session on to rewire the flow.
+  - ⚠️ **The flow's resolve filter may never have worked.**
+    `BCPush_PlanningSteps-clientdata.json` `Build_Filter` builds
+    `projectPlanningEntries?$filter=auxiliaryIndex4 eq '<jobno>'`. Run live today
+    that returns `"The supplied column ID '0' cannot be found in the query"`.
+    Unfiltered `$top=N` works fine. Verify this before assuming the resolve step
+    is sound — it is the same error class that made us think the step page had no
+    addressable row.
+  - 🔴 **ALL FOUR ICG.IPP PAGES ARE EXHAUSTED (Sep 22).** Every Infotech page was
+    published as a web service in UAT and probed. **None exposes per-job planning
+    rows.** Do not re-try these:
+
+    | Page | Service published | What it actually is |
+    |---|---|---|
+    | 71441976 `ICG.IPP.ProjectPlanningSteps` | `LumineoPlanningSteps` | catalogue list — the 35 rows |
+    | 71441977 `ICG.IPP.ProjPlanningStepCard` | `LumineoPlanningStepCard` | catalogue **card** — same 35 `Code` GUIDs |
+    | 71441978 `ICG.IPP.ProjectPlanningSubform` | (Infotech's own `Job_*` services) | catalogue via a **temp source** — 35 zeroed rows |
+    | 71441979 `ICG.IPP.ProjectPlanningAct` | `LumineoPlanningAct` | **not OData-exposable** — 404 + absent from `$metadata` even with `Published = 1`; by its name a Role Center activities cue part |
+
+    - `LumineoPlanningStepCard` proved the catalogue reading beyond doubt: its
+      fields are step-type **configuration** — `Due_Date_Calculation`,
+      `ActivateNextStepDescription`, `Successor_Link_Step`, `ShowOnScheduler`,
+      `Power_Automate_Trigger_Url`, `PlanningAreaDescription` — keyed on the same
+      `Code` GUIDs. No job, no schedule.
+    - ⚠️ Page IDs and table IDs are numbered **independently**. Page 71441977 is
+      the Step *Card* over table 71441976, NOT a page over table 71441977. This
+      tripped us up; don't infer a page's source table from its object ID.
+    - ✅ **CONFIRMED by Page Inspection (Sep 22), on a real job's planning
+      steps.** The subform is `ICG.IPP.ProjectPlanningSubform` (71441978,
+      **ListPart**) with Source Table `ICG.IPP.ProjectPlanningStep` (**71441976**)
+      — the same table we read. Three readings settle it:
+      1. **The record is NOT temporary.** (The earlier temp-source theory was
+         wrong. Recorded because it is the obvious guess and someone will make it
+         again.)
+      2. **No field on the table references a job.** This is the decisive one: a
+         per-job schedule table must carry a job reference, and this one has none.
+         So 71441976 cannot hold per-job planning rows — independent of row
+         counts or page filters.
+      3. Page and Table stay the same wherever you click in the section.
+    - ⛔ **This also kills the "our page is just filtered" alternative.** A
+      page-level `SourceTableView` filter would explain `$count = 35` over a large
+      table — but with no job field on the table, there is nothing to filter *by*
+      and nothing per-job to find. Don't re-open this.
+    - **So the mechanism is:** the subform lists the real 35 catalogue rows and
+      surfaces per-job values (dates, assignee, complete) as **FlowFields or
+      code-populated columns** sourced from another table and keyed by the parent
+      job. Over OData there is no parent job, so those columns return
+      `0001-01-01` / `""` / `false`. Every observation in this block has that one
+      explanation.
+  - 📊 **Useful side-finding: the BC-side source of our production stepper.** The
+    35 steps carry `PlanningAreaDescription` ∈ {Sales (9), Production (15),
+    Installation/Service (11)}, and exactly **9 have `ShowOnScheduler = true`**:
+    Routing, Fabrication, Painting, Assembly Wiring, Face Production, Vinyl,
+    Final Assembly, Final Inspection, Crating. That is our production department
+    list, maintained in BC. Worth reconciling against `production-steps.ts`
+    independently of the write-back thread.
+    `Power_Automate_Trigger_Url` exists per step but is **empty on all 35** — an
+    unused vendor hook for BC→flow notification. Outbound only, so it is not a
+    write path, but it could replace some `BCSync_*` polling later.
+  - ✅ **TARGET IDENTIFIED (Sep 22) — table 71441977 `ICG.IPP.ProjectPlanning`.**
+    BC → `Table Information` record counts settled it:
+
+    | Table | Records | Verdict |
+    |---|---|---|
+    | 71441976 `ICG.IPP.ProjectPlanningStep` | **35** | catalogue; **matches our OData `$count` exactly, so our page is unfiltered** |
+    | 71441977 `ICG.IPP.ProjectPlanning` | **8,147** | ⭐ **the per-job table — the write target** |
+    | 71441979 `ICG.IPP.ProjPlanTripResource` | 495 | trip/resource rows (sign365's `tripResource*` fields) |
+
+    **8,147 ÷ 35 ≈ 232.8** — one row per (job × step) across ~233 jobs. That
+    arithmetic is the confirmation; don't re-litigate it.
+    - **Why no Infotech page exists over it:** the subform's per-job columns are
+      almost certainly **FlowFields on the catalogue row** that look up into
+      71441977 filtered by the parent job. That is how the UI shows per-job data
+      while every OData route returns blanks — and why publishing more Infotech
+      pages will never help.
+    - ✅ **We already hold Read/Insert/Modify/Delete on 71441977** via
+      `ICG.PROJPLANNING.ADM`. No further permission ask is needed for the write.
+  - 📌 **RESUME HERE — build an AL page over 71441977.** This is now the plan, not
+    a fork: no Infotech page exposes the table, and the sign365 API entities stay
+    `Updatable=false` regardless of permissions (that is a page property, not a
+    rights problem). A BC **Query** object won't do either — queries are read-only.
+    1. **Stand up an AL project against UAT** (VS Code + AL Language extension) and
+       run **`AL: Download Symbols`**. This is the prerequisite for everything
+       below, and it also hands us two things we do not otherwise have:
+       - the **exact field names** of table 71441977 (needed for the page and for
+         the flow's field mapping — we have never seen them);
+       - the **dependency block** for `app.json` (ICG Project Planning's app id,
+         name, publisher, version), required to reference another extension's
+         table. Get it from BC → **Extension Management** → Project Planning.
+    2. **Write a List page** over `SourceTable = "ICG.IPP.ProjectPlanning"` with
+       `ModifyAllowed = true`, `InsertAllowed = false`, `DeleteAllowed = false`.
+       Expose the job reference, the step link, start/end, assignee,
+       started/complete — **and `SystemId`**, so rows are addressable without
+       relying on a GUID primary key the way the catalogue page did.
+    3. **Publish the extension to UAT**, then publish the page as a web service
+       (same pattern as `LumineoPlanningSteps`), and re-probe: expect **~8,147
+       rows**, **real dates**, and **a job identifier** — the three things every
+       page so far has failed.
+    4. **Rewire the flow** once the probe comes back clean. Today it resolves
+       through sign365 and PATCHes `projectPlanningEntries(<systemId>)`; base URL
+       and row addressing move to the OData form
+       `…/ODataV4/Company('Luminous%20Neon')/<service>(<key>)`.
+       **Auth is unchanged** — same registration, same `.default` scope.
+       ⚠️ If the key ends up a GUID, remember the literal is **unquoted**.
+    5. **Drain the backlog.** `kind:"schedule"` outbox rows have queued with no
+       consumer since Sep 14 — the first real end-to-end test, and it will fire in
+       volume.
+  - 📨 **Send `flows/BCPush-infotech-request.md` in parallel — it is still NOT
+    sent.** Our own AL page is a workaround, not the durable fix: writing to
+    another extension's table **skips ICG's own page logic** (table triggers still
+    fire) and an ICG upgrade can change the schema under us. A vendor-sanctioned
+    writable API page remains the answer we actually want. Their three broken
+    PATCH samples are worth reporting whatever route we take.
+  - **Files:** probe → `scripts/bc-odata-step-probe.ps1`; internal permission ask
+    → `flows/BC-permission-request.md` (**GRANTED — ask is closed**); vendor ask →
+    `flows/BCPush-infotech-request.md` (**still NOT sent**).
+
+- **🏭 PRODUCTION CUTOVER — what must be repeated in prod once this works in UAT.**
+  Everything above was done against **UAT**. None of it travels automatically:
+  BC permissions and published web services are **per-environment** and are not
+  carried by a Power Platform solution. Read alongside
+  `flows/BC-ENVIRONMENT-SWITCH.md`, which covers the BCSync *read* flows; this
+  list is the *write-back* additions.
+  1. **Confirm the prod client ID.** The Entra Application Card in production may
+     be a different registration than UAT's `34a4de23-4db0-48d9-a941-285c9c2f9b5d`.
+     Check before assuming — the whole permission list hangs off it.
+  2. **Re-do the permission sets on the prod app card**, same procedure and the
+     same outage caveat: State `Disabled` → add **`ICG.IPS.GENERAL`** and
+     **`ICG.PROJPLANNING.ADM`** → State `Enabled` → **Grant Consent**. Needs
+     SUPER or SECURITY in *production* BC — confirm Alex's grant covers prod, or
+     route it through the admin again. **Do not** copy `SECURITY` onto the prod
+     app card; that was our UAT over-grant.
+  3. **Re-publish the web service page(s)** in prod under the *same Service
+     Names*, so flow URLs need no per-environment edit beyond the base.
+     **Partly done already (Sep 22):** `LumineoPlanningSteps` was already live in
+     Production, and `LumineoPlanningAct` + `LumineoPlanningStepCard` were
+     published there before UAT. ⚠️ All three are now known to be **catalogue**
+     pages that cannot carry per-job data — so once the real write target is
+     settled, **unpublish these from Production** rather than leaving three unused
+     services behind. Publishing a page grants no access on its own (the calling
+     principal still needs BC permissions, which Production's app card does not
+     have), so nothing is currently exposed.
+  3b. 🔴 **Deploy the AL extension to Production — this is new and is NOT the same
+     as a sandbox publish.** Direct publish from VS Code works against a sandbox
+     (UAT); **Production requires uploading the built `.app` as a per-tenant
+     extension** via **Extension Management → Upload Extension**, and it must be
+     built against the same ICG Project Planning dependency version that
+     Production runs. Check the ICG version in both environments before building —
+     a version mismatch is the likeliest cutover failure. Keep the `.app` and its
+     source in the repo so the deployed artifact is reproducible.
+     ⚠️ An ICG upgrade in Production can change table 71441977's schema under the
+     extension; re-validate after any Infotech update.
+  4. **Repoint the push flows.** `Bc_ApiBase` contains `/UAT/` and must become the
+     prod environment name; **`Bc_CompanyId` will likely differ** (UAT is
+     `4738bfb5-a06d-ec11-bf27-000d3a132a9e` — confirm prod). `Bc_Tenant`
+     (`fe0182fa-d183-46ab-8493-9e8ea9c3d0b8`) is unchanged. Prefer moving these
+     to **Dataverse environment variables** per `BC-ENVIRONMENT-SWITCH.md` rather
+     than editing each flow.
+  5. 🔴 **Do not hardcode any step GUID.** The catalogue `Code` values are
+     per-environment; `851226ac-…` is a UAT value and means nothing in prod.
+     Whatever the final resolve step is, it must look the step up by name/job at
+     run time.
+  6. 🔴 **Move the client secret to Key Vault before prod.** It is currently
+     injected from `$env:BC_CLIENT_SECRET` into the staged solution copy. Needs a
+     vault, an SP grant, and an extra flow step — see `flows/BCPush_JobCompletion.md`.
+  7. **Re-run the probe against prod** before enabling anything, then turn the
+     flows on **one at a time** and validate against a single real job.
+  8. **Expect to iterate on permissions** — BC reports missing table permissions
+     one at a time, so a fresh 403 naming a different table is progress.
 - **Last shipped (Sep 16, 2026 · latest) — deployed + committed: weather chips fixed.**
   Symptom: install cards showed no weather, or July's conditions. `WeatherCache_Refresh`
   was healthy (ran every 6h, forecasts for all 66 job ZIPs) — the bug was the READ.
