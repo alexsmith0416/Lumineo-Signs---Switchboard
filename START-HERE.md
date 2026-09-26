@@ -364,6 +364,16 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       pages will never help.
     - ✅ **We already hold Read/Insert/Modify/Delete on 71441977** via
       `ICG.PROJPLANNING.ADM`. No further permission ask is needed for the write.
+  - ⏳ **STATUS (Sep 25): AL project scaffolded, waiting on a BC permission.**
+    `bc/lumineo-planning-ext/` exists (template `HelloWorld.al` removed, publisher
+    `Lumineo Signs`, no `.al` objects yet) with `.vscode/launch.json` → sandbox
+    `UAT`, tenant `fe0182fa-…`. Sign-in works; `AL: Download Symbols` fails
+    Forbidden on *TableData 2000000206 Published Application* for Alex's **user**.
+    Admin emailed Sep 25 to add **`EXTEN. MGT. - ADMIN`** (Company blank) to
+    `asmith@lumineosigns.com` in UAT. (The old name `D365 EXTENSION MGT` doesn't
+    exist in this BC version — typing it gives an "Aggregate Permission Set" error.)
+    Once granted: download symbols → add ICG Project Planning dependency to
+    `app.json` → download again → read 71441977's field names from `.alpackages`.
   - 📌 **RESUME HERE — build an AL page over 71441977.** This is now the plan, not
     a fork: no Infotech page exposes the table, and the sign365 API entities stay
     `Updatable=false` regardless of permissions (that is a page property, not a
@@ -439,6 +449,12 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
      source in the repo so the deployed artifact is reproducible.
      ⚠️ An ICG upgrade in Production can change table 71441977's schema under the
      extension; re-validate after any Infotech update.
+     ⚠️ **The developer's own BC USER needs `EXTEN. MGT. - ADMIN`** (Company blank;
+     the old `D365 EXTENSION MGT` name no longer exists in our BC version)
+     to download symbols, publish from VS Code, or upload the `.app`. Without it
+     `AL: Download Symbols` fails with *"IndirectRead on TableData 2000000206
+     Published Application"* (hit in UAT Sep 25). This is on the user, not the
+     Entra app card — the app card grants don't apply to a VS Code sign-in.
   4. **Repoint the push flows.** `Bc_ApiBase` contains `/UAT/` and must become the
      prod environment name; **`Bc_CompanyId` will likely differ** (UAT is
      `4738bfb5-a06d-ec11-bf27-000d3a132a9e` — confirm prod). `Bc_Tenant`

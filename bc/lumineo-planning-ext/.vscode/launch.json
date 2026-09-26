@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "UAT sandbox",
+      "type": "al",
+      "request": "launch",
+      "environmentType": "Sandbox",
+      "environmentName": "UAT",
+      "tenant": "fe0182fa-d183-46ab-8493-9e8ea9c3d0b8",
+      "startupObjectId": 50100,
+      "startupObjectType": "Page",
+      "breakOnError": "All",
+      "launchBrowser": true,
+      "enableLongRunningSqlStatementsDebugging": true,
+      "enableSqlInformationDebugger": true
+    }
+  ]
+}
