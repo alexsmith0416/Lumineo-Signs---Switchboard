@@ -4,7 +4,8 @@ import {
   allStepsComplete,
   bcStepForDepartmentName,
   bcStepForKey,
-  buildCompletionPush,
+  bcStepStates,
+  buildStepStatePush,
   buildJobPush,
   buildStepSchedulePush,
   pushRowName,
@@ -198,35 +199,72 @@ describe("buildStepSchedulePush", () => {
   });
 });
 
-describe("buildCompletionPush", () => {
-  it("targets the department's BC step and marks it started", () => {
-    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "MF", complete: true, completedBy: "Amy Wing" });
-    expect(push).toMatchObject({
-      kind: "completion",
-      planningStep: "Fabrication",
-      deptKey: "MF",
-      complete: true,
-      started: true,
-      assignedToName: "Amy Wing",
+describe("bcStepStates", () => {
+  type St = "completed" | "active" | "included";
+  const steps = (...a: Array<[string, St]>) => a.map(([key, state]) => ({ key, state }));
+  const pick = (r: ReturnType<typeof bcStepStates>, step: string) => r.find((x) => x.step === step);
+
+  it("marks the active department Started and the rest not", () => {
+    const r = bcStepStates(steps(["R", "completed"], ["MF", "active"], ["P", "included"], ["I", "included"]));
+    expect(pick(r, "Routing")).toMatchObject({ started: true, complete: true });
+    expect(pick(r, "Fabrication")).toMatchObject({ started: true, complete: false });
+    expect(pick(r, "Painting")).toMatchObject({ started: false, complete: false });
+    expect(pick(r, "Install")).toMatchObject({ started: false, complete: false });
+  });
+
+  it("supports several active departments at once", () => {
+    const r = bcStepStates(steps(["MF", "active"], ["V", "active"], ["A", "included"]));
+    expect(pick(r, "Fabrication")?.started).toBe(true);
+    expect(pick(r, "Vinyl")?.started).toBe(true);
+    expect(pick(r, "Final Assembly")?.started).toBe(false);
+  });
+
+  it("completes a folded step only when all of its departments are done", () => {
+    const partial = bcStepStates(steps(["S", "completed"], ["MF", "active"]));
+    expect(pick(partial, "Fabrication")).toMatchObject({ started: true, complete: false, keys: ["S", "MF"] });
+    const done = bcStepStates(steps(["S", "completed"], ["MF", "completed"], ["P", "active"]));
+    expect(pick(done, "Fabrication")).toMatchObject({ started: true, complete: true });
+  });
+
+  it("leaves a folded step not Started when none of its departments is active", () => {
+    // Steel is done, Routing is the active stage, Metal Fab hasn't begun.
+    const r = bcStepStates(steps(["S", "completed"], ["R", "active"], ["MF", "included"]));
+    expect(pick(r, "Fabrication")).toMatchObject({ started: false, complete: false });
+  });
+
+  it("returns one entry per BC step, only for included departments", () => {
+    const r = bcStepStates(steps(["S", "active"], ["MF", "included"]));
+    expect(r.map((x) => x.step)).toEqual(["Fabrication"]);
+    expect(bcStepStates([])).toEqual([]);
+  });
+});
+
+describe("buildStepStatePush", () => {
+  it("carries the step's Started and Complete", () => {
+    const push = buildStepStatePush({
+      jobNo: "J33138",
+      state: { step: "Fabrication", started: true, complete: false, keys: ["S", "MF"] },
+      by: "Alex Smith",
     });
-    expect(push?.startDateTime).toBeNull();
+    expect(push).toMatchObject({
+      kind: "state",
+      jobNo: "J33138",
+      planningStep: "Fabrication",
+      deptKey: "S,MF",
+      started: true,
+      complete: false,
+      startDateTime: null,
+      assignedTo: "",
+    });
   });
-
-  it("re-opening clears complete but doesn't claim the step started", () => {
-    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "P", complete: false });
-    expect(push).toMatchObject({ planningStep: "Painting", complete: false, started: false });
-  });
-
-  it("returns null without a job, or for a department with no BC step", () => {
-    expect(buildCompletionPush({ jobNo: "", deptKey: "P", complete: true })).toBeNull();
-    expect(buildCompletionPush({ jobNo: "J1", deptKey: "", complete: true })).toBeNull();
-    expect(buildCompletionPush({ jobNo: "J1", deptKey: "X", complete: true })).toBeNull();
+  it("is null without a job", () => {
+    expect(buildStepStatePush({ jobNo: "", state: { step: "Vinyl", started: true, complete: false, keys: ["V"] } })).toBeNull();
   });
 });
 
 describe("pushRowName", () => {
   it("labels the outbox row job · step", () => {
-    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "V", complete: true });
+    const push = buildStepStatePush({ jobNo: "J32865", state: { step: "Vinyl", started: true, complete: false, keys: ["V"] } });
     expect(pushRowName(push!)).toBe("J32865 · Vinyl");
   });
 });

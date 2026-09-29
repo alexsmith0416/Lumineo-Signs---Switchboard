@@ -512,8 +512,15 @@
         one, across every week, in Central time.</li>
         <li><strong>Who</strong> — the step's <strong>Assigned To</strong> is set when every card on it is the same
         person. Several people, or a team lane, leaves BC's assignee as it was.</li>
-        <li><strong>Done</strong> — completing a department here marks its BC step <strong>Complete</strong> (and
-        Started); <strong>Reopen</strong> clears it again. Scheduling a step does <em>not</em> mark it Started.</li>
+        <li><strong>Which department it's in</strong> — BC's <strong>Started</strong> box follows the stepper's
+        <strong>active</strong> department(s). That's what puts the project in that department's tile in BC. Complete a
+        department and the next one becomes active, so BC moves the project to the next department's tile on its own.
+        <strong>Set active</strong> on several departments and it shows in each of their tiles. A department that stops
+        being active without being finished is un-Started again.</li>
+        <li><strong>Done</strong> — completing a department here marks its BC step <strong>Complete</strong>;
+        <strong>Reopen</strong> clears it again. Where several departments share one BC step (Steel, Metal Fab and
+        Fabrication Help all feed <strong>Fabrication</strong>), the step is Complete only once all of them are.
+        Scheduling a card never changes Started or Complete.</li>
       </ul>
     Departments map to BC steps as: Steel, Metal Fab and Fabrication Help &rarr; <strong>Fabrication</strong>;
     Routing &rarr; <strong>Routing</strong>; Paint &rarr; <strong>Painting</strong>; Vinyl / Graphics &rarr;
@@ -1007,7 +1014,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
-      <tr><td>Sep 28, 2026</td><td><strong>The board now keeps Business Central's Project Planning up to date</strong> &mdash; each department's scheduled dates and assignee on a job are mirrored to the matching step in BC's Project Planning list (e.g. Metal Fab &rarr; Fabrication, Paint &rarr; Painting), covering the department's whole window across every week. Completing or reopening a department on the stepper completes or reopens its BC step. Scheduling a step doesn't mark it Started in BC. See &sect;5.4.</td></tr>
+      <tr><td>Sep 28, 2026</td><td><strong>The board now keeps Business Central's Project Planning up to date</strong> &mdash; each department's scheduled dates and assignee on a job are mirrored to the matching step in BC's Project Planning list (e.g. Metal Fab &rarr; Fabrication, Paint &rarr; Painting), covering the department's whole window across every week. BC's <strong>Started</strong> box follows the stepper's active department(s), so the project appears in the right department tile in BC and moves to the next department's tile when you complete one. Completing or reopening a department completes or reopens its BC step. See &sect;5.4.</td></tr>
       <tr><td>Sep 15, 2026</td><td><strong>Fix: weather chips show the current forecast again</strong> &mdash; install cards had started showing no weather, or weather from months ago, because the forecast history outgrew what the app could load at once. Cards now show the real forecast for their day. A day more than 7 days out has no chip until its forecast is available, instead of a stale reading. See &sect;4.</td></tr>
       <tr><td>Sep 14, 2026</td><td><strong>Finishing a job's last department now marks it complete in Business Central</strong> &mdash; the production stepper writes back to BC. When the final department on a job is completed, the BC job is flagged <strong>complete</strong> and stamped with the completion date, automatically; reopening a department reverses it. This is the first thing the scheduler writes <em>into</em> BC rather than just reading out of it. The job's BC <em>status</em> is deliberately left untouched, so nothing is posted or billed on your behalf. See &sect;5.4.</td></tr>
       <tr><td>Sep 4, 2026</td><td><strong>A lent employee's install work now shows on the Production board</strong> &mdash; when someone is lent to Installation, their install jobs are drawn on their own Production row, badged <em>Install</em>, <em>Install AM</em> or <em>Install PM</em>, so they can plan their whole week from one board. Those cards are read-only there (the job belongs to Installation), and a full lent day still blocks Production scheduling. <strong>Fix:</strong> a loan is now genuinely one week &mdash; a lent person used to stay on the Installation roster for every future week. <strong>Also:</strong> Production's <em>Custom Card</em> gained the <strong>Shipment load</strong> picker, so a truck run can be put on a production employee &mdash; it lands on the Installation board, adds them there, and shows on Production too. See &sect;5.10.</td></tr>
@@ -1088,7 +1095,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.9 · Sep 28, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.10 · Sep 28, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

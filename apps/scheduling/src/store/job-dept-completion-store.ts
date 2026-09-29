@@ -88,6 +88,8 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
         ? m.addJobDeptCompletion(jobNo, deptKey, by)
         : m.removeJobDeptCompletion(jobNo, deptKey);
     });
+    // Mirror the stepper into BC's step Started/Complete (fire-and-forget).
+    void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by));
 
     // JOB-level BC write-back. Fire-and-forget, and deliberately AFTER the
     // department write: if that write failed it's already reported, and the

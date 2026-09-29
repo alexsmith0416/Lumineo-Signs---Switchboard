@@ -24,7 +24,10 @@
 import type { ScheduleLine } from "../engine/types";
 import { DEPT_FLOW, INSTALL_STEP } from "./production-steps";
 
-export type BcPushKind = "schedule" | "completion" | "job";
+/** `"schedule"` = a step's dates/assignee; `"state"` = a step's Started /
+ *  Complete from the production stepper; `"job"` = the BC job's own complete
+ *  flag. (`"completion"` is the retired pre-Sep-28 shape — never written now.) */
+export type BcPushKind = "schedule" | "state" | "completion" | "job";
 
 /** A transport-agnostic instruction to update one BC planning step (or, for
  *  `"job"`, the BC job itself). */
@@ -46,8 +49,10 @@ export interface BcPlanningPush {
   assignedTo: string;
   assignedToName: string;
   complete: boolean;
-  /** Written to BC's Started ONLY on completion pushes. Scheduling a step is
-   *  not starting it — the flow never sends Started for a `"schedule"` push. */
+  /** BC's Started, on `"state"` pushes only. In BC, Started means "listed in
+   *  this department's queue" — the department tiles show steps that are
+   *  Started and not Complete — so it mirrors the stepper's ACTIVE stage(s).
+   *  Scheduling never touches it. */
   started: boolean;
   /** Source schedule-line id — traceability + de-dupe in the outbox. */
   sourceLineId: string;
@@ -191,28 +196,56 @@ export function buildStepSchedulePush(input: {
   };
 }
 
-/** Build a complete / re-open push for a department the stepper just toggled.
- *  Null when the department has no BC step. Completing marks the step Started
- *  too (it was clearly worked); re-opening leaves Started alone. */
-export function buildCompletionPush(input: {
-  jobNo: string;
-  deptKey: string;
+export interface BcStepState {
+  step: string;
+  started: boolean;
   complete: boolean;
-  completedBy?: string;
-}): BcPlanningPush | null {
-  const step = bcStepForKey(input.deptKey);
-  if (!input.jobNo || !step) return null;
+  /** The stepper keys folded into this step, e.g. ["S", "MF"] for Fabrication. */
+  keys: string[];
+}
+
+/**
+ * BC Started / Complete for every BC step a job's stepper includes. The
+ * stepper is the source of truth (agreed Sep 28, 2026):
+ *   - Complete  = EVERY included department that maps to the step is done, so
+ *     finishing Metal Fab doesn't close Fabrication while Steel is still going.
+ *   - Started   = the step is complete, or ANY of its departments is active.
+ *     Several departments can be active at once. A department that stops being
+ *     active without finishing goes back to not Started, so a project only
+ *     shows in the tile(s) of the department(s) it is actually in.
+ * Departments the stepper doesn't include are left out — BC is not touched.
+ */
+export function bcStepStates(
+  steps: ReadonlyArray<{ key: string; state: "completed" | "active" | "included" }>,
+): BcStepState[] {
+  const byStep = new Map<string, BcStepState>();
+  for (const d of steps) {
+    const step = bcStepForKey(d.key);
+    if (!step) continue;
+    let st = byStep.get(step);
+    if (!st) byStep.set(step, (st = { step, started: false, complete: true, keys: [] }));
+    st.keys.push(d.key);
+    if (d.state !== "completed") st.complete = false;
+    if (d.state === "active") st.started = true;
+  }
+  for (const st of byStep.values()) if (st.complete) st.started = true;
+  return [...byStep.values()];
+}
+
+/** A Started/Complete push for one (job, BC step). */
+export function buildStepStatePush(input: { jobNo: string; state: BcStepState; by?: string }): BcPlanningPush | null {
+  if (!input.jobNo) return null;
   return {
-    kind: "completion",
+    kind: "state",
     jobNo: input.jobNo,
-    planningStep: step,
-    deptKey: input.deptKey,
+    planningStep: input.state.step,
+    deptKey: input.state.keys.join(","),
     startDateTime: null,
     endDateTime: null,
     assignedTo: "",
-    assignedToName: input.completedBy ?? "",
-    complete: input.complete,
-    started: input.complete,
+    assignedToName: input.by ?? "",
+    complete: input.state.complete,
+    started: input.state.started,
     sourceLineId: "",
   };
 }

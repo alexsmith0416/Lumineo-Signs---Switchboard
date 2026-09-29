@@ -26,12 +26,12 @@ One row = one **(job, BC catalogue step)**, not one card.
 
 | Outbox column (`crfdf_…`) | Meaning |
 |---|---|
-| `kind` | `schedule` or `completion` (`job` rows belong to `BCPush_JobCompletion`) |
+| `kind` | `schedule` or `state` (`job` rows belong to `BCPush_JobCompletion`; `completion` is the retired pre-Sep-28 shape and is ignored) |
 | `jobno` | BC job no → `Project_No` |
 | `planningstep` | BC **catalogue step name** (`Fabrication`) → matched on `Step_Description` |
 | `startdatetime` / `enddatetime` | the step's **whole** window, UTC: earliest start → latest end over every card of the job that maps to the step |
 | `assignedto` | BC resource no — set only when every card on the step names the same person; blank = leave BC's assignee alone |
-| `complete` / `started` | completion pushes only |
+| `started` / `complete` | `state` pushes only — the step's whole Started/Complete, from the stepper |
 | `deptkey`, `sourcelineid` | traceability |
 
 The app computes the window at enqueue time by reading **all** of the job's
@@ -41,7 +41,26 @@ delete. So each row is the step's complete current state — idempotent, and a
 later row always supersedes an earlier one. When the last card of a step is
 deleted nothing is pushed: BC keeps its last dates rather than being cleared.
 
-### App department → BC step (agreed Sep 28, 2026)
+#### Started / Complete — the stepper is the source of truth (agreed Sep 28, 2026)
+
+In BC, **Started means "listed in this department's queue"**: the department
+tiles show steps that are Started and not Complete. It does not mean someone has
+physically begun. So Started mirrors the production stepper's **active**
+department(s), which can be several at once:
+
+- Any stepper change — complete, re-open, Set active, editor add/remove —
+  queues a `state` row for **every** BC step the stepper includes
+  (`store/bc-stepper-push.ts`), because one click moves several steps
+  (completing Metal Fab makes Paint active → Painting becomes Started).
+- **Complete** = every included department mapped to the step is done
+  (Fabrication waits for Steel AND Metal Fab). **Started** = complete, or any
+  of its departments active. A department that stops being active without
+  finishing is un-Started. `bcStepStates` in `bc-planning-sync.ts`.
+- BC's own "Activate Next Step" doesn't win: every push restates all the
+  job's mapped steps.
+- Departments the stepper doesn't include are never touched.
+
+## App department → BC step (agreed Sep 28, 2026)
 
 | App department | BC catalogue step |
 |---|---|
@@ -59,9 +78,14 @@ written. Shipment-load cards on the install board don't count toward Install.
 ## Flow steps
 
 1. **Trigger** — Dataverse row added/modified on `crfdf_bcpushqueue`
-   (filtering on `crfdf_status`), **concurrency 1** so rows apply in order.
-   Acts only on `status = pending`, `kind ∈ {schedule, completion}`, and a
-   non-empty `planningstep`.
+   (filtering on `crfdf_status`), concurrency 1. Acts only on
+   `status = pending`, `kind ∈ {schedule, state}`, and a non-empty
+   `planningstep`.
+1b. **Skip stale rows** — if a NEWER row exists for the same job + step + kind
+   (`createdon gt` this one), mark this one `superseded` and stop. Each row
+   carries the step's whole current state, so only the newest matters — and the
+   trigger does NOT deliver rows strictly in order (Sep 28: a quick
+   reopen-then-complete on Routing landed complete-first).
 2. **Get the job's rows** —
    `GET …/ODataV4/Company('Luminous Neon')/LumineoProjectPlanning?$filter=Project_No eq '<job>'`
    (a job has at most ~35).
@@ -70,9 +94,10 @@ written. Shipment-load cards on the install board don't count toward Install.
 4. **Build the body**
    - `schedule` → `{ Sched_Start, Sched_End }` (+ `Assigned_To` when set).
      **Never `Started`** — scheduling is not starting.
-   - `completion` → `{ Complete: true, Started: true }`, or on re-open
-     `{ Complete: false, Completed_Date: 0001-01-01T00:00:00Z }` — ICG sets
-     Completed Date on complete but never clears it. Completing needs a BC
+   - `state` → only the flags that **differ** from the BC row: `Started`,
+     `Complete`, and on a re-open `Completed_Date: 0001-01-01T00:00:00Z` (ICG
+     sets Completed Date on complete but never clears it; re-sending
+     Complete=true would re-stamp it). Nothing differs → `already matches`. Completing needs a BC
      **User Setup** line for the flow's user (`POWERAPPS PERMISSIONS`), or ICG's
      validation fails; Completed By stays blank (that line has no resource).
      Completing a step with no start date makes ICG set the start to now.

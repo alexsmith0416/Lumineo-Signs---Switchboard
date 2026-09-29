@@ -70,6 +70,8 @@ export const useJobDeptOverrideStore = create<JobDeptOverrideState>((set, get) =
       const m = await import("../services/dataverse-live");
       return m.setJobDeptOverride(jobNo, deptKey, o.included, o.active);
     });
+    // "Set active" / add / remove moves BC's Started too (fire-and-forget).
+    void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo));
   },
 
   clearOverride: async (jobNo, deptKey) => {
@@ -84,5 +86,6 @@ export const useJobDeptOverrideStore = create<JobDeptOverrideState>((set, get) =
       const m = await import("../services/dataverse-live");
       return m.clearJobDeptOverride(jobNo, deptKey);
     });
+    void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo));
   },
 }));

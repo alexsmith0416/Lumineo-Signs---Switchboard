@@ -51,7 +51,6 @@ import type { JobSchedule } from "./job-schedule-data";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import {
   bcStepForDepartmentName,
-  buildCompletionPush,
   buildStepSchedulePush,
   pushRowName,
   resourceNoByName,
@@ -1053,11 +1052,13 @@ const BC = {
 //
 // `crfdf_kind` routes the row to a flow, and is a plain string column, so
 // adding a kind needs NO Dataverse script:
-//   "schedule" / "completion" → one BC planning STEP per (job, catalogue step),
+//   "schedule" / "state" → one BC planning STEP per (job, catalogue step),
 //      drained by BCPush_PlanningSteps into our own web service
 //      LumineoProjectPlanning (bc/lumineo-planning-ext). crfdf_planningstep is
-//      the BC step name ("Fabrication"), crfdf_startdatetime/enddatetime the
-//      whole step window. Rows queued before Sep 28, 2026 used the old
+//      the BC step name ("Fabrication"); a schedule row carries the whole step
+//      window in crfdf_startdatetime/enddatetime, a state row the step's
+//      crfdf_started/crfdf_complete mirrored from the production stepper
+//      (store/bc-stepper-push.ts). Rows queued before Sep 28, 2026 used the old
 //      per-card shape (planning-LINE text) and must be retired, not drained.
 //   "job" → PATCH jobs('<jobNo>'), which IS writable as of Sep 11, 2026.
 //      Drained by BCPush_JobCompletion. Reuses existing columns:
@@ -2073,12 +2074,10 @@ export async function addJobDeptCompletion(jobNo: string, deptKey: string, compl
     const id = s(existing[0]!.crfdf_jobdeptcompletionid);
     const res = await dvUpdate(JOBDEPT_SET, id, rec);
     if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(update) failed");
-    void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
     return;
   }
   const res = await dvCreate(JOBDEPT_SET, { crfdf_jobdeptcompletionid: uuid(), ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "addJobDeptCompletion(create) failed");
-  void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: true, completedBy }));
 }
 
 /** Un-complete a job's department (delete the completion row(s)). */
@@ -2088,7 +2087,6 @@ export async function removeJobDeptCompletion(jobNo: string, deptKey: string): P
   await Promise.all(
     existing.map((r) => dvDelete(JOBDEPT_SET, s(r.crfdf_jobdeptcompletionid))),
   );
-  void enqueueBcPush(buildCompletionPush({ jobNo, deptKey, complete: false }));
 }
 
 // ---------------------------------------------------------------------------
