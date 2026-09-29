@@ -23,6 +23,11 @@
 param(
   # Rows created before this instant are old-shape. Default: the rewire date.
   [datetime]$Before = [datetime]'2026-09-29T00:00:00Z',
+  # Which kinds to retire. Since the Sep 28 rewire the app writes "schedule"
+  # and "state"; any pending "completion" row is old-shape by definition, so
+  # `-Kinds completion -Before (Get-Date)` safely sweeps stragglers from tabs
+  # that hadn't reloaded.
+  [string[]]$Kinds = @('schedule', 'completion'),
   [switch]$Apply
 )
 
@@ -57,7 +62,8 @@ $headers = @{ Authorization="Bearer $token"; 'Content-Type'='application/json'; 
 $base = "$org/api/data/v9.2/crfdf_bcpushqueues"
 
 $cut = $Before.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-$filter = "crfdf_status eq 'pending' and (crfdf_kind eq 'schedule' or crfdf_kind eq 'completion') and createdon lt $cut"
+$kindFilter = ($Kinds | ForEach-Object { "crfdf_kind eq '$_'" }) -join ' or '
+$filter = "crfdf_status eq 'pending' and ($kindFilter) and createdon lt $cut"
 $rows = @()
 $url = "$base`?`$select=crfdf_bcpushqueueid,crfdf_kind,crfdf_jobno,crfdf_planningstep,createdon&`$filter=$([uri]::EscapeDataString($filter))"
 while ($url) {
@@ -66,13 +72,14 @@ while ($url) {
   $url = $page.'@odata.nextLink'
 }
 
-"{0} pending schedule/completion row(s) created before {1}" -f $rows.Count, $cut
+"{0} pending {1} row(s) created before {2}" -f $rows.Count, ($Kinds -join '/'), $cut
 $rows | Group-Object crfdf_kind | ForEach-Object { "  {0,-11} {1}" -f $_.Name, $_.Count }
+$rows | Select-Object -First 10 | ForEach-Object { "    {0,-10} {1,-12} {2,-18} {3}" -f $_.crfdf_kind, $_.crfdf_jobno, $_.crfdf_planningstep, $_.createdon }
 if (-not $Apply) { ""; "Dry run — nothing changed. Re-run with -Apply to retire them."; return }
 
 $done = 0
 foreach ($r in $rows) {
-  $body = @{ crfdf_status = 'superseded'; crfdf_statusmessage = 'retired Sep 28 2026: pre-rewire per-card shape' } | ConvertTo-Json
+  $body = @{ crfdf_status = 'superseded'; crfdf_statusmessage = 'retired: pre-rewire (Sep 28 2026) shape' } | ConvertTo-Json
   Invoke-RestMethod -Method Patch -Uri "$base($($r.crfdf_bcpushqueueid))" -Headers $headers -Body $body | Out-Null
   $done++
 }
