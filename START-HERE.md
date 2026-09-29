@@ -374,6 +374,61 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     exist in this BC version — typing it gives an "Aggregate Permission Set" error.)
     Once granted: download symbols → add ICG Project Planning dependency to
     `app.json` → download again → read 71441977's field names from `.alpackages`.
+  - ✅ **Sep 28: symbols downloaded, page written + compiles clean.** Grant
+    landed; UAT is **BC 28** (`app.json` application 28.0.0.0 / runtime 17.0 —
+    29.0 gave "No published package"). Dependency: **Infotech Project Planning**
+    `dde7ba4d-60fc-48d6-9f2e-ab535dc7b886` v28.0.84.0 (prod must be ≥ this).
+    - **71441977 schema (from symbols):** PK **`Project No.` + `Code`** (Code =
+      catalogue step GUID). Writable: `Start DateTime`, `End DateTime`,
+      `Due DateTime` (+ `Start Date 2`/`Start Time`, `End Date`/`End Time`,
+      `Due Date 2`/`Due Time` pairs), `Duration`, `Assigned To`, `Started`,
+      `Complete`, `Completed Date`, `Completed By`, `Quick Notes`. Old
+      `Start Date`/`Due Date` are **obsoleted** by Infotech — don't use them.
+    - 🔴 **`Assigned To` / `Completed By` are Resource No. (Code[20], Type=Person)**,
+      not names — the flow needs an employee → Resource No. mapping.
+    - `src/LumineoProjectPlanning.Page.al` — page **58400** (50100 collided with Infotech Role Center KPIs), publish as service
+      **`LumineoProjectPlanning`**; key `(Project_No='J…',Code=<guid unquoted>)`.
+      Exposes `Step_Description` (looked up from the catalogue) so the flow can
+      resolve by name — step GUIDs differ per environment.
+    - `src/LumineoPlanningWriteBack.PermissionSet.al` — **`LUM PLANNING WB`** (58400),
+      page X + RM on 71441977; assign to the app card.
+    - ✅ **Published to UAT + probed (Sep 28)** — `scripts/bc-odata-planning-probe.ps1`
+      (read-only): **8,147 rows**, J31949 returns real dates/assignee, keyed GET
+      `(Project_No='J…',Code=<guid>)` returns one row **with an etag**. PATCH
+      works with the existing service principal. (Took `EXTEN. MGT. - ADMIN` +
+      Company-blank on Alex's `D365 BASIC`/`D365 BUS FULL ACCESS` to publish —
+      install runs in EVERY company; page ID 50100 collided, now 58400.)
+    - 🔴 **Rows are SPARSE — not 35 per job.** J31949 has 5 rows (only steps that
+      were touched). 8,147 ≠ 233 × 35; that arithmetic was coincidence. Scheduling
+      an untouched step needs an INSERT — page is `InsertAllowed = false`; open
+      question whether/how ICG creates rows (don't bypass hidden setup).
+    - 🔴 **Time zones — write test (`bc-odata-planning-write-test.ps1`, J31949
+      "Upcoming Manufacturing", restored).** `<X> DateTime` is UTC; the
+      `Date 2`/`Date` + `Time` pair is the **writing session's local time**, and
+      ICG's OnValidate converts between them in the SESSION time zone. A human in
+      Central writes 07:00 → 12:00Z. **Our service principal's session is UTC**, so
+      whichever side we write, the pair lands in UTC — 5 h off for anyone reading
+      the Time fields in BC. Fix needs AL on our side (set both sides explicitly
+      with a fixed Central conversion), not a flow change.
+      ✅ **Built in v1.0.0.1 (Sep 28, compiled, NOT yet republished/verified):**
+      the page now exposes **`Sched_Start` / `Sched_End`** (UTC in) as the ONLY
+      writable dates. They validate the UTC DateTime through ICG (Duration stays
+      derived), then pin the pair to **Central wall-clock** via System App
+      `Time Zone`.GetTimezoneOffset(instant, 'Central Standard Time') — DST-aware,
+      independent of the session zone — and put back Started/Complete. All raw
+      date/time fields are read-only on the page. **The flow writes only
+      `Sched_Start`/`Sched_End`** (+ Assigned_To etc.). Verify with
+      `bc-odata-planning-write-test.ps1` after F5 — it covers CDT, CST, and the
+      UTC/Central date boundary.
+    - 🔴 **Writing `Start DateTime` sets `Started = true`** (writing the pair does
+      not). A schedule push must not mark steps started.
+    - `Duration` is derived (End − Start) — never write it. BC does NOT enforce
+      start ≤ end (Fabrication on J31949 has negative duration).
+    - ⚠️ **Bulk PATCHes are order-sensitive**: blanking the start while `Started`
+      is true sets start = NOW. Clear `Started` first, then DateTime, then the
+      pair. The write-test restore does it one field at a time for this reason.
+    - ⚠️ PowerShell `ConvertFrom-Json` reinterprets DateTimes — use
+      `-DateKind String` when checking what BC actually stored.
   - 📌 **RESUME HERE — build an AL page over 71441977.** This is now the plan, not
     a fork: no Infotech page exposes the table, and the sign365 API entities stay
     `Updatable=false` regardless of permissions (that is a page property, not a

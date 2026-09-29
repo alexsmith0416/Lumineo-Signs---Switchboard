@@ -2,7 +2,7 @@
   "id": "7aa51704-725d-423a-a9b0-ddcdd7fcfdad",
   "name": "lumineo-planning-ext",
   "publisher": "Lumineo Signs",
-  "version": "1.0.0.0",
+  "version": "1.0.0.1",
   "brief": "",
   "description": "",
   "privacyStatement": "",
@@ -10,14 +10,21 @@
   "help": "",
   "url": "",
   "logo": "",
-  "dependencies": [],
+  "dependencies": [
+    {
+      "id": "dde7ba4d-60fc-48d6-9f2e-ab535dc7b886",
+      "name": "Infotech Project Planning",
+      "publisher": "Infotech Consulting Group",
+      "version": "28.0.84.0"
+    }
+  ],
   "screenshots": [],
   "platform": "1.0.0.0",
-  "application": "29.0.0.0",
+  "application": "28.0.0.0",
   "idRanges": [
     {
-      "from": 50100,
-      "to": 50149
+      "from": 58400,
+      "to": 58449
     }
   ],
   "resourceExposurePolicy": {
@@ -25,7 +32,7 @@
     "allowDownloadingSource": true,
     "includeSourceInSymbolFile": true
   },
-  "runtime": "18.0",
+  "runtime": "17.0",
   "features": [
     "NoImplicitWith"
   ]
