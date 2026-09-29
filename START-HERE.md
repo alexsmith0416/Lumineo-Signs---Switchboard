@@ -265,7 +265,8 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     match `Step_Description` → PATCH `(Project_No='…',Code=<guid>)` or POST;
     concurrency 1; `Sched_*` only, never raw dates.
   - **Next, in order:** (1) ✅ done — v1.0.0.5 published + all paths verified;
-    (2) `scripts/retire-bcpush-backlog.ps1` dry run → `-Apply`; (3) deploy the
+    (2) ✅ done Sep 28 — 187 old rows (115 schedule + 72 completion) now
+    `superseded`; the 1 `job` row is still pending for BCPush_JobCompletion; (3) deploy the
     app + update USER-GUIDE §5.4 (BC now receives step dates/assignee);
     (4) build + import the solution, turn the flow on, move one card, check BC.
 - **Sep 22, 2026 — BC Planning Step write-back. The permission wall is
