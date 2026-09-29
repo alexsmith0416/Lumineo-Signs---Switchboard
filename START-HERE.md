@@ -215,8 +215,16 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Sep 28, 2026) — BC step write-back is BUILT end to end;
-  nothing is live yet.** Our AL page works in UAT; the app + flow are rewired to
+- **📌 RESUME HERE (Sep 28, 2026) — BC step write-back is LIVE against UAT.**
+  App deployed, BCPush_PlanningSteps imported + ON. Verified on J33138: a Metal
+  Fab card move created BC's Fabrication row (Central times, Chris Owen 1030,
+  Started untouched); reopen → complete on Routing left Routing Started +
+  Complete and Fabrication Started (Metal Fab active); Painting / Vinyl /
+  Install untouched ("nothing to set"). One old-shape `completion` row for
+  J33138 Routing (4:00 AM) is still `pending` — ignored by the flow, harmless.
+  **Next:** watch real traffic for a few days (queue rows `failed`?), ask the
+  team to reload the app, then plan the PRODUCTION cutover (list below).
+  Previous status, kept for context: Our AL page works in UAT; the app + flow are rewired to
   it. Full design: `apps/scheduling/flows/BCPush_PlanningSteps.md`.
   - 🔴 **Started ≠ "scheduled" and ≠ "physically started" (Alex, Sep 28).** In BC,
     Started = *listed in that department's queue* — BC's department tiles show
