@@ -2,7 +2,7 @@
   bc-odata-planning-write-test.ps1 — ONE-ROW write test against our own service
   `LumineoProjectPlanning` (page 58400 over 71441977). Verifies the Sched_Start /
   Sched_End write path: UTC in -> Start/End DateTime in UTC, the Date+Time pair
-  in CENTRAL wall-clock time (DST-aware), Duration derived, Started untouched.
+  in CENTRAL wall-clock time (DST-aware), Duration = End - Start (set by the page), Started untouched.
   (The raw date fields are read-only on the page since v1.0.0.1.)
 
   Snapshots every writable field first and RESTORES them at the end (and on any
@@ -68,10 +68,10 @@ try {
   "===== B: Sched_End = 2026-10-06T21:00:00Z  (expect pair 2026-10-06 16:00, Duration P1DT8H)"
   Show 'after B' (Patch @{ Sched_End = '2026-10-06T21:00:00Z' })
   ""
-  "===== C: Sched_Start = 2026-12-07T14:00:00Z  (winter: expect pair 2026-12-07 08:00 CST)"
+  "===== C: Sched_Start = 2026-12-07T14:00:00Z  (winter: expect pair 2026-12-07 08:00 CST, Duration negative — start after end)"
   Show 'after C' (Patch @{ Sched_Start = '2026-12-07T14:00:00Z' })
   ""
-  "===== D: Sched_Start = 2026-10-06T03:00:00Z  (date boundary: expect pair 2026-10-05 22:00)"
+  "===== D: Sched_Start = 2026-10-06T03:00:00Z  (date boundary: expect pair 2026-10-05 22:00, Duration P0DT18H)"
   Show 'after D' (Patch @{ Sched_Start = '2026-10-06T03:00:00Z' })
   ""
 } catch {

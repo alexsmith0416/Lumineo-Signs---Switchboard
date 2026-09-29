@@ -144,6 +144,13 @@ page 58400 "Lumineo Project Planning"
             Rec."End Time" := LocalTime;
         end;
 
+        // ICG derives Duration only from the Date/Time pair's OnValidate, which we
+        // bypass. It is plain elapsed End - Start (J31949 Routing: P2DT9H).
+        if (Rec."Start DateTime" <> 0DT) and (Rec."End DateTime" <> 0DT) then
+            Rec.Duration := Rec."End DateTime" - Rec."Start DateTime"
+        else
+            Rec.Duration := 0;
+
         // Scheduling is not starting: undo ICG's Started/Complete side effects.
         Rec.Started := WasStarted;
         Rec.Complete := WasComplete;

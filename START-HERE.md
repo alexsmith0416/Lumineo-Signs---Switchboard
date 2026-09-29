@@ -410,10 +410,11 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       whichever side we write, the pair lands in UTC — 5 h off for anyone reading
       the Time fields in BC. Fix needs AL on our side (set both sides explicitly
       with a fixed Central conversion), not a flow change.
-      ✅ **Built in v1.0.0.1 (Sep 28, compiled, NOT yet republished/verified):**
+      ✅ **Built + verified in UAT (Sep 28, v1.0.0.1; v1.0.0.2 adds Duration):**
       the page now exposes **`Sched_Start` / `Sched_End`** (UTC in) as the ONLY
-      writable dates. They validate the UTC DateTime through ICG (Duration stays
-      derived), then pin the pair to **Central wall-clock** via System App
+      writable dates. They validate the UTC DateTime through ICG, set
+      `Duration` = End − Start themselves (ICG only derives it in the PAIR's
+      OnValidate, which this path skips — v1.0.0.1 left it 0), then pin the pair to **Central wall-clock** via System App
       `Time Zone`.GetTimezoneOffset(instant, 'Central Standard Time') — DST-aware,
       independent of the session zone — and put back Started/Complete. All raw
       date/time fields are read-only on the page. **The flow writes only
