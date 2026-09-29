@@ -125,3 +125,11 @@ export function monthsAround(today: Date, back = 3, ahead = 12): string[] {
   const base = new Date(today.getFullYear(), today.getMonth(), 1);
   return Array.from({ length: back + ahead + 1 }, (_, i) => monthKey(addMonths(base, i - back)));
 }
+
+/** The billing period whose (explicitly set) cut-off falls on `day`, or null.
+ *  Drives the "Billing cut-off" label on the calendars' day headers. */
+export function cutoffOnDay(day: Date, rows: readonly BillingPeriodRow[]): BillingPeriod | null {
+  const key = formatDay(day);
+  const row = rows.find((r) => r.cutoff === key && parseDay(r.cutoff));
+  return row ? billingPeriod(row.month, rows) : null;
+}

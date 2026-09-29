@@ -103,6 +103,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         assistDaysByEmployee={assistDaysByEmployee}
         mirroredLinesByEmployee={mirroredLines}
         showInvoice={showMoney}
+        showBillingCutoffs={showMoney}
         showTotalValue={showMoney}
         bannerSlot={bannerSlot}
         onNavigate={onNavigate}

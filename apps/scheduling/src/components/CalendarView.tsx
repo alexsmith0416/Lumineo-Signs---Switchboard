@@ -40,6 +40,8 @@ import EmployeeAdminPanel from "./EmployeeAdminPanel";
 import JobCard, { cardHasAddons, cardAddonCount } from "./JobCard";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
+import { useBillingPeriodStore } from "../store/billing-period-store";
+import { cutoffOnDay } from "../services/billing-periods";
 import CascadeConfirmDialog, {
   summarizeCascadeMoves,
   type CascadeMove,
@@ -69,6 +71,9 @@ interface CalendarViewProps {
   cardLayout?: "compact" | "stacked";
   /** Show invoice $ amount on cards. */
   showInvoice?: boolean;
+  /** Label each month's billing cut-off day in the day header (part of the $
+   *  toggle — Admin / Ops / Developer). Dates from Settings → Billing periods. */
+  showBillingCutoffs?: boolean;
   /** Show crew/truck badge on cards. */
   showCrewBadge?: boolean;
   /** Show weather chip on cards. */
@@ -375,6 +380,7 @@ export default function CalendarView({
   onJobClick,
   cardLayout = "compact",
   showInvoice = false,
+  showBillingCutoffs = false,
   showCrewBadge = false,
   showWeather = false,
   showBillingStats = false,
@@ -1079,6 +1085,7 @@ export default function CalendarView({
             >
               <div>{format(d, "EEE")}</div>
               <div style={{ fontWeight: 400, fontSize: 11 }}>{format(d, "MMM d")}</div>
+              {showBillingCutoffs && <BillingCutoffLabel day={d} />}
             </div>
           ))}
         </div>
@@ -2277,6 +2284,27 @@ function GanttCard({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/** "Billing cut-off" chip for a day header — only on a day that is some
+ *  month's billing cut-off (Settings → Billing periods). */
+function BillingCutoffLabel({ day }: { day: Date }) {
+  const rows = useBillingPeriodStore((s) => s.rows);
+  const load = useBillingPeriodStore((s) => s.load);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const period = cutoffOnDay(day, rows);
+  if (!period) return null;
+  const month = format(new Date(`${period.month}-01T00:00:00`), "MMMM");
+  return (
+    <div
+      className="calendar-header-cutoff"
+      title={`${month} billing cut-off — installs must end by ${format(period.lastInstallDay, "EEE MMM d")} to bill in ${month}. Ending today rolls to next month.`}
+    >
+      Billing cut-off
     </div>
   );
 }

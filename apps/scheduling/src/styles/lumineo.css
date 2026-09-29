@@ -1459,6 +1459,22 @@ input, select, textarea {
   text-align: center;
 }
 
+/* Subtle marker on a month's billing cut-off day (shown with the $ toggle). */
+.calendar-header-cutoff {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 6px;
+  border: 1px dashed var(--status-green);
+  border-radius: 999px;
+  color: var(--status-green);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: help;
+}
+
 .calendar-header-cell--resource {
   position: sticky;
   left: 0;

@@ -267,6 +267,7 @@ export default function InstallationCalendar({
         assistDaysByEmployee={productionDaysByEmployee}
         assistFiller={{ full: "Production", half: "Prod" }}
         showInvoice={showMoney}
+        showBillingCutoffs={showMoney}
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}
         showBillingStats={showMoney}

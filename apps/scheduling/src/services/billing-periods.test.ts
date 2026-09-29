@@ -3,6 +3,7 @@ import {
   billingMonthOf,
   billingPeriod,
   billingPeriodFor,
+  cutoffOnDay,
   cutoffProblem,
   DEFAULT_MONTHLY_GOAL,
   monthsAround,
@@ -94,5 +95,17 @@ describe("monthsAround", () => {
     expect(m[3]).toBe("2026-09");
     expect(m.at(-1)).toBe("2027-09");
     expect(m).toHaveLength(16);
+  });
+});
+
+describe("cutoffOnDay", () => {
+  it("finds the month whose cut-off is that day", () => {
+    const p = cutoffOnDay(new Date(2026, 9, 24, 13, 30), rows);
+    expect(p?.month).toBe("2026-10");
+    expect(p?.lastInstallDay).toEqual(d("2026-10-23"));
+  });
+  it("is null on other days, and for calendar-default months", () => {
+    expect(cutoffOnDay(new Date(2026, 9, 23), rows)).toBeNull();
+    expect(cutoffOnDay(new Date(2026, 11, 1), rows)).toBeNull(); // Dec 1 is only November's default end
   });
 });
