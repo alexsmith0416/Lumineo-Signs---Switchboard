@@ -215,7 +215,73 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 LIVE (Sep 29, 2026) — Billing periods (fiscal months).** Table
+- **📌 RESUME HERE (Sep 29, 2026) — Job Tracking (replacing Airtable). Phase 1
+  data is IN; next is the Jobs view.**
+  Goal: track every job from order → production → install → invoice inside the
+  Project Scheduler, replacing the Airtable "LNI Production Schedule / WK
+  Expeditor" list, with the stepper replacing Airtable's "/" (needed) and "X"
+  (done) department columns and everything flowing to BC Project Planning.
+  - **Where the Airtable app lives:** `C:\Users\Alex\Documents\LNI-ProductionSchedule`
+    (Code App `4ed31b48-…`). Good Airtable-style grid (React 19, @tanstack/react-virtual,
+    grouping / filters / 15 views / inline edit) BUT it shows a baked-in CSV snapshot
+    (`src/data/staticRecords.ts`, 730 rows) and **saves nothing**; its Dataverse +
+    BC code is unused (and its BC path reads a client secret from `VITE_` vars —
+    never ship that). We PORT its grid UI; its data layer is not reused.
+  - ⚠️ `C:\Users\Alex\Lumineo-Signs---Switchboard\production-scheduling-app` is an
+    OLD copy of this scheduler, not the Airtable app. Its power.config.json had the
+    LIVE app id — cleared Sep 29 (`appId: ""`, renamed "old copy - do not use") so a
+    push there can't overwrite production. That edit is **uncommitted in the
+    Switchboard repo**.
+  - **Decisions (Alex, Sep 29):**
+    - TWO steppers per job: **Production** (lifecycle) and **Service** (service /
+      contract orders → BC "Service" step): Survey → Service → Complete to Admin →
+      Complete Invoiced.
+    - Production lifecycle: New Order → Upcoming Mfg → Purchasing → **Material Cut
+      (NEW dept, BC Substrate Cut/Prep)** → Steel/Metal Fab → Routing → Paint →
+      Vinyl (**Plex/Application folds into Vinyl**; BC Face Production NOT mapped —
+      too broad) → Assembly → Ready for Install → Install → Complete-Need Paperwork
+      → **Complete to Admin** (production team's last step) → **Complete Invoiced**
+      (Admin's step; the true end).
+    - **BC job-level "complete" moves to Complete to Admin** (today it fires when
+      the last production dept completes — change in Phase 2).
+    - Current Status = derived from the stepper's active stage, with a **manual
+      override** for odd cases (Morton – National, Billboards…; may need extra BC
+      tiles).
+    - **Hold** = flag + reason + Date to Hold / Date off Hold → **DIP = days open −
+      days on hold**. **UL Sign** = filterable checkbox. **Routing Hrs dropped.**
+    - **Expeditor date** = when the expeditor finished review and passed the job to
+      the dept head.
+  - ✅ **Done (Sep 29):**
+    - Table **`crfdf_jobtrack`** (Job Tracking, 31 cols, keyed by job no; dates as
+      YYYY-MM-DD text) — `scripts/create-jobtrack-table.ps1`.
+    - Column **`crfdf_jobschedule.crfdf_productioncompletedate`** added (was never
+      created; the app's production-complete override now works).
+    - **Airtable imported** (`scripts/plan-airtable-import.py` → review CSV + plan;
+      `scripts/apply-airtable-import.ps1` — dry-run default, only fills gaps, never
+      overwrites). 611 rows → **601 jobs**: 601 jobtrack rows, 42 new + 30 filled
+      jobschedule dates (red date / Mfg Target Modified), **307 "needed" overrides +
+      110 completions** (stamped "Airtable import"). Totals now: jobtrack 601,
+      jobschedule 748, overrides 334, completions 217. Import writes did NOT push to
+      BC — BC catches up when a job's stepper is next touched.
+    - "(Steel Copy)" / "(Paint Copy)" Airtable rows = a job in two depts at once →
+      imported as extra ACTIVE depts. Same job with a production + a service order
+      → one job (both steppers). 4 merge conflicts (J35548, J36572, J39571 order
+      dates; J39712 sales VB|JS) — newest order won. 26 jobs aren't in the BC job
+      sync (crfdf_bcjob) — imported anyway, flag them in the view.
+    - Material Cut is stored under stepper key **`MC`** but the stepper doesn't show
+      it yet (not in `DEPT_FLOW`).
+  - **Next — Phase 1 cont.: the Jobs view** (read-only first): port the LNI grid into
+    the scheduler; rows = BC jobs (`crfdf_bcjobs`) ∪ jobtrack; show each job's
+    stepper + derived/overridden Current Status; a "WK Expeditor" view matching the
+    Airtable columns; flag the 26 not-in-BC jobs. Screenshot in dev before deploy.
+  - **Phase 2:** editing; lifecycle + Service steppers (new keys incl. MC, holds, DIP);
+    BC write-back for the new stages (non-dept BC steps: New Order This Week,
+    Upcoming Manufacturing, Job Purchasing, Substrate Cut/Prep, Product Ready for
+    Install Scheduling, Install-Waiting on Product, Complete-Need Paperwork);
+    move BC job "complete" to Complete to Admin. **Phase 3:** Mfg/Install targets →
+    Monthly Gameplanning (replace mock `INSTALL_CANDIDATES`) + scheduling.
+    **Phase 4:** retire Airtable.
+- **LIVE (Sep 29, 2026) — Billing periods (fiscal months).** Table
   `crfdf_billingperiod` created, app deployed; cut-off dates still to be entered.
   - Each month has a **billing cut-off date** + **goal** in Settings → Billing
     periods (Admin / Developer / Ops only — `canEditBillingPeriods`). A job bills
