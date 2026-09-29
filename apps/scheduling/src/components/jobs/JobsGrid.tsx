@@ -28,6 +28,7 @@ export default function JobsGrid({
   groups,
   sorts,
   onToggleSort,
+  onOpen,
   collapseSignal,
 }: {
   rows: JobRow[];
@@ -35,6 +36,8 @@ export default function JobsGrid({
   groups: GroupCriterion[];
   sorts: SortCriterion[];
   onToggleSort: (field: string) => void;
+  /** Open a job's panel (row click). */
+  onOpen: (row: JobRow) => void;
   /** Bump .n to collapse (all=true) or expand (all=false) every group. */
   collapseSignal: { n: number; all: boolean };
 }) {
@@ -161,7 +164,7 @@ export default function JobsGrid({
                 </tr>
               );
             }
-            return <JobGridRow key={item.row.id} row={item.row} cols={cols} />;
+            return <JobGridRow key={item.row.id} row={item.row} cols={cols} onOpen={onOpen} />;
           })}
           {padBot > 0 && (
             <tr aria-hidden="true">
@@ -175,9 +178,9 @@ export default function JobsGrid({
   );
 }
 
-const JobGridRow = memo(function JobGridRow({ row, cols }: { row: JobRow; cols: JobFieldDef[] }) {
+const JobGridRow = memo(function JobGridRow({ row, cols, onOpen }: { row: JobRow; cols: JobFieldDef[]; onOpen: (row: JobRow) => void }) {
   return (
-    <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`}>
+    <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`} onClick={() => onOpen(row)}>
       {cols.map((c) => (
         <td key={c.key} className={c.key === "job" ? "jobs-cell--primary" : undefined}>
           <Cell row={row} def={c} />

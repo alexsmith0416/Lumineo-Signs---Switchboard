@@ -1437,6 +1437,39 @@ export interface ActiveJob {
   placements: ActivePlacement[];
 }
 
+/**
+ * Where ONE job sits on the boards right now — every production card, install
+ * card and shipment load for it, earliest first (all dates, not just upcoming).
+ * The Jobs view's job panel shows these so the list and the boards agree.
+ */
+export async function jobPlacements(jobNo: string): Promise<ActivePlacement[]> {
+  const filter = `crfdf_jobno eq '${odataLit(jobNo)}'`;
+  const [prodRows, cardRows, names, loads] = await Promise.all([
+    list(SET.lines, { filter }),
+    list(SHIP.cards, { filter }),
+    departmentNames(),
+    fetchShipmentLoads(),
+  ]);
+  const out: ActivePlacement[] = [];
+  for (const r of prodRows) {
+    const l = mapLine(r);
+    if (l.isCustom) continue;
+    const dn = names.get(l.departmentId);
+    out.push({ kind: "production", label: dn ? `Production · ${dn}` : "Production", date: l.startDateTime });
+  }
+  for (const r of cardRows) {
+    const c = mapCardRecord(r);
+    if (c.isCustom || c.shipmentLoadId) continue;
+    out.push({ kind: "installation", label: c.region ? `Installation · ${c.region}` : "Installation", date: c.startDateTime });
+  }
+  for (const load of loads) {
+    if (load.items.some((it) => it.jobNo === jobNo)) {
+      out.push({ kind: "shipping", label: `Shipping · ${load.name}`, date: load.shipDate });
+    }
+  }
+  return out.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 export async function fetchActiveJobs(from: Date): Promise<ActiveJob[]> {
   const fromIso = from.toISOString();
   const [prodRows, deptRows, cardRows, loads, meta, salesByJob] = await Promise.all([

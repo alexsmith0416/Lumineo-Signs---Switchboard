@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
+import { useJobScheduleStore } from "../../store/job-schedule-store";
+import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services/job-tracking";
 import JobsGrid from "./JobsGrid";
+import JobsJobPanel from "./JobsJobPanel";
 import { FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
 import { ALL_JOB_VIEWS, JOB_FIELDS, JOB_VIEW_GROUPS, type JobsView as JobsViewDef } from "./jobs-fields";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
@@ -33,15 +36,38 @@ function savePrefs(view: string, prefs: GridPrefs) {
 
 type Panel = "filter" | "sort" | "group" | null;
 
-export default function JobsView({ canSeeMoney }: { canSeeMoney: boolean }) {
-  const rows = useJobTrackingStore((s) => s.rows);
+const ymd = (d: Date | null | undefined): string =>
+  d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+
+export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolean; canEdit: boolean }) {
+  const bcJobs = useJobTrackingStore((s) => s.bcJobs);
+  const tracks = useJobTrackingStore((s) => s.tracks);
   const loading = useJobTrackingStore((s) => s.loading);
   const loaded = useJobTrackingStore((s) => s.loaded);
   const error = useJobTrackingStore((s) => s.error);
   const load = useJobTrackingStore((s) => s.load);
+  // Dates come from the SAME job-schedule store the boards' Install Dates use,
+  // so an edit anywhere shows here at once (and here → the boards).
+  const scheduleByJob = useJobScheduleStore((s) => s.byJob);
+  const loadSchedules = useJobScheduleStore((s) => s.load);
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadSchedules();
+  }, [load, loadSchedules]);
+
+  const rows = useMemo(() => {
+    const dates = new Map<string, JobScheduleDates>();
+    for (const [jobNo, sch] of Object.entries(scheduleByJob)) {
+      dates.set(jobNo, {
+        redDate: ymd(sch.redDate),
+        productionCompleteDate: ymd(sch.productionCompleteDate),
+        releasedDate: ymd(sch.releasedDate),
+        scheduledInstallDate: ymd(sch.scheduledInstallDate),
+      });
+    }
+    return buildJobRows(bcJobs, tracks, dates, new Date());
+  }, [bcJobs, tracks, scheduleByJob]);
+  const [openJob, setOpenJob] = useState<JobRow | null>(null);
 
   const [viewName, setViewName] = useState<string>(() => {
     try {
@@ -152,14 +178,22 @@ export default function JobsView({ canSeeMoney }: { canSeeMoney: boolean }) {
             {loading && !loaded ? "Loading jobs…" : `${shown.length.toLocaleString()} of ${inView.length.toLocaleString()} jobs`}
           </span>
           <span className="jobs-toolbar__spring" />
-          <span className="jobs-toolbar__note">Read-only preview — editing comes next</span>
-          <button type="button" className="jobs-toolbar__btn" onClick={() => void load(true)} disabled={loading}>
+          <span className="jobs-toolbar__note">Click a job to open it</span>
+          <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); }} disabled={loading}>
             Refresh
           </button>
         </div>
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
-        <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort} collapseSignal={collapseSignal} />
+        <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
+          collapseSignal={collapseSignal} onOpen={setOpenJob} />
       </section>
+      {openJob && (
+        <JobsJobPanel
+          row={rows.find((r) => r.jobNo === openJob.jobNo) ?? openJob}
+          canEdit={canEdit}
+          onClose={() => setOpenJob(null)}
+        />
+      )}
     </div>
   );
 }

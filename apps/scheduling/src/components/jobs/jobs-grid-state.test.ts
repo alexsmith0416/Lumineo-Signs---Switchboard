@@ -6,7 +6,7 @@ const row = (o: Partial<JobRow>): JobRow =>
   ({
     id: o.jobNo ?? "J1", jobNo: "J1", name: "", job: "J1", status: "Installation", statusSource: "airtable",
     tracked: true, inBc: true, description: "", sales: "", location: "", region: "", priority: "", orderDate: "",
-    mfgFinalDate: "", mfgTargetMod: "", redDate: "", notes: "", powerlines: "", holdReason: "", dateToHold: "",
+    mfgFinalDate: "", mfgTargetMod: "", redDate: "", releaseDate: "", scheduledInstall: "", notes: "", powerlines: "", holdReason: "", dateToHold: "",
     dateOffHold: "", expeditor: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "", vendor: "", po: "",
     vendorStatus: "", storageLocation: "", vendorShipDate: "", vendorShipDate2: "", outsourcedArrival: "",
     graphics: "", routingType: "", ulSign: false, process: "", mfgRegion: "", installRegion: "", value: null, dip: null,

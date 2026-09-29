@@ -868,9 +868,14 @@
     replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
     <li>Drag a column edge to resize it (double-click to reset). A <em>not in BC</em> tag means the job was carried
     over from Airtable but isn't in the BC job sync.</li>
+    <li><strong>Click a job</strong> to open it: its tracking details, <strong>where it sits on the Production,
+    Installation and Shipping boards</strong>, and the same <strong>production stepper</strong> and <strong>Install
+    Dates</strong> as the job card on the boards. It's one system &mdash; completing a department or changing a date
+    here updates the boards (and Business Central's Project Planning, &sect;5.4) exactly as it would from a card, and
+    changes made on the boards show here straight away.</li>
   </ul>
-  <p>It's <strong>read-only for now</strong>; editing, the full lifecycle stepper (New Order through Complete
-  Invoiced) and the Service stepper are next.</p>
+  <p>The tracking columns (hold, vendor, expeditor, date to Admin&hellip;) are <strong>read-only for now</strong>;
+  editing them, the full lifecycle stepper (New Order through Complete Invoiced) and the Service stepper are next.</p>
 
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
@@ -1048,7 +1053,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
-      <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
+      <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Click a job to open it: the same stepper and Install Dates as the boards' job card, so a change here updates the boards and BC. Tracking columns are read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing cut-off days are marked on the calendars</strong> &mdash; with the <strong>$</strong> button on, Production and Installation show a small <em>Billing cut-off</em> label under the date of each month's cut-off. Hover it to see which month it closes and the last install day that still counts. See &sect;4.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing months now follow the billing cut-off</strong> &mdash; set each month's cut-off date and goal in <em>Settings &rarr; Billing periods</em> (Admin / Ops / Developer). A job counts toward the month its install <strong>ends</strong> in, and must end the day before the cut-off; ending on the cut-off day rolls it to the next month. The Installation board's <em>Billing</em> stat and the Monthly Plan both use these months and each month's own goal. See &sect;5.12 and &sect;5.14.</td></tr>
       <tr><td>Sep 28, 2026</td><td><strong>The board now keeps Business Central's Project Planning up to date</strong> &mdash; each department's scheduled dates and assignee on a job are mirrored to the matching step in BC's Project Planning list (e.g. Metal Fab &rarr; Fabrication, Paint &rarr; Painting), covering the department's whole window across every week. BC's <strong>Started</strong> box follows the stepper's active department(s), so the project appears in the right department tile in BC and moves to the next department's tile when you complete one. Completing or reopening a department completes or reopens its BC step. See &sect;5.4.</td></tr>

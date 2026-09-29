@@ -62,6 +62,8 @@ export interface BcJobSummary {
 export interface JobScheduleDates {
   redDate: string;
   productionCompleteDate: string;
+  releasedDate?: string;
+  scheduledInstallDate?: string;
 }
 
 export type StatusSource = "override" | "hold" | "airtable" | "untracked";
@@ -86,6 +88,8 @@ export interface JobRow {
   mfgFinalDate: string;
   mfgTargetMod: string;
   redDate: string;
+  releaseDate: string;
+  scheduledInstall: string;
   notes: string;
   powerlines: string;
   holdReason: string;
@@ -187,6 +191,8 @@ export function buildJobRows(
       mfgFinalDate: t?.mfgFinalDate ?? "",
       mfgTargetMod: sch?.productionCompleteDate ?? "",
       redDate: sch?.redDate ?? "",
+      releaseDate: sch?.releasedDate ?? "",
+      scheduledInstall: sch?.scheduledInstallDate ?? "",
       notes: t?.notes ?? "",
       powerlines: t?.powerlines ?? "",
       holdReason: t?.holdReason ?? "",

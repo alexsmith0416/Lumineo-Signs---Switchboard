@@ -1,7 +1,7 @@
 // Synthetic Jobs-view data for the dev server (made-up customers — no real job
 // data in the repo). Shaped like the imported Airtable list: a spread of
 // statuses, holds, vendors and regions, plus BC jobs with no tracking row yet.
-import type { BcJobSummary, JobScheduleDates, JobTrack } from "../services/job-tracking";
+import type { BcJobSummary, JobTrack } from "../services/job-tracking";
 
 const STATUSES = [
   "New Order this week", "Upcoming Mfg.", "MFG - Routing", "MFG - Len Metal Fab", "MFG - Paint Prep / Paint",
@@ -70,7 +70,3 @@ export const MOCK_JOB_TRACKS: JobTrack[] = MOCK_BC_JOBS.slice(0, 48).map((j, i) 
     legacyProcess: /Service/.test(status) ? "Service" : "In Process",
   };
 });
-
-export const MOCK_JOB_SCHEDULES = new Map<string, JobScheduleDates>(
-  MOCK_JOB_TRACKS.filter((t) => t.priority === "RED DATE").map((t) => [t.jobNo, { redDate: daysAgo(-10), productionCompleteDate: "" }]),
-);

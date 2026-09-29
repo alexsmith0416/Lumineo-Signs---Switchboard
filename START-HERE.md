@@ -287,8 +287,26 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       (no real customers in the repo). Guide v3.12 §5.17.
     - The Stepper column is empty in dev (no BC planning lines); live it lazy-loads
       per visible row.
-  - **Next:** deploy the Jobs preview + compare against Airtable side by side; then
-    Phase 2 (editing).
+  - ✅ **Deployed Sep 29 + wired into the scheduler.** One system, not two:
+    - Stepper column + job panel use the SAME stepper stores as the boards
+      (`useJobSteps`, `ProductionStepperSection`) → complete / reopen / Set active
+      from Jobs writes the same rows and queues the same BC state push
+      (`store/bc-stepper-push.ts`).
+    - Dates (red / release / sched. install / production-complete override) come
+      from the SHARED `useJobScheduleStore`; the job panel embeds the boards'
+      `JobSchedulePanel` (Install Dates) → edits show on boards + Jobs at once.
+      `job-tracking-store` now holds only raw BC jobs + jobtrack rows; the join
+      happens in `JobsView` at render time.
+    - Row click → `JobsJobPanel`: tracking facts, **where the job sits on the
+      boards** (`jobPlacements(jobNo)` in dataverse-live: production lines, install
+      cards, shipment loads), stepper, targets, Install Dates, job tasks.
+    - 🔴 **Rule for Phase 2+: never give Jobs its own copy of shared state.** New
+      editable job fields go through a shared store + `persistOrReport`; anything
+      BC should see goes through the existing push paths (`enqueueBcPush`,
+      `pushStepperState`, schedule pushes) so boards, Jobs and BC stay in step.
+  - **Next:** compare Jobs against Airtable with Alex, then Phase 2 (editing the
+    tracking fields, lifecycle + Service steppers, BC job "complete" at Complete to
+    Admin).
   - **Phase 2:** editing; lifecycle + Service steppers (new keys incl. MC, holds, DIP);
     BC write-back for the new stages (non-dept BC steps: New Order This Week,
     Upcoming Manufacturing, Job Purchasing, Substrate Cut/Prep, Product Ready for

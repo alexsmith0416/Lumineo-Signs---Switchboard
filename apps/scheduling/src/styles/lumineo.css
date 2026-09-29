@@ -5231,3 +5231,33 @@ input, select, textarea {
 }
 .jobs-panel__clear { color: var(--text-tertiary); margin-left: auto; }
 .jobs-panel__mini { font-weight: 500; font-size: 11px; }
+
+/* Jobs: job panel */
+.jobs-row { cursor: pointer; }
+.jobs-jobpanel { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.jobs-jobpanel__status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jobs-jobpanel__desc { margin: 0; font-size: 13px; color: var(--text-primary); }
+.jobs-jobpanel__notes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+.jobs-jobpanel__muted { font-size: 12px; color: var(--text-tertiary); }
+.jobs-jobpanel__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+}
+.jobs-jobpanel__facts dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-tertiary);
+}
+.jobs-jobpanel__facts dd { margin: 0; font-size: 12px; color: var(--text-primary); }
+

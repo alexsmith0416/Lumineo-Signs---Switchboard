@@ -186,7 +186,7 @@ export default function App() {
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
-          {view === "jobs" && permissions.monthly && <JobsView canSeeMoney={permissions.money} />}
+          {view === "jobs" && permissions.monthly && <JobsView canSeeMoney={permissions.money} canEdit={canEdit} />}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen
