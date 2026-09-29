@@ -39,7 +39,6 @@ interface InstallationCalendarProps {
   readOnly?: boolean;
 }
 
-export const MONTHLY_INSTALL_GOAL = 1_100_000;
 
 export default function InstallationCalendar({
   onNavigate,
@@ -271,7 +270,7 @@ export default function InstallationCalendar({
         showCrewBadge={showCrewBadge}
         showWeather={showWeather}
         showBillingStats={showMoney}
-        monthlyGoal={showMoney ? MONTHLY_INSTALL_GOAL : undefined}
+        showMonthlyGoal={showMoney}
         combinedBillingThisWeek={showMoney ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
         bannerSlot={regionToggle}

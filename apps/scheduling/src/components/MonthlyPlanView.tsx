@@ -1,18 +1,12 @@
-import { useMemo, useState } from "react";
-import {
-  addDays,
-  addWeeks,
-  endOfMonth,
-  format,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { addDays, addWeeks, format, startOfWeek } from "date-fns";
 import {
   useInstallationStoreNEK,
   useInstallationStoreWK,
 } from "../store/schedule-store";
 import { INSTALL_CANDIDATES, type InstallCandidate } from "../data/mock-install-candidates";
-import { MONTHLY_INSTALL_GOAL } from "./InstallationCalendar";
+import { useBillingPeriodStore } from "../store/billing-period-store";
+import { billingPeriodFor } from "../services/billing-periods";
 import type { ScheduleLine } from "../engine/types";
 
 interface WeekSlot {
@@ -27,8 +21,9 @@ function formatMoney(amount: number): string {
   return `$${amount.toLocaleString("en-US")}`;
 }
 
+/** A line bills in the week (and billing period) its install ENDS in. */
 function lineWeekStart(line: ScheduleLine): Date {
-  return startOfWeek(line.startDateTime, { weekStartsOn: 1 });
+  return startOfWeek(line.endDateTime, { weekStartsOn: 1 });
 }
 
 export default function MonthlyPlanView() {
@@ -46,13 +41,22 @@ export default function MonthlyPlanView() {
     if (nekSchedule.length === 0) void loadNEK();
   }, [wkSchedule.length, nekSchedule.length, loadWK, loadNEK]);
 
+  // The billing period (fiscal month) for today — its dates come from each
+  // month's billing cut-off in Settings → Billing periods.
+  const periodRows = useBillingPeriodStore((s) => s.rows);
+  const loadPeriods = useBillingPeriodStore((s) => s.load);
+  useEffect(() => {
+    void loadPeriods();
+  }, [loadPeriods]);
+
   const month = useMemo(() => {
-    const start = startOfMonth(anchorDate);
-    const end = endOfMonth(anchorDate);
+    const period = billingPeriodFor(anchorDate, periodRows);
+    const start = period.start;
+    const end = period.end; // exclusive
     const firstWeek = startOfWeek(start, { weekStartsOn: 1 });
     const slots: WeekSlot[] = [];
     let cursor = firstWeek;
-    while (cursor <= end) {
+    while (cursor < end) {
       slots.push({
         weekStart: cursor,
         weekLabel: format(cursor, "MMM d"),
@@ -62,15 +66,16 @@ export default function MonthlyPlanView() {
       });
       cursor = addWeeks(cursor, 1);
     }
-    return { start, end, slots };
-  }, [anchorDate]);
+    return { start, end, slots, period };
+  }, [anchorDate, periodRows]);
+  const goal = month.period.goal;
 
   const monthStats = useMemo(() => {
     const slots = month.slots.map((s) => ({ ...s }));
     const addToSlot = (line: ScheduleLine, region: "WK" | "NEK") => {
       const invoice = line.invoiceAmount ?? 0;
       if (invoice <= 0) return;
-      if (line.startDateTime < month.start || line.startDateTime > month.end) return;
+      if (line.endDateTime < month.start || line.endDateTime >= month.end) return;
       const ws = lineWeekStart(line);
       const slot = slots.find(
         (s) => s.weekStart.getTime() === ws.getTime(),
@@ -89,15 +94,15 @@ export default function MonthlyPlanView() {
     return { slots, wkTotal, nekTotal, combined };
   }, [month, wkSchedule, nekSchedule]);
 
-  const gap = Math.max(0, MONTHLY_INSTALL_GOAL - monthStats.combined);
-  const goalProgress = monthStats.combined / MONTHLY_INSTALL_GOAL;
+  const gap = Math.max(0, goal - monthStats.combined);
+  const goalProgress = monthStats.combined / goal;
 
   const runAutofill = () => {
     setProposal(
       autofillToGoal(INSTALL_CANDIDATES, gap, month.slots, {
         wkCrewCount: new Set(wkSchedule.map((l) => l.employeeId)).size,
         nekCrewCount: new Set(nekSchedule.map((l) => l.employeeId)).size,
-      }),
+      }, goal),
     );
   };
 
@@ -116,8 +121,12 @@ export default function MonthlyPlanView() {
           flexWrap: "wrap",
         }}
       >
-        <Stat label={`Month of ${format(month.start, "MMMM yyyy")}`} value="" highlight />
-        <Stat label="Monthly goal" value={formatMoney(MONTHLY_INSTALL_GOAL)} money />
+        <Stat
+          label={`${format(new Date(`${month.period.month}-01T00:00:00`), "MMMM yyyy")} billing · installs ending ${format(month.start, "MMM d")} – ${format(month.period.lastInstallDay, "MMM d")}`}
+          value=""
+          highlight
+        />
+        <Stat label="Monthly goal" value={formatMoney(goal)} money />
         <Stat label="Combined" value={formatMoney(monthStats.combined)} money={goalProgress >= 1} warning={goalProgress < 0.9} />
         <Stat label="WK" value={formatMoney(monthStats.wkTotal)} money />
         <Stat label="NEK" value={formatMoney(monthStats.nekTotal)} money />
@@ -130,7 +139,7 @@ export default function MonthlyPlanView() {
         <Stat label="Gap" value={gap > 0 ? formatMoney(gap) : "✓ on track"} warning={gap > 0} money={gap === 0} />
         <div style={{ flex: 1 }} />
         <button className="btn-primary" onClick={runAutofill}>
-          ✨ AI auto-fill to ${MONTHLY_INSTALL_GOAL.toLocaleString()}
+          ✨ AI auto-fill to ${goal.toLocaleString()}
         </button>
       </div>
 
@@ -143,7 +152,7 @@ export default function MonthlyPlanView() {
         }}
       >
         {monthStats.slots.map((slot) => {
-          const weeklyTarget = MONTHLY_INSTALL_GOAL / monthStats.slots.length;
+          const weeklyTarget = goal / monthStats.slots.length;
           const onTrack = slot.total >= weeklyTarget * 0.85;
           return (
             <div
@@ -325,6 +334,7 @@ function autofillToGoal(
   gap: number,
   weeks: WeekSlot[],
   crew: CrewCapacityOpts,
+  goal: number,
 ): AutofillResult {
   if (gap <= 0) {
     return { selected: [], rejected: [], totalAdded: 0, remainingGap: 0 };
@@ -345,7 +355,7 @@ function autofillToGoal(
   //   1. $ headroom — keep weeks roughly balanced toward the goal
   //   2. Crew-day headroom per region — can't book more days than crews exist
   const weekDollarHeadroom = weeks.map((w) =>
-    Math.max(0, MONTHLY_INSTALL_GOAL / weeks.length - w.total),
+    Math.max(0, goal / weeks.length - w.total),
   );
   // 5 workdays per week × crew count per region = max crew-days available.
   // Each candidate consumes `ceil(estimatedHours / 8)` crew-days from its region.

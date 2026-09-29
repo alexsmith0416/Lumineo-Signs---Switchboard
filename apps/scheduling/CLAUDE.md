@@ -135,9 +135,16 @@ The dev server boots with mock data; everything is reactive but persists only in
 ## Monthly install plan + AI auto-fill
 
 Sidebar item **Monthly Plan** (`src/components/MonthlyPlanView.tsx`) shows a
-per-month roll-up of install billing across both regions, with per-week cards,
-a target line, and gap vs the configured $1.1M monthly goal
-(`MONTHLY_INSTALL_GOAL` in `InstallationCalendar.tsx`).
+roll-up of install billing across both regions for the current BILLING month,
+with per-week cards, a target line, and gap vs that month's goal.
+
+**Billing months follow each month's billing cut-off, not the calendar**
+(`services/billing-periods.ts`, Dataverse `crfdf_billingperiod`, edited in
+Settings → Billing periods by Admin / Developer / Ops). A job bills in the
+period its install ENDS in; the cut-off day itself belongs to the next month.
+No cut-off → calendar month; no goal → `DEFAULT_MONTHLY_GOAL` ($1.1M). The
+Installation board's "Billing · <month>" stat (`WeekSummary`) uses the same
+periods.
 
 The "AI auto-fill" button runs a deterministic greedy algorithm
 (`autofillToGoal` inside `MonthlyPlanView.tsx`) over the `INSTALL_CANDIDATES`

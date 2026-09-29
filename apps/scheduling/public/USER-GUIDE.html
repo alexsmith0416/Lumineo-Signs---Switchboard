@@ -295,7 +295,7 @@
     <tr><td><strong>Sidebar</strong></td><td>Left edge</td><td>Switch between Production, Installation, Shipping, My Schedule, Monthly Plan, Scenario Sandbox, and Settings.</td></tr>
     <tr><td><strong>Top bar</strong></td><td>Top</td><td>Page title, your user chip (top-right), and — for admins — "View as user".</td></tr>
     <tr><td><strong>Week toolbar</strong></td><td>Above the grid</td><td>Prev / Today / Next, the week label, Print, and the Add Job button.</td></tr>
-    <tr><td><strong>Week summary</strong></td><td>Above the toolbar</td><td>At-a-glance stats for the week (people scheduled, total value, weekly goal), plus Undo/Redo and the Job Queue toggle.</td></tr>
+    <tr><td><strong>Week summary</strong></td><td>Above the toolbar</td><td>At-a-glance stats for the week (people scheduled, total value, billing for the week and the billing month vs. its goal), plus Undo/Redo and the Job Queue toggle.</td></tr>
     <tr><td><strong>The grid</strong></td><td>Center</td><td>People (or crews/locations) down the left, the seven days across the top, and job cards in between.</td></tr>
   </table>
 
@@ -695,9 +695,16 @@
   to the live schedule when you're happy — or discard them. Admin/Ops only.</p>
 
   <h3>5.12 &nbsp;Monthly Plan &amp; AI auto-fill</h3>
-  <p>A month roll-up of installation billing across both regions, with per-week cards and a line for the monthly goal.
-  The <strong>AI auto-fill</strong> button greedily fills the month from the pool of jobs that are ready for install,
-  respecting promised dates and a per-week cap. Admin/Ops only.</p>
+  <p>A roll-up of installation billing across both regions for the current <strong>billing month</strong>, with
+  per-week cards and a line for that month's goal. The header shows which installs count — e.g.
+  <em>"October 2026 billing · installs ending Sep 25 – Oct 23"</em>. The <strong>AI auto-fill</strong> button greedily
+  fills the month from the pool of jobs that are ready for install, respecting promised dates and a per-week cap.
+  Admin/Ops only.</p>
+  <p><strong>Billing months follow the billing cut-off, not the calendar.</strong> A job counts toward the month its
+  install <strong>ends</strong> in, and it has to end the <strong>day before</strong> that month's cut-off so the order
+  can be turned in — an install that ends <em>on</em> the cut-off day counts toward the next month. The cut-off dates
+  and each month's goal are set in <strong>Settings → Billing periods</strong> (5.14). The Installation board's
+  <strong>Billing</strong> stat (e.g. <em>Billing · Oct</em>) uses the same months; hover it to see the dates.</p>
 
   <h3>5.13 &nbsp;My Schedule / My Active Jobs</h3>
   <p>Floor and field staff get a focused <strong>My Schedule</strong> — just their week, day by day. A job that spans
@@ -713,6 +720,7 @@
     <tr><td>Hide the Power Apps header</td><td>Reclaims the purple bar at the very top for more space (reloads the app; deployed app only).</td></tr>
     <tr><td>Current time line</td><td>Shows a faint, softly pulsing red line at the current day &amp; time on the calendars — a quick marker of where "now" is in the week. Only appears on the current week. On by default.</td></tr>
     <tr><td>Day hours on hover</td><td>Shows the scheduled-hours pill when you hover a day on someone's row (<em>"6h of 8h · 2h open"</em>). Turn it off for a clean board while dragging cards, or on a wall display. On by default. Doesn't affect the job-card hover preview, which is separate.</td></tr>
+    <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Each month's <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
   </table>
 
@@ -993,6 +1001,8 @@
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
     <tr><td>BC</td><td>Business Central — the ERP that feeds jobs, customers, values, and planning lines into the scheduler.</td></tr>
+    <tr><td>Billing cut-off</td><td>The last date orders can be turned in for a month's billing, set per month in Settings → Billing periods. An install has to <strong>end the day before</strong> it to count toward that month.</td></tr>
+    <tr><td>Billing month</td><td>The month a job bills in: the one its install <strong>ends</strong> in, running from the previous month's cut-off day through the day before this month's cut-off.</td></tr>
     <tr><td>Cascade</td><td>The engine automatically shifting downstream jobs to keep the schedule conflict-free.</td></tr>
     <tr><td>Planning line</td><td>A schedulable task on a BC job (labor with hours). Cards are built from these.</td></tr>
     <tr><td>Production stepper</td><td>The ordered departments a job passes through (Steel → … → Assembly, then Install), shown on the card with each step's completed / active state.</td></tr>
@@ -1014,6 +1024,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 29, 2026</td><td><strong>Billing months now follow the billing cut-off</strong> &mdash; set each month's cut-off date and goal in <em>Settings &rarr; Billing periods</em> (Admin / Ops / Developer). A job counts toward the month its install <strong>ends</strong> in, and must end the day before the cut-off; ending on the cut-off day rolls it to the next month. The Installation board's <em>Billing</em> stat and the Monthly Plan both use these months and each month's own goal. See &sect;5.12 and &sect;5.14.</td></tr>
       <tr><td>Sep 28, 2026</td><td><strong>The board now keeps Business Central's Project Planning up to date</strong> &mdash; each department's scheduled dates and assignee on a job are mirrored to the matching step in BC's Project Planning list (e.g. Metal Fab &rarr; Fabrication, Paint &rarr; Painting), covering the department's whole window across every week. BC's <strong>Started</strong> box follows the stepper's active department(s), so the project appears in the right department tile in BC and moves to the next department's tile when you complete one. Completing or reopening a department completes or reopens its BC step. See &sect;5.4.</td></tr>
       <tr><td>Sep 15, 2026</td><td><strong>Fix: weather chips show the current forecast again</strong> &mdash; install cards had started showing no weather, or weather from months ago, because the forecast history outgrew what the app could load at once. Cards now show the real forecast for their day. A day more than 7 days out has no chip until its forecast is available, instead of a stale reading. See &sect;4.</td></tr>
       <tr><td>Sep 14, 2026</td><td><strong>Finishing a job's last department now marks it complete in Business Central</strong> &mdash; the production stepper writes back to BC. When the final department on a job is completed, the BC job is flagged <strong>complete</strong> and stamped with the completion date, automatically; reopening a department reverses it. This is the first thing the scheduler writes <em>into</em> BC rather than just reading out of it. The job's BC <em>status</em> is deliberately left untouched, so nothing is posted or billed on your behalf. See &sect;5.4.</td></tr>
@@ -1095,7 +1106,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.10 · Sep 28, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.11 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -77,8 +77,9 @@ interface CalendarViewProps {
   showBillingStats?: boolean;
   /** Show the "Total Value" (sum of jobs' remaining value) stat in WeekSummary. */
   showTotalValue?: boolean;
-  /** External monthly goal (combined across regions, used by WeekSummary). */
-  monthlyGoal?: number;
+  /** Show the billing period's goal in WeekSummary (the goal comes from
+   *  Settings → Billing periods). */
+  showMonthlyGoal?: boolean;
   /** Combined billing reference total (used when a region toggle shows partial billing). */
   combinedBillingThisWeek?: number;
   /** Navigation callback so the dialog can jump to the Scenario Sandbox. */
@@ -378,7 +379,7 @@ export default function CalendarView({
   showWeather = false,
   showBillingStats = false,
   showTotalValue = false,
-  monthlyGoal,
+  showMonthlyGoal,
   combinedBillingThisWeek,
   onNavigate,
   supportsScenarioSandbox = false,
@@ -905,7 +906,7 @@ export default function CalendarView({
           weekStart={weekStart}
           showBillingStats={showBillingStats}
           showTotalValue={showTotalValue}
-          monthlyGoal={monthlyGoal}
+          showMonthlyGoal={showMonthlyGoal}
           combinedBillingThisWeek={combinedBillingThisWeek}
           showStats={!readOnly}
           trailing={

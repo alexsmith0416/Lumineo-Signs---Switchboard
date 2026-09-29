@@ -683,6 +683,51 @@ input, select, textarea {
   transform: translateX(18px);
 }
 
+/* Settings → Billing periods */
+.billing-periods {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.billing-periods th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.billing-periods td {
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text-primary);
+}
+.billing-periods input {
+  font: inherit;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  max-width: 140px;
+}
+.billing-periods__month {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.billing-periods__default {
+  color: var(--text-tertiary);
+}
+.billing-periods__problem {
+  margin-top: 4px;
+  color: var(--status-red);
+  font-size: 11px;
+}
+
 /* Persistent banner while previewing another user's view. */
 .impersonation-banner {
   display: flex;

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createScheduleStore } from "./schedule-store";
 import { useWriteStatusStore } from "./write-status-store";
+import { createBillingPeriodStore } from "./billing-period-store";
 import type { ScheduleDataSource } from "../services/data-source";
 import type { Department, Employee, ScheduleLine } from "../engine/types";
 
@@ -160,5 +161,28 @@ describe("an edit whose save fails", () => {
 
     expect(useWriteStatusStore.getState().failed).toHaveLength(0);
     expect(useWriteStatusStore.getState().pending).toBe(0);
+  });
+});
+
+describe("a billing-period edit whose save fails", () => {
+  beforeEach(() => {
+    useWriteStatusStore.getState().clear();
+  });
+
+  it("keeps the new cut-off and goal on screen and reports the failure", async () => {
+    const useStore = createBillingPeriodStore({
+      load: async () => [{ month: "2026-10", cutoff: "2026-10-23", goal: null }],
+      save: async () => {
+        throw new Error("Failed to fetch");
+      },
+    });
+    await useStore.getState().load();
+    await useStore.getState().setPeriod("2026-10", { cutoff: "2026-10-24", goal: 950_000 });
+    await flush();
+
+    expect(useStore.getState().rows).toEqual([{ month: "2026-10", cutoff: "2026-10-24", goal: 950_000 }]);
+    const failed = useWriteStatusStore.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Save billing period");
   });
 });

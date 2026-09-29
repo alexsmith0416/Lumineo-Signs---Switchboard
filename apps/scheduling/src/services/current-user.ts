@@ -123,6 +123,11 @@ export function isUserType(v: string | undefined | null): v is UserType {
 export const isAdminLevel = (t: UserType | undefined): boolean =>
   t === "admin" || t === "developer";
 
+/** May edit Settings → Billing periods (cut-off dates + monthly goals). A
+ *  high-level tool: Admin, Developer and Operations only. */
+export const canEditBillingPeriods = (t: UserType | undefined): boolean =>
+  t === "admin" || t === "developer" || t === "ops";
+
 /** Resolve a login's user type: the directory wins (when it's a valid type),
  *  else derive a sensible one. `directory` defaults to the hardcoded map;
  *  useCurrentUser passes the merged (Dataverse-over-code) directory so table

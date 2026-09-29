@@ -215,6 +215,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
+- **📌 LIVE (Sep 29, 2026) — Billing periods (fiscal months).** Table
+  `crfdf_billingperiod` created, app deployed; cut-off dates still to be entered.
+  - Each month has a **billing cut-off date** + **goal** in Settings → Billing
+    periods (Admin / Developer / Ops only — `canEditBillingPeriods`). A job bills
+    in the month its install **ENDS** in; it must end the day BEFORE the cut-off,
+    so the cut-off day rolls to the next month (Alex, Sep 29). Window for month
+    M = [cut-off(M−1), cut-off(M)). No cut-off → calendar month; no goal → $1.1M.
+  - `services/billing-periods.ts` (pure, 14 tests), `store/billing-period-store.ts`
+    (optimistic, `persistOrReport`; failing-save case in `optimistic-edit.test.ts`),
+    `components/BillingPeriodsSection.tsx`, Dataverse `crfdf_billingperiod`
+    (month / cutoff as `YYYY-MM-DD` TEXT so no TZ shift / decimal goal).
+    `WeekSummary` "Billing · <Mon>" and `MonthlyPlanView` now use periods + the
+    period's goal; `MONTHLY_INSTALL_GOAL` is gone. Guide v3.11.
+  - ⚠️ The board's month stat only sees the loaded week's cards (pre-existing
+    limit) — a job whose last install is in another week isn't counted there.
+  - **Next:** Alex enters the real cut-offs + goals in Settings → Billing periods.
 - **📌 RESUME HERE (Sep 28, 2026) — BC step write-back is LIVE against UAT.**
   App deployed, BCPush_PlanningSteps imported + ON. Verified on J33138: a Metal
   Fab card move created BC's Fabrication row (Central times, Chris Owen 1030,

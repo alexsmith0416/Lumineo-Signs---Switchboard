@@ -48,6 +48,7 @@ import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
+import type { BillingPeriodRow } from "./billing-periods";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import {
   bcStepForDepartmentName,
@@ -1832,6 +1833,35 @@ export async function updateCardPreset(id: string, changes: Partial<SavedCardPre
 export async function deleteCardPreset(id: string): Promise<void> {
   const res = await dvDelete(CARD_PRESET_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteCardPreset(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// Billing periods (crfdf_billingperiod) — one row per month: the billing
+// cut-off date ("YYYY-MM-DD" text, so no time zone can shift it) and the
+// month's goal. Created by scripts/create-billingperiod-table.ps1. Rules live
+// in services/billing-periods.ts.
+// ---------------------------------------------------------------------------
+const BILLING_SET = "crfdf_billingperiods";
+
+export async function fetchBillingPeriods(): Promise<BillingPeriodRow[]> {
+  const rows = await list(BILLING_SET, { select: "crfdf_month,crfdf_cutoffdate,crfdf_goal" });
+  return rows
+    .map((r) => ({
+      month: s(r.crfdf_month).trim(),
+      cutoff: s(r.crfdf_cutoffdate).trim() || null,
+      goal: r.crfdf_goal == null ? null : n(r.crfdf_goal),
+    }))
+    .filter((r) => /^\d{4}-\d{2}$/.test(r.month));
+}
+
+/** Upsert one month (keyed by crfdf_month). */
+export async function saveBillingPeriod(row: BillingPeriodRow): Promise<void> {
+  const rec: Row = { crfdf_month: row.month, crfdf_name: row.month, crfdf_cutoffdate: row.cutoff ?? "", crfdf_goal: row.goal };
+  const existing = await list(BILLING_SET, { filter: `crfdf_month eq '${odataLit(row.month)}'` });
+  const res = existing[0]
+    ? await dvUpdate(BILLING_SET, s(existing[0].crfdf_billingperiodid), rec)
+    : await dvCreate(BILLING_SET, { crfdf_billingperiodid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "saveBillingPeriod failed");
 }
 
 // ---------------------------------------------------------------------------

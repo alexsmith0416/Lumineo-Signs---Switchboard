@@ -1,5 +1,7 @@
-import { useMemo } from "react";
-import { addDays, startOfMonth, endOfMonth, startOfWeek } from "date-fns";
+import { useEffect, useMemo } from "react";
+import { addDays, format, startOfWeek } from "date-fns";
+import { useBillingPeriodStore } from "../store/billing-period-store";
+import { billingPeriodFor } from "../services/billing-periods";
 import { dayLoad, getDayCapacity, isWeekend } from "../engine/capacity";
 import type { ScheduleContext } from "../engine/types";
 import { cardMoneyValue } from "./JobCard";
@@ -8,7 +10,9 @@ interface WeekSummaryProps {
   context: ScheduleContext;
   weekStart: Date;
   showBillingStats?: boolean;
-  monthlyGoal?: number;
+  /** Show the billing period's goal (the goal itself comes from Settings →
+   *  Billing periods). */
+  showMonthlyGoal?: boolean;
   combinedBillingThisWeek?: number;
   /** Show a "Total Value" stat — sum of each current job's remaining value. */
   showTotalValue?: boolean;
@@ -29,12 +33,25 @@ export default function WeekSummary({
   context,
   weekStart,
   showBillingStats = false,
-  monthlyGoal,
+  showMonthlyGoal = false,
   combinedBillingThisWeek,
   showTotalValue = false,
   showStats = true,
   trailing,
 }: WeekSummaryProps) {
+  // The billing period (fiscal month) the viewed week sits in — its dates come
+  // from each month's billing cut-off (Settings → Billing periods).
+  const periodRows = useBillingPeriodStore((s) => s.rows);
+  const loadPeriods = useBillingPeriodStore((s) => s.load);
+  useEffect(() => {
+    if (showBillingStats) void loadPeriods();
+  }, [showBillingStats, loadPeriods]);
+  const period = useMemo(
+    () => billingPeriodFor(startOfWeek(weekStart, { weekStartsOn: 1 }), periodRows),
+    [weekStart, periodRows],
+  );
+  const monthlyGoal = showMonthlyGoal ? period.goal : undefined;
+
   const stats = useMemo(() => {
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -51,8 +68,6 @@ export default function WeekSummary({
       }
     }
 
-    const monthStart = startOfMonth(weekStart);
-    const monthEnd = endOfMonth(weekStart);
     const weekEnd = addDays(start, 7);
 
     // Count only the hours that actually land INSIDE this week. A job that
@@ -69,15 +84,21 @@ export default function WeekSummary({
     // $ figures are counted ONCE per job number — a job's value is the same on
     // every card/line of that job, so multiple cards must not multiply it.
     const weekJobs = new Map<string, number>();
-    const monthJobs = new Map<string, number>();
     const allJobs = new Map<string, number>();
+    // A job bills in the period its install ENDS in — its latest card end.
+    const lastEnd = new Map<string, Date>();
     for (const line of context.schedule) {
       const v = cardMoneyValue(line) ?? 0;
       if (v <= 0) continue;
       const s0 = line.startDateTime;
       if (!allJobs.has(line.jobNo)) allJobs.set(line.jobNo, v);
       if (s0 >= start && s0 < weekEnd && !weekJobs.has(line.jobNo)) weekJobs.set(line.jobNo, v);
-      if (s0 >= monthStart && s0 <= monthEnd && !monthJobs.has(line.jobNo)) monthJobs.set(line.jobNo, v);
+      const prev = lastEnd.get(line.jobNo);
+      if (!prev || line.endDateTime > prev) lastEnd.set(line.jobNo, line.endDateTime);
+    }
+    const monthJobs = new Map<string, number>();
+    for (const [jobNo, end] of lastEnd) {
+      if (end >= period.start && end < period.end) monthJobs.set(jobNo, allJobs.get(jobNo) ?? 0);
     }
     const sumValues = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
     const weekBilling = sumValues(weekJobs);
@@ -96,7 +117,7 @@ export default function WeekSummary({
       monthBilling,
       totalValue,
     };
-  }, [context, weekStart]);
+  }, [context, weekStart, period]);
 
   const goalProgress =
     monthlyGoal && monthlyGoal > 0 ? stats.monthBilling / monthlyGoal : null;
@@ -130,7 +151,12 @@ export default function WeekSummary({
               {typeof combinedNoteWeek === "number" && combinedNoteWeek !== stats.weekBilling && (
                 <Stat label="Both regions · week" value={formatMoney(combinedNoteWeek)} money />
               )}
-              <Stat label="Billing · month" value={formatMoney(stats.monthBilling)} money />
+              <Stat
+                label={`Billing · ${format(new Date(`${period.month}-01T00:00:00`), "MMM")}`}
+                value={formatMoney(stats.monthBilling)}
+                money
+                title={`Installs ending ${format(period.start, "MMM d")} – ${format(period.lastInstallDay, "MMM d")}${period.cutoffSet ? ` (cut-off ${format(period.cutoff, "MMM d")})` : ""}`}
+              />
               {monthlyGoal && monthlyGoal > 0 && goalProgress !== null && (
                 <Stat
                   label="Monthly goal"
@@ -156,19 +182,22 @@ function Stat({
   highlight = false,
   money = false,
   warning = false,
+  title,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
   money?: boolean;
   warning?: boolean;
+  /** Hover text, e.g. the billing period's dates. */
+  title?: string;
 }) {
   let color: string = "var(--text-primary)";
   if (highlight) color = "var(--lumineo-navy)";
   if (money) color = "var(--status-green)";
   if (warning) color = "var(--status-amber)";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 1 }} title={title}>
       <span
         style={{
           fontSize: 10,

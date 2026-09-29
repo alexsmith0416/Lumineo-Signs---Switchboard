@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useSettingsStore } from "../store/settings-store";
 import { applyHeaderVisibility, isInPowerPlayer } from "../services/power-host";
-import { isAdminLevel, useCurrentUser } from "../services/current-user";
+import { canEditBillingPeriods, isAdminLevel, useCurrentUser } from "../services/current-user";
 import UsersAdminPanel from "./UsersAdminPanel";
+import BillingPeriodsSection from "./BillingPeriodsSection";
 
 /** App settings. Cascade/conflict behavior + Power Apps header visibility, plus
  *  the admin-only Users manager (tucked away here). */
@@ -166,6 +167,8 @@ export default function SettingsScreen() {
           The hover readout is <strong>{showDayHours ? "on" : "off"}</strong>.
         </div>
       </div>
+
+      {canEditBillingPeriods(realType) && <BillingPeriodsSection />}
 
       {isAdminLevel(realType) && (
         <div className="settings-section">
