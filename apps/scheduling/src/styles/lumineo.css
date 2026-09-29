@@ -684,6 +684,18 @@ input, select, textarea {
 }
 
 /* Settings → Billing periods */
+.slide-over__panel--wide {
+  width: min(680px, 100vw);
+}
+.billing-periods-panel {
+  padding: 4px 16px 16px;
+}
+.billing-periods-panel__note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 8px 0 4px;
+}
 .billing-periods {
   width: 100%;
   margin-top: 12px;

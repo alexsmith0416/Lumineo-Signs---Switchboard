@@ -14,8 +14,35 @@ import {
  * set the "Billing · month" stat on the Installation board and the Monthly Plan.
  * A job counts toward the month its install ENDS in; the cut-off day itself
  * rolls to the next month. Admin / Developer / Ops only (the caller gates it).
+ *
+ * The section itself is just a row with an "Edit Periods" button; the month list
+ * opens in a slide-over panel, the same pattern as Settings → Users.
  */
 export default function BillingPeriodsSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="settings-section">
+      <div className="settings-section__title">Billing periods</div>
+
+      <div className="settings-row">
+        <div className="settings-row__text">
+          <div className="settings-row__title">Billing cut-offs &amp; monthly goals</div>
+          <div className="settings-row__desc">
+            Set each month's <strong>billing cut-off date</strong> and <strong>goal</strong>. These decide which
+            installs count toward each billing month on the Installation board and the Monthly Plan.
+          </div>
+        </div>
+        <button type="button" className="btn-primary" onClick={() => setOpen(true)}>
+          Edit Periods
+        </button>
+      </div>
+
+      {open && <BillingPeriodsPanel onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+function BillingPeriodsPanel({ onClose }: { onClose: () => void }) {
   const rows = useBillingPeriodStore((s) => s.rows);
   const load = useBillingPeriodStore((s) => s.load);
   const setPeriod = useBillingPeriodStore((s) => s.setPeriod);
@@ -26,29 +53,40 @@ export default function BillingPeriodsSection() {
   const months = useMemo(() => monthsAround(new Date()), []);
 
   return (
-    <div className="settings-section">
-      <div className="settings-section__title">Billing periods</div>
-      <div className="settings-row__desc">
-        Set each month's <strong>billing cut-off date</strong>. A job counts toward the month its install{" "}
-        <strong>ends</strong> in, and an install has to end the <strong>day before</strong> the cut-off to be turned
-        in that month — an install ending <em>on</em> the cut-off day counts toward the next month. A month with no
-        cut-off runs 1st to last day. The goal defaults to {money(DEFAULT_MONTHLY_GOAL)}.
+    <div className="slide-over" onClick={onClose}>
+      <div className="slide-over__panel slide-over__panel--wide" onClick={(e) => e.stopPropagation()}>
+        <div className="section-title">Billing periods</div>
+
+        <div className="slide-over__body billing-periods-panel">
+          <p className="billing-periods-panel__note">
+            A job counts toward the month its install <strong>ends</strong> in, and an install has to end the{" "}
+            <strong>day before</strong> the cut-off to be turned in that month — an install ending <em>on</em> the
+            cut-off day counts toward the next month. A month with no cut-off runs 1st to last day. A blank goal means{" "}
+            {money(DEFAULT_MONTHLY_GOAL)}.
+          </p>
+          <table className="billing-periods">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Cut-off date</th>
+                <th>Installs ending</th>
+                <th>Goal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((m) => (
+                <PeriodRow key={m} month={m} rows={rows} onSave={(patch) => void setPeriod(m, patch)} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="users-admin__footer">
+          <button className="btn-primary" onClick={onClose}>
+            Done
+          </button>
+        </div>
       </div>
-      <table className="billing-periods">
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th>Cut-off date</th>
-            <th>Installs ending</th>
-            <th>Goal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {months.map((m) => (
-            <PeriodRow key={m} month={m} rows={rows} onSave={(patch) => void setPeriod(m, patch)} />
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
