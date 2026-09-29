@@ -100,8 +100,33 @@ page 58400 "Lumineo Project Planning"
                 field(Due_Time; Rec."Due Time") { Editable = false; }
                 field(Duration; Rec.Duration) { Editable = false; }
 
-                // Assignee is a Resource No. (Type = Person), not a name.
-                field(Assigned_To; Rec."Assigned To") { }
+                // Assignee is a Resource No. (Type = Person), not a name. ICG's
+                // validation of "Assigned To" sets Started := true (even when
+                // clearing it) and, on a row with no start, sets the start to
+                // NOW — both verified in UAT Sep 28. Like Sched_*, this validates
+                // through ICG and then puts the flags and the schedule back:
+                // assigning someone changes who, never when or whether started.
+                field(Assigned_To; AssignedTo)
+                {
+                    Caption = 'Assigned To';
+                    TableRelation = Resource."No." where(Type = const(Person), Blocked = const(false));
+                    trigger OnValidate()
+                    var
+                        Before: Record "ICG.IPP.ProjectPlanning";
+                    begin
+                        Before := Rec;
+                        Rec.Validate("Assigned To", AssignedTo);
+                        Rec.Started := Before.Started;
+                        Rec.Complete := Before.Complete;
+                        Rec."Start DateTime" := Before."Start DateTime";
+                        Rec."Start Date 2" := Before."Start Date 2";
+                        Rec."Start Time" := Before."Start Time";
+                        Rec."End DateTime" := Before."End DateTime";
+                        Rec."End Date" := Before."End Date";
+                        Rec."End Time" := Before."End Time";
+                        Rec.Duration := Before.Duration;
+                    end;
+                }
                 field(Assigned_To_Name; Rec."Assigned To Name") { Editable = false; }
 
                 field(Started; Rec.Started) { }
@@ -131,6 +156,7 @@ page 58400 "Lumineo Project Planning"
             StepDescription := Step.Description;
         SchedStart := Rec."Start DateTime";
         SchedEnd := Rec."End DateTime";
+        AssignedTo := Rec."Assigned To";
     end;
 
     trigger OnInsertRecord(BelowxRec: Boolean): Boolean
@@ -224,6 +250,7 @@ page 58400 "Lumineo Project Planning"
         StepDescription: Text[100];
         SchedStart: DateTime;
         SchedEnd: DateTime;
+        AssignedTo: Code[20];
         BusinessTimeZoneTok: Label 'Central Standard Time', Locked = true;
         IdentityFixedErr: Label '%1 can only be set when creating a row.', Comment = '%1 = field name';
         NewRowNeedsIdentityErr: Label 'A new row needs Project_No and Step_Description.';

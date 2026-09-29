@@ -240,7 +240,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   - AL **v1.0.0.3** (compiled, NOT yet published): page allows **insert** —
     POST `{Project_No, Step_Description, Sched_*}`; the page resolves the step
     by name and copies Code / Planning Area / sort / indent from the catalogue.
-    `LUM PLANNING WB` now RIM.
+    `LUM PLANNING WB` now RIM. ✅ **Create verified in UAT (Sep 28):** J31949 /
+    Painting → HTTP 201, catalogue fields identical to J13231's Painting row,
+    Central times right; unknown step, ambiguous "Survey", and changing an
+    existing row's Project_No are all rejected. 🧹 **Test row left in UAT:
+    J31949 / Painting — delete it by hand in BC.**
+    🔴 **ICG's validation of `Assigned To` sets Started = true** (even when
+    clearing it). v1.0.0.4 (compiled, NOT yet published) makes `Assigned_To` a
+    page variable that validates through ICG and restores Started/Complete,
+    like `Sched_*` — ✅ verified. It ALSO sets the start to NOW on a row with no
+    start; v1.0.0.5 (compiled) restores the dates + Duration too.
+    🔴 **Completing needs a BC User Setup row for the flow's user.** ICG's
+    `Complete` validation does `User Setup.Get(UserId)` (ICG adds
+    `ICG.IPP.ResourceNoFilter` to User Setup) → *"The User Setup does not exist.
+    User ID='POWERAPPS PERMISSIONS'"*. Fix: add a User Setup line for
+    `POWERAPPS PERMISSIONS` (UAT now; **prod at cutover too**). Don't bypass ICG's
+    Complete logic — it can activate the next step.
   - Flow rewritten (`BCPush_PlanningSteps-clientdata.json`): GET job rows →
     match `Step_Description` → PATCH `(Project_No='…',Code=<guid>)` or POST;
     concurrency 1; `Sched_*` only, never raw dates.
@@ -545,6 +560,9 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
      `AL: Download Symbols` fails with *"IndirectRead on TableData 2000000206
      Published Application"* (hit in UAT Sep 25). This is on the user, not the
      Entra app card — the app card grants don't apply to a VS Code sign-in.
+  3c. **Add a User Setup line for the flow's BC user** (`POWERAPPS PERMISSIONS`
+     in UAT — confirm the prod user's name). Without it, completing a step
+     fails in ICG's validation.
   4. **Repoint the push flows.** `Bc_ApiBase` contains `/UAT/` and must become the
      prod environment name; **`Bc_CompanyId` will likely differ** (UAT is
      `4738bfb5-a06d-ec11-bf27-000d3a132a9e` — confirm prod). `Bc_Tenant`
