@@ -270,10 +270,25 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       sync (crfdf_bcjob) — imported anyway, flag them in the view.
     - Material Cut is stored under stepper key **`MC`** but the stepper doesn't show
       it yet (not in `DEPT_FLOW`).
-  - **Next — Phase 1 cont.: the Jobs view** (read-only first): port the LNI grid into
-    the scheduler; rows = BC jobs (`crfdf_bcjobs`) ∪ jobtrack; show each job's
-    stepper + derived/overridden Current Status; a "WK Expeditor" view matching the
-    Airtable columns; flag the 26 not-in-BC jobs. Screenshot in dev before deploy.
+  - ✅ **Jobs view BUILT (Sep 29) — NOT yet deployed.** Sidebar **Jobs** (Admin /
+    Ops / Developer while in preview; `permissions.monthly`). Read-only.
+    - Rows = every open BC job (`crfdf_bcjobs`, all 1,389 are status Open) ∪
+      `crfdf_jobtrack` (26 tracked jobs not in the sync show a "not in BC" tag);
+      untracked BC jobs show status "Not tracked yet" + their own view.
+    - `services/job-tracking.ts` (join, `currentStatus` = override → active hold →
+      Airtable carry-over, `daysInProcess` = order→today minus hold days; 13 tests),
+      `store/job-tracking-store.ts`, `components/jobs/` — `jobs-fields.ts` (columns,
+      badge colours, views incl. **WK Expeditor** = the Airtable columns),
+      `jobs-grid-state.ts` (search / and-or filters / sort by status tier / nested
+      groups; 9 tests), `JobsGrid.tsx` (@tanstack/react-virtual, sticky header +
+      first column, resizable columns, collapsible groups, Stepper column via
+      `useJobSteps`), `JobsPanels.tsx` (Filter / Sort / Group), `JobsView.tsx`
+      (per-view prefs in localStorage). Dev uses synthetic `data/mock-job-tracking.ts`
+      (no real customers in the repo). Guide v3.12 §5.17.
+    - The Stepper column is empty in dev (no BC planning lines); live it lazy-loads
+      per visible row.
+  - **Next:** deploy the Jobs preview + compare against Airtable side by side; then
+    Phase 2 (editing).
   - **Phase 2:** editing; lifecycle + Service steppers (new keys incl. MC, holds, DIP);
     BC write-back for the new stages (non-dept BC steps: New Order This Week,
     Upcoming Manufacturing, Job Purchasing, Substrate Cut/Prep, Product Ready for

@@ -14,6 +14,7 @@ const TOP: SbItem[] = [{ id: "my-schedule", label: "My Schedule", icon: "my-sche
 // The scheduler views — the sidebar is now the primary view switcher (the old
 // top sub-nav pill row was removed). Ids match App's View union.
 const VIEWS: SbItem[] = [
+  { id: "jobs", label: "Jobs", icon: "joblog" },
   { id: "production", label: "Production", icon: "production" },
   { id: "installation", label: "Installation", icon: "installation" },
   { id: "shipping", label: "Shipping", icon: "shipping" },
@@ -37,6 +38,8 @@ interface SidebarProps {
   showMonthly?: boolean;
   /** Scenarios is Admin/Ops only. */
   showScenario?: boolean;
+  /** Jobs (job tracking) — Admin/Ops/Developer while it's a preview. */
+  showJobs?: boolean;
 }
 
 function NavItem({
@@ -64,11 +67,12 @@ function NavItem({
   );
 }
 
-export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true, showScenario = true }: SidebarProps) {
+export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true, showScenario = true, showJobs = true }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
   const views = VIEWS.filter(
-    (v) => (v.id !== "monthly" || showMonthly) && (v.id !== "scenario" || showScenario),
+    (v) =>
+      (v.id !== "monthly" || showMonthly) && (v.id !== "scenario" || showScenario) && (v.id !== "jobs" || showJobs),
   );
   return (
     <aside className="switchboard-sidebar" aria-label="Scheduler navigation">

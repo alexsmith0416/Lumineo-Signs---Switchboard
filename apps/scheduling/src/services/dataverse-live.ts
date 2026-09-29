@@ -49,6 +49,7 @@ import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
 import type { BillingPeriodRow } from "./billing-periods";
+import type { BcJobSummary, JobTrack } from "./job-tracking";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import {
   bcStepForDepartmentName,
@@ -1833,6 +1834,70 @@ export async function updateCardPreset(id: string, changes: Partial<SavedCardPre
 export async function deleteCardPreset(id: string): Promise<void> {
   const res = await dvDelete(CARD_PRESET_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteCardPreset(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// Job tracking (crfdf_jobtrack) — the Airtable "Expeditor" fields BC doesn't
+// hold, one row per job. Created by scripts/create-jobtrack-table.ps1, seeded by
+// the Airtable import. Model + join: services/job-tracking.ts.
+// ---------------------------------------------------------------------------
+const JOBTRACK_SET = "crfdf_jobtracks";
+
+export async function fetchJobTracks(): Promise<JobTrack[]> {
+  const rows = await list(JOBTRACK_SET, {});
+  return rows
+    .map((r) => ({
+      jobNo: s(r.crfdf_jobno).trim(),
+      statusOverride: s(r.crfdf_statusoverride),
+      priority: s(r.crfdf_priority),
+      holdReason: s(r.crfdf_holdreason),
+      dateToHold: s(r.crfdf_datetohold),
+      dateOffHold: s(r.crfdf_dateoffhold),
+      orderDate: s(r.crfdf_orderdate),
+      mfgFinalDate: s(r.crfdf_mfgfinaldate),
+      expeditorDate: s(r.crfdf_expeditordate),
+      dateInstalled: s(r.crfdf_dateinstalled),
+      dateToAdmin: s(r.crfdf_datetoadmin),
+      dateInvoiced: s(r.crfdf_dateinvoiced),
+      vendor: s(r.crfdf_vendor),
+      poNumber: s(r.crfdf_ponumber),
+      vendorStatus: s(r.crfdf_vendorstatus),
+      storageLocation: s(r.crfdf_storagelocation),
+      vendorShipDate: s(r.crfdf_vendorshipdate),
+      vendorShipDate2: s(r.crfdf_vendorshipdate2),
+      outsourcedArrival: s(r.crfdf_outsourcedarrival),
+      graphics: s(r.crfdf_graphics),
+      routingType: s(r.crfdf_routingtype),
+      powerlines: s(r.crfdf_powerlines),
+      sales: s(r.crfdf_sales),
+      location: s(r.crfdf_location),
+      region: s(r.crfdf_region),
+      mfgRegion: s(r.crfdf_mfgregion),
+      installRegion: s(r.crfdf_installregion),
+      ulSign: Boolean(r.crfdf_ulsign),
+      notes: s(r.crfdf_notes),
+      legacyStatus: s(r.crfdf_legacystatus),
+      legacyProcess: s(r.crfdf_legacyprocess),
+    }))
+    .filter((t) => t.jobNo);
+}
+
+/** Every open BC job, summarised for the Jobs view. */
+export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
+  const rows = await list(BC.jobs, {
+    select:
+      "crfdf_jobnumber,crfdf_appjobname,crfdf_customername,crfdf_description,crfdf_remainingbalance,crfdf_shiptocity,crfdf_salespersoncode",
+  });
+  return rows
+    .map((r) => ({
+      jobNo: s(r.crfdf_jobnumber).trim(),
+      name: s(r.crfdf_appjobname) || s(r.crfdf_customername),
+      description: s(r.crfdf_description),
+      remaining: n(r.crfdf_remainingbalance),
+      city: s(r.crfdf_shiptocity),
+      salesperson: s(r.crfdf_salespersoncode).trim().toUpperCase(),
+    }))
+    .filter((j) => j.jobNo);
 }
 
 // ---------------------------------------------------------------------------

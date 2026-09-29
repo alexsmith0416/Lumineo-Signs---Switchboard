@@ -18,6 +18,7 @@ import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser } from "./services/current-user";
+import JobsView from "./components/jobs/JobsView";
 import { useSettingsStore } from "./store/settings-store";
 import { useJobScheduleStore } from "./store/job-schedule-store";
 import { useJobDeptCompletionStore } from "./store/job-dept-completion-store";
@@ -31,6 +32,7 @@ type View =
   | "shipping"
   | "scenario"
   | "monthly"
+  | "jobs"
   | "settings"
   | "help";
 
@@ -41,6 +43,7 @@ const VIEW_TITLES: Record<View, string> = {
   shipping: "Shipping Schedule",
   scenario: "Scenario Schedule",
   monthly: "Monthly Install Plan",
+  jobs: "Jobs",
   settings: "Settings",
   help: "Help & User Guide",
 };
@@ -149,6 +152,7 @@ export default function App() {
           myScheduleLabel={myScheduleLabel}
           showMonthly={permissions.monthly}
           showScenario={permissions.scenarios}
+          showJobs={permissions.monthly}
         />
       )}
 
@@ -182,6 +186,7 @@ export default function App() {
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView />}
+          {view === "jobs" && permissions.monthly && <JobsView canSeeMoney={permissions.money} />}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen
@@ -216,6 +221,7 @@ export default function App() {
         myScheduleLabel={myScheduleLabel}
         showMonthly={permissions.monthly}
         showScenario={permissions.scenarios}
+        showJobs={permissions.monthly}
       />
     </div>
   );

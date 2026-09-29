@@ -1,0 +1,204 @@
+// Filter / Sort / Group dropdown panels for the Jobs view — ported from the
+// Airtable recreation app (FilterPanel / SortPanel / GroupPanel).
+import type { JobRow } from "../../services/job-tracking";
+import { JOB_FIELDS, type JobFieldDef } from "./jobs-fields";
+import { JobBadge } from "./JobsGrid";
+import type { FilterCondition, FilterOp, GroupCriterion, SortCriterion } from "./jobs-grid-state";
+
+const OPS: { value: FilterOp; label: string }[] = [
+  { value: "contains", label: "contains" },
+  { value: "not_contains", label: "does not contain" },
+  { value: "is", label: "is" },
+  { value: "is_not", label: "is not" },
+  { value: "is_any_of", label: "is any of" },
+  { value: "is_none_of", label: "is none of" },
+  { value: "is_empty", label: "is empty" },
+  { value: "is_not_empty", label: "is not empty" },
+];
+
+const newId = () => `f_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+function PanelShell({ title, onClose, children, footer, extra }: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="jobs-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="jobs-panel__head">
+        <span>{title}</span>
+        <span className="jobs-panel__head-actions">
+          {extra}
+          <button type="button" className="jobs-panel__x" onClick={onClose} aria-label="Close">✕</button>
+        </span>
+      </div>
+      {children}
+      <div className="jobs-panel__foot">{footer}</div>
+    </div>
+  );
+}
+
+export function FilterPanel({ fields, filters, rows, onChange, onClose }: {
+  fields: JobFieldDef[];
+  filters: FilterCondition[];
+  /** Used to offer each badge field's actual values in "is any of". */
+  rows: JobRow[];
+  onChange: (f: FilterCondition[]) => void;
+  onClose: () => void;
+}) {
+  const update = (id: string, patch: Partial<FilterCondition>) =>
+    onChange(filters.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  const valuesOf = (field: string) =>
+    [...new Set(rows.map((r) => String((r as unknown as Record<string, unknown>)[field] ?? "")).filter(Boolean))].sort();
+
+  return (
+    <PanelShell
+      title="In this view, show jobs"
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="jobs-panel__add"
+            onClick={() => onChange([...filters, { id: newId(), conjunction: "and", field: "status", op: "is_any_of", value: "" }])}>
+            + Add condition
+          </button>
+          {filters.length > 0 && <button type="button" className="jobs-panel__clear" onClick={() => onChange([])}>Clear all</button>}
+        </>
+      }
+    >
+      {filters.length === 0 && <div className="jobs-panel__empty">No filters. Add a condition below.</div>}
+      {filters.map((f, i) => {
+        const def = JOB_FIELDS[f.field];
+        const picker = (f.op === "is_any_of" || f.op === "is_none_of") && def?.type === "badge";
+        const chosen = new Set(f.value.split(",").map((v) => v.trim()).filter(Boolean));
+        return (
+          <div key={f.id} className="jobs-panel__cond">
+            <div className="jobs-panel__row">
+              {i === 0 ? (
+                <span className="jobs-panel__where">Where</span>
+              ) : (
+                <select value={f.conjunction} onChange={(e) => update(f.id, { conjunction: e.target.value as "and" | "or" })}>
+                  <option value="and">and</option>
+                  <option value="or">or</option>
+                </select>
+              )}
+              <select value={f.field} onChange={(e) => update(f.id, { field: e.target.value, value: "" })}>
+                {fields.filter((d) => d.type !== "stepper").map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+              </select>
+              <select value={f.op} onChange={(e) => update(f.id, { op: e.target.value as FilterOp, value: "" })}>
+                {OPS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {f.op !== "is_empty" && f.op !== "is_not_empty" && !picker && (
+                <input value={f.value} placeholder="Value…" onChange={(e) => update(f.id, { value: e.target.value })} />
+              )}
+              <button type="button" className="jobs-panel__x" onClick={() => onChange(filters.filter((x) => x.id !== f.id))} aria-label="Remove condition">✕</button>
+            </div>
+            {picker && (
+              <div className="jobs-panel__picker">
+                {valuesOf(f.field).map((v) => (
+                  <button key={v} type="button"
+                    className={`jobs-panel__pick${chosen.has(v) ? " jobs-panel__pick--on" : ""}`}
+                    onClick={() => {
+                      const next = new Set(chosen);
+                      if (next.has(v)) next.delete(v);
+                      else next.add(v);
+                      update(f.id, { value: [...next].join(",") });
+                    }}>
+                    <JobBadge field={f.field} value={v} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </PanelShell>
+  );
+}
+
+export function SortPanel({ fields, sorts, onChange, onClose }: {
+  fields: JobFieldDef[];
+  sorts: SortCriterion[];
+  onChange: (s: SortCriterion[]) => void;
+  onClose: () => void;
+}) {
+  const sortable = fields.filter((d) => d.type !== "stepper");
+  const used = new Set(sorts.map((s) => s.field));
+  return (
+    <PanelShell
+      title="Sort by"
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="jobs-panel__add" disabled={sortable.every((d) => used.has(d.key))}
+            onClick={() => onChange([...sorts, { field: sortable.find((d) => !used.has(d.key))!.key, asc: true }])}>
+            + Add sort
+          </button>
+          {sorts.length > 0 && <button type="button" className="jobs-panel__clear" onClick={() => onChange([])}>Clear all</button>}
+        </>
+      }
+    >
+      {sorts.length === 0 && <div className="jobs-panel__empty">Sorted by Current Status. Add a sort to change it.</div>}
+      {sorts.map((s, i) => (
+        <div key={i} className="jobs-panel__row">
+          <select value={s.field} onChange={(e) => onChange(sorts.map((x, j) => (j === i ? { ...x, field: e.target.value } : x)))}>
+            {sortable.map((d) => <option key={d.key} value={d.key} disabled={used.has(d.key) && d.key !== s.field}>{d.label}</option>)}
+          </select>
+          <select value={s.asc ? "asc" : "desc"} onChange={(e) => onChange(sorts.map((x, j) => (j === i ? { ...x, asc: e.target.value === "asc" } : x)))}>
+            <option value="asc">A → Z</option>
+            <option value="desc">Z → A</option>
+          </select>
+          <button type="button" className="jobs-panel__x" onClick={() => onChange(sorts.filter((_, j) => j !== i))} aria-label="Remove sort">✕</button>
+        </div>
+      ))}
+    </PanelShell>
+  );
+}
+
+export function GroupPanel({ fields, groups, onChange, onClose, onCollapseAll, onExpandAll }: {
+  fields: JobFieldDef[];
+  groups: GroupCriterion[];
+  onChange: (g: GroupCriterion[]) => void;
+  onClose: () => void;
+  onCollapseAll: () => void;
+  onExpandAll: () => void;
+}) {
+  const groupable = fields.filter((d) => d.type !== "stepper" && d.type !== "multiline");
+  const used = new Set(groups.map((g) => g.field));
+  return (
+    <PanelShell
+      title="Group by"
+      onClose={onClose}
+      extra={groups.length > 0 && (
+        <>
+          <button type="button" className="jobs-panel__mini" onClick={onCollapseAll}>Collapse all</button>
+          <button type="button" className="jobs-panel__mini" onClick={onExpandAll}>Expand all</button>
+        </>
+      )}
+      footer={
+        <>
+          <button type="button" className="jobs-panel__add" disabled={groupable.every((d) => used.has(d.key))}
+            onClick={() => onChange([...groups, { field: groupable.find((d) => !used.has(d.key))!.key, asc: true }])}>
+            + Add subgroup
+          </button>
+          {groups.length > 0 && <button type="button" className="jobs-panel__clear" onClick={() => onChange([])}>Clear all</button>}
+        </>
+      }
+    >
+      {groups.length === 0 && <div className="jobs-panel__empty">No grouping.</div>}
+      {groups.map((g, i) => (
+        <div key={i} className="jobs-panel__row">
+          <select value={g.field} onChange={(e) => onChange(groups.map((x, j) => (j === i ? { ...x, field: e.target.value } : x)))}>
+            {groupable.map((d) => <option key={d.key} value={d.key} disabled={used.has(d.key) && d.key !== g.field}>{d.label}</option>)}
+          </select>
+          <select value={g.asc ? "asc" : "desc"} onChange={(e) => onChange(groups.map((x, j) => (j === i ? { ...x, asc: e.target.value === "asc" } : x)))}>
+            <option value="asc">First → Last</option>
+            <option value="desc">Last → First</option>
+          </select>
+          <button type="button" className="jobs-panel__x" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label="Remove group">✕</button>
+        </div>
+      ))}
+    </PanelShell>
+  );
+}

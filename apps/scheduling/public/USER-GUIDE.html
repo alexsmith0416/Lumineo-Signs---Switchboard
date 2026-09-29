@@ -849,6 +849,29 @@
   where you let go decides which one you meant. Note that its stop location, Deliver/Pickup and loading notes are
   <strong>not</strong> kept: they described the run it just left, so you set them fresh next time it goes out.</p>
 
+  <h3>5.17 &nbsp;Jobs &mdash; tracking every job (preview)</h3>
+  <p>The <strong>Jobs</strong> screen (sidebar) is the job list that is replacing the Airtable
+  <em>LNI Production Schedule / Expeditor</em>. Every <strong>open BC job</strong> is on it automatically, from the
+  moment the job is opened in Business Central, with its tracking details alongside: Current Status, order date,
+  Mfg Final / Mfg Target, RED DATE, <strong>DIP</strong> (days in process, minus any days on hold), hold, expeditor
+  date, vendor / P.O. / vendor status / storage, date installed, date to Admin, UL sign, and more. Admin / Ops /
+  Developer only while it's a preview.</p>
+  <ul>
+    <li><strong>Views</strong> on the left &mdash; <em>All Jobs</em>, <em>Not tracked yet</em> (new BC jobs nobody
+    has set up), team views (OPS / MFG, OPS / Install, Warehouse Coord.) and <em>WK Expeditor</em>, which matches the
+    Airtable columns. Each view remembers its own filters, sorts and groups on your device.</li>
+    <li><strong>Filter</strong> &mdash; stack conditions with <em>and</em> / <em>or</em>; for badge columns pick the
+    values from a list (<em>is any of</em>). <strong>Sort</strong> &mdash; click a column header, or use the Sort
+    button for several levels. <strong>Group</strong> &mdash; nest groups (e.g. Current Status, then Region);
+    click a group bar to collapse it.</li>
+    <li><strong>Stepper</strong> column &mdash; the job's production stepper, the same one as on the job card. It
+    replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
+    <li>Drag a column edge to resize it (double-click to reset). A <em>not in BC</em> tag means the job was carried
+    over from Airtable but isn't in the BC job sync.</li>
+  </ul>
+  <p>It's <strong>read-only for now</strong>; editing, the full lifecycle stepper (New Order through Complete
+  Invoiced) and the Service stepper are next.</p>
+
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
@@ -1025,6 +1048,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing cut-off days are marked on the calendars</strong> &mdash; with the <strong>$</strong> button on, Production and Installation show a small <em>Billing cut-off</em> label under the date of each month's cut-off. Hover it to see which month it closes and the last install day that still counts. See &sect;4.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing months now follow the billing cut-off</strong> &mdash; set each month's cut-off date and goal in <em>Settings &rarr; Billing periods</em> (Admin / Ops / Developer). A job counts toward the month its install <strong>ends</strong> in, and must end the day before the cut-off; ending on the cut-off day rolls it to the next month. The Installation board's <em>Billing</em> stat and the Monthly Plan both use these months and each month's own goal. See &sect;5.12 and &sect;5.14.</td></tr>
       <tr><td>Sep 28, 2026</td><td><strong>The board now keeps Business Central's Project Planning up to date</strong> &mdash; each department's scheduled dates and assignee on a job are mirrored to the matching step in BC's Project Planning list (e.g. Metal Fab &rarr; Fabrication, Paint &rarr; Painting), covering the department's whole window across every week. BC's <strong>Started</strong> box follows the stepper's active department(s), so the project appears in the right department tile in BC and moves to the next department's tile when you complete one. Completing or reopening a department completes or reopens its BC step. See &sect;5.4.</td></tr>
@@ -1108,7 +1132,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.11 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.12 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
