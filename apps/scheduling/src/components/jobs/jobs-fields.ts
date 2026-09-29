@@ -126,8 +126,8 @@ export interface JobsView {
   cols: string[];
   /** Group by this field when the view is opened with no saved grouping. */
   defaultGroup?: string;
-  /** Rows this view is limited to, before the user's own filters. */
-  include?: (row: JobRow) => boolean;
+  /** A built-in row limit (see jobs-view-layout PRESETS). */
+  preset?: "untracked";
 }
 
 export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
@@ -136,7 +136,7 @@ export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
     views: [
       { name: "All Jobs", defaultGroup: "status",
         cols: ["job", "status", "stepper", "sales", "location", "region", "priority", "orderDate", "mfgFinalDate", "redDate", "scheduledInstall", "dip", "value"] },
-      { name: "Not tracked yet", include: (r) => !r.tracked,
+      { name: "Not tracked yet", preset: "untracked",
         cols: ["job", "status", "description", "sales", "location", "value"] },
     ],
   },
@@ -163,5 +163,3 @@ export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
     ],
   },
 ];
-
-export const ALL_JOB_VIEWS: JobsView[] = JOB_VIEW_GROUPS.flatMap((g) => g.views);

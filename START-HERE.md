@@ -304,6 +304,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       editable job fields go through a shared store + `persistOrReport`; anything
       BC should see goes through the existing push paths (`enqueueBcPush`,
       `pushStepperState`, schedule pushes) so boards, Jobs and BC stay in step.
+  - ✅ **Sep 29 feedback round (Alex):** (1) column widths are ONE shared set,
+    saved per device (`lumineo.jobs.colWidths.v1`) and used by every view;
+    (2) the sticky header stays above the stepper (tbody is its own stacking layer —
+    stepper nodes use z-index); (3) **editable views** like the Airtable app —
+    `jobs-view-layout.ts` (pure, 7 tests: add / rename / duplicate / delete views,
+    drag views across sections, add / rename / delete / drag sections, per-view
+    columns) + `JobsViewList.tsx` + a **Fields** panel (show / hide / search / drag
+    order); saved per device (`lumineo.jobs.layout.v1`), prefs keyed by view id;
+    (4) **stepper speed**: ONE paged read of all BC resource planning lines
+    (`allJobStepInfo`, 5,035 rows > the 5,000 page cap → new `listAll` follows
+    `@odata.nextLink`/`$skiptoken`) primes `useJobSteps`' cache before rows draw,
+    instead of one request per visible row; (5) **Value** = the calendar's
+    `cardMoneyValue` rule: BC remaining balance, else the largest
+    `crfdf_invoiceamount` on the job's production cards (`jobInvoiceAmounts`).
+    Views are per device (like the old app); moving them to Dataverse to share
+    across users is an open option.
   - **Next:** compare Jobs against Airtable with Alex, then Phase 2 (editing the
     tracking fields, lifecycle + Service steppers, BC job "complete" at Complete to
     Admin).

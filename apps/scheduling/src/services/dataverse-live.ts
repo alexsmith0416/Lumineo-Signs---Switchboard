@@ -261,6 +261,34 @@ async function list(
   return (data?.value ?? []).map((it) => ((it as { dynamicProperties?: Row }).dynamicProperties ?? it) as Row);
 }
 
+/**
+ * Like `list`, but follows Dataverse paging past the 5,000-row page cap
+ * (`@odata.nextLink` → `$skiptoken`) so a big table isn't silently truncated.
+ * Use it for bulk reads that can grow (e.g. every BC planning line).
+ */
+async function listAll(
+  entitySet: string,
+  opts: { select?: string; filter?: string; orderby?: string } = {},
+): Promise<Row[]> {
+  const { S, org } = await sdk();
+  const out: Row[] = [];
+  let skiptoken: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const res = await S.ListRecordsWithOrganization(
+      org, entitySet, PREFER_READ, ACCEPT, false, false,
+      opts.select, opts.filter, opts.orderby, undefined, undefined, undefined, skiptoken,
+    );
+    if (!res.success) throw new Error(res.error?.message ?? `ListRecords(${entitySet}) failed`);
+    const data = res.data as { value?: Row[]; "@odata.nextLink"?: string } | undefined;
+    out.push(...(data?.value ?? []).map((it) => ((it as { dynamicProperties?: Row }).dynamicProperties ?? it) as Row));
+    const next = data?.["@odata.nextLink"];
+    const token = next ? new URL(next).searchParams.get("$skiptoken") : null;
+    if (!token) break;
+    skiptoken = token;
+  }
+  return out;
+}
+
 const s = (v: unknown, fb = ""): string => (v == null ? fb : String(v));
 const n = (v: unknown, fb = 0): number => (v == null || v === "" ? fb : Number(v));
 const nOrNull = (v: unknown): number | null => (v == null || v === "" ? null : Number(v));
@@ -2299,7 +2327,13 @@ export async function jobProductionDepartments(jobNo: string): Promise<string[]>
 /** Production departments a job needs + whether it has installation labor —
  *  drives the production stepper (a final "Install" step when hasInstall). */
 export async function jobStepInfo(jobNo: string): Promise<{ production: string[]; hasInstall: boolean }> {
-  const lines = await planningLinesFor(jobNo).catch(() => []);
+  return stepInfoFromLines(await planningLinesFor(jobNo).catch(() => []));
+}
+
+/** The stepper's BC-derived departments + install flag from a job's planning lines. */
+function stepInfoFromLines(
+  lines: ReadonlyArray<{ resourceNo: string; description: string }>,
+): { production: string[]; hasInstall: boolean } {
   const production = new Set<string>();
   let hasInstall = false;
   for (const l of lines) {
@@ -2311,6 +2345,46 @@ export async function jobStepInfo(jobNo: string): Promise<{ production: string[]
     }
   }
   return { production: [...production], hasInstall };
+}
+
+/**
+ * Stepper info for EVERY job in one paged read of the BC planning lines (5,000+
+ * rows), instead of one request per job. The Jobs view primes the stepper cache
+ * with it so the Stepper column draws immediately.
+ */
+export async function allJobStepInfo(): Promise<Map<string, { production: string[]; hasInstall: boolean }>> {
+  const rows = await listAll(BC.planning, {
+    select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description",
+    filter: "crfdf_type eq 'Resource'",
+  });
+  const byJob = new Map<string, { resourceNo: string; description: string }[]>();
+  for (const r of rows) {
+    const jobNo = s(r.crfdf_jobno).trim();
+    if (!jobNo) continue;
+    let arr = byJob.get(jobNo);
+    if (!arr) byJob.set(jobNo, (arr = []));
+    arr.push({ resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no), description: s(r.crfdf_description) });
+  }
+  return new Map([...byJob].map(([jobNo, lines]) => [jobNo, stepInfoFromLines(lines)]));
+}
+
+/**
+ * The invoice amount typed on a job's production calendar cards (largest per
+ * job). The calendar shows it when BC's remaining balance is empty, so the Jobs
+ * Value column uses the same fallback.
+ */
+export async function jobInvoiceAmounts(): Promise<Map<string, number>> {
+  const rows = await listAll(SET.lines, {
+    select: "crfdf_jobno,crfdf_invoiceamount",
+    filter: "crfdf_invoiceamount gt 0",
+  });
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    const jobNo = s(r.crfdf_jobno).trim();
+    const v = n(r.crfdf_invoiceamount);
+    if (jobNo && v > (out.get(jobNo) ?? 0)) out.set(jobNo, v);
+  }
+  return out;
 }
 
 /**

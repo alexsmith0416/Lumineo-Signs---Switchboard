@@ -1,5 +1,6 @@
-// Filter / Sort / Group dropdown panels for the Jobs view — ported from the
-// Airtable recreation app (FilterPanel / SortPanel / GroupPanel).
+// Filter / Sort / Group / Fields dropdown panels for the Jobs view — ported from
+// the Airtable recreation app (FilterPanel / SortPanel / GroupPanel / ColumnPanel).
+import { useState } from "react";
 import type { JobRow } from "../../services/job-tracking";
 import { JOB_FIELDS, type JobFieldDef } from "./jobs-fields";
 import { JobBadge } from "./JobsGrid";
@@ -199,6 +200,71 @@ export function GroupPanel({ fields, groups, onChange, onClose, onCollapseAll, o
           <button type="button" className="jobs-panel__x" onClick={() => onChange(groups.filter((_, j) => j !== i))} aria-label="Remove group">✕</button>
         </div>
       ))}
+    </PanelShell>
+  );
+}
+
+export function FieldsPanel({ fields, cols, onChange, onClose }: {
+  fields: JobFieldDef[];
+  cols: string[];
+  onChange: (cols: string[]) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const byKey = new Map(fields.map((f) => [f.key as string, f]));
+  const shown = cols.filter((k) => byKey.has(k));
+  const hidden = fields.map((f) => f.key as string).filter((k) => !cols.includes(k));
+  const q = search.trim().toLowerCase();
+  const match = (k: string) => !q || (byKey.get(k)?.label ?? k).toLowerCase().includes(q);
+
+  const toggle = (k: string) => {
+    if (k === "job") return;
+    onChange(cols.includes(k) ? cols.filter((c) => c !== k) : [...cols, k]);
+  };
+  const dropOn = (target: string) => {
+    if (!dragKey || dragKey === target || target === "job") return;
+    const next = cols.filter((c) => c !== dragKey);
+    next.splice(next.indexOf(target), 0, dragKey);
+    onChange(next);
+  };
+
+  const row = (k: string, visible: boolean) => (
+    <label
+      key={k}
+      className={`jobs-fields__row${dragKey === k ? " jobs-fields__row--dragging" : ""}`}
+      draggable={visible && k !== "job" && !q}
+      onDragStart={() => setDragKey(k)}
+      onDragEnd={() => setDragKey(null)}
+      onDragOver={(e) => visible && dragKey && e.preventDefault()}
+      onDrop={() => dropOn(k)}
+    >
+      <span className="jobs-fields__grip" aria-hidden="true">{visible && k !== "job" ? "⠿" : ""}</span>
+      <input type="checkbox" checked={visible} disabled={k === "job"} onChange={() => toggle(k)} />
+      <span>{byKey.get(k)?.label ?? k}</span>
+    </label>
+  );
+
+  return (
+    <PanelShell
+      title="Fields in this view"
+      onClose={onClose}
+      extra={
+        <>
+          <button type="button" className="jobs-panel__mini" onClick={() => onChange([...cols, ...hidden])}>Show all</button>
+          <button type="button" className="jobs-panel__mini" onClick={() => onChange(["job"])}>Hide all</button>
+        </>
+      }
+      footer={<span className="jobs-panel__empty" style={{ padding: 0 }}>Drag ⠿ to reorder the shown fields.</span>}
+    >
+      <div className="jobs-panel__row">
+        <input value={search} placeholder="Find a field…" onChange={(e) => setSearch(e.target.value)} />
+      </div>
+      <div className="jobs-fields">
+        {shown.filter(match).map((k) => row(k, true))}
+        {hidden.filter(match).length > 0 && <div className="jobs-fields__divider">Hidden</div>}
+        {hidden.filter(match).map((k) => row(k, false))}
+      </div>
     </PanelShell>
   );
 }

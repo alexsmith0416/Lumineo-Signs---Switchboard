@@ -163,6 +163,9 @@ export function buildJobRows(
   tracks: readonly JobTrack[],
   schedules: ReadonlyMap<string, JobScheduleDates>,
   today: Date,
+  /** Invoice amounts typed on the job's calendar cards — the calendar's $
+   *  fallback when BC's remaining balance is empty. */
+  invoiceByJob: ReadonlyMap<string, number> = new Map(),
 ): JobRow[] {
   const bcBy = new Map(bcJobs.map((j) => [j.jobNo, j]));
   const trackBy = new Map(tracks.map((t) => [t.jobNo, t]));
@@ -215,7 +218,9 @@ export function buildJobRows(
       process: t?.legacyProcess ?? "",
       mfgRegion: t?.mfgRegion ?? "",
       installRegion: t?.installRegion ?? "",
-      value: bc ? bc.remaining : null,
+      // Same rule as a calendar card's $ (cardMoneyValue): BC remaining balance,
+      // else the invoice amount typed on the job's cards.
+      value: bc && bc.remaining > 0 ? bc.remaining : invoiceByJob.get(jobNo) ?? null,
       dip: t ? daysInProcess(t, today) : null,
     };
   });

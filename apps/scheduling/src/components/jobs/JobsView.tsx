@@ -4,44 +4,61 @@ import { useJobScheduleStore } from "../../store/job-schedule-store";
 import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services/job-tracking";
 import JobsGrid from "./JobsGrid";
 import JobsJobPanel from "./JobsJobPanel";
-import { FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
-import { ALL_JOB_VIEWS, JOB_FIELDS, JOB_VIEW_GROUPS, type JobsView as JobsViewDef } from "./jobs-fields";
+import JobsViewList from "./JobsViewList";
+import { FieldsPanel, FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
+import { JOB_FIELDS } from "./jobs-fields";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
+import {
+  PRESETS, addSection, addView, defaultLayout, deleteSection, deleteView, duplicateView, moveSection, moveView,
+  renameSection, renameView, sanitizeLayout, setViewCols, type ViewDef, type ViewLayout,
+} from "./jobs-view-layout";
 
 /**
- * Jobs — every open BC job with its tracking fields and stepper (Phase 1,
- * read-only). Replaces the Airtable "LNI Production Schedule / Expeditor" list.
- * Each view keeps its own sorts / filters / groups on this device.
+ * Jobs — every open BC job with its tracking fields and stepper. Replaces the
+ * Airtable "LNI Production Schedule / Expeditor" list. The views (sections,
+ * names, order, columns), each view's sorts / filters / groups, and the column
+ * widths (shared by every view) are saved on this device.
  */
-const PREFS_KEY = (view: string) => `lumineo.jobs.view.${view}`;
+const LAYOUT_KEY = "lumineo.jobs.layout.v1";
+const WIDTHS_KEY = "lumineo.jobs.colWidths.v1";
 const LAST_VIEW_KEY = "lumineo.jobs.lastView";
+const PREFS_KEY = (viewId: string) => `lumineo.jobs.view.${viewId}`;
 
-function loadPrefs(view: JobsViewDef): GridPrefs {
+function read<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(PREFS_KEY(view.name));
-    if (raw) return JSON.parse(raw) as GridPrefs;
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
-    /* private window / blocked storage — fall through to defaults */
+    return null; // private window / blocked storage
   }
-  return { sorts: [], filters: [], groups: view.defaultGroup ? [{ field: view.defaultGroup, asc: true }] : [] };
 }
-
-function savePrefs(view: string, prefs: GridPrefs) {
+function write(key: string, value: unknown) {
   try {
-    localStorage.setItem(PREFS_KEY(view), JSON.stringify(prefs));
+    localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
   } catch {
     /* non-critical */
   }
 }
 
-type Panel = "filter" | "sort" | "group" | null;
+function loadPrefs(view: ViewDef): GridPrefs {
+  return read<GridPrefs>(PREFS_KEY(view.id)) ?? {
+    sorts: [],
+    filters: [],
+    groups: view.defaultGroup ? [{ field: view.defaultGroup, asc: true }] : [],
+  };
+}
+
+type Panel = "fields" | "filter" | "sort" | "group" | null;
 
 const ymd = (d: Date | null | undefined): string =>
   d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
 
+const KNOWN_FIELDS = new Set(Object.keys(JOB_FIELDS));
+
 export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolean; canEdit: boolean }) {
   const bcJobs = useJobTrackingStore((s) => s.bcJobs);
   const tracks = useJobTrackingStore((s) => s.tracks);
+  const invoiceByJob = useJobTrackingStore((s) => s.invoiceByJob);
   const loading = useJobTrackingStore((s) => s.loading);
   const loaded = useJobTrackingStore((s) => s.loaded);
   const error = useJobTrackingStore((s) => s.error);
@@ -65,40 +82,51 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         scheduledInstallDate: ymd(sch.scheduledInstallDate),
       });
     }
-    return buildJobRows(bcJobs, tracks, dates, new Date());
-  }, [bcJobs, tracks, scheduleByJob]);
+    return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob);
+  }, [bcJobs, tracks, scheduleByJob, invoiceByJob]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
 
-  const [viewName, setViewName] = useState<string>(() => {
-    try {
-      const v = localStorage.getItem(LAST_VIEW_KEY);
-      if (v && ALL_JOB_VIEWS.some((x) => x.name === v)) return v;
-    } catch {
-      /* ignore */
-    }
-    return ALL_JOB_VIEWS[0]!.name;
+  // ── Views (editable, per device) ─────────────────────────────────────────
+  const [layout, setLayoutState] = useState<ViewLayout>(() => {
+    const saved = read<unknown>(LAYOUT_KEY);
+    return saved ? sanitizeLayout(saved, KNOWN_FIELDS) : defaultLayout();
   });
-  const view = ALL_JOB_VIEWS.find((v) => v.name === viewName) ?? ALL_JOB_VIEWS[0]!;
+  const setLayout = (next: ViewLayout) => {
+    setLayoutState(next);
+    write(LAYOUT_KEY, next);
+  };
+  const [viewId, setViewId] = useState<string>(() => {
+    try {
+      return localStorage.getItem(LAST_VIEW_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const firstViewId = layout.sections.flatMap((s) => s.viewIds)[0]!;
+  const view = layout.views[viewId] ?? layout.views[firstViewId]!;
+
   const [prefs, setPrefsState] = useState<GridPrefs>(() => loadPrefs(view));
+  const [widths, setWidthsState] = useState<Record<string, number>>(() => read(WIDTHS_KEY) ?? {});
   const [search, setSearch] = useState("");
   const [panel, setPanel] = useState<Panel>(null);
   const [collapseSignal, setCollapseSignal] = useState({ n: 0, all: false });
 
-  const pickView = (name: string) => {
-    const v = ALL_JOB_VIEWS.find((x) => x.name === name)!;
-    setViewName(name);
+  const pickView = (id: string) => {
+    const v = layout.views[id];
+    if (!v) return;
+    setViewId(id);
     setPrefsState(loadPrefs(v));
     setPanel(null);
-    try {
-      localStorage.setItem(LAST_VIEW_KEY, name);
-    } catch {
-      /* ignore */
-    }
+    write(LAST_VIEW_KEY, id);
   };
   const setPrefs = (patch: Partial<GridPrefs>) => {
     const next = { ...prefs, ...patch };
     setPrefsState(next);
-    savePrefs(view.name, next);
+    write(PREFS_KEY(view.id), next);
+  };
+  const setWidths = (next: Record<string, number>) => {
+    setWidthsState(next);
+    write(WIDTHS_KEY, next);
   };
 
   const cols = useMemo(
@@ -109,7 +137,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     () => Object.values(JOB_FIELDS).filter((d) => !d.money || canSeeMoney),
     [canSeeMoney],
   );
-  const inView = useMemo(() => (view.include ? rows.filter(view.include) : rows), [rows, view]);
+  const inView = useMemo(() => (view.preset ? rows.filter(PRESETS[view.preset]) : rows), [rows, view]);
   const shown = useMemo(() => applyGrid(inView, search, prefs), [inView, search, prefs]);
 
   const toggleSort = (field: string) => {
@@ -117,27 +145,52 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     setPrefs({ sorts: !cur ? [{ field, asc: true }] : cur.asc ? [{ field, asc: false }] : [] });
   };
 
-  const counts = { filter: prefs.filters.length, sort: prefs.sorts.length, group: prefs.groups.length };
+  const counts = { fields: 0, filter: prefs.filters.length, sort: prefs.sorts.length, group: prefs.groups.length };
+  const LABELS = { fields: "Fields", filter: "Filter", sort: "Sort", group: "Group" } as const;
 
   return (
     <div className="jobs-view" onClick={() => setPanel(null)}>
-      <nav className="jobs-views" aria-label="Job views">
-        {JOB_VIEW_GROUPS.map((g) => (
-          <div key={g.label} className="jobs-views__group">
-            <div className="jobs-views__label">{g.label}</div>
-            {g.views.map((v) => (
-              <button
-                key={v.name}
-                type="button"
-                className={`jobs-views__item${v.name === view.name ? " jobs-views__item--active" : ""}`}
-                onClick={() => pickView(v.name)}
-              >
-                {v.name}
-              </button>
-            ))}
-          </div>
-        ))}
-      </nav>
+      <JobsViewList
+        layout={layout}
+        activeId={view.id}
+        onSelect={pickView}
+        onAddView={(sectionId) => {
+          const [next, id] = addView(layout, sectionId, { name: "New view", cols: [...view.cols] });
+          setLayout(next);
+          setViewId(id);
+          setPrefsState(loadPrefs(next.views[id]!));
+          write(LAST_VIEW_KEY, id);
+        }}
+        onDuplicate={(id) => {
+          const [next, copy] = duplicateView(layout, id);
+          setLayout(next);
+          write(PREFS_KEY(copy), read(PREFS_KEY(id)) ?? loadPrefs(layout.views[id]!));
+          setViewId(copy);
+          setPrefsState(loadPrefs(next.views[copy]!));
+          write(LAST_VIEW_KEY, copy);
+        }}
+        onRename={(id, name) => setLayout(renameView(layout, id, name))}
+        onDelete={(id) => {
+          const next = deleteView(layout, id);
+          setLayout(next);
+          if (id === view.id) {
+            const first = next.sections.flatMap((s) => s.viewIds)[0]!;
+            setViewId(first);
+            setPrefsState(loadPrefs(next.views[first]!));
+            write(LAST_VIEW_KEY, first);
+          }
+        }}
+        onMoveView={(id, sectionId, index) => setLayout(moveView(layout, id, sectionId, index))}
+        onAddSection={() => setLayout(addSection(layout, "New section")[0])}
+        onRenameSection={(id, label) => setLayout(renameSection(layout, id, label))}
+        onDeleteSection={(id) => {
+          const s = layout.sections.find((x) => x.id === id);
+          if (s && window.confirm(`Delete the section "${s.label}"? Its views move to the section above.`)) {
+            setLayout(deleteSection(layout, id));
+          }
+        }}
+        onMoveSection={(id, index) => setLayout(moveSection(layout, id, index))}
+      />
 
       <section className="jobs-main">
         <div className="jobs-toolbar">
@@ -149,16 +202,20 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
             onChange={(e) => setSearch(e.target.value)}
             onClick={(e) => e.stopPropagation()}
           />
-          {(["filter", "sort", "group"] as const).map((p) => (
+          {(["fields", "filter", "sort", "group"] as const).map((p) => (
             <div key={p} className="jobs-toolbar__btn-wrap" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className={`jobs-toolbar__btn${counts[p] ? " jobs-toolbar__btn--on" : ""}`}
                 onClick={() => setPanel(panel === p ? null : p)}
               >
-                {p === "filter" ? "Filter" : p === "sort" ? "Sort" : "Group"}
+                {LABELS[p]}
                 {counts[p] > 0 && <span className="jobs-toolbar__count">{counts[p]}</span>}
               </button>
+              {panel === "fields" && p === "fields" && (
+                <FieldsPanel fields={allFields} cols={view.cols}
+                  onChange={(next) => setLayout(setViewCols(layout, view.id, next))} onClose={() => setPanel(null)} />
+              )}
               {panel === "filter" && p === "filter" && (
                 <FilterPanel fields={allFields} filters={prefs.filters} rows={inView}
                   onChange={(filters) => setPrefs({ filters })} onClose={() => setPanel(null)} />
@@ -185,7 +242,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         </div>
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
-          collapseSignal={collapseSignal} onOpen={setOpenJob} />
+          collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} />
       </section>
       {openJob && (
         <JobsJobPanel

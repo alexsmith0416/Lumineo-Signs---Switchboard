@@ -29,6 +29,8 @@ export default function JobsGrid({
   sorts,
   onToggleSort,
   onOpen,
+  widths,
+  onWidths,
   collapseSignal,
 }: {
   rows: JobRow[];
@@ -38,12 +40,17 @@ export default function JobsGrid({
   onToggleSort: (field: string) => void;
   /** Open a job's panel (row click). */
   onOpen: (row: JobRow) => void;
+  /** Column widths, shared by every view (a resize applies everywhere). */
+  widths: Record<string, number>;
+  onWidths: (next: Record<string, number>) => void;
   /** Bump .n to collapse (all=true) or expand (all=false) every group. */
   collapseSignal: { n: number; all: boolean };
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [widths, setWidths] = useState<Record<string, number>>({});
+  // Live width while dragging; committed to the shared widths on mouse-up.
+  const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
+  const widthOf = (key: string, fallback: number) => (dragging?.key === key ? dragging.w : widths[key] ?? fallback);
 
   const tree = useMemo(() => (groups.length ? buildGroupTree(rows, groups) : null), [rows, groups]);
 
@@ -83,11 +90,17 @@ export default function JobsGrid({
     e.preventDefault();
     e.stopPropagation();
     const x0 = e.clientX;
-    const move = (m: MouseEvent) => setWidths((w) => ({ ...w, [key]: Math.max(50, start + m.clientX - x0) }));
+    let last = start;
+    const move = (m: MouseEvent) => {
+      last = Math.max(50, start + m.clientX - x0);
+      setDragging({ key, w: last });
+    };
     const up = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
       document.body.style.cursor = "";
+      setDragging(null);
+      onWidths({ ...widths, [key]: last });
     };
     document.body.style.cursor = "col-resize";
     document.addEventListener("mousemove", move);
@@ -103,7 +116,7 @@ export default function JobsGrid({
       <table className="jobs-grid">
         <colgroup>
           {cols.map((c) => (
-            <col key={c.key} style={{ width: widths[c.key] ?? c.width }} />
+            <col key={c.key} style={{ width: widthOf(c.key, c.width) }} />
           ))}
         </colgroup>
         <thead>
@@ -122,14 +135,12 @@ export default function JobsGrid({
                   {si >= 0 && <span className="jobs-th__sort">{sorts[si]!.asc ? "▲" : "▼"}</span>}
                   <span
                     className="jobs-th__resize"
-                    onMouseDown={(e) => startResize(e, c.key, widths[c.key] ?? c.width)}
+                    onMouseDown={(e) => startResize(e, c.key, widthOf(c.key, c.width))}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
-                      setWidths((w) => {
-                        const n = { ...w };
-                        delete n[c.key];
-                        return n;
-                      });
+                      const n = { ...widths };
+                      delete n[c.key];
+                      onWidths(n);
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />

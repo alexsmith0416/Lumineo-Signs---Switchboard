@@ -74,3 +74,17 @@ describe("buildJobRows", () => {
     expect(by("J28500")).toMatchObject({ tracked: true, inBc: false, value: null, job: "J28500" });
   });
 });
+
+describe("value", () => {
+  const bcJobs = [
+    { jobNo: "J1", name: "A", description: "", remaining: 5000, city: "", salesperson: "" },
+    { jobNo: "J2", name: "B", description: "", remaining: 0, city: "", salesperson: "" },
+  ];
+  const rows = buildJobRows(bcJobs, [], new Map(), TODAY, new Map([["J1", 900], ["J2", 1200]]));
+  it("uses BC's remaining balance first, like the calendar", () => {
+    expect(rows.find((r) => r.jobNo === "J1")!.value).toBe(5000);
+  });
+  it("falls back to the invoice amount on the job's cards", () => {
+    expect(rows.find((r) => r.jobNo === "J2")!.value).toBe(1200);
+  });
+});

@@ -12,6 +12,12 @@ export type JobStepInfo = { production: string[]; hasInstall: boolean };
 // planning lines every time, and the same job appears on many cards.
 const infoCache = new Map<string, JobStepInfo>();
 
+/** Pre-fill the cache for many jobs at once (e.g. the Jobs list's bulk load),
+ *  so their steppers draw without a request each. Existing entries are kept. */
+export function primeJobStepInfo(all: ReadonlyMap<string, JobStepInfo>): void {
+  for (const [jobNo, info] of all) if (!infoCache.has(jobNo)) infoCache.set(jobNo, info);
+}
+
 /**
  * The production stepper steps for a job (departments in flow order + Install,
  * with completed / active / included state), sharing the completion + override
