@@ -243,8 +243,8 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     `LUM PLANNING WB` now RIM. ✅ **Create verified in UAT (Sep 28):** J31949 /
     Painting → HTTP 201, catalogue fields identical to J13231's Painting row,
     Central times right; unknown step, ambiguous "Survey", and changing an
-    existing row's Project_No are all rejected. 🧹 **Test row left in UAT:
-    J31949 / Painting — delete it by hand in BC.**
+    existing row's Project_No are all rejected. 🧹 **Test row in UAT:
+    J31949 / Painting — delete it by hand in BC if still there.**
     🔴 **ICG's validation of `Assigned To` sets Started = true** (even when
     clearing it). v1.0.0.4 (compiled, NOT yet published) makes `Assigned_To` a
     page variable that validates through ICG and restores Started/Complete,
@@ -256,11 +256,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     User ID='POWERAPPS PERMISSIONS'"*. Fix: add a User Setup line for
     `POWERAPPS PERMISSIONS` (UAT now; **prod at cutover too**). Don't bypass ICG's
     Complete logic — it can activate the next step.
+    ✅ **Added in UAT Sep 28** (typed in — the User ID lookup hides app users).
+    Complete / re-open verified; no sibling steps changed. Re-open now also
+    blanks Completed_Date (ICG leaves it). Completed By stays blank (Alex chose
+    not to fill it). **All five write paths proven in UAT** — update dates,
+    update assignee, create, complete, re-open.
   - Flow rewritten (`BCPush_PlanningSteps-clientdata.json`): GET job rows →
     match `Step_Description` → PATCH `(Project_No='…',Code=<guid>)` or POST;
     concurrency 1; `Sched_*` only, never raw dates.
-  - **Next, in order:** (1) F5 publish v1.0.0.3 + test a create on a job missing
-    a mapped step (then delete that row by hand in BC — the page can't);
+  - **Next, in order:** (1) ✅ done — v1.0.0.5 published + all paths verified;
     (2) `scripts/retire-bcpush-backlog.ps1` dry run → `-Apply`; (3) deploy the
     app + update USER-GUIDE §5.4 (BC now receives step dates/assignee);
     (4) build + import the solution, turn the flow on, move one card, check BC.

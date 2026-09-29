@@ -158,7 +158,7 @@
                       "Succeeded"
                     ]
                   },
-                  "inputs": "@if(equals(triggerOutputs()?['body/crfdf_kind'], 'schedule'), if(empty(triggerOutputs()?['body/crfdf_assignedto']), addProperty(addProperty(json('{}'), 'Sched_Start', triggerOutputs()?['body/crfdf_startdatetime']), 'Sched_End', triggerOutputs()?['body/crfdf_enddatetime']), addProperty(addProperty(addProperty(json('{}'), 'Sched_Start', triggerOutputs()?['body/crfdf_startdatetime']), 'Sched_End', triggerOutputs()?['body/crfdf_enddatetime']), 'Assigned_To', triggerOutputs()?['body/crfdf_assignedto'])), if(equals(triggerOutputs()?['body/crfdf_complete'], true), json('{\"Complete\":true,\"Started\":true}'), json('{\"Complete\":false}')))"
+                  "inputs": "@if(equals(triggerOutputs()?['body/crfdf_kind'], 'schedule'), if(empty(triggerOutputs()?['body/crfdf_assignedto']), addProperty(addProperty(json('{}'), 'Sched_Start', triggerOutputs()?['body/crfdf_startdatetime']), 'Sched_End', triggerOutputs()?['body/crfdf_enddatetime']), addProperty(addProperty(addProperty(json('{}'), 'Sched_Start', triggerOutputs()?['body/crfdf_startdatetime']), 'Sched_End', triggerOutputs()?['body/crfdf_enddatetime']), 'Assigned_To', triggerOutputs()?['body/crfdf_assignedto'])), if(equals(triggerOutputs()?['body/crfdf_complete'], true), json('{\"Complete\":true,\"Started\":true}'), json('{\"Complete\":false,\"Completed_Date\":\"0001-01-01T00:00:00Z\"}')))"
                 },
                 "Row_Exists": {
                   "type": "If",

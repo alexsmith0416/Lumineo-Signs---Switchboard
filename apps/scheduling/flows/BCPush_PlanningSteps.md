@@ -70,7 +70,12 @@ written. Shipment-load cards on the install board don't count toward Install.
 4. **Build the body**
    - `schedule` → `{ Sched_Start, Sched_End }` (+ `Assigned_To` when set).
      **Never `Started`** — scheduling is not starting.
-   - `completion` → `{ Complete: true, Started: true }` or `{ Complete: false }`.
+   - `completion` → `{ Complete: true, Started: true }`, or on re-open
+     `{ Complete: false, Completed_Date: 0001-01-01T00:00:00Z }` — ICG sets
+     Completed Date on complete but never clears it. Completing needs a BC
+     **User Setup** line for the flow's user (`POWERAPPS PERMISSIONS`), or ICG's
+     validation fails; Completed By stays blank (that line has no resource).
+     Completing a step with no start date makes ICG set the start to now.
 5. **Row exists** → `PATCH …/LumineoProjectPlanning(Project_No='<job>',Code=<guid>)`
    with `If-Match: *`. The GUID literal is **unquoted**.
    **No row** → `POST …/LumineoProjectPlanning` with the body plus
