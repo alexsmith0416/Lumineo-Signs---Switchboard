@@ -6,6 +6,13 @@
 //   LumineoProjectPlanning(Project_No='J32865',Code=<step guid>)
 // with the GUID literal UNQUOTED.
 //
+// A job only has rows for steps someone has touched, so the push flow also
+// CREATES rows: POST { Project_No, Step_Description, Sched_Start, ... }. The
+// step is named, not coded — catalogue GUIDs differ per environment — and the
+// page copies Code, Planning Area and the sort/indent fields from the catalogue
+// row, as ICG's own rows carry them. Project_No and Step_Description are
+// settable ONLY on a new row (an existing row always has a Code).
+//
 // WRITE THE SCHEDULE ONLY THROUGH Sched_Start / Sched_End. The table stores each
 // moment twice — "<X> DateTime" in UTC and a Date+Time pair in the WRITER's
 // local time — and Infotech's OnValidate converts between them in the SESSION
@@ -21,9 +28,10 @@ page 58400 "Lumineo Project Planning"
     SourceTable = "ICG.IPP.ProjectPlanning";
     ApplicationArea = All;
     UsageCategory = Lists;
-    InsertAllowed = false;
+    InsertAllowed = true;
     DeleteAllowed = false;
     ModifyAllowed = true;
+    DelayedInsert = true;
 
     layout
     {
@@ -32,13 +40,26 @@ page 58400 "Lumineo Project Planning"
             repeater(Lines)
             {
                 // Identity — never written by the scheduler.
-                field(Project_No; Rec."Project No.") { Editable = false; }
+                // Identity — set on create only, never changed afterwards.
+                field(Project_No; Rec."Project No.")
+                {
+                    trigger OnValidate()
+                    begin
+                        if not IsNullGuid(Rec.Code) then
+                            Error(IdentityFixedErr, 'Project_No');
+                    end;
+                }
                 field(Code; Rec.Code) { Editable = false; }
                 field(Step_Description; StepDescription)
                 {
                     Caption = 'Step Description';
-                    Editable = false;
-                    ToolTip = 'Catalogue name of the step. Step GUIDs differ per environment, so resolve by this, never by a hardcoded Code.';
+                    ToolTip = 'Catalogue name of the step. Step GUIDs differ per environment, so resolve by this, never by a hardcoded Code. Settable only when creating a row.';
+                    trigger OnValidate()
+                    begin
+                        if not IsNullGuid(Rec.Code) then
+                            Error(IdentityFixedErr, 'Step_Description');
+                        SetStepFromCatalogue(StepDescription);
+                    end;
                 }
                 field(Planning_Area; Rec."Planning Area") { Editable = false; }
                 field(Parent_Sort_Order; Rec."Parent Sort Order") { Editable = false; }
@@ -112,6 +133,33 @@ page 58400 "Lumineo Project Planning"
         SchedEnd := Rec."End DateTime";
     end;
 
+    trigger OnInsertRecord(BelowxRec: Boolean): Boolean
+    begin
+        if (Rec."Project No." = '') or IsNullGuid(Rec.Code) then
+            Error(NewRowNeedsIdentityErr);
+        exit(true); // a trigger with no exit value returns false = "don't insert"
+    end;
+
+    local procedure SetStepFromCatalogue(Description: Text)
+    var
+        Step: Record "ICG.IPP.ProjectPlanningStep";
+    begin
+        Step.SetRange(Description, Description);
+        case Step.Count() of
+            0:
+                Error(UnknownStepErr, Description);
+            1:
+                Step.FindFirst();
+            else
+                Error(AmbiguousStepErr, Description);
+        end;
+        Rec.Code := Step.Code;
+        Rec."Planning Area" := Step."Planning Area";
+        Rec."Parent Sort Order" := Step."Parent Sort Order";
+        Rec."Sort Order" := Step."Sort Order";
+        Rec.Indentation := Step.Indentation;
+    end;
+
     local procedure SetMoment(UtcValue: DateTime; IsStart: Boolean)
     var
         WasStarted: Boolean;
@@ -177,4 +225,8 @@ page 58400 "Lumineo Project Planning"
         SchedStart: DateTime;
         SchedEnd: DateTime;
         BusinessTimeZoneTok: Label 'Central Standard Time', Locked = true;
+        IdentityFixedErr: Label '%1 can only be set when creating a row.', Comment = '%1 = field name';
+        NewRowNeedsIdentityErr: Label 'A new row needs Project_No and Step_Description.';
+        UnknownStepErr: Label 'No planning step named ''%1'' in the step catalogue.', Comment = '%1 = step description';
+        AmbiguousStepErr: Label 'More than one planning step is named ''%1''; it can''t be created by name.', Comment = '%1 = step description';
 }

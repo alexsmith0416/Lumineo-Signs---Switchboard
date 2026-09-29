@@ -3,10 +3,12 @@ app->BC write-back flows that drain the crfdf_bcpushqueue outbox.
 
 Flows in this solution
 ----------------------
-  BCPush_PlanningSteps  - PATCHes sign365 projectPlanningEntries with a step's
-                          start/end/assignee. STILL BLOCKED: that entity is
-                          read-only and has no addressable row. Ships in the
-                          solution but must stay OFF. See BCPush-infotech-request.md.
+  BCPush_PlanningSteps  - PATCHes (or creates) a job's step row in our own BC
+                          web service LumineoProjectPlanning with the step's
+                          window/assignee/complete (rewired Sep 28, 2026).
+                          Imports OFF: retire the old backlog first
+                          (scripts/retire-bcpush-backlog.ps1), then turn it on.
+                          See BCPush_PlanningSteps.md.
   BCPush_JobCompletion  - PATCHes jobs('<jobNo>') with {complete,
                           icgSgpCompletionDate} when the production stepper's
                           last department closes. WORKS TODAY (write verified

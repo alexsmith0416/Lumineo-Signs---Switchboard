@@ -215,7 +215,41 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **ACTIVE (Sep 22, 2026) — BC Planning Step write-back. The permission wall is
+- **📌 RESUME HERE (Sep 28, 2026) — BC step write-back is BUILT end to end;
+  nothing is live yet.** Our AL page works in UAT; the app + flow are rewired to
+  it. Full design: `apps/scheduling/flows/BCPush_PlanningSteps.md`.
+  - **Decisions (Alex, Sep 28):** dept → BC step = Steel MFG / Metal Fab /
+    Fabrication Help → Fabrication, Routing → Routing, Paint → Painting,
+    Vinyl / Graphics → Vinyl, Assembly → Final Assembly, Install → Install.
+    Scheduling does **not** set BC Started (completion does). Missing step rows
+    are **created**. The pre-rewire backlog is **retired**, not replayed.
+  - 🔴 **The old outbox shape was unusable**: `crfdf_planningstep` held BC
+    planning-LINE text ("Cabinet Metal Labor"), never a catalogue step, and each
+    row was one card. Now one row = one (job, step) with the **whole** window
+    (min start → max end over every card of the job for that step, read from
+    Dataverse at enqueue, on create/update/delete). Assignee only when every
+    card names the same person. `bc-planning-sync.ts` + `dataverse-live.ts`;
+    272 tests green.
+  - **Assignees (Sep 28):** production roster `crfdf_no` is complete — Len Cook
+    → 1143, Aiden Haskill → 1152 set by `scripts/set-employee-resourceno.ps1`
+    (names deliberately left as-is). Install crew resolve by NAME against
+    `crfdf_appuser` (first name + last initial, installer preferred on a tie):
+    18/25 resolve; Danny (= Daniel Keller 1100), Richie, Jarrod L, Bryan don't.
+    `AppUser-EmployeeList.xlsx` matches `crfdf_appuser` except Kevin Barnhart,
+    listed twice in BC (1207 + 5038; the app uses 5038).
+  - AL **v1.0.0.3** (compiled, NOT yet published): page allows **insert** —
+    POST `{Project_No, Step_Description, Sched_*}`; the page resolves the step
+    by name and copies Code / Planning Area / sort / indent from the catalogue.
+    `LUM PLANNING WB` now RIM.
+  - Flow rewritten (`BCPush_PlanningSteps-clientdata.json`): GET job rows →
+    match `Step_Description` → PATCH `(Project_No='…',Code=<guid>)` or POST;
+    concurrency 1; `Sched_*` only, never raw dates.
+  - **Next, in order:** (1) F5 publish v1.0.0.3 + test a create on a job missing
+    a mapped step (then delete that row by hand in BC — the page can't);
+    (2) `scripts/retire-bcpush-backlog.ps1` dry run → `-Apply`; (3) deploy the
+    app + update USER-GUIDE §5.4 (BC now receives step dates/assignee);
+    (4) build + import the solution, turn the flow on, move one card, check BC.
+- **Sep 22, 2026 — BC Planning Step write-back. The permission wall is
   DOWN; the target table was WRONG.** Two things changed today: every BC
   permission blocker is resolved and the "no addressable row" wall is genuinely
   cleared — but probing proved we were aiming all of it at the **step catalogue**

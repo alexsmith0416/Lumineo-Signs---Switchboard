@@ -1,111 +1,123 @@
-# BCPush_PlanningSteps — write scheduler changes back to Business Central
+# BCPush_PlanningSteps — write the board's step schedule back to Business Central
 
-> 🔴 **STILL BLOCKED — re-verified 2026-09-14** against live UAT `$metadata`
-> after Infotech's Sep 11 collection update.
->
-> The API is **no longer read-only across the board**: `jobs` and
-> `projectPlanningLines` are now `Insertable/Updatable/Deletable = true`. But
-> **the two entities this flow needs are unchanged** —
-> `projectPlanningSteps` and `projectPlanningEntries` are still
-> `Insertable=false / Updatable=false / Deletable=false`, and
-> `projectPlanningLine` carries none of the fields we write (no `assignedTo`,
-> no start/end, no `started`/`complete` — it's quantity/cost data).
->
-> A keyed GET on a step also still fails with *"The supplied column ID '0'
-> cannot be found in the query"*, and step rows have no ETag — so there is
-> still no addressable single row for PATCH to target, and still no
-> `<Action>`/`<Function>` in the container.
->
-> **Do not turn this flow on.** Evidence + the narrowed ask are in
-> `BCPush-infotech-request.md`; re-verify with
-> `scripts/bc-uat-write-proof.ps1`. The app-side outbox is harmless to keep
-> running (it only records intended pushes). `projectPlanningEntry` also uses a
-> 7-part composite key, so its URI below is a placeholder pending the writable
-> surface.
+> **Rewired Sep 28, 2026 — not yet imported or run end to end.** The sign365
+> API route this flow used to target was a dead end (its planning entities are
+> read-only and have no addressable row). It now writes to **our own** BC web
+> service, `LumineoProjectPlanning` — page 58400 in the AL extension at
+> `bc/lumineo-planning-ext`, over Infotech's per-job table
+> `ICG.IPP.ProjectPlanning` (71441977). The page was proven in UAT with
+> `scripts/bc-odata-planning-probe.ps1` (read) and
+> `scripts/bc-odata-planning-write-test.ps1` (write + restore).
 
-This is the **write-back half** of the BC integration. The existing `BCSync_*`
-flows are read-only (BC → Dataverse). This flow is the only path that writes
-**app → BC**, PATCHing the `sign365` `projectPlanningEntries` custom API when the
-scheduler moves/resizes a job task or a department is marked started/complete.
+This is the **write-back half** of the BC integration. The `BCSync_*` flows are
+read-only (BC → Dataverse); this flow and `BCPush_JobCompletion` are the only
+paths that write **app → BC**.
 
 ## Why an outbox, not a direct call
 
-The Lumineo Project Scheduler is a Power Apps **Code App** whose only connector
-is Dataverse — it cannot call the BC API from the browser (CORS + no place to
-hold BC's OAuth secret). So the app drops a **pending row** into the
-`crfdf_bcpushqueue` outbox table (see `scripts/create-bcpushqueue-table.ps1`),
-and this flow drains it. This keeps the write durable and retriable, and needs
-zero new connector wiring in the Code App.
+The Code App's only connector is Dataverse — it can't call BC from the browser
+(CORS, and nowhere to hold BC's OAuth secret). So the app drops a **pending**
+row into `crfdf_bcpushqueue` and this flow drains it. Durable, retriable, and
+no new connector in the Code App.
 
-> Upgrade path for *inline* feedback: once this is proven, the same PATCH logic
-> can be re-triggered by a **PowerApps (V2)** request trigger and added to the
-> Code App as a data source (`pac code add-data-source`) so the app awaits a
-> synced/failed response per commit. The outbox flow can stay as the durable
-> fallback / catch-all.
+## What one outbox row means
 
-## Trigger
+One row = one **(job, BC catalogue step)**, not one card.
 
-**When a row is added** (Dataverse) → table `crfdf_bcpushqueue`
-(`crfdf_bcpushqueues`), optionally filter `crfdf_status eq 'pending'`.
+| Outbox column (`crfdf_…`) | Meaning |
+|---|---|
+| `kind` | `schedule` or `completion` (`job` rows belong to `BCPush_JobCompletion`) |
+| `jobno` | BC job no → `Project_No` |
+| `planningstep` | BC **catalogue step name** (`Fabrication`) → matched on `Step_Description` |
+| `startdatetime` / `enddatetime` | the step's **whole** window, UTC: earliest start → latest end over every card of the job that maps to the step |
+| `assignedto` | BC resource no — set only when every card on the step names the same person; blank = leave BC's assignee alone |
+| `complete` / `started` | completion pushes only |
+| `deptkey`, `sourcelineid` | traceability |
 
-## Outbox row → BC field mapping
+The app computes the window at enqueue time by reading **all** of the job's
+cards for that step from Dataverse (`pushProductionStep` / `pushInstallStep` in
+`services/dataverse-live.ts`), on every card create, move, resize, reassign and
+delete. So each row is the step's complete current state — idempotent, and a
+later row always supersedes an earlier one. When the last card of a step is
+deleted nothing is pushed: BC keeps its last dates rather than being cleared.
 
-| Outbox column (`crfdf_…`) | Meaning | BC `projectPlanningEntries` field |
-|---|---|---|
-| `jobno` | BC project/job no | `projectNo` / `auxiliaryIndex4` (join) |
-| `planningstep` | step description | `planningStepDescription` (join) |
-| `deptkey` | app department id | (completion resolution only) |
-| `startdatetime` | scheduled start | `startDateTime` |
-| `enddatetime` | scheduled end | `endDateTime` |
-| `assignedto` | BC resource no (resolved in-app) | `assignedTo` *(passed straight through)* |
-| `assignedtoname` | display name | `assignedToName` |
-| `complete` | dept complete flag | `complete` |
-| `started` | on the board | (started flag, if the API exposes one) |
-| `kind` | `schedule` \| `completion` | which fields to send |
+### App department → BC step (agreed Sep 28, 2026)
 
-## Steps
+| App department | BC catalogue step |
+|---|---|
+| Steel MFG, Metal Fab, Fabrication Help | Fabrication |
+| Routing | Routing |
+| Paint | Painting |
+| Vinyl / Graphics | Vinyl |
+| Assembly | Final Assembly |
+| Install (install board) | Install |
 
-1. **Resolve the target entry.** GET the API filtered to the job + step:
-   ```
-   GET .../sign365/v1.0/companies({companyId})/projectPlanningEntries
-       ?$filter=auxiliaryIndex4 eq '{jobno}' and planningStepDescription eq '{planningstep}'
-   ```
-   - `kind = "schedule"` → expect one entry; take its key (`auxiliaryIndex1` /
-     `systemId`).
-   - `kind = "completion"` with an empty `planningstep` → filter by job only and
-     select every entry whose resource band maps to `deptkey`, then PATCH each.
-2. **PATCH it** by systemId:
-   ```
-   PATCH .../projectPlanningEntries({systemId})
-   If-Match: *
-   { "startDateTime": …, "endDateTime": …, "assignedTo": …, "complete": … }
-   ```
-   Send only the fields relevant to `kind` (schedule → times + assignee;
-   completion → `complete`).
-3. **Assignee.** `crfdf_assignedto` already holds the BC resource no (the app
-   resolves it from `crfdf_employee1.crfdf_no` at enqueue time), so the schedule
-   PATCH passes it straight to `assignedTo` — no lookup needed. It's included in
-   the body only when non-empty, so a team/unmapped line never clears BC's value.
-4. **Write status back.** UPDATE the outbox row: `crfdf_status` = `synced` or
-   `failed`, `crfdf_statusmessage` = the BC systemId (on success) or the error
-   body (on failure). The app reads this to show a synced ✓ / failed ⚠ chip.
+`BC_STEP_FOR_KEY` / `bcStepForDepartmentName` in `services/bc-planning-sync.ts`.
+BC's Assembly Wiring, Face Production, Final Inspection and Crating are never
+written. Shipment-load cards on the install board don't count toward Install.
+
+## Flow steps
+
+1. **Trigger** — Dataverse row added/modified on `crfdf_bcpushqueue`
+   (filtering on `crfdf_status`), **concurrency 1** so rows apply in order.
+   Acts only on `status = pending`, `kind ∈ {schedule, completion}`, and a
+   non-empty `planningstep`.
+2. **Get the job's rows** —
+   `GET …/ODataV4/Company('Luminous Neon')/LumineoProjectPlanning?$filter=Project_No eq '<job>'`
+   (a job has at most ~35).
+3. **Match the step** by `Step_Description`. Step GUIDs (`Code`) differ per BC
+   environment, so they're never stored or hardcoded — always resolved here.
+4. **Build the body**
+   - `schedule` → `{ Sched_Start, Sched_End }` (+ `Assigned_To` when set).
+     **Never `Started`** — scheduling is not starting.
+   - `completion` → `{ Complete: true, Started: true }` or `{ Complete: false }`.
+5. **Row exists** → `PATCH …/LumineoProjectPlanning(Project_No='<job>',Code=<guid>)`
+   with `If-Match: *`. The GUID literal is **unquoted**.
+   **No row** → `POST …/LumineoProjectPlanning` with the body plus
+   `Project_No` + `Step_Description`; the page looks the step up in the
+   catalogue and copies Code / Planning Area / sort order / indentation.
+   A re-open (`complete = false`) with no row is a no-op.
+6. **Status** — `synced` + `updated <step>` / `created <step>`, or `failed` +
+   BC's error message.
+
+### Why `Sched_Start` / `Sched_End`, never the raw date fields
+
+The BC table stores each moment twice: `<X> DateTime` in UTC and a Date + Time
+pair in the **writer's session** time zone, converted by Infotech's validation.
+This flow's service principal runs in UTC, so writing either raw side leaves the
+pair 5–6 h off for people reading it in BC, and validating `Start DateTime`
+flips `Started` to true. `Sched_*` set the UTC value, pin the pair to Central
+wall-clock time (DST-aware), set `Duration`, and preserve Started/Complete. The
+raw fields are read-only on the page.
 
 ## Auth
 
-Reuse the Postman app registration (the one already proven to PATCH the sign365
-API in UAT). In Power Automate use an **HTTP with Microsoft Entra ID (preauthorized)**
-action or a **custom connector** built from the API's metadata. Point at the
-**UAT** company id `4738bfb5-a06d-ec11-bf27-000d3a132a9e` while testing; switch
-to production when promoted.
+Same app registration as `BCPush_JobCompletion` (client credentials,
+`https://api.businesscentral.dynamics.com/.default`). Its BC app card already
+holds `ICG.PROJPLANNING.ADM`; the extension's `LUM PLANNING WB` permission set
+is the narrower replacement (assign with Company = Luminous Neon).
 
-## Open items before go-live
+## Before turning it on
 
-- Confirm the entry key really is `auxiliaryIndex1` (the GET in step 1 should
-  round-trip it) and that PATCH accepts `startDateTime` / `endDateTime` /
-  `assignedTo` / `complete` (per the Postman write test).
-- Assignee resource no lives on `crfdf_employee1.crfdf_no` (run
-  `scripts/add-employee-resourceno-column.ps1` to add + back-fill it from
-  `crfdf_appuser`). Install-board employees (`crfdf_InstallationEmployees`) aren't
-  cached yet, so install pushes send no assignee until they get a `crfdf_no` too.
-- Granularity: one app department can map to several BC steps — decide whether a
-  completion PATCHes the primary labor step or all matching steps.
+1. Republish the extension (v1.0.0.3 adds create) and test a create on a job
+   that lacks one of the mapped steps.
+2. Retire the old backlog: `scripts/retire-bcpush-backlog.ps1` (dry run), then
+   `-Apply`. Rows queued before the rewire use the old per-card, planning-line
+   shape and must not be drained.
+3. Deploy the app (the new enqueue code is live-only).
+4. Build the solution (`_build_pushflow_solution.py`), import, map the
+   connection reference, turn the flow on, and move one card on one job.
+   Check the row in BC.
+
+## Known limits
+
+- Install crews (`crfdf_InstallationEmployees`) have no BC resource no column.
+  Their short roster names ("Doug", "Justin F") are resolved against the
+  app-user directory by first name + last initial (`resourceNoByName`). As of
+  Sep 28, 18 of 25 roster rows resolve; unresolved: placeholders (Priority WIP
+  Projects, Additional Jobs, Misc Jobs), people with no login (Richie, Jarrod L,
+  Bryan), and "Danny" (logs in as Daniel Keller, 1100). Unresolved → no
+  assignee sent.
+- A card moved to a different job or department recomputes only its new step;
+  the old one keeps its last window until something else touches it.
+- No backfill: steps nobody edits after go-live keep whatever BC has.

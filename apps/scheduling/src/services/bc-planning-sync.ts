@@ -1,122 +1,218 @@
 /**
  * BC planning-step write-back — payload builders (pure).
  *
- * The scheduler is the authority for the START/END times, the ASSIGNEE, and the
- * STARTED/COMPLETE state of the production + install *labor* steps of a BC job.
- * When a user commits one of those on the board, we push it back to Business
- * Central's `projectPlanningEntries` custom API (infotechConsultingGroup/
- * sign365/v1.0) so the BC Project Planning list mirrors the board.
+ * The scheduler is the authority for the START/END window, the ASSIGNEE, and
+ * the COMPLETE state of a job's production + install steps in Business
+ * Central's Project Planning. When a user commits one of those on the board we
+ * push it to BC so the BC Project Planning list mirrors the board.
  *
  * This module is PURE — it only turns app state into a transport-agnostic
- * `BcPlanningPush`. The actual write is done by `enqueueBcPush()` in
- * `dataverse-live.ts` (writes an outbox row) + a Power Automate flow
- * (BCPush_PlanningSteps) that PATCHes BC. Keeping the mapping here makes it
- * unit-testable without the Power runtime.
+ * `BcPlanningPush`. The write is `enqueueBcPush()` in `dataverse-live.ts`
+ * (an outbox row) + the BCPush_PlanningSteps flow, which PATCHes (or creates)
+ * the row in our own BC web service `LumineoProjectPlanning` (page 58400 over
+ * ICG.IPP.ProjectPlanning, bc/lumineo-planning-ext).
  *
- * ── The identity/granularity gap ─────────────────────────────────────────────
- * A ScheduleLine is one row per *department* per job; a BC planning entry is one
- * row per *step*. We join on `jobNo` + `planningStep` (the app's
- * planningLineDescription is copied straight from the BC planning line
- * description, so they match). The flow resolves that to the entry's systemId
- * and PATCHes it. See flows/BCPush_PlanningSteps.md.
+ * ── Granularity ──────────────────────────────────────────────────────────────
+ * A board card is one BC *planning line* ("Cabinet Metal Labor") in one app
+ * *department*. BC's Project Planning row is one *catalogue step* per job
+ * ("Fabrication"), and several departments fold into one step (Steel MFG,
+ * Metal Fab and Fabrication Help all → Fabrication). So a push is per
+ * (job, BC step), and its window is the earliest start → latest end over EVERY
+ * card of the job that maps to that step — computed at enqueue time from
+ * Dataverse (not the loaded week), which also makes each push idempotent.
  */
 import type { ScheduleLine } from "../engine/types";
+import { DEPT_FLOW, INSTALL_STEP } from "./production-steps";
 
-/**
- * ── Which of these can actually reach BC today (Sep 14, 2026) ────────────────
- * Only `"job"`. The sign365 API opened `jobs` + `projectPlanningLines` for write
- * on Sep 11, 2026, but `projectPlanningSteps`/`projectPlanningEntries` — where
- * start/end/assignedTo/started/complete live — are STILL read-only and still
- * have no addressable single row. So `"schedule"` and `"completion"` rows keep
- * queuing harmlessly (nothing drains them) while `"job"` rows are drainable now.
- * See flows/BCPush-infotech-request.md.
- */
 export type BcPushKind = "schedule" | "completion" | "job";
 
-/** A transport-agnostic instruction to update one BC planning step. */
+/** A transport-agnostic instruction to update one BC planning step (or, for
+ *  `"job"`, the BC job itself). */
 export interface BcPlanningPush {
   kind: BcPushKind;
-  /** BC project/job number — projectPlanningEntries.projectNo (aux index 2/4). */
+  /** BC project/job number — the row's Project_No. */
   jobNo: string;
-  /** BC step description — projectPlanningEntries.planningStepDescription. The
-   *  join key together with jobNo. Empty on department-level completion pushes,
-   *  where the flow resolves every step of `deptKey`'s resource band. */
+  /** BC CATALOGUE step name (e.g. "Fabrication") — the row's Step_Description.
+   *  The flow matches on it (step GUIDs differ per BC environment) and creates
+   *  the row when the job has none for this step. Empty for `"job"`. */
   planningStep: string;
-  /** App department id/key — lets the flow resolve which BC steps a
-   *  department-level completion applies to. */
+  /** App department key / stepper key the push came from — traceability. */
   deptKey: string;
-  /** ISO 8601, or null when this push doesn't set the time (completion). */
+  /** ISO 8601 UTC, or null when this push doesn't set the time (completion). */
   startDateTime: string | null;
   endDateTime: string | null;
-  /** Who the step is scheduled to — the BC resource number, resolved in-app from
-   *  the roster employee's crfdf_no. Passed straight to BC's `assignedTo`. "" for
-   *  team/department lines and completion pushes. */
+  /** BC resource number, or "" to leave BC's assignee untouched (team lanes,
+   *  several people on the step, install crews without a crfdf_no). */
   assignedTo: string;
   assignedToName: string;
   complete: boolean;
-  /** A step that has a scheduled slot on the board is "started" in BC terms. */
+  /** Written to BC's Started ONLY on completion pushes. Scheduling a step is
+   *  not starting it — the flow never sends Started for a `"schedule"` push. */
   started: boolean;
   /** Source schedule-line id — traceability + de-dupe in the outbox. */
   sourceLineId: string;
 }
 
-const iso = (d: Date | null | undefined): string | null =>
-  d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+const validDate = (d: Date | null | undefined): d is Date =>
+  d instanceof Date && !Number.isNaN(d.getTime());
+const iso = (d: Date | null | undefined): string | null => (validDate(d) ? d.toISOString() : null);
+
+/**
+ * App stepper key → BC catalogue step (the 35-step list in table 71441976,
+ * matched by its Description). Agreed Sep 28, 2026. BC steps with no app
+ * department — Assembly Wiring, Face Production, Final Inspection, Crating —
+ * are never written.
+ */
+export const BC_STEP_FOR_KEY: Readonly<Record<string, string>> = {
+  S: "Fabrication", // Steel MFG
+  R: "Routing",
+  MF: "Fabrication", // Metal Fab
+  P: "Painting",
+  V: "Vinyl", // Vinyl / Graphics
+  A: "Final Assembly",
+  [INSTALL_STEP.key]: "Install",
+};
+
+/** BC step for a stepper key, or null when that key has no BC step. */
+export function bcStepForKey(key: string | null | undefined): string | null {
+  return (key && BC_STEP_FOR_KEY[key]) || null;
+}
+
+/** BC step for a production department NAME. "Fabrication Help" isn't a
+ *  stepper department but its work is fabrication, so it folds in too. */
+export function bcStepForDepartmentName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  if (/fabricat/i.test(name)) return "Fabrication";
+  return bcStepForKey(DEPT_FLOW.find((d) => d.match.test(name))?.key);
+}
 
 /**
  * Whether a schedule line should sync to BC. Custom cards (PTO, group
- * containers) and lines with no BC job number or planning-step text have no
- * planning entry behind them, so they never sync.
+ * containers) and lines with no BC job number have no planning step behind
+ * them, so they never sync.
  */
-export function shouldSyncLine(
-  line: Pick<ScheduleLine, "jobNo" | "isCustom" | "planningLineDescription">,
-): boolean {
-  return Boolean(line.jobNo) && !line.isCustom && Boolean(line.planningLineDescription);
+export function shouldSyncLine(line: Pick<ScheduleLine, "jobNo" | "isCustom">): boolean {
+  return Boolean(line.jobNo) && !line.isCustom;
 }
 
-/** Build a start/end + assignee push from a committed schedule line, or null
- *  when the line isn't BC-backed. */
-export function buildSchedulePush(
-  line: ScheduleLine,
-  opts: { assignedTo?: string; assignedToName?: string } = {},
-): BcPlanningPush | null {
-  if (!shouldSyncLine(line)) return null;
+export interface StepWindow {
+  start: Date;
+  end: Date;
+  /** The one BC resource no on the step, or "" when none / several people. */
+  assignedTo: string;
+}
+
+/**
+ * The BC step window for a set of cards that all map to ONE (job, step):
+ * earliest start → latest end. The assignee is only set when every card that
+ * names a person names the SAME person — BC holds one assignee per step, and
+ * picking one of several would be a guess. Null when no card has a usable
+ * window (nothing to push; BC is left as it is rather than cleared).
+ */
+export function stepWindow(
+  lines: ReadonlyArray<Pick<ScheduleLine, "jobNo" | "isCustom" | "startDateTime" | "endDateTime" | "employeeId">>,
+  resourceNoFor: (employeeId: string) => string,
+): StepWindow | null {
+  let start: Date | null = null;
+  let end: Date | null = null;
+  const people = new Set<string>();
+  for (const l of lines) {
+    if (!shouldSyncLine(l)) continue;
+    const s = l.startDateTime;
+    const e = l.endDateTime;
+    if (!validDate(s) || !validDate(e)) continue;
+    if (!start || s < start) start = s;
+    if (!end || e > end) end = e;
+    const r = l.employeeId ? resourceNoFor(l.employeeId) : "";
+    if (r) people.add(r);
+  }
+  if (!start || !end) return null;
+  return { start, end, assignedTo: people.size === 1 ? [...people][0]! : "" };
+}
+
+/** A login from the app-user directory (crfdf_appuser), as the name lookup needs it. */
+export interface BcPerson {
+  displayName: string;
+  userType: string;
+  /** BC Resource No. (crfdf_no). */
+  bcNo: string;
+}
+
+const words = (n: string): string[] => n.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+
+/**
+ * BC Resource No. for an install-crew roster name. The install roster uses
+ * short names ("Doug", "Justin F", "Kevin B"), so this matches the FIRST name
+ * and, when given, the last-name INITIAL against the app-user directory.
+ * Several matches → prefer install-role logins ("Thomas" is Thomas Dunson the
+ * installer, not Thomas Sellers in admin). Still ambiguous, or no match (a
+ * placeholder row like "Misc Jobs", a nickname like "Danny" for Daniel) → ""
+ * so BC's assignee is left alone rather than guessed.
+ */
+export function resourceNoByName(name: string, people: readonly BcPerson[]): string {
+  const [first, ...rest] = words(name);
+  if (!first) return "";
+  // "Justin F" → any surname starting F; "Lee McQueen" → surname McQueen.
+  const last = rest.at(-1);
+  const surnameFits = (surnames: string[]): boolean =>
+    !last || surnames.some((x) => (last.length === 1 ? x.startsWith(last) : x === last));
+  let hits = people.filter((p) => {
+    const [pFirst, ...pRest] = words(p.displayName);
+    return Boolean(p.bcNo) && pFirst === first && surnameFits(pRest);
+  });
+  if (hits.length > 1) {
+    const install = hits.filter((p) => p.userType.startsWith("install"));
+    if (install.length) hits = install;
+  }
+  return hits.length === 1 ? hits[0]!.bcNo : "";
+}
+
+/** A schedule push for one (job, BC step) from its computed window. */
+export function buildStepSchedulePush(input: {
+  jobNo: string;
+  step: string | null;
+  window: StepWindow | null;
+  deptKey?: string;
+  sourceLineId?: string;
+}): BcPlanningPush | null {
+  if (!input.jobNo || !input.step || !input.window) return null;
   return {
     kind: "schedule",
-    jobNo: line.jobNo,
-    planningStep: line.planningLineDescription,
-    deptKey: line.departmentId,
-    startDateTime: iso(line.startDateTime),
-    endDateTime: iso(line.endDateTime),
-    assignedTo: opts.assignedTo ?? "",
-    assignedToName: opts.assignedToName ?? "",
+    jobNo: input.jobNo,
+    planningStep: input.step,
+    deptKey: input.deptKey ?? "",
+    startDateTime: iso(input.window.start),
+    endDateTime: iso(input.window.end),
+    assignedTo: input.window.assignedTo,
+    assignedToName: "",
     complete: false,
-    started: true, // scheduled on the board ⇒ started in BC
-    sourceLineId: line.id,
+    started: false,
+    sourceLineId: input.sourceLineId ?? "",
   };
 }
 
-/** Build a started/complete push for a department the stepper just toggled. */
+/** Build a complete / re-open push for a department the stepper just toggled.
+ *  Null when the department has no BC step. Completing marks the step Started
+ *  too (it was clearly worked); re-opening leaves Started alone. */
 export function buildCompletionPush(input: {
   jobNo: string;
   deptKey: string;
   complete: boolean;
-  planningStep?: string;
   completedBy?: string;
 }): BcPlanningPush | null {
-  if (!input.jobNo || !input.deptKey) return null;
+  const step = bcStepForKey(input.deptKey);
+  if (!input.jobNo || !step) return null;
   return {
     kind: "completion",
     jobNo: input.jobNo,
-    planningStep: input.planningStep ?? "",
+    planningStep: step,
     deptKey: input.deptKey,
     startDateTime: null,
     endDateTime: null,
     assignedTo: "",
     assignedToName: input.completedBy ?? "",
     complete: input.complete,
-    // Completing (or re-opening) a dept implies it was at least started.
-    started: true,
+    started: input.complete,
     sourceLineId: "",
   };
 }

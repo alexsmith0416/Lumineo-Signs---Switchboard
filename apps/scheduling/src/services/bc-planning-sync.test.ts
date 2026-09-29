@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { ScheduleLine } from "../engine/types";
 import {
   allStepsComplete,
+  bcStepForDepartmentName,
+  bcStepForKey,
   buildCompletionPush,
   buildJobPush,
-  buildSchedulePush,
+  buildStepSchedulePush,
   pushRowName,
+  resourceNoByName,
   shouldSyncLine,
+  stepWindow,
 } from "./bc-planning-sync";
 
 function line(overrides: Partial<ScheduleLine> = {}): ScheduleLine {
@@ -38,60 +42,192 @@ describe("shouldSyncLine", () => {
   it("skips lines with no job number", () => {
     expect(shouldSyncLine(line({ jobNo: "" }))).toBe(false);
   });
-  it("skips lines with no planning-step text", () => {
-    expect(shouldSyncLine(line({ planningLineDescription: "" }))).toBe(false);
+});
+
+describe("BC step mapping", () => {
+  it("maps every stepper key to its agreed BC catalogue step", () => {
+    expect(["S", "R", "MF", "P", "V", "A", "I"].map(bcStepForKey)).toEqual([
+      "Fabrication",
+      "Routing",
+      "Fabrication",
+      "Painting",
+      "Vinyl",
+      "Final Assembly",
+      "Install",
+    ]);
+  });
+  it("returns null for an unknown key", () => {
+    expect(bcStepForKey("X")).toBeNull();
+    expect(bcStepForKey("")).toBeNull();
+  });
+  it("maps live department names, folding the fabrication departments together", () => {
+    expect(bcStepForDepartmentName("Steel MFG")).toBe("Fabrication");
+    expect(bcStepForDepartmentName("Metal Fab")).toBe("Fabrication");
+    expect(bcStepForDepartmentName("Fabrication Help")).toBe("Fabrication");
+    expect(bcStepForDepartmentName("Routing")).toBe("Routing");
+    expect(bcStepForDepartmentName("Paint")).toBe("Painting");
+    expect(bcStepForDepartmentName("Vinyl / Graphics")).toBe("Vinyl");
+    expect(bcStepForDepartmentName("Assembly")).toBe("Final Assembly");
+  });
+  it("returns null for a department with no BC step", () => {
+    expect(bcStepForDepartmentName("Shipping")).toBeNull();
+    expect(bcStepForDepartmentName(undefined)).toBeNull();
   });
 });
 
-describe("buildSchedulePush", () => {
-  it("maps a committed line to a schedule push with ISO times", () => {
-    const push = buildSchedulePush(line(), { assignedTo: "emp-1138", assignedToName: "Tanner Rue" });
-    expect(push).toEqual({
+describe("stepWindow", () => {
+  const rn = (id: string) => ({ "emp-1": "1059", "emp-2": "1071" })[id] ?? "";
+  const at = (iso: string) => new Date(iso);
+
+  it("spans earliest start to latest end across the step's cards", () => {
+    const w = stepWindow(
+      [
+        line({ startDateTime: at("2026-10-06T13:00:00Z"), endDateTime: at("2026-10-06T21:00:00Z"), employeeId: "emp-1" }),
+        line({ startDateTime: at("2026-10-05T13:00:00Z"), endDateTime: at("2026-10-05T17:00:00Z"), employeeId: "emp-1" }),
+        line({ startDateTime: at("2026-10-12T13:00:00Z"), endDateTime: at("2026-10-12T15:00:00Z"), employeeId: "emp-1" }),
+      ],
+      rn,
+    );
+    expect(w?.start.toISOString()).toBe("2026-10-05T13:00:00.000Z");
+    expect(w?.end.toISOString()).toBe("2026-10-12T15:00:00.000Z");
+    expect(w?.assignedTo).toBe("1059");
+  });
+
+  it("leaves the assignee blank when several people share the step", () => {
+    const w = stepWindow([line({ employeeId: "emp-1" }), line({ employeeId: "emp-2" })], rn);
+    expect(w?.assignedTo).toBe("");
+  });
+
+  it("ignores cards with no BC resource no when picking the assignee", () => {
+    // A team-lane card alongside one person's card still assigns that person.
+    const w = stepWindow([line({ employeeId: "emp-1" }), line({ employeeId: "lane-x" })], rn);
+    expect(w?.assignedTo).toBe("1059");
+  });
+
+  it("skips custom cards and cards without a usable window", () => {
+    const w = stepWindow(
+      [
+        line({ isCustom: true, startDateTime: at("2020-01-01T00:00:00Z") }),
+        line({ startDateTime: new Date("nope") }),
+        line({ startDateTime: at("2026-10-05T13:00:00Z"), endDateTime: at("2026-10-05T17:00:00Z") }),
+      ],
+      rn,
+    );
+    expect(w?.start.toISOString()).toBe("2026-10-05T13:00:00.000Z");
+  });
+
+  it("is null when no card remains — BC is left alone, not cleared", () => {
+    expect(stepWindow([], rn)).toBeNull();
+    expect(stepWindow([line({ isCustom: true })], rn)).toBeNull();
+  });
+});
+
+describe("resourceNoByName", () => {
+  // A slice of the real crfdf_appuser directory (Sep 28, 2026).
+  const people = [
+    { displayName: "Doug Geddes", userType: "install-wk", bcNo: "1141" },
+    { displayName: "Justin Ferguson", userType: "ops", bcNo: "5025" },
+    { displayName: "Justin Jeffers", userType: "install-nek", bcNo: "1253" },
+    { displayName: "Kevin Barnhart", userType: "ops", bcNo: "5038" },
+    { displayName: "Kevin Himes", userType: "pm", bcNo: "5034" },
+    { displayName: "Thomas Dunson", userType: "install-wk", bcNo: "1156" },
+    { displayName: "Thomas Sellers", userType: "admin", bcNo: "4009" },
+    { displayName: "Lee Mcqueen", userType: "production", bcNo: "1062" },
+    { displayName: "Kayleigh Mcqueen", userType: "production", bcNo: "1159" },
+    { displayName: "Daniel Keller", userType: "install-wk", bcNo: "1100" },
+    { displayName: "Bartel de Leeuw", userType: "developer", bcNo: "" },
+  ];
+
+  it("matches a unique first name", () => {
+    expect(resourceNoByName("Doug", people)).toBe("1141");
+  });
+  it("uses the last-name initial to pick between people", () => {
+    expect(resourceNoByName("Justin F", people)).toBe("5025");
+    expect(resourceNoByName("Justin J", people)).toBe("1253");
+    expect(resourceNoByName("Kevin B", people)).toBe("5038");
+  });
+  it("prefers the installer when a first name is shared", () => {
+    expect(resourceNoByName("Thomas", people)).toBe("1156");
+  });
+  it("matches a full name, case-insensitively", () => {
+    expect(resourceNoByName("Lee McQueen", people)).toBe("1062");
+  });
+  it("leaves the assignee blank when still ambiguous", () => {
+    // Kevin Barnhart (ops) and Kevin Himes (pm): no installer to prefer.
+    expect(resourceNoByName("Kevin", people)).toBe("");
+  });
+  it("leaves it blank for placeholders, nicknames and people without a BC no", () => {
+    expect(resourceNoByName("Misc Jobs", people)).toBe("");
+    expect(resourceNoByName("Danny", people)).toBe("");
+    expect(resourceNoByName("Bartel", people)).toBe("");
+    expect(resourceNoByName("", people)).toBe("");
+  });
+});
+
+describe("buildStepSchedulePush", () => {
+  const window = {
+    start: new Date("2026-05-14T12:00:00Z"),
+    end: new Date("2026-05-15T22:00:00Z"),
+    assignedTo: "1059",
+  };
+
+  it("builds a per-step push with ISO UTC times", () => {
+    expect(buildStepSchedulePush({ jobNo: "J32865", step: "Vinyl", window, sourceLineId: "line-1" })).toEqual({
       kind: "schedule",
       jobNo: "J32865",
-      planningStep: "Vinyl Install Only",
-      deptKey: "dept-vinyl",
+      planningStep: "Vinyl",
+      deptKey: "",
       startDateTime: "2026-05-14T12:00:00.000Z",
-      endDateTime: "2026-05-14T22:00:00.000Z",
-      assignedTo: "emp-1138",
-      assignedToName: "Tanner Rue",
+      endDateTime: "2026-05-15T22:00:00.000Z",
+      assignedTo: "1059",
+      assignedToName: "",
       complete: false,
-      started: true,
+      started: false,
       sourceLineId: "line-1",
     });
   });
 
-  it("returns null for a non-BC / custom line (never enqueued)", () => {
-    expect(buildSchedulePush(line({ isCustom: true }))).toBeNull();
+  it("never marks the step started — scheduling is not starting", () => {
+    expect(buildStepSchedulePush({ jobNo: "J1", step: "Vinyl", window })?.started).toBe(false);
   });
 
-  it("defaults assignee to empty (e.g. team-lane lines)", () => {
-    const push = buildSchedulePush(line());
-    expect(push?.assignedTo).toBe("");
+  it("is null without a job, a step, or a window", () => {
+    expect(buildStepSchedulePush({ jobNo: "", step: "Vinyl", window })).toBeNull();
+    expect(buildStepSchedulePush({ jobNo: "J1", step: null, window })).toBeNull();
+    expect(buildStepSchedulePush({ jobNo: "J1", step: "Vinyl", window: null })).toBeNull();
   });
 });
 
 describe("buildCompletionPush", () => {
-  it("builds a complete push carrying the completer", () => {
-    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "dept-vinyl", complete: true, completedBy: "Amy Wing" });
-    expect(push).toMatchObject({ kind: "completion", complete: true, started: true, assignedToName: "Amy Wing" });
+  it("targets the department's BC step and marks it started", () => {
+    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "MF", complete: true, completedBy: "Amy Wing" });
+    expect(push).toMatchObject({
+      kind: "completion",
+      planningStep: "Fabrication",
+      deptKey: "MF",
+      complete: true,
+      started: true,
+      assignedToName: "Amy Wing",
+    });
     expect(push?.startDateTime).toBeNull();
   });
 
-  it("builds a re-open (complete=false) push", () => {
-    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "dept-vinyl", complete: false });
-    expect(push?.complete).toBe(false);
+  it("re-opening clears complete but doesn't claim the step started", () => {
+    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "P", complete: false });
+    expect(push).toMatchObject({ planningStep: "Painting", complete: false, started: false });
   });
 
-  it("returns null without a job or dept key", () => {
-    expect(buildCompletionPush({ jobNo: "", deptKey: "dept-vinyl", complete: true })).toBeNull();
+  it("returns null without a job, or for a department with no BC step", () => {
+    expect(buildCompletionPush({ jobNo: "", deptKey: "P", complete: true })).toBeNull();
     expect(buildCompletionPush({ jobNo: "J1", deptKey: "", complete: true })).toBeNull();
+    expect(buildCompletionPush({ jobNo: "J1", deptKey: "X", complete: true })).toBeNull();
   });
 });
 
 describe("pushRowName", () => {
   it("labels the outbox row job · step", () => {
-    expect(pushRowName(buildSchedulePush(line())!)).toBe("J32865 · Vinyl Install Only");
+    const push = buildCompletionPush({ jobNo: "J32865", deptKey: "V", complete: true });
+    expect(pushRowName(push!)).toBe("J32865 · Vinyl");
   });
 });
 

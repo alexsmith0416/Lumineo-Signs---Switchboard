@@ -50,9 +50,14 @@ import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import {
+  bcStepForDepartmentName,
   buildCompletionPush,
-  buildSchedulePush,
+  buildStepSchedulePush,
   pushRowName,
+  resourceNoByName,
+  shouldSyncLine,
+  stepWindow,
+  type BcPerson,
   type BcPlanningPush,
 } from "./bc-planning-sync";
 
@@ -460,11 +465,9 @@ export const liveProductionDataSource: ScheduleDataSource = {
     const line = body && body.crfdf_productionschedulelineid ? mapLine(body) : ({ id, ...changes } as ScheduleLine);
     // Mirror a scheduling change (start/end/assignee) back to the BC planning
     // step. Only when one of those actually changed — not on lock/hours-only
-    // edits. Team-lane lines carry no person, so no BC assignee. Fire-and-forget.
+    // edits. Fire-and-forget.
     if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
-      const assignedTo =
-        line.employeeId && !isLaneEmployeeId(line.employeeId) ? employeeResourceNo.get(line.employeeId) ?? "" : "";
-      void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
+      void pushProductionStep(line);
     }
     return line;
   },
@@ -479,6 +482,7 @@ export const liveProductionDataSource: ScheduleDataSource = {
       res = await dvCreate(SET.lines, toRecord(line));
     }
     if (!res.success) throw new Error(res.error?.message ?? `CreateRecord failed`);
+    void pushProductionStep(line);
     // CreateRecord returns void; the new id is in the response location header
     // which the generated wrapper doesn't surface — return the input line. A
     // reload (loadWeek) picks up the server id. TODO: capture the created id.
@@ -486,8 +490,11 @@ export const liveProductionDataSource: ScheduleDataSource = {
   },
 
   async deleteScheduleLine(id: string): Promise<void> {
+    // Read the card first: once it's gone we can't tell which BC step to redo.
+    const before = await lineById(SET.lines, "crfdf_productionschedulelineid", id, mapLine);
     const res = await dvDelete(SET.lines, id);
     if (!res.success) throw new Error(res.error?.message ?? `DeleteRecord(${id}) failed`);
+    if (before) void pushProductionStep(before);
   },
 
   // --- Roster admin (right-click) on crfdf_employee1 ----------------------
@@ -762,9 +769,7 @@ function createLiveInstallDataSource(
       // Mirror an install-step scheduling change back to BC (same outbox as
       // production). Only on a start/end/assignee change; fire-and-forget.
       if (changes.startDateTime !== undefined || changes.endDateTime !== undefined || changes.employeeId !== undefined) {
-        const assignedTo =
-          line.employeeId && !isLaneEmployeeId(line.employeeId) ? employeeResourceNo.get(line.employeeId) ?? "" : "";
-        void enqueueBcPush(buildSchedulePush(line, { assignedTo }));
+        void pushInstallStep(line);
       }
       return line;
     },
@@ -782,12 +787,15 @@ function createLiveInstallDataSource(
       if (!res.success) throw new Error(res.error?.message ?? "CreateInstallCard failed");
       const created = { ...line, id };
       cacheAddCard(region, created);
+      void pushInstallStep(created);
       return created;
     },
     async deleteScheduleLine(id: string): Promise<void> {
+      const before = await lineById(SHIP.cards, "crfdf_installcardid", id, mapCardRecord);
       const res = await dvDelete(SHIP.cards, id);
       if (!res.success) throw new Error(res.error?.message ?? `DeleteInstallCard(${id}) failed`);
       cacheRemoveCard(region, id);
+      if (before) void pushInstallStep(before);
     },
 
     // Roster admin (right-click): create / edit / delete a crew row on
@@ -1040,14 +1048,17 @@ const BC = {
 // ---------------------------------------------------------------------------
 // The Code App can only talk to Dataverse (its lone connector), so we don't
 // call the BC API from the browser. Instead a board commit drops a "pending"
-// row here; a Dataverse-triggered Power Automate flow drains it, PATCHes the
-// sign365 API, and writes the row's status back.
+// row here; a Dataverse-triggered Power Automate flow drains it, writes BC,
+// and writes the row's status back.
 //
 // `crfdf_kind` routes the row to a flow, and is a plain string column, so
 // adding a kind needs NO Dataverse script:
-//   "schedule" / "completion" → planning STEPS. Still blocked — that entity is
-//      read-only in sign365 and has no addressable row. Nothing drains these;
-//      they queue harmlessly. See flows/BCPush-infotech-request.md.
+//   "schedule" / "completion" → one BC planning STEP per (job, catalogue step),
+//      drained by BCPush_PlanningSteps into our own web service
+//      LumineoProjectPlanning (bc/lumineo-planning-ext). crfdf_planningstep is
+//      the BC step name ("Fabrication"), crfdf_startdatetime/enddatetime the
+//      whole step window. Rows queued before Sep 28, 2026 used the old
+//      per-card shape (planning-LINE text) and must be retired, not drained.
 //   "job" → PATCH jobs('<jobNo>'), which IS writable as of Sep 11, 2026.
 //      Drained by BCPush_JobCompletion. Reuses existing columns:
 //      crfdf_complete = the flag, crfdf_enddatetime = the completion date.
@@ -1086,6 +1097,126 @@ export async function enqueueBcPush(push: BcPlanningPush | null): Promise<void> 
   } catch (e) {
     console.warn("[bc-sync] enqueue failed (non-blocking)", e);
   }
+}
+
+// Department id → name, for mapping a production card to its BC step. Cached
+// for the session (departments change about never); a failed read is retried.
+let departmentNamesP: Promise<Map<string, string>> | null = null;
+function departmentNames(): Promise<Map<string, string>> {
+  departmentNamesP ??= list(SET.departments, { select: "crfdf_department1id,crfdf_departmentname" })
+    .then((rows) => new Map(rows.map((d) => [s(d.crfdf_department1id), s(d.crfdf_departmentname)] as const)))
+    .catch((e) => {
+      departmentNamesP = null;
+      throw e;
+    });
+  return departmentNamesP;
+}
+
+/** One row by id, mapped — null when it can't be read. Used before a delete. */
+async function lineById(
+  set: string,
+  idCol: string,
+  id: string,
+  map: (r: Row) => ScheduleLine,
+): Promise<ScheduleLine | null> {
+  try {
+    const rows = await list(set, { filter: `${idCol} eq ${id}` });
+    return rows[0] ? map(rows[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+const bcResourceNo = (employeeId: string): string =>
+  isLaneEmployeeId(employeeId) ? "" : employeeResourceNo.get(employeeId) ?? "";
+
+/**
+ * Recompute a (job, BC step) window from EVERY card of the job that maps to
+ * the step — not just the loaded week — and enqueue it. Fire-and-forget like
+ * `enqueueBcPush`: never blocks or fails a board commit. When no card remains
+ * nothing is pushed, so BC keeps its last dates rather than being cleared.
+ */
+async function enqueueStepSchedule(
+  jobNo: string,
+  step: string,
+  cards: () => Promise<ScheduleLine[]>,
+  sourceLineId: string,
+  /** Resolves the card employeeId → BC Resource No. lookup for this board. */
+  resourceLookup: () => Promise<(employeeId: string) => string> = async () => bcResourceNo,
+): Promise<void> {
+  try {
+    const [lines, resourceNoFor] = await Promise.all([cards(), resourceLookup()]);
+    const window = stepWindow(lines, resourceNoFor);
+    await enqueueBcPush(buildStepSchedulePush({ jobNo, step, window, sourceLineId }));
+  } catch (e) {
+    console.warn("[bc-sync] step recompute failed (non-blocking)", e);
+  }
+}
+
+async function pushProductionStep(line: ScheduleLine): Promise<void> {
+  if (!shouldSyncLine(line)) return;
+  try {
+    const names = await departmentNames();
+    const step = bcStepForDepartmentName(names.get(line.departmentId));
+    if (!step) return;
+    await enqueueStepSchedule(
+      line.jobNo,
+      step,
+      async () =>
+        (await list(SET.lines, { filter: `crfdf_jobno eq '${odataLit(line.jobNo)}'` }))
+          .map(mapLine)
+          .filter((l) => bcStepForDepartmentName(names.get(l.departmentId)) === step),
+      line.id,
+    );
+  } catch (e) {
+    console.warn("[bc-sync] step recompute failed (non-blocking)", e);
+  }
+}
+
+// App-user directory as BC people, for naming install crew. Cached for the
+// session like the department names; a failed read is retried next time.
+let bcPeopleP: Promise<BcPerson[]> | null = null;
+function bcPeople(): Promise<BcPerson[]> {
+  bcPeopleP ??= list(APPUSER_SET, { select: "crfdf_displayname,crfdf_usertype,crfdf_no" })
+    .then((rows) =>
+      rows.map((r) => ({
+        displayName: s(r.crfdf_displayname),
+        userType: s(r.crfdf_usertype).trim().toLowerCase(),
+        bcNo: s(r.crfdf_no).trim(),
+      })),
+    )
+    .catch((e) => {
+      bcPeopleP = null;
+      throw e;
+    });
+  return bcPeopleP;
+}
+
+/** Install crew have no BC Resource No. column; their roster names are short
+ *  ("Doug", "Justin F"), so resolve them against the app-user directory by
+ *  name — see `resourceNoByName`. Unresolvable → "" (BC assignee untouched). */
+async function installResourceLookup(): Promise<(employeeId: string) => string> {
+  const [crew, people] = await Promise.all([
+    list(INSTALL_SET, { select: "crfdf_installationemployeesid,crfdf_employeename" }),
+    bcPeople(),
+  ]);
+  const nameById = new Map(crew.map((r) => [s(r.crfdf_installationemployeesid), s(r.crfdf_employeename)] as const));
+  return (employeeId) => resourceNoByName(nameById.get(employeeId) ?? "", people);
+}
+
+function pushInstallStep(line: ScheduleLine): Promise<void> {
+  if (!shouldSyncLine(line)) return Promise.resolve();
+  return enqueueStepSchedule(
+    line.jobNo,
+    "Install",
+    async () =>
+      (await list(SHIP.cards, { filter: `crfdf_jobno eq '${odataLit(line.jobNo)}'` }))
+        .map(mapCardRecord)
+        // A shipment-load card is a delivery run, not install labor.
+        .filter((c) => !c.shipmentLoadId),
+    line.id,
+    installResourceLookup,
+  );
 }
 
 export interface BcJobLive {

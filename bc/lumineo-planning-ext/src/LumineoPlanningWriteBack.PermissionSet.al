@@ -7,7 +7,7 @@ permissionset 58400 "LUM PLANNING WB"
     Assignable = true;
     Permissions =
         page "Lumineo Project Planning" = X,
-        tabledata "ICG.IPP.ProjectPlanning" = RM,
+        tabledata "ICG.IPP.ProjectPlanning" = RIM,
         tabledata "ICG.IPP.ProjectPlanningStep" = R,
         tabledata "ICG.IPP.ProjPlanTripResource" = R,
         tabledata Job = R,
