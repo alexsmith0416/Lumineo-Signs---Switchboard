@@ -222,7 +222,7 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     every 15 min, jobs whose BC *New Order This Week* step is Started (and
     not yet on the Jobs list) get a jobtrack row (status "New Order this
     week") and their bcjob row + planning lines filled from BC at once.
-    Zip `Downloads\BCNewOrders_1_0_0_1.zip`; **user to import, turn on, test
+    Zip `Downloads\BCNewOrders_1_0_0_2.zip`; **user to import, turn on, test
     in UAT**. Switches to Production with the cutover (below).
   - **Location fix:** `scripts/patch-saleslines-flow-shipto.ps1` makes the
     nightly BCSync_SalesLines write the Sales Order's ship-to city / state /

@@ -117,6 +117,39 @@ JOB_FIELDS = {
     "item/crfdf_salespersoncode": "@" + pick(f(O, "salesperson"), f(L, "salespersonCode")),
 }
 
+# Updating a row that already exists (the nightly syncs got there first): keep
+# the value it has wherever BC gave nothing back this time, so a failed or
+# empty read never blanks what the nightly syncs filled in.
+EXISTING = first("Find_BC_Job_Row")
+NUMERIC = {"item/crfdf_remainingbalance", "item/crfdf_salesorderamount",
+           "item/crfdf_promiseddate", "item/crfdf_releasedate"}
+
+
+def keep_existing(field, expr):
+    col = field.split("/", 1)[1]
+    new = expr[1:]  # drop the leading "@"
+    old = f(EXISTING, col)
+    if field == "item/crfdf_jobnumber":
+        return expr
+    if field == "item/crfdf_saleslinefound":
+        return f"@or({new}, equals({old}, true))"
+    if field in NUMERIC:  # numbers / dates: null means "nothing came back"
+        return f"@coalesce({new}, {old})"
+    return f"@if(empty(coalesce({new}, '')), {old}, {new})"
+
+
+UPDATE_FIELDS = {k: keep_existing(k, v) for k, v in JOB_FIELDS.items()}
+# Ship-to on an update: the order's, else what the row already has (the nightly
+# sync's order ship-to), and only then the bill-to customer's address.
+for _field, _order, _cust in [("shiptoaddress", "shipToAddressLine1", "crfdf_addressline1"),
+                              ("shiptocity", "shipToCity", "crfdf_city"),
+                              ("shiptostate", "shipToState", "crfdf_state"),
+                              ("shiptozip", "shipToPostCode", "crfdf_postalcode")]:
+    UPDATE_FIELDS[f"item/crfdf_{_field}"] = "@" + pick(f(O, _order), pick(f(EXISTING, f"crfdf_{_field}"), f(C, _cust)))
+UPDATE_FIELDS["item/crfdf_appjobname"] = "@" + pick(f(O, "shipToName"), pick(
+    f(O, "customerName"), pick(f(EXISTING, "crfdf_appjobname"), f"coalesce({f(C, 'crfdf_customername')}, {JOB})")))
+EXISTING_COLS = ",".join(["crfdf_bcjobid"] + [k.split("/", 1)[1] for k in JOB_FIELDS if k != "item/crfdf_jobnumber"])
+
 LINE = "items('For_each_line')"
 LINE_FIELDS = {
     "item/crfdf_description": f"@{LINE}?['description']",
@@ -144,7 +177,7 @@ refresh = {
         "salesOrders", f"number eq '@{{replace(coalesce({L}?['documentNo'], ''), '''', '''''')}}'",
         dataset="v2.0", top=1, run_after=after("Get_Sales_Lines")),
     "Find_BC_Job_Row": dv("ListRecords", {
-        "entityName": "crfdf_bcjobs", "$select": "crfdf_bcjobid",
+        "entityName": "crfdf_bcjobs", "$select": EXISTING_COLS,
         "$filter": f"crfdf_jobnumber eq '@{{{JOBLIT}}}'", "$top": 1}),
     "BC_Job_Row_Exists": {
         "type": "If",
@@ -154,7 +187,7 @@ refresh = {
                      "Find_BC_Job_Row": ["Succeeded"]},
         "expression": {"greater": ["@length(body('Find_BC_Job_Row')?['value'])", 0]},
         "actions": {"Update_BC_Job": dv("UpdateOnlyRecord", {
-            "entityName": "crfdf_bcjobs", "recordId": f"@{first('Find_BC_Job_Row')}?['crfdf_bcjobid']", **JOB_FIELDS})},
+            "entityName": "crfdf_bcjobs", "recordId": f"@{first('Find_BC_Job_Row')}?['crfdf_bcjobid']", **UPDATE_FIELDS})},
         "else": {"actions": {"Create_BC_Job": dv("CreateRecord", {"entityName": "crfdf_bcjobs", **JOB_FIELDS})}},
     },
     "Get_Planning_Lines": bc_get("jobPlanningLines", f"jobNo eq '@{{{JOBLIT}}}'"),
