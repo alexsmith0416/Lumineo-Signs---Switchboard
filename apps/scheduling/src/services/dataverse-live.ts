@@ -2009,6 +2009,25 @@ const JOBTRACK_COLS = {
   dateToHold: "crfdf_datetohold",
   dateOffHold: "crfdf_dateoffhold",
   priorHoldDays: "crfdf_priorholddays",
+  priority: "crfdf_priority",
+  expeditorDate: "crfdf_expeditordate",
+  dateInstalled: "crfdf_dateinstalled",
+  dateToAdmin: "crfdf_datetoadmin",
+  dateInvoiced: "crfdf_dateinvoiced",
+  vendor: "crfdf_vendor",
+  poNumber: "crfdf_ponumber",
+  vendorStatus: "crfdf_vendorstatus",
+  storageLocation: "crfdf_storagelocation",
+  vendorShipDate: "crfdf_vendorshipdate",
+  vendorShipDate2: "crfdf_vendorshipdate2",
+  outsourcedArrival: "crfdf_outsourcedarrival",
+  graphics: "crfdf_graphics",
+  routingType: "crfdf_routingtype",
+  powerlines: "crfdf_powerlines",
+  mfgRegion: "crfdf_mfgregion",
+  installRegion: "crfdf_installregion",
+  ulSign: "crfdf_ulsign",
+  notes: "crfdf_notes",
 } as const;
 export type JobTrackPatch = Partial<Pick<JobTrack, keyof typeof JOBTRACK_COLS>>;
 
@@ -2207,6 +2226,39 @@ export async function saveJobCustomValue(jobNo: string, key: string, value: unkn
   const res = await dvCreate(JOBTRACK_SET, { crfdf_jobtrackid: id, crfdf_jobno: jobNo, crfdf_name: jobNo, crfdf_customvalues: json });
   if (!res.success) throw new Error(res.error?.message ?? "saveJobCustomValue failed");
   return id;
+}
+
+// ---------------------------------------------------------------------------
+// Shared Jobs views (crfdf_jobsview) — one row per key: "layout" (sections,
+// views, columns) and "prefs:<view id>" (sorts / filters / groups / collapsed),
+// the value as JSON in crfdf_config. Created by scripts/create-jobsview-table.ps1.
+// ---------------------------------------------------------------------------
+const JOBSVIEW_SET = "crfdf_jobsviews";
+
+/** Every saved key → value. Throws when the table doesn't exist yet. */
+export async function fetchJobsViewConfig(): Promise<Map<string, unknown>> {
+  const rows = await list(JOBSVIEW_SET, { select: "crfdf_name,crfdf_config" });
+  const out = new Map<string, unknown>();
+  for (const r of rows) {
+    const key = s(r.crfdf_name);
+    if (!key) continue;
+    try {
+      out.set(key, JSON.parse(s(r.crfdf_config)) as unknown);
+    } catch {
+      /* skip a damaged row */
+    }
+  }
+  return out;
+}
+
+/** Save one key (create or update its row). */
+export async function saveJobsViewConfig(key: string, value: unknown): Promise<void> {
+  const rec: Row = { crfdf_name: key, crfdf_config: JSON.stringify(value) };
+  const existing = await list(JOBSVIEW_SET, { select: "crfdf_jobsviewid", filter: `crfdf_name eq '${odataLit(key)}'` });
+  const res = existing[0]
+    ? await dvUpdate(JOBSVIEW_SET, s(existing[0].crfdf_jobsviewid), rec)
+    : await dvCreate(JOBSVIEW_SET, { crfdf_jobsviewid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "saveJobsViewConfig failed");
 }
 
 /** Upsert one month (keyed by crfdf_month). */

@@ -35,6 +35,8 @@ interface JobTrackingState {
    * which pushes the new step states to BC like a stepper click.
    */
   setStatus: (jobNo: string, status: string, by: string) => Promise<void>;
+  /** Change tracking fields on a job (the Jobs grid's editable columns). */
+  updateTrack: (jobNo: string, patch: TrackPatch) => Promise<void>;
   /** Set (or clear, with null) one custom field value on a job. */
   setCustomValue: (jobNo: string, key: string, value: unknown) => Promise<void>;
 }
@@ -85,6 +87,8 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
 
   renameJob: (jobNo, name) => saveTrack(jobNo, { jobName: name.trim() }, "Rename job"),
 
+  updateTrack: (jobNo, patch) => saveTrack(jobNo, patch, "Edit job"),
+
   setCustomValue: async (jobNo, key, value) => {
     const apply = (p: Partial<JobTrack>) =>
       set((s) => {
@@ -131,7 +135,7 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
   },
 }));
 
-type TrackPatch = Partial<Pick<JobTrack, "jobName" | "statusOverride" | "holdReason" | "dateToHold" | "dateOffHold" | "priorHoldDays">>;
+export type TrackPatch = import("../services/dataverse-live").JobTrackPatch;
 
 /** Apply a tracking edit on screen, then save it (creating the row if the job
  *  wasn't tracked yet). A failed save is reported and the edit stays. */

@@ -14,22 +14,24 @@ import { JOB_FIELDS, customColumn, type JobFieldDef } from "./jobs-fields";
 import { withCustomFields } from "../../services/custom-fields";
 import { useCustomFieldStore } from "../../store/custom-field-store";
 import { AddFieldsDialog, EditFieldDialog } from "./CustomFieldDialogs";
+import { BUILTIN_EDITS, localDate, trackValue } from "./jobs-editable";
+import { useCurrentUser } from "../../services/current-user";
+import { cleanPrefs, useJobsViewsStore } from "../../store/jobs-views-store";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import {
-  PRESETS, addSection, addView, defaultLayout, deleteSection, deleteView, duplicateView, moveSection, moveView,
-  renameSection, renameView, sanitizeLayout, setViewCols, type ViewDef, type ViewLayout,
+  PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
+  renameSection, renameView, setViewCols,
 } from "./jobs-view-layout";
 
 /**
  * Jobs — every open BC job with its tracking fields and stepper. Replaces the
  * Airtable "LNI Production Schedule / Expeditor" list. The views (sections,
- * names, order, columns), each view's sorts / filters / groups, and the column
- * widths (shared by every view) are saved on this device.
+ * names, order, columns) and each view's sorts / filters / groups / collapsed
+ * groups are SHARED by everyone (store/jobs-views-store.ts). Column widths and
+ * the view you last had open are saved on this device.
  */
-const LAYOUT_KEY = "lumineo.jobs.layout.v1";
 const WIDTHS_KEY = "lumineo.jobs.colWidths.v1";
 const LAST_VIEW_KEY = "lumineo.jobs.lastView";
-const PREFS_KEY = (viewId: string) => `lumineo.jobs.view.${viewId}`;
 
 function read<T>(key: string): T | null {
   try {
@@ -47,13 +49,6 @@ function write(key: string, value: unknown) {
   }
 }
 
-function loadPrefs(view: ViewDef): GridPrefs {
-  return read<GridPrefs>(PREFS_KEY(view.id)) ?? {
-    sorts: [],
-    filters: [],
-    groups: view.defaultGroup ? [{ field: view.defaultGroup, asc: true }] : [],
-  };
-}
 
 type Panel = "fields" | "filter" | "sort" | "group" | null;
 
@@ -76,6 +71,11 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const error = useJobTrackingStore((s) => s.error);
   const load = useJobTrackingStore((s) => s.load);
   const setCustomValue = useJobTrackingStore((s) => s.setCustomValue);
+  const updateTrack = useJobTrackingStore((s) => s.updateTrack);
+  const setStatus = useJobTrackingStore((s) => s.setStatus);
+  const updateSchedule = useJobScheduleStore((s) => s.update);
+  const { fullName, upn } = useCurrentUser();
+  const me = fullName || upn || "Unknown";
   const customDefs = useCustomFieldStore((s) => s.defs);
   const loadCustomDefs = useCustomFieldStore((s) => s.load);
   // Dates come from the SAME job-schedule store the boards' Install Dates use,
@@ -116,15 +116,15 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const [addingField, setAddingField] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
 
-  // ── Views (editable, per device) ─────────────────────────────────────────
-  const [layout, setLayoutState] = useState<ViewLayout>(() => {
-    const saved = read<unknown>(LAYOUT_KEY);
-    return saved ? sanitizeLayout(saved, KNOWN_FIELDS) : defaultLayout();
-  });
-  const setLayout = (next: ViewLayout) => {
-    setLayoutState(next);
-    write(LAYOUT_KEY, next);
-  };
+  // ── Views (editable, shared by everyone) ─────────────────────────────────
+  const layout = useJobsViewsStore((s) => s.layout);
+  const setLayout = useJobsViewsStore((s) => s.setLayout);
+  const prefsByView = useJobsViewsStore((s) => s.prefsByView);
+  const setViewPrefs = useJobsViewsStore((s) => s.setPrefs);
+  const loadViews = useJobsViewsStore((s) => s.load);
+  useEffect(() => {
+    void loadViews(KNOWN_FIELDS);
+  }, [loadViews]);
   const [viewId, setViewId] = useState<string>(() => {
     try {
       return localStorage.getItem(LAST_VIEW_KEY) ?? "";
@@ -135,7 +135,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const firstViewId = layout.sections.flatMap((s) => s.viewIds)[0]!;
   const view = layout.views[viewId] ?? layout.views[firstViewId]!;
 
-  const [prefs, setPrefsState] = useState<GridPrefs>(() => loadPrefs(view));
+  const prefs: GridPrefs = prefsByView[view.id] ?? cleanPrefs(null, view);
   const [widths, setWidthsState] = useState<Record<string, number>>(() => read(WIDTHS_KEY) ?? {});
   const [search, setSearch] = useState("");
   const [panel, setPanel] = useState<Panel>(null);
@@ -145,15 +145,10 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     const v = layout.views[id];
     if (!v) return;
     setViewId(id);
-    setPrefsState(loadPrefs(v));
     setPanel(null);
     write(LAST_VIEW_KEY, id);
   };
-  const setPrefs = (patch: Partial<GridPrefs>) => {
-    const next = { ...prefs, ...patch };
-    setPrefsState(next);
-    write(PREFS_KEY(view.id), next);
-  };
+  const setPrefs = (patch: Partial<GridPrefs>) => setViewPrefs(view.id, { ...prefs, ...patch });
   const setWidths = (next: Record<string, number>) => {
     setWidthsState(next);
     write(WIDTHS_KEY, next);
@@ -174,14 +169,33 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     [canSeeMoney, fieldsByKey],
   );
   const tracksByJob = useMemo(() => new Map(tracks.map((t) => [t.jobNo, t])), [tracks]);
+  // In-place editing: custom fields, plus the built-in columns in jobs-editable.ts.
   const gridEditing = useMemo(
     () => ({
       canEdit,
-      valuesFor: (jobNo: string) => tracksByJob.get(jobNo)?.customValues,
-      onSave: (jobNo: string, key: string, value: unknown) => void setCustomValue(jobNo, key, value),
+      editorFor: (col: JobFieldDef) => col.custom ?? BUILTIN_EDITS[col.key]?.field ?? null,
+      valueFor: (row: JobRow, col: JobFieldDef) =>
+        col.custom
+          ? tracksByJob.get(row.jobNo)?.customValues?.[col.key]
+          : (row as unknown as Record<string, unknown>)[col.key],
+      onSave: (row: JobRow, col: JobFieldDef, value: unknown) => {
+        if (col.custom) return void setCustomValue(row.jobNo, col.key, value);
+        const target = BUILTIN_EDITS[col.key];
+        if (!target) return;
+        if (target.kind === "status") {
+          if (typeof value === "string" && value) void setStatus(row.jobNo, value, me);
+        } else if (target.kind === "schedule") {
+          void updateSchedule(row.jobNo, { [target.schedKey]: localDate(value) });
+        } else {
+          void updateTrack(row.jobNo, { [target.trackKey]: trackValue(target, value) });
+        }
+      },
     }),
-    [canEdit, tracksByJob, setCustomValue],
+    [canEdit, tracksByJob, setCustomValue, setStatus, updateSchedule, updateTrack, me],
   );
+
+  // Job # / Name fits the longest name in the list until it's resized by hand.
+  const autoWidths = useMemo(() => ({ job: fitJobColumn(rows) }), [rows]);
   const inView = useMemo(() => (view.preset ? rows.filter(PRESETS[view.preset]) : rows), [rows, view]);
   const shown = useMemo(() => applyGrid(inView, search, prefs), [inView, search, prefs]);
 
@@ -203,15 +217,13 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           const [next, id] = addView(layout, sectionId, { name: "New view", cols: [...view.cols] });
           setLayout(next);
           setViewId(id);
-          setPrefsState(loadPrefs(next.views[id]!));
           write(LAST_VIEW_KEY, id);
         }}
         onDuplicate={(id) => {
           const [next, copy] = duplicateView(layout, id);
           setLayout(next);
-          write(PREFS_KEY(copy), read(PREFS_KEY(id)) ?? loadPrefs(layout.views[id]!));
+          setViewPrefs(copy, prefsByView[id] ?? cleanPrefs(null, layout.views[id]));
           setViewId(copy);
-          setPrefsState(loadPrefs(next.views[copy]!));
           write(LAST_VIEW_KEY, copy);
         }}
         onRename={(id, name) => setLayout(renameView(layout, id, name))}
@@ -221,7 +233,6 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           if (id === view.id) {
             const first = next.sections.flatMap((s) => s.viewIds)[0]!;
             setViewId(first);
-            setPrefsState(loadPrefs(next.views[first]!));
             write(LAST_VIEW_KEY, first);
           }
         }}
@@ -289,8 +300,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         </div>
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
-          collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths}
-          fieldsByKey={fieldsByKey} editing={gridEditing} />
+          collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} autoWidths={autoWidths}
+          fieldsByKey={fieldsByKey} editing={gridEditing}
+          collapsed={prefs.collapsed ?? []} onCollapsedChange={(collapsed) => setPrefs({ collapsed })} />
       </section>
       {addingField && (
         <AddFieldsDialog
@@ -308,4 +320,20 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
       )}
     </div>
   );
+}
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+/** Width that fits the longest "J12345 Customer Name" (the grid's 600-weight
+ *  12px text + padding, and room for a "not in BC" tag), within 180–520 px. */
+function fitJobColumn(rows: readonly JobRow[]): number {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement("canvas").getContext("2d");
+    if (measureCtx) measureCtx.font = `600 12px ${getComputedStyle(document.body).fontFamily}`;
+  }
+  let widest = 0;
+  for (const r of rows) {
+    const w = (measureCtx ? measureCtx.measureText(r.job).width : r.job.length * 7) + (r.inBc ? 0 : 76);
+    if (w > widest) widest = w;
+  }
+  return Math.min(520, Math.max(180, Math.ceil(widest + 24)));
 }

@@ -908,21 +908,24 @@
   <ul>
     <li><strong>Views</strong> on the left &mdash; <em>All Jobs</em>, <em>Not tracked yet</em> (new BC jobs nobody
     has set up), team views (OPS / MFG, OPS / Install, Warehouse Coord.) and <em>WK Expeditor</em>, which matches the
-    Airtable columns. Make them your own: <strong>+ Add view</strong> under any section, <strong>double-click</strong>
+    Airtable columns. Change them: <strong>+ Add view</strong> under any section, <strong>double-click</strong>
     a view or section name to rename it, hover a view for <strong>duplicate</strong> (⧉) or <strong>delete</strong>
     (✕), <strong>drag</strong> views (even into another section) and sections to reorder them, and
-    <strong>+ Add section</strong> at the bottom. Each view remembers its own columns, filters, sorts and groups on
-    your device.</li>
+    <strong>+ Add section</strong> at the bottom. <strong>Views are shared</strong>: each view keeps its own
+    columns, filters, sorts, groups and <strong>collapsed groups</strong> for <em>everyone</em>, so a change you make to
+    a view is what the whole team sees in it (make your own view if you want one to yourself). Which view you last had
+    open, and column widths, stay on your device.</li>
     <li><strong>Fields</strong> &mdash; choose which columns a view shows: tick / untick, search, Show all / Hide all,
     and drag the ⠿ grip to put the shown columns in order.</li>
     <li><strong>Filter</strong> &mdash; stack conditions with <em>and</em> / <em>or</em>; for badge columns pick the
     values from a list (<em>is any of</em>). <strong>Sort</strong> &mdash; click a column header, or use the Sort
     button for several levels. <strong>Group</strong> &mdash; nest groups (e.g. Current Status, then Region);
-    click a group bar to collapse it.</li>
+    click a group bar to collapse it &mdash; it stays collapsed in that view (for everyone) until someone expands it.</li>
     <li><strong>Stepper</strong> column &mdash; the job's production stepper, the same one as on the job card. It
     replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
-    view. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
+    view and on every row. <strong>Job # / Name</strong> sizes itself to the longest name in the list until you resize
+    it by hand; double-click its edge to go back to that. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
     <li><strong>Click a job</strong> to open it: its tracking details, <strong>where it sits on the Production,
     Installation and Shipping boards</strong>, and the same <strong>production stepper</strong> and <strong>Install
     Dates</strong> as the job card on the boards. It's one system &mdash; completing a department or changing a date
@@ -965,8 +968,21 @@
     <li><strong>Change or remove a field</strong>: <strong>Fields</strong> &rarr; the ✎ next to it &mdash; rename it, add /
     rename / remove options and pick their colours, change a formula, or delete the field for everyone.</li>
   </ul>
-  <p>The other tracking columns (vendor, expeditor, date to Admin&hellip;) are <strong>read-only for now</strong>;
-  editing them, the full lifecycle stepper and the Service stepper are next.</p>
+  <h4>Editing in the list</h4>
+  <p>Editors change a job right in the list: <strong>click a cell</strong> to edit it (Enter or clicking away saves,
+  Esc cancels; a check box toggles with one click). Clicking anywhere else on the row still opens the job.</p>
+  <ul>
+    <li><strong>Pick-lists</strong> &mdash; Current Status (with its automation), Priority, Hold, Vendor, Vendor Status,
+    Storage Location, Graphics, Routing Type, Powerlines, MFG Region and Install Region, using the LNI option lists.</li>
+    <li><strong>Dates</strong> &mdash; Date to Hold / off Hold, Expeditor, Date Installed, Date to Admin, Date Invoiced,
+    Vendor Ship Dates and Outsourced Arrival. <strong>Order Date / Release Date</strong>, <strong>Mfg Target Mod</strong>,
+    <strong>Sched. Install</strong> and <strong>RED DATE</strong> are the job's Install Dates &mdash; changing them here
+    changes them on the boards too (and moves the targets).</li>
+    <li><strong>Text</strong> &mdash; P.O. #, Job Notes; and the <strong>UL Sign</strong> check box.</li>
+    <li>Filled in for you, not editable: Sales, Location and Region (from BC), Value and Remaining Balance, and the
+    calculated Mfg Target / Install Target / Mfg Final, DIP, DOH and Actual DIP. Rename a job in its panel.</li>
+  </ul>
+  <p>The full lifecycle stepper and the Service stepper are next.</p>
 
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
@@ -1144,6 +1160,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs views are shared, and remember collapsed groups</strong> &mdash; the views and each view's columns, filters, sorts, groups and collapsed groups are now saved for the whole team instead of on each device, and a collapsed group stays collapsed when you come back. See &sect;5.17.</td></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs: edit tracking columns in the list</strong> &mdash; editors click a cell to change Current Status, Priority, Hold, vendor details, storage, graphics, routing type, powerlines, regions, the tracking dates, P.O. #, notes and UL Sign; Order / Release Date, Mfg Target Mod, Sched. Install and RED DATE edit the job's Install Dates (shared with the boards). <strong>Job # / Name</strong> now sizes itself to the longest name until you resize it. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>BC's main Production and Installation/Service steps follow the stepper</strong> &mdash; <em>Production</em> is marked Started while any production department is Started and Complete once they're all done; <em>Installation/Service</em> is Started once Install is the active step and Complete when Install is. See &sect;5.4.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Sync to BC and Match Steppers moved to Settings</strong> &mdash; they're occasional catch-up tools (everyday changes reach BC on their own), so they now live in <em>Settings &rarr; Business Central</em> instead of the Jobs toolbar. See &sect;5.14.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: custom fields</strong> &mdash; editors add their own shared columns to the job list from <em>Fields &rarr; + Add field</em>, with the same 12 types as the LNI Production Scheduler: Text, Long text, Number, Currency, Date, Checkbox, Single Select, Multi Select, URL, Email, Phone and Formula Date (another date plus or minus days, working days or weeks). Fill them in right in the list or in the job's panel; edit or delete a field with ✎ in Fields. See &sect;5.17.</td></tr>

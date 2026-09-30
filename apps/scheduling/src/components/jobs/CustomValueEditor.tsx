@@ -65,7 +65,8 @@ export default function CustomValueEditor({
           onKeyDown={(e) => e.key === "Escape" && onDone?.()}
         >
           <option value="">—</option>
-          {(def.opts ?? []).map((o) => (
+          {/* Keep a value that isn't one of the options (e.g. carried over from Airtable). */}
+          {[...(typeof value === "string" && value && !(def.opts ?? []).includes(value) ? [value] : []), ...(def.opts ?? [])].map((o) => (
             <option key={o} value={o}>
               {o}
             </option>

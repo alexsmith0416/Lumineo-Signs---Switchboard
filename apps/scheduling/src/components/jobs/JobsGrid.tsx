@@ -39,16 +39,19 @@ export function OptionBadges({ def, value }: { def: CustomFieldDef; value: strin
   );
 }
 
-/** Custom-field editing for the grid: which cell is open, the raw values, the save. */
+/** In-place editing for the grid (editors only): which columns take an editor,
+ *  a cell's current value, and the save. */
 export interface GridEditing {
   canEdit: boolean;
-  valuesFor: (jobNo: string) => Record<string, unknown> | undefined;
-  onSave: (jobNo: string, key: string, value: unknown) => void;
+  /** The editor for a column, or null when it isn't editable. */
+  editorFor: (col: JobFieldDef) => CustomFieldDef | null;
+  valueFor: (row: JobRow, col: JobFieldDef) => unknown;
+  onSave: (row: JobRow, col: JobFieldDef, value: unknown) => void;
 }
 
 /** Virtualised Jobs grid. Ported in spirit from the Airtable recreation app's
- *  Grid.tsx — same grouping / sorting / resizing. Built-in columns are read-only
- *  (click a row to open the job); editors edit custom-field cells in place. */
+ *  Grid.tsx — same grouping / sorting / resizing. Click a row to open the job;
+ *  editors edit the editable cells (tracking fields, dates, custom fields) in place. */
 export default function JobsGrid({
   rows,
   cols,
@@ -58,7 +61,10 @@ export default function JobsGrid({
   onOpen,
   widths,
   onWidths,
+  autoWidths,
   collapseSignal,
+  collapsed: collapsedPaths,
+  onCollapsedChange,
   fieldsByKey,
   editing,
 }: {
@@ -71,21 +77,31 @@ export default function JobsGrid({
   onOpen: (row: JobRow) => void;
   /** Column widths, shared by every view (a resize applies everywhere). */
   widths: Record<string, number>;
+  /** Widths used until a column is resized by hand (e.g. Job # / Name fits the longest name). */
+  autoWidths?: Record<string, number>;
   onWidths: (next: Record<string, number>) => void;
   /** Bump .n to collapse (all=true) or expand (all=false) every group. */
   collapseSignal: { n: number; all: boolean };
+  /** Paths of the collapsed groups — saved with the view. */
+  collapsed: readonly string[];
+  onCollapsedChange: (next: string[]) => void;
   /** Every field by key (built-in + custom), for group headers. */
   fieldsByKey?: ReadonlyMap<string, JobFieldDef>;
   editing?: GridEditing;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const collapsed = useMemo(() => new Set(collapsedPaths), [collapsedPaths]);
+  const collapsedRef = useRef(collapsed);
+  collapsedRef.current = collapsed;
+  const onCollapsedRef = useRef(onCollapsedChange);
+  onCollapsedRef.current = onCollapsedChange;
   // The custom-field cell being edited: `${jobNo}\u0000${fieldKey}`.
   const [openCell, setOpenCell] = useState<string | null>(null);
   const closeCell = useCallback(() => setOpenCell(null), []);
   // Live width while dragging; committed to the shared widths on mouse-up.
   const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
-  const widthOf = (key: string, fallback: number) => (dragging?.key === key ? dragging.w : widths[key] ?? fallback);
+  const widthOf = (key: string, fallback: number) =>
+    dragging?.key === key ? dragging.w : widths[key] ?? autoWidths?.[key] ?? fallback;
 
   const tree = useMemo(() => (groups.length ? buildGroupTree(rows, groups) : null), [rows, groups]);
 
@@ -95,7 +111,7 @@ export default function JobsGrid({
   useEffect(() => {
     if (collapseSignal.n === 0) return;
     const t = treeRef.current;
-    setCollapsed(collapseSignal.all && t ? new Set(allGroupPaths(t)) : new Set());
+    onCollapsedRef.current(collapseSignal.all && t ? allGroupPaths(t) : []);
   }, [collapseSignal]);
 
   const items = useMemo<FlatItem[]>(
@@ -111,14 +127,12 @@ export default function JobsGrid({
   });
 
   const toggle = useCallback((path: string) => {
-    startTransition(() =>
-      setCollapsed((prev) => {
-        const next = new Set(prev);
-        if (next.has(path)) next.delete(path);
-        else next.add(path);
-        return next;
-      }),
-    );
+    const next = new Set(collapsedRef.current);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    // Update the ref now, so a second click before the re-render builds on this one.
+    collapsedRef.current = next;
+    startTransition(() => onCollapsedRef.current([...next]));
   }, []);
 
   const startResize = (e: React.MouseEvent, key: string, start: number) => {
@@ -148,7 +162,10 @@ export default function JobsGrid({
 
   return (
     <div className="jobs-grid-wrap" ref={wrapRef}>
-      <table className="jobs-grid">
+      {/* An exact width (the sum of the columns) keeps table-layout: fixed in charge,
+          so a column is the width it's set to on every row — not sized by the text
+          of whichever rows are on screen. */}
+      <table className="jobs-grid" style={{ width: cols.reduce((sum, c) => sum + widthOf(c.key, c.width), 0) }}>
         <colgroup>
           {cols.map((c) => (
             <col key={c.key} style={{ width: widthOf(c.key, c.width) }} />
@@ -171,6 +188,7 @@ export default function JobsGrid({
                   <span
                     className="jobs-th__resize"
                     onMouseDown={(e) => startResize(e, c.key, widthOf(c.key, c.width))}
+                    title="Drag to resize · double-click to reset"
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       const n = { ...widths };
@@ -263,8 +281,8 @@ const JobGridRow = memo(function JobGridRow({
   return (
     <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`} onClick={() => onOpen(row)}>
       {cols.map((c) => {
-        const cf = c.custom;
-        const editable = !!cf && !!editing?.canEdit && cf.type !== "formula-date";
+        const cf = editing?.canEdit ? editing.editorFor(c) : null;
+        const editable = !!cf && cf.type !== "formula-date";
         const isOpen = editable && openKey === c.key;
         const cls = [
           c.key === "job" ? "jobs-cell--primary" : "",
@@ -279,8 +297,8 @@ const JobGridRow = memo(function JobGridRow({
               editable
                 ? (e) => {
                     e.stopPropagation();
-                    if (cf.type === "bool") {
-                      editing!.onSave(row.jobNo, cf.key, !(editing!.valuesFor(row.jobNo)?.[cf.key] === true));
+                    if (cf!.type === "bool") {
+                      editing!.onSave(row, c, !(editing!.valueFor(row, c) === true));
                     } else if (!isOpen) onOpenCell(`${row.jobNo}\u0000${c.key}`);
                   }
                 : undefined
@@ -290,9 +308,9 @@ const JobGridRow = memo(function JobGridRow({
               <div className="jobs-cell__editor">
                 <CustomValueEditor
                   inline
-                  def={cf}
-                  value={editing!.valuesFor(row.jobNo)?.[cf.key]}
-                  onSave={(v) => editing!.onSave(row.jobNo, cf.key, v)}
+                  def={cf!}
+                  value={editing!.valueFor(row, c)}
+                  onSave={(v) => editing!.onSave(row, c, v)}
                   onDone={onCloseCell}
                 />
               </div>

@@ -26,6 +26,8 @@ export interface GridPrefs {
   sorts: SortCriterion[];
   filters: FilterCondition[];
   groups: GroupCriterion[];
+  /** Paths of the groups that are collapsed (GroupNode.path). */
+  collapsed?: string[];
 }
 
 const text = (row: JobRow, field: string): string => {

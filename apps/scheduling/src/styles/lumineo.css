@@ -5082,7 +5082,7 @@ input.lead-times__weeks { width: 64px; }
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
-  width: max-content;
+  /* width is set inline to the sum of the columns (JobsGrid). */
   min-width: 100%;
   font-size: 12px;
 }

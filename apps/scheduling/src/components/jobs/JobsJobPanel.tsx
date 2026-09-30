@@ -26,7 +26,8 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
  *  - Install Dates (release / scheduled install / red date) — the shared
  *    job-schedule store; the boards and the Jobs columns update at once.
  *  - Where the job sits on the Production / Installation / Shipping boards.
- * Tracking fields (hold, vendor, expeditor…) are shown read-only until Phase 2.
+ * Tracking fields are shown here as a summary; editors change them in the grid
+ * (jobs-editable.ts).
  * The name can be edited: it defaults to BC's ship-to customer name.
  */
 export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; canEdit: boolean; onClose: () => void }) {
