@@ -216,6 +216,14 @@ export interface BcStepState {
  *     active without finishing goes back to not Started, so a project only
  *     shows in the tile(s) of the department(s) it is actually in.
  * Departments the stepper doesn't include are left out — BC is not touched.
+ *
+ * Plus BC's two MAIN steps (agreed Sep 30, 2026), which head their sections:
+ *   - "Production": Started once any production step is Started; Complete
+ *     once every production step is complete. Only for a job with production
+ *     steps.
+ *   - "Installation/Service": Started once Install is active (production done,
+ *     or the job moved to an Installation status); Complete once Install is
+ *     complete (a Complete status completes it). Only for a job with Install.
  */
 export function bcStepStates(
   steps: ReadonlyArray<{ key: string; state: "completed" | "active" | "included" }>,
@@ -231,8 +239,26 @@ export function bcStepStates(
     if (d.state === "active") st.started = true;
   }
   for (const st of byStep.values()) if (st.complete) st.started = true;
-  return [...byStep.values()];
+
+  const main = (step: string, of: typeof steps): BcStepState | null => {
+    if (!of.length) return null;
+    const complete = of.every((d) => d.state === "completed");
+    return {
+      step,
+      complete,
+      started: complete || of.some((d) => d.state === "active" || d.state === "completed"),
+      keys: of.map((d) => d.key),
+    };
+  };
+  const production = main(BC_PRODUCTION_STEP, steps.filter((d) => d.key !== INSTALL_STEP.key && bcStepForKey(d.key)));
+  const install = main(BC_INSTALLATION_STEP, steps.filter((d) => d.key === INSTALL_STEP.key));
+  return [...(production ? [production] : []), ...byStep.values(), ...(install ? [install] : [])];
 }
+
+/** BC's main Production step (heads the production departments). */
+export const BC_PRODUCTION_STEP = "Production";
+/** BC's main Installation step (heads Install and the other install steps). */
+export const BC_INSTALLATION_STEP = "Installation/Service";
 
 /** A Started/Complete push for one (job, BC step). */
 export function buildStepStatePush(input: { jobNo: string; state: BcStepState; by?: string }): BcPlanningPush | null {

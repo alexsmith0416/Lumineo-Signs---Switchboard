@@ -218,6 +218,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 - **📌 RESUME HERE (Sep 30, 2026) — Jobs list stages 1–4 shipped.** Next:
   editing the other tracking columns (vendor, expeditor, date to Admin…), the
   lifecycle + Service steppers, BC job "complete" at Complete to Admin.
+  - **New orders flow (built Sep 30, UAT):** `flows/BCSync_NewOrders.md` —
+    every 15 min, jobs whose BC *New Order This Week* step is Started (and
+    not yet on the Jobs list) get a jobtrack row (status "New Order this
+    week") and their bcjob row + planning lines filled from BC at once.
+    Zip `Downloads\BCNewOrders_1_0_0_1.zip`; **user to import, turn on, test
+    in UAT**. Switches to Production with the cutover (below).
+  - **Location fix:** `scripts/patch-saleslines-flow-shipto.ps1` makes the
+    nightly BCSync_SalesLines write the Sales Order's ship-to city / state /
+    address (BCSync_Jobs writes the bill-to customer's) — **user to run**.
   - **Stage 4 (done): custom fields** — `services/custom-fields.ts` (12 types
     incl. Formula Date = base date ± days / working days / weeks),
     `store/custom-field-store.ts`, `components/jobs/CustomFieldDialogs.tsx`
@@ -756,6 +765,11 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
      services behind. Publishing a page grants no access on its own (the calling
      principal still needs BC permissions, which Production's app card does not
      have), so nothing is currently exposed.
+  3a. **Point the BC flows at Production.** `BCPush_PlanningSteps` and
+     `BCSync_NewOrders` both call page 58400 (`Bc_ODataBase` → the
+     `/Production/ODataV4` base); `BCSync_NewOrders` also reads through the BC
+     connector (`Bc_Environment` → `PRODUCTION`). See
+     `flows/BCSync_NewOrders.md`.
   3b. 🔴 **Deploy the AL extension to Production — this is new and is NOT the same
      as a sandbox publish.** Direct publish from VS Code works against a sandbox
      (UAT); **Production requires uploading the built `.app` as a per-tenant

@@ -234,10 +234,33 @@ describe("bcStepStates", () => {
     expect(pick(r, "Fabrication")).toMatchObject({ started: false, complete: false });
   });
 
-  it("returns one entry per BC step, only for included departments", () => {
+  it("returns one entry per BC step, only for included departments (plus the main Production step)", () => {
     const r = bcStepStates(steps(["S", "active"], ["MF", "included"]));
-    expect(r.map((x) => x.step)).toEqual(["Fabrication"]);
+    expect(r.map((x) => x.step)).toEqual(["Production", "Fabrication"]);
     expect(bcStepStates([])).toEqual([]);
+  });
+
+  describe("main steps", () => {
+    it("Production is Started while any production step is, and Complete once all are", () => {
+      const going = bcStepStates(steps(["R", "completed"], ["MF", "active"], ["I", "included"]));
+      expect(pick(going, "Production")).toMatchObject({ started: true, complete: false, keys: ["R", "MF"] });
+      const done = bcStepStates(steps(["R", "completed"], ["MF", "completed"], ["I", "active"]));
+      expect(pick(done, "Production")).toMatchObject({ started: true, complete: true });
+    });
+
+    it("Installation/Service is Started once Install is active, Complete once it's done", () => {
+      expect(pick(bcStepStates(steps(["MF", "active"], ["I", "included"])), "Installation/Service"))
+        .toMatchObject({ started: false, complete: false });
+      expect(pick(bcStepStates(steps(["MF", "completed"], ["I", "active"])), "Installation/Service"))
+        .toMatchObject({ started: true, complete: false, keys: ["I"] });
+      expect(pick(bcStepStates(steps(["MF", "completed"], ["I", "completed"])), "Installation/Service"))
+        .toMatchObject({ started: true, complete: true });
+    });
+
+    it("leaves out a main step the job has nothing under", () => {
+      expect(pick(bcStepStates(steps(["I", "active"])), "Production")).toBeUndefined();
+      expect(pick(bcStepStates(steps(["MF", "active"])), "Installation/Service")).toBeUndefined();
+    });
   });
 });
 

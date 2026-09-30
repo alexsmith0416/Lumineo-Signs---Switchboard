@@ -525,10 +525,16 @@
         <strong>Reopen</strong> clears it again. Where several departments share one BC step (Steel, Metal Fab and
         Fabrication Help all feed <strong>Fabrication</strong>), the step is Complete only once all of them are.
         Scheduling a card never changes Started or Complete.</li>
+        <li><strong>The main steps</strong> — BC's <strong>Production</strong> step is marked <strong>Started</strong>
+        as soon as any production department is, and <strong>Complete</strong> once every production department on the
+        stepper is done. <strong>Installation/Service</strong> is <strong>Started</strong> once Install becomes the
+        active step (production done, or the job moved to an Installation status) and <strong>Complete</strong> when
+        Install is completed (which the Complete statuses do).</li>
       </ul>
     Departments map to BC steps as: Steel, Metal Fab and Fabrication Help &rarr; <strong>Fabrication</strong>;
     Routing &rarr; <strong>Routing</strong>; Paint &rarr; <strong>Painting</strong>; Vinyl / Graphics &rarr;
-    <strong>Vinyl</strong>; Assembly &rarr; <strong>Final Assembly</strong>; Install &rarr; <strong>Install</strong>.
+    <strong>Vinyl</strong>; Assembly &rarr; <strong>Final Assembly</strong>; Material Cut &rarr; <strong>Substrate
+    Cut/Prep</strong>; Crating &rarr; <strong>Crating</strong>; Install &rarr; <strong>Install</strong>.
     If the job has no row for that step in BC yet, one is added. Deleting a department's last card leaves BC's dates as
     they were. Changes reach BC within a minute or two.</li>
     <li><strong>At a glance</strong> — <strong>hover any job card</strong> (Production or Installation, and the job pills
@@ -1138,6 +1144,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>BC's main Production and Installation/Service steps follow the stepper</strong> &mdash; <em>Production</em> is marked Started while any production department is Started and Complete once they're all done; <em>Installation/Service</em> is Started once Install is the active step and Complete when Install is. See &sect;5.4.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Sync to BC and Match Steppers moved to Settings</strong> &mdash; they're occasional catch-up tools (everyday changes reach BC on their own), so they now live in <em>Settings &rarr; Business Central</em> instead of the Jobs toolbar. See &sect;5.14.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: custom fields</strong> &mdash; editors add their own shared columns to the job list from <em>Fields &rarr; + Add field</em>, with the same 12 types as the LNI Production Scheduler: Text, Long text, Number, Currency, Date, Checkbox, Single Select, Multi Select, URL, Email, Phone and Formula Date (another date plus or minus days, working days or weeks). Fill them in right in the list or in the job's panel; edit or delete a field with ✎ in Fields. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: BC-filled columns, status automation and target dates</strong> &mdash; Name (ship-to customer, renamable), Sales, Region, Location, Order Date (= release date), Value (Sales Order amount) and a new Remaining Balance now come from Business Central. Changing a job's <strong>Current Status</strong> completes the stepper steps it implies and stamps Date to Hold / Date off Hold; new <strong>DOH</strong> and <strong>Actual DIP</strong> columns, and <strong>Match steppers</strong> to catch up existing jobs. New <strong>Mfg Target</strong>, <strong>Install Target</strong> and <strong>Mfg Final</strong> dates from editable <strong>lead-time rules</strong> (Settings &rarr; Lead times). <strong>Material Cut</strong> and <strong>Crating</strong> are now stepper steps (BC Substrate Cut/Prep and Crating); Crating is added automatically from crating labor. See &sect;5.4, &sect;5.5, &sect;5.14 and &sect;5.17.</td></tr>

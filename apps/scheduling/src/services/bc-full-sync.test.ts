@@ -33,9 +33,10 @@ describe("planFullSync", () => {
     expect(byStep["state:Routing"]).toMatchObject({ started: true, complete: true });
     expect(byStep["state:Fabrication"]).toMatchObject({ started: true, complete: false });
     expect(byStep["state:Painting"]).toMatchObject({ started: false, complete: false });
+    expect(byStep["state:Production"]).toMatchObject({ started: true, complete: false }); // the main step
     expect(byStep["schedule:Fabrication"]).toMatchObject({ assignedTo: "1030", startDateTime: "2026-10-05T13:00:00.000Z" });
     expect(byStep["schedule:Painting"]).toBeUndefined(); // no Paint cards → no dates
-    expect(plan).toMatchObject({ jobs: 1, stateChanges: 3, scheduleChanges: 1, unchanged: 0 });
+    expect(plan).toMatchObject({ jobs: 1, stateChanges: 4, scheduleChanges: 1, unchanged: 0 });
   });
 
   it("skips anything identical to the last push for that step", () => {
@@ -43,11 +44,12 @@ describe("planFullSync", () => {
       lastPushes: [
         last({}),
         last({ planningStep: "Fabrication", complete: false }),
+        last({ planningStep: "Production", complete: false }),
         last({ kind: "schedule", planningStep: "Fabrication", startDateTime: "2026-10-05T13:00:00Z", endDateTime: "2026-10-05T21:00:00Z", assignedTo: "1030" }),
       ],
     }));
     expect(plan.pushes.map((p) => `${p.kind}:${p.planningStep}`)).toEqual(["state:Painting"]);
-    expect(plan.unchanged).toBe(3);
+    expect(plan.unchanged).toBe(4);
   });
 
   it("compares against the NEWEST earlier push", () => {
