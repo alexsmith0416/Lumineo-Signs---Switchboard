@@ -215,7 +215,36 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Sep 29, 2026) — Job Tracking (replacing Airtable). Phase 1
+- **📌 RESUME HERE (Sep 30, 2026) — Jobs list stages 1–3 shipped; next is
+  STAGE 4: custom fields** (like the LNI Production Scheduler app at
+  `C:\Users\Alex\Documents\LNI-ProductionSchedule` — `src/types/schema.ts`
+  CustomFieldType, `useCustomFields`, `FieldManager`, `FieldEditPanel`). 12
+  types: Text, Long text, Number, Currency, Date, Checkbox, Single Select,
+  Multi Select, URL, Email, Phone, Formula Date. Shared in Dataverse
+  (definitions + per-job values).
+  - **Stage 1 (done):** Name = BC ship-to (fallback: SharePoint customer
+    folder; `crfdf_jobtrack.crfdf_jobname` manual rename). Sales initials /
+    Region from `services/sales-pm.ts` (NEK = QTOTTA, SPOPPELREITER,
+    VBAUMGARTNER, JLYLE; rest WK). Location = ship-to city, state. Value =
+    `crfdf_bcjob.crfdf_salesorderamount` (BCSync_SalesLines patched by
+    `scripts/patch-saleslines-flow-order.ps1`: order total, order salesperson,
+    ship-to name → order customer name fallback); Remaining Balance column.
+    Frozen Job # column above the steppers.
+  - **Stage 2 (done):** editable Current Status (`services/job-status.ts`):
+    complete statuses complete every step, Installation statuses complete
+    production; hold in/out stamps Date to/off Hold (`crfdf_priorholddays`
+    keeps earlier holds). DIP (from release) / DOH / Actual DIP. "Match
+    steppers" backfill dialog — **user hasn't run it yet**; then Sync to BC.
+  - **Stage 3 (done):** `services/lead-times.ts` + `crfdf_leadtimerule`
+    (Settings → Lead times). Mfg Target / Install Target (7 / 10 wk default),
+    Mfg Final = Mfg Modified (in-app override, else Airtable Mfg Final) if
+    different, else target. `computeJobTargets` takes a `lead` now (cards too).
+    Jobs release date = in-app override, else BC `crfdf_releasedate`.
+  - **Stepper:** Material Cut (MC → BC "Substrate Cut/Prep", editor-added)
+    and Crating (CR → BC "Crating", auto from crating-labor planning lines,
+    `planning-line-mapping.stepInfoFromLines`).
+
+- **(Sep 29, 2026) — Job Tracking (replacing Airtable). Phase 1
   data is IN; next is the Jobs view.**
   Goal: track every job from order → production → install → invoice inside the
   Project Scheduler, replacing the Airtable "LNI Production Schedule / WK
