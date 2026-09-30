@@ -17,7 +17,9 @@ const lines = new Map([
 
 describe("buildStepQueue", () => {
   it("has a group per production BC step, in flow order", () => {
-    expect(PRODUCTION_QUEUE_STEPS).toEqual(["Fabrication", "Routing", "Painting", "Vinyl", "Final Assembly"]);
+    expect(PRODUCTION_QUEUE_STEPS).toEqual([
+      "Substrate Cut/Prep", "Fabrication", "Routing", "Painting", "Vinyl", "Final Assembly", "Crating",
+    ]);
   });
 
   it("lists a job under each step it's ACTIVE in, with that step's tasks and hours", () => {
@@ -46,7 +48,7 @@ describe("buildStepQueue", () => {
       scheduled: new Set(["J0|Fabrication"]),
       departmentIdFor: () => "",
     });
-    expect(groups[0]!.items.map((i) => [i.jobNo, i.scheduled])).toEqual([["J1", false], ["J0", true]]);
+    expect(groups.find((g) => g.step === "Fabrication")!.items.map((i) => [i.jobNo, i.scheduled])).toEqual([["J1", false], ["J0", true]]);
   });
 
   it("puts jobs whose Install stage is active in their region's Ready for Install", () => {
@@ -62,6 +64,15 @@ describe("buildStepQueue", () => {
     expect(wk[0]!.items.map((i) => i.jobNo)).toEqual(["J1"]);
     expect(wk[0]!.items[0]).toMatchObject({ planningLineDescription: "Install Labor", estimatedHours: 16 });
     expect(buildStepQueue({ ...input, kind: "install-nek" })[0]!.items.map((i) => i.jobNo)).toEqual(["J2"]);
+  });
+
+  it("lists Material Cut and Crating under their BC steps", () => {
+    const groups = buildStepQueue({
+      kind: "production", jobs: [job("J5")], stepsByJob: new Map([["J5", steps(["MC", "active"], ["CR", "active"])]]),
+      linesByJob: new Map(), scheduled: new Set(), departmentIdFor: () => "",
+    });
+    expect(groups.find((g) => g.step === "Substrate Cut/Prep")!.items.map((i) => i.jobNo)).toEqual(["J5"]);
+    expect(groups.find((g) => g.step === "Crating")!.items.map((i) => i.jobNo)).toEqual(["J5"]);
   });
 
   it("gives a job with no planning lines a default 8h card", () => {

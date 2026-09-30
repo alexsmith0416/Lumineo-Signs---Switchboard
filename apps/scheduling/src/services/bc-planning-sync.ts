@@ -64,17 +64,19 @@ const iso = (d: Date | null | undefined): string | null => (validDate(d) ? d.toI
 
 /**
  * App stepper key → BC catalogue step (the 35-step list in table 71441976,
- * matched by its Description). Agreed Sep 28, 2026. BC steps with no app
- * department — Assembly Wiring, Face Production, Final Inspection, Crating —
- * are never written.
+ * matched by its Description). Agreed Sep 28, 2026; Material Cut and Crating
+ * added Sep 30. BC steps with no app department — Assembly Wiring, Face
+ * Production, Final Inspection — are never written.
  */
 export const BC_STEP_FOR_KEY: Readonly<Record<string, string>> = {
+  MC: "Substrate Cut/Prep", // Material Cut
   S: "Fabrication", // Steel MFG
   R: "Routing",
   MF: "Fabrication", // Metal Fab
   P: "Painting",
   V: "Vinyl", // Vinyl / Graphics
   A: "Final Assembly",
+  CR: "Crating",
   [INSTALL_STEP.key]: "Install",
 };
 

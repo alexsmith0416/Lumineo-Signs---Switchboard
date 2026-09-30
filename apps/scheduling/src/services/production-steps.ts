@@ -5,14 +5,20 @@ import type { DepartmentStep } from "../components/DepartmentStepper";
  * matched against planning-line-mapping's department names (Steel MFG, Routing,
  * Metal Fab, Paint, Vinyl / Graphics, Assembly). A job only shows the
  * departments its planning lines actually need, in this order.
+ *
+ * Crating is added automatically when a planning line is crating labor
+ * (planning-line-mapping `stepInfoFromLines`). Material Cut has no planning
+ * line, so an editor adds it from the stepper's Edit (or the Airtable import did).
  */
 export const DEPT_FLOW: ReadonlyArray<{ match: RegExp; key: string; label: string }> = [
+  { match: /material cut|substrate/i, key: "MC", label: "Material Cut" },
   { match: /steel/i, key: "S", label: "Steel MFG" },
   { match: /rout/i, key: "R", label: "Routing" },
   { match: /metal/i, key: "MF", label: "Metal Fab" },
   { match: /paint/i, key: "P", label: "Paint" },
   { match: /vinyl|graphic/i, key: "V", label: "Vinyl / Graphics" },
   { match: /assembl/i, key: "A", label: "Assembly" },
+  { match: /crat/i, key: "CR", label: "Crating" },
 ];
 
 /** The final "Install" step, appended when a job has installation labor. */

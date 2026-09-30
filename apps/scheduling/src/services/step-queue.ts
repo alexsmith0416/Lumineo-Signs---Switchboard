@@ -8,7 +8,8 @@
  * "Sync to BC"). So the queue reads the stepper directly — no BC round trip —
  * and a job moves to the next group the moment its department is completed.
  *
- *  - Production queue: Fabrication, Routing, Painting, Vinyl, Final Assembly.
+ *  - Production queue: Substrate Cut/Prep, Fabrication, Routing, Painting,
+ *    Vinyl, Final Assembly, Crating.
  *  - Install queues (WK / NEK by the job's install region): Ready for Install =
  *    the Install stage is active (production done).
  * Each card carries the job's BC planning lines for that step (tasks + hours),

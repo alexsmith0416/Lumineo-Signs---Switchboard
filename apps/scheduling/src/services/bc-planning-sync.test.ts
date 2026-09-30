@@ -47,13 +47,15 @@ describe("shouldSyncLine", () => {
 
 describe("BC step mapping", () => {
   it("maps every stepper key to its agreed BC catalogue step", () => {
-    expect(["S", "R", "MF", "P", "V", "A", "I"].map(bcStepForKey)).toEqual([
+    expect(["MC", "S", "R", "MF", "P", "V", "A", "CR", "I"].map(bcStepForKey)).toEqual([
+      "Substrate Cut/Prep",
       "Fabrication",
       "Routing",
       "Fabrication",
       "Painting",
       "Vinyl",
       "Final Assembly",
+      "Crating",
       "Install",
     ]);
   });

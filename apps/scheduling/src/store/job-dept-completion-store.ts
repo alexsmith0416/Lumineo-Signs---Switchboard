@@ -37,6 +37,19 @@ interface JobDeptCompletionState {
     done: boolean,
     allStepKeys?: readonly string[],
   ) => Promise<void>;
+  /**
+   * Complete several departments at once (a status change, or the Jobs
+   * backfill). One stepper → BC state push afterwards instead of one per step,
+   * and the job-level push when this completes the job. `pushBc: false` skips
+   * both (the backfill leaves BC to "Sync to BC").
+   */
+  completeMany: (
+    jobNo: string,
+    deptKeys: readonly string[],
+    by: string,
+    allStepKeys: readonly string[],
+    opts?: { pushBc?: boolean },
+  ) => Promise<void>;
 }
 
 export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, get) => ({
@@ -106,5 +119,32 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
     void m.enqueueBcPush(
       buildJobPush({ jobNo, complete: isComplete, completedBy: by, completedDate: new Date() }),
     );
+  },
+
+  completeMany: async (jobNo, deptKeys, by, allStepKeys, opts = {}) => {
+    const before = new Set(Object.keys(get().byJob[jobNo] ?? {}));
+    const keys = deptKeys.filter((k) => k && !before.has(k));
+    if (!jobNo || keys.length === 0) return;
+    set((s) => {
+      const forJob = { ...(s.byJob[jobNo] ?? {}) };
+      for (const k of keys) forJob[k] = { by, date: new Date() };
+      return { byJob: { ...s.byJob, [jobNo]: forJob } };
+    });
+    if (!LIVE) return;
+    await persistOrReport("Complete departments", async () => {
+      const m = await import("../services/dataverse-live");
+      // Idempotent upserts, so a retry after a partial failure is safe.
+      await Promise.all(keys.map((k) => m.addJobDeptCompletion(jobNo, k, by)));
+    });
+    if (opts.pushBc === false) return;
+    void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by));
+    const after = new Set(Object.keys(get().byJob[jobNo] ?? {}));
+    const [{ allStepsComplete, buildJobPush }, m] = await Promise.all([
+      import("../services/bc-planning-sync"),
+      import("../services/dataverse-live"),
+    ]);
+    if (!allStepsComplete(allStepKeys, before) && allStepsComplete(allStepKeys, after)) {
+      void m.enqueueBcPush(buildJobPush({ jobNo, complete: true, completedBy: by, completedDate: new Date() }));
+    }
   },
 }));

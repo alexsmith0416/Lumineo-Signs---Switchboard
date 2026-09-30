@@ -1,4 +1,5 @@
-import { addBusinessDays, addWeeks, isWeekend, nextMonday } from "date-fns";
+import { addBusinessDays, addWeeks } from "date-fns";
+import { DEFAULT_LEAD_TIME, forwardWorkingDay, type LeadTime } from "./lead-times";
 
 /**
  * Per-job scheduling data (crfdf_jobschedule) + derived target dates.
@@ -20,35 +21,27 @@ export interface JobSchedule {
 
 export interface JobTargets {
   /** When production should be done. Precedence: the working day before a Red
-   *  date → manual override → release + 7 wk (4 wk vinyl/graphics-only). */
+   *  date → manual override → release + the job's production lead time
+   *  (lead-times.ts: 7 wk by default, or the matching lead-time rule). */
   targetProductionComplete: Date | null;
-  /** Estimated install window: the working day after production complete, then a
-   *  3-week span. Null once install is committed (Red or Scheduled install). */
+  /** Estimated install window: the working day after production complete, then
+   *  the gap between the install and production lead times (3 weeks by default).
+   *  Null once install is committed (Red or Scheduled install). */
   installWindowStart: Date | null;
   installWindowEnd: Date | null;
 }
 
-// Lead times (weeks). Constants for now; a Settings-backed table can replace
-// these later without touching callers.
-export const LEAD_TIMES = {
-  productionWeeks: 7,
-  vinylProductionWeeks: 4,
-  installWindowWeeks: 3,
-} as const;
-
-/** Roll a weekend target FORWARD to Monday (never back to Friday). */
-const forwardWorkingDay = (d: Date): Date => (isWeekend(d) ? nextMonday(d) : d);
-
 export interface JobTargetsInput {
   released: Date | null;
-  vinylOnly: boolean;
+  /** The job's lead time (lead-times.ts `leadTimeFor`); default 7 / 10 weeks. */
+  lead?: LeadTime;
   redDate?: Date | null;
   scheduledInstall?: Date | null;
   productionOverride?: Date | null;
 }
 
 export function computeJobTargets(input: JobTargetsInput): JobTargets {
-  const { released, vinylOnly, redDate = null, scheduledInstall = null, productionOverride = null } = input;
+  const { released, lead = DEFAULT_LEAD_TIME, redDate = null, scheduledInstall = null, productionOverride = null } = input;
 
   // A committed install date (Red always wins, else a Scheduled install) pulls
   // the production target to the working day BEFORE it — production must finish
@@ -59,9 +52,7 @@ export function computeJobTargets(input: JobTargetsInput): JobTargets {
   if (committed) prod = addBusinessDays(committed, -1); // the working day before install
   else if (productionOverride) prod = productionOverride;
   else if (released)
-    prod = forwardWorkingDay(
-      addWeeks(released, vinylOnly ? LEAD_TIMES.vinylProductionWeeks : LEAD_TIMES.productionWeeks),
-    );
+    prod = forwardWorkingDay(addWeeks(released, lead.productionWeeks));
   else prod = null;
 
   if (!prod) {
@@ -73,7 +64,7 @@ export function computeJobTargets(input: JobTargetsInput): JobTargets {
     return { targetProductionComplete: prod, installWindowStart: null, installWindowEnd: null };
   }
   const start = addBusinessDays(prod, 1); // the working day after production
-  const end = forwardWorkingDay(addWeeks(start, LEAD_TIMES.installWindowWeeks));
+  const end = forwardWorkingDay(addWeeks(start, Math.max(1, lead.installWeeks - lead.productionWeeks)));
   return { targetProductionComplete: prod, installWindowStart: start, installWindowEnd: end };
 }
 

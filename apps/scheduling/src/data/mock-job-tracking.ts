@@ -15,7 +15,8 @@ const CUSTOMERS = [
   "Oakridge Clinic", "Plains Tire", "Meadowlark Hotel", "Ironside Fitness", "Willow Vet",
 ];
 const CITIES = ["Wichita", "Hutchinson", "Salina", "Dodge City", "Topeka", "Lawrence", "Olathe"];
-const SALES = ["VB", "NH", "DW", "QT", "CC", "AS"];
+// BC salesperson codes (their initials and regions come from services/sales-pm).
+const SALES = ["VBAUMGARTNER", "NHASKELL", "DWELU", "QTOTTA", "CCARSON", "ASELLERS"];
 const VENDORS = ["", "", "GREGORY", "GEMINI", "MIRATEC", "SIGN HOUSE"];
 
 const iso = (d: Date) =>
@@ -27,7 +28,9 @@ export const MOCK_BC_JOBS: BcJobSummary[] = Array.from({ length: 60 }, (_, i) =>
   name: `${CUSTOMERS[i % CUSTOMERS.length]}${i >= CUSTOMERS.length ? ` #${Math.floor(i / CUSTOMERS.length) + 1}` : ""}`,
   description: ["Channel letters", "Monument refurb", "Pylon re-face", "Wall sign + vinyl", "EMC upgrade"][i % 5]!,
   remaining: 2_500 + ((i * 7919) % 60_000),
+  orderAmount: 8_000 + ((i * 7919) % 90_000),
   city: CITIES[i % CITIES.length]!,
+  state: "KS",
   salesperson: SALES[i % SALES.length]!,
 }));
 
@@ -59,7 +62,7 @@ export const MOCK_JOB_TRACKS: JobTrack[] = MOCK_BC_JOBS.slice(0, 48).map((j, i) 
     graphics: i % 4 === 0 ? "Hutch" : "",
     routingType: i % 5 === 1 ? "Metal & Backed" : "",
     powerlines: i % 7 === 0 ? "?" : "",
-    sales: j.salesperson,
+    sales: j.salesperson.slice(0, 2),
     location: j.city,
     region: nek ? "NEK" : "WK",
     mfgRegion: nek ? "NEK" : "WK",

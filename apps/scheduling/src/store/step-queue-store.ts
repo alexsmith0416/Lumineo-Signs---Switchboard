@@ -5,6 +5,7 @@ import type { QueueKind } from "../services/job-queue-data";
 import { buildStepQueue, type StepPlanningLine, type StepQueueGroup, type StepQueueItem } from "../services/step-queue";
 import { bcStepForDepartmentName } from "../services/bc-planning-sync";
 import { buildDepartmentSteps } from "../services/production-steps";
+import { defaultJobName } from "../services/job-tracking";
 import { useJobTrackingStore } from "./job-tracking-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
@@ -89,7 +90,7 @@ export function useStepQueue(
       const bc = bcBy.get(t.jobNo);
       return {
         jobNo: t.jobNo,
-        name: bc?.name ?? "",
+        name: t.jobName?.trim() || defaultJobName(bc),
         description: bc?.description ?? "",
         installRegion: t.installRegion || t.region,
         value: bc && bc.remaining > 0 ? bc.remaining : null,
@@ -115,6 +116,9 @@ export function useStepQueue(
       } else if (!l.shipmentLoadId) nowScheduled.add(`${l.jobNo}|Install`);
     }
     const idByName = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
+    // The calendar has no Crating department — crating is done by Assembly.
+    const assemblyId = departments.find((d) => /assembl/i.test(d.name))?.id ?? "";
+    if (assemblyId && !idByName.has("crating")) idByName.set("crating", assemblyId);
     const out = buildStepQueue({
       kind,
       jobs,

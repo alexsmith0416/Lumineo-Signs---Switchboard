@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Department } from "../engine/types";
 import {
   departmentNameForLine,
+  isCratingLine,
+  stepInfoFromLines,
   isInstallResource,
   isProductionResource,
   mapPlanningLine,
@@ -105,5 +107,31 @@ describe("resolveDepartmentId", () => {
   it("returns null for an unknown or empty name", () => {
     expect(resolveDepartmentId("Nonexistent", live)).toBeNull();
     expect(resolveDepartmentId(null, live)).toBeNull();
+  });
+});
+
+describe("stepInfoFromLines", () => {
+  it("adds the Crating step for crating labor, whatever the resource", () => {
+    for (const [resourceNo, description] of [
+      ["2217", "Crating Labor"],
+      ["WK SHOP LABOR - TBD", "Crate/load/ship"],
+      ["NEK SHOP LABOR - TBD", "Crate sign for shipping"],
+      ["46010", "Crating"],
+    ] as const) {
+      expect(stepInfoFromLines([{ resourceNo, description }])).toEqual({ production: ["Crating"], hasInstall: false });
+    }
+  });
+  it("crating doesn't count as Assembly or install; other lines still do", () => {
+    const info = stepInfoFromLines([
+      { resourceNo: "2217", description: "Crating Labor" },
+      { resourceNo: "2011", description: "Cabinet Metal Labor" },
+      { resourceNo: "WK 2 MAN - TBD", description: "Install Labor" },
+    ]);
+    expect(info.production.sort()).toEqual(["Crating", "Metal Fab"]);
+    expect(info.hasInstall).toBe(true);
+  });
+  it("doesn't mistake other words for crating", () => {
+    expect(isCratingLine("Decorative trim")).toBe(false);
+    expect(isCratingLine("Accurate layout")).toBe(false);
   });
 });

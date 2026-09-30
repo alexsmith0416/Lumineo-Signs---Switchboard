@@ -121,6 +121,38 @@ export function isProductionResource(resourceNo: string | null | undefined): boo
   return Number.isFinite(num) && num >= 2000 && num < 3000;
 }
 
+/** Crating labor, by the line's description ("Crating Labor", "Crate/load/ship",
+ *  "Crate sign for shipping"). It's booked to various resources — Assembly's
+ *  2217, but also shop-labor placeholders — so the description decides. */
+export function isCratingLine(description: string): boolean {
+  return /\bcrat(e|es|ed|ing)\b/i.test(description);
+}
+
+/**
+ * The stepper's BC-derived steps from a job's planning lines: the production
+ * department names (in any order) + whether it has install work.
+ *  - Crating lines add the "Crating" step — and ONLY that: they don't count as
+ *    Assembly (resource 2217) or as install labor (shop-labor placeholders).
+ *  - Other 2000-band lines add their department; other resources are install.
+ */
+export function stepInfoFromLines(
+  lines: ReadonlyArray<{ resourceNo: string; description: string }>,
+): { production: string[]; hasInstall: boolean } {
+  const production = new Set<string>();
+  let hasInstall = false;
+  for (const l of lines) {
+    if (isCratingLine(l.description)) {
+      production.add("Crating");
+    } else if (isProductionResource(l.resourceNo)) {
+      const name = departmentNameForLine(l.resourceNo, l.description);
+      if (name) production.add(name);
+    } else if (isInstallResource(l.resourceNo)) {
+      hasInstall = true;
+    }
+  }
+  return { production: [...production], hasInstall };
+}
+
 /** Installation labor: any resource OUTSIDE the production 2000-band — crew
  *  placeholders, install travel, blank codes — minus the non-schedulable
  *  exclusions (e.g. 1110 Sketch Resource labor, which shows on neither board). */

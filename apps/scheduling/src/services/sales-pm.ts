@@ -67,3 +67,23 @@ export function salespeopleForPm(pmCode: string | null | undefined): SalesPmPers
   const c = normCode(pmCode);
   return c ? SALESPEOPLE.filter((s) => s.pmCode === c) : [];
 }
+
+// ── Jobs list: Sales initials + Region ──────────────────────────────────────
+// A job's Region follows its salesperson (the BC salesperson list, Sep 29 2026).
+// Anyone not listed — and a job with no salesperson — is WK.
+const NEK_SALESPEOPLE = new Set(["QTOTTA", "SPOPPELREITER", "VBAUMGARTNER", "JLYLE"]);
+const HOUSE_CODES = new Set(["JSANDERSON", "HOUSE", "JONTJES"]);
+
+/** "NEK" or "WK" for a BC salesperson code (default WK). */
+export function regionForSalesperson(code: string | null | undefined): "WK" | "NEK" {
+  return NEK_SALESPEOPLE.has(normCode(code)) ? "NEK" : "WK";
+}
+
+/** The Jobs list's Sales badge for a code: "NH" for NHASKELL (first initial +
+ *  surname initial, which is how BC codes are built), "LNI" for the house accounts. */
+export function salesInitials(code: string | null | undefined): string {
+  const c = normCode(code);
+  if (!c) return "";
+  if (HOUSE_CODES.has(c)) return "LNI";
+  return c.slice(0, 2);
+}

@@ -734,6 +734,46 @@ input, select, textarea {
 .billing-periods__default {
   color: var(--text-tertiary);
 }
+.slide-over__panel.lead-times-panel { width: min(960px, 100vw); }
+.lead-times__scroll { overflow-x: auto; }
+.lead-times td { vertical-align: top; }
+.lead-times input[type="text"] { min-width: 150px; }
+.lead-times select {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+.lead-times__steps { display: flex; flex-wrap: wrap; gap: 4px; max-width: 320px; }
+.lead-times__step {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.lead-times__step--on {
+  background: var(--lumineo-navy);
+  border-color: var(--lumineo-navy);
+  color: #fff;
+}
+input.lead-times__weeks { width: 64px; }
+.lead-times__actions { white-space: nowrap; }
+.lead-times__icon {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+.lead-times__icon:disabled { opacity: 0.3; cursor: default; }
+.lead-times__icon--delete:hover { color: var(--lumineo-red); }
+.lead-times__add { margin-top: 10px; align-self: flex-start; }
 .billing-periods__problem {
   margin-top: 4px;
   color: var(--status-red);
@@ -5080,7 +5120,8 @@ input, select, textarea {
 .jobs-grid td.jobs-cell--primary {
   position: sticky;
   left: 0;
-  z-index: 1;
+  /* Above the stepper's nodes (z-index 2), so they scroll BEHIND the frozen column. */
+  z-index: 3;
 }
 .jobs-grid th:first-child { z-index: 11; }
 /* The body is its own stacking layer, so anything positioned inside a cell (the
@@ -5250,6 +5291,18 @@ input, select, textarea {
   white-space: pre-wrap;
 }
 .jobs-jobpanel__muted { font-size: 12px; color: var(--text-tertiary); }
+.jobs-jobpanel__status-select { width: auto; min-width: 220px; font-weight: 600; }
+.jobs-jobpanel__name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.jobs-jobpanel__link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lumineo-navy);
+  cursor: pointer;
+  text-decoration: underline;
+}
 .jobs-jobpanel__facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

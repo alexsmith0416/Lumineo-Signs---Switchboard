@@ -4,6 +4,7 @@ import { applyHeaderVisibility, isInPowerPlayer } from "../services/power-host";
 import { canEditBillingPeriods, isAdminLevel, useCurrentUser } from "../services/current-user";
 import UsersAdminPanel from "./UsersAdminPanel";
 import BillingPeriodsSection from "./BillingPeriodsSection";
+import LeadTimesSection from "./LeadTimesSection";
 
 /** App settings. Cascade/conflict behavior + Power Apps header visibility, plus
  *  the admin-only Users manager (tucked away here). */
@@ -169,6 +170,7 @@ export default function SettingsScreen() {
       </div>
 
       {canEditBillingPeriods(realType) && <BillingPeriodsSection />}
+      {canEditBillingPeriods(realType) && <LeadTimesSection />}
 
       {isAdminLevel(realType) && (
         <div className="settings-section">

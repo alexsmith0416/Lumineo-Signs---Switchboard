@@ -49,10 +49,17 @@ import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
 import type { BillingPeriodRow } from "./billing-periods";
-import type { BcJobSummary, JobTrack } from "./job-tracking";
+import { sharePointCustomer, type BcJobSummary, type JobTrack } from "./job-tracking";
+import type { LeadTimeRule } from "./lead-times";
 import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
-import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
+import {
+  departmentNameForLine,
+  isCratingLine,
+  isInstallResource,
+  isProductionResource,
+  stepInfoFromLines,
+} from "./planning-line-mapping";
 import {
   bcStepForDepartmentName,
   buildStepSchedulePush,
@@ -1910,12 +1917,15 @@ export async function fetchJobTracks(): Promise<JobTrack[]> {
   const rows = await list(JOBTRACK_SET, {});
   return rows
     .map((r) => ({
+      id: s(r.crfdf_jobtrackid),
       jobNo: s(r.crfdf_jobno).trim(),
+      jobName: s(r.crfdf_jobname),
       statusOverride: s(r.crfdf_statusoverride),
       priority: s(r.crfdf_priority),
       holdReason: s(r.crfdf_holdreason),
       dateToHold: s(r.crfdf_datetohold),
       dateOffHold: s(r.crfdf_dateoffhold),
+      priorHoldDays: n(r.crfdf_priorholddays),
       orderDate: s(r.crfdf_orderdate),
       mfgFinalDate: s(r.crfdf_mfgfinaldate),
       expeditorDate: s(r.crfdf_expeditordate),
@@ -1945,12 +1955,23 @@ export async function fetchJobTracks(): Promise<JobTrack[]> {
     .filter((t) => t.jobNo);
 }
 
+// crfdf_salesorderamount is added by scripts/add-jobs-name-value-columns.ps1;
+// until it exists the Jobs list reads without it (Value falls back).
+let orderAmountCol = true;
+
 /** Every open BC job, summarised for the Jobs view. */
 export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
-  const rows = await list(BC.jobs, {
-    select:
-      "crfdf_jobnumber,crfdf_appjobname,crfdf_customername,crfdf_description,crfdf_remainingbalance,crfdf_shiptocity,crfdf_salespersoncode",
-  });
+  const base =
+    "crfdf_jobnumber,crfdf_appjobname,crfdf_customername,crfdf_description,crfdf_remainingbalance," +
+    "crfdf_shiptocity,crfdf_shiptostate,crfdf_salespersoncode,crfdf_sharepointurl,crfdf_releasedate";
+  let rows: Row[];
+  try {
+    rows = await list(BC.jobs, { select: orderAmountCol ? `${base},crfdf_salesorderamount` : base });
+  } catch (e) {
+    if (!orderAmountCol || !/salesorderamount/i.test(e instanceof Error ? e.message : String(e))) throw e;
+    orderAmountCol = false;
+    rows = await list(BC.jobs, { select: base });
+  }
   return rows
     .map((r) => ({
       jobNo: s(r.crfdf_jobnumber).trim(),
@@ -1958,9 +1979,57 @@ export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
       description: s(r.crfdf_description),
       remaining: n(r.crfdf_remainingbalance),
       city: s(r.crfdf_shiptocity),
+      state: s(r.crfdf_shiptostate),
       salesperson: s(r.crfdf_salespersoncode).trim().toUpperCase(),
+      folderName: sharePointCustomer(s(r.crfdf_sharepointurl)),
+      orderAmount: r.crfdf_salesorderamount == null ? null : n(r.crfdf_salesorderamount),
+      releaseDate: r.crfdf_releasedate == null ? "" : String(r.crfdf_releasedate).slice(0, 10),
     }))
     .filter((j) => j.jobNo);
+}
+
+/** Tracking fields the app edits, by JobTrack key → crfdf_jobtrack column. */
+const JOBTRACK_COLS = {
+  jobName: "crfdf_jobname",
+  statusOverride: "crfdf_statusoverride",
+  holdReason: "crfdf_holdreason",
+  dateToHold: "crfdf_datetohold",
+  dateOffHold: "crfdf_dateoffhold",
+  priorHoldDays: "crfdf_priorholddays",
+} as const;
+export type JobTrackPatch = Partial<Pick<JobTrack, keyof typeof JOBTRACK_COLS>>;
+
+// crfdf_priorholddays is added by scripts/add-jobtrack-hold-columns.ps1; until
+// it exists a save drops it and retries (a second hold's DOH then undercounts).
+let priorHoldCol = true;
+
+/** Save tracking fields for a job — updates its crfdf_jobtrack row, or creates
+ *  one (a job BC opened that nobody has tracked yet). Returns the row id. */
+export async function saveJobTrack(jobNo: string, id: string | undefined, patch: JobTrackPatch): Promise<string> {
+  const rec: Row = {};
+  for (const [k, col] of Object.entries(JOBTRACK_COLS)) {
+    const v = patch[k as keyof JobTrackPatch];
+    if (v !== undefined) rec[col] = v;
+  }
+  if (!priorHoldCol) delete rec.crfdf_priorholddays;
+  let rowId = id;
+  if (!rowId) {
+    const existing = await list(JOBTRACK_SET, { select: "crfdf_jobtrackid", filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });
+    rowId = existing[0] ? s(existing[0].crfdf_jobtrackid) : undefined;
+  }
+  const newId = rowId ?? uuid();
+  const write = () =>
+    rowId
+      ? dvUpdate(JOBTRACK_SET, rowId, rec)
+      : dvCreate(JOBTRACK_SET, { crfdf_jobtrackid: newId, crfdf_jobno: jobNo, crfdf_name: jobNo, ...rec });
+  let res = await write();
+  if (!res.success && "crfdf_priorholddays" in rec && /priorholddays/i.test(res.error?.message ?? "")) {
+    priorHoldCol = false;
+    delete rec.crfdf_priorholddays;
+    res = await write();
+  }
+  if (!res.success) throw new Error(res.error?.message ?? "saveJobTrack failed");
+  return newId;
 }
 
 // ---------------------------------------------------------------------------
@@ -1980,6 +2049,63 @@ export async function fetchBillingPeriods(): Promise<BillingPeriodRow[]> {
       goal: r.crfdf_goal == null ? null : n(r.crfdf_goal),
     }))
     .filter((r) => /^\d{4}-\d{2}$/.test(r.month));
+}
+
+// ---------------------------------------------------------------------------
+// Lead-time rules (crfdf_leadtimerule) — the Jobs list's Mfg / Install target
+// lead times by step combination. Created by scripts/create-leadtimerule-table.ps1.
+// Rules live in services/lead-times.ts.
+// ---------------------------------------------------------------------------
+const LEADTIME_SET = "crfdf_leadtimerules";
+
+/** Every rule in list order. Throws when the table doesn't exist yet. */
+export async function fetchLeadTimeRules(): Promise<LeadTimeRule[]> {
+  const rows = await list(LEADTIME_SET, {
+    select: "crfdf_leadtimeruleid,crfdf_name,crfdf_steps,crfdf_match,crfdf_productionweeks,crfdf_installweeks,crfdf_sortorder",
+  });
+  return rows
+    .map((r) => ({
+      id: s(r.crfdf_leadtimeruleid),
+      name: s(r.crfdf_name),
+      steps: s(r.crfdf_steps).split(",").map((k) => k.trim()).filter(Boolean),
+      match: (s(r.crfdf_match) === "includes" ? "includes" : "only") as LeadTimeRule["match"],
+      productionWeeks: n(r.crfdf_productionweeks, 7),
+      installWeeks: n(r.crfdf_installweeks, 10),
+      order: n(r.crfdf_sortorder),
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ order: _order, ...rule }) => rule);
+}
+
+/** Replace the saved rules with `rules` (in this order). Returns them with ids. */
+export async function saveLeadTimeRules(rules: readonly LeadTimeRule[]): Promise<LeadTimeRule[]> {
+  const existing = await list(LEADTIME_SET, { select: "crfdf_leadtimeruleid" });
+  const keep = new Set(rules.map((r) => r.id).filter(Boolean));
+  const saved: LeadTimeRule[] = [];
+  for (const [i, rule] of rules.entries()) {
+    const rec: Row = {
+      crfdf_name: rule.name || "Rule",
+      crfdf_steps: rule.steps.join(","),
+      crfdf_match: rule.match,
+      crfdf_productionweeks: rule.productionWeeks,
+      crfdf_installweeks: rule.installWeeks,
+      crfdf_sortorder: i,
+    };
+    const id = rule.id || uuid();
+    const res = rule.id
+      ? await dvUpdate(LEADTIME_SET, id, rec)
+      : await dvCreate(LEADTIME_SET, { crfdf_leadtimeruleid: id, ...rec });
+    if (!res.success) throw new Error(res.error?.message ?? "saveLeadTimeRules failed");
+    saved.push({ ...rule, id });
+  }
+  for (const r of existing) {
+    const id = s(r.crfdf_leadtimeruleid);
+    if (id && !keep.has(id)) {
+      const res = await dvDelete(LEADTIME_SET, id);
+      if (!res.success) throw new Error(res.error?.message ?? "saveLeadTimeRules (delete) failed");
+    }
+  }
+  return saved;
 }
 
 /** Upsert one month (keyed by crfdf_month). */
@@ -2332,23 +2458,6 @@ export async function jobStepInfo(jobNo: string): Promise<{ production: string[]
   return stepInfoFromLines(await planningLinesFor(jobNo).catch(() => []));
 }
 
-/** The stepper's BC-derived departments + install flag from a job's planning lines. */
-function stepInfoFromLines(
-  lines: ReadonlyArray<{ resourceNo: string; description: string }>,
-): { production: string[]; hasInstall: boolean } {
-  const production = new Set<string>();
-  let hasInstall = false;
-  for (const l of lines) {
-    if (isProductionResource(l.resourceNo)) {
-      const name = departmentNameForLine(l.resourceNo, l.description);
-      if (name) production.add(name);
-    } else if (isInstallResource(l.resourceNo)) {
-      hasInstall = true;
-    }
-  }
-  return { production: [...production], hasInstall };
-}
-
 export interface BcPlanningLineLite {
   resourceNo: string;
   description: string;
@@ -2412,12 +2521,20 @@ export async function queuePlanningLines(): Promise<Map<string, StepPlanningLine
   return new Map(
     [...byJob].map(([jobNo, lines]) => [
       jobNo,
-      lines.map((l) => ({
-        departmentName: isProductionResource(l.resourceNo) ? departmentNameForLine(l.resourceNo, l.description) ?? "" : "",
-        isInstall: isInstallResource(l.resourceNo),
-        description: l.description,
-        hours: l.hours,
-      })),
+      lines.map((l) => {
+        // Crating labor belongs to the Crating step, whatever resource it's on.
+        const crating = isCratingLine(l.description);
+        return {
+          departmentName: crating
+            ? "Crating"
+            : isProductionResource(l.resourceNo)
+              ? departmentNameForLine(l.resourceNo, l.description) ?? ""
+              : "",
+          isInstall: !crating && isInstallResource(l.resourceNo),
+          description: l.description,
+          hours: l.hours,
+        };
+      }),
     ]),
   );
 }

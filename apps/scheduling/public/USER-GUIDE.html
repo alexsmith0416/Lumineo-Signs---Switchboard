@@ -487,9 +487,12 @@
   (5.6), and — for editors — the <strong>Install Dates</strong> (5.5). View-only roles see a read-only version of the card.</p>
 
   <h3>5.4 &nbsp;Production stage &amp; marking steps complete</h3>
-  <p>Every BC job card shows a <strong>production stepper</strong> — the departments the job needs (Steel, Routing,
-  Metal Fab, Paint, Vinyl / Graphics, Assembly), in flow order, plus a final <strong>Install</strong> step when the job
-  has install work. Each node shows its standing: <strong>completed</strong>, <strong>active</strong> (in progress, red),
+  <p>Every BC job card shows a <strong>production stepper</strong> — the departments the job needs (Material Cut, Steel,
+  Routing, Metal Fab, Paint, Vinyl / Graphics, Assembly, Crating), in flow order, plus a final <strong>Install</strong>
+  step when the job has install work. The departments come from the job's BC planning lines; <strong>Crating</strong>
+  is added whenever a planning line is crating labor. <strong>Material Cut</strong> has no planning line &mdash; editors
+  add it with the stepper's <strong>Edit</strong>. In BC, Material Cut is the <em>Substrate Cut/Prep</em> step and
+  Crating is <em>Crating</em>. Each node shows its standing: <strong>completed</strong>, <strong>active</strong> (in progress, red),
   or still to come (navy).</p>
   <ul>
     <li><strong>Mark a step done</strong> — <strong>anyone</strong> can complete a department. <strong>Click the
@@ -542,10 +545,13 @@
   the production stepper — and on the card's <strong>hover preview</strong>). These are computed guides, not committed
   dates:</p>
   <ul>
-    <li><strong>Target production complete</strong> — <strong>7 weeks</strong> after the job's <em>release date</em>
-    (<strong>4 weeks</strong> for vinyl/graphics-only jobs).</li>
+    <li><strong>Target production complete</strong> — the job's <strong>production lead time</strong> after its
+    <em>release date</em>: <strong>7 weeks</strong> by default, or what a <strong>lead-time rule</strong> in
+    Settings &rarr; Lead times sets for jobs with its combination of steps (out of the box, vinyl/graphics-only jobs
+    get 4 weeks).</li>
     <li><strong>Est. install window</strong> — starts the <strong>working day after</strong> production completes and runs
-    <strong>3 weeks</strong>. As soon as you set a <strong>Scheduled install</strong>, the window is replaced by that
+    until the job's <strong>install lead time</strong> (<strong>10 weeks</strong> after release by default, so a
+    3-week window). As soon as you set a <strong>Scheduled install</strong>, the window is replaced by that
     committed day (which then shows on the job card).</li>
   </ul>
   <p>When a <strong>Red date</strong> is set, it appears as a <strong>red bar above</strong> the Target dates section
@@ -617,7 +623,8 @@
   <h4>From BC steps &mdash; groups that fill themselves</h4>
   <p>At the top of the queue, <strong>From BC steps</strong> lists every tracked job by the step it's in right now
   &mdash; the same jobs Business Central shows in its Project Planning step tiles. On the Production board there's a
-  group per step (<em>Fabrication, Routing, Painting, Vinyl, Final Assembly</em>); on the Installation boards,
+  group per step (<em>Substrate Cut/Prep, Fabrication, Routing, Painting, Vinyl, Final Assembly, Crating</em> &mdash;
+  a Crating card drops onto the Assembly lane); on the Installation boards,
   <em>Ready for Install</em> holds that region's jobs whose production is done.</p>
   <ul>
     <li>A job is listed under a step when that department is <strong>active</strong> on its stepper. Complete the
@@ -737,6 +744,7 @@
     <tr><td>Current time line</td><td>Shows a faint, softly pulsing red line at the current day &amp; time on the calendars — a quick marker of where "now" is in the week. Only appears on the current week. On by default.</td></tr>
     <tr><td>Day hours on hover</td><td>Shows the scheduled-hours pill when you hover a day on someone's row (<em>"6h of 8h · 2h open"</em>). Turn it off for a clean board while dragging cards, or on a wall display. On by default. Doesn't affect the job-card hover preview, which is separate.</td></tr>
     <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Periods</strong> to open the month list. Each month has a <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
+    <tr><td>Lead times <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Lead Times</strong>. Sets how many weeks after release a job's <strong>Mfg Target</strong> and <strong>Install Target</strong> fall (default <strong>7</strong> and <strong>10</strong> weeks). Add a rule per combination of steps: name it, pick <em>Only these steps</em> (the job's production steps are all in the rule &mdash; e.g. only Material Cut + Vinyl) or <em>Includes these steps</em> (the job has every one of them, plus maybe others), click the steps, and enter the Mfg and Install weeks. Rules are checked top to bottom (&uarr; &darr; to reorder); the first match wins. Click <strong>Save</strong>. The rules drive the Jobs list and the target dates on every job card.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
   </table>
 
@@ -868,9 +876,28 @@
   <p>The <strong>Jobs</strong> screen (sidebar) is the job list that is replacing the Airtable
   <em>LNI Production Schedule / Expeditor</em>. Every <strong>open BC job</strong> is on it automatically, from the
   moment the job is opened in Business Central, with its tracking details alongside: Current Status, order date,
-  Mfg Final / Mfg Target, RED DATE, <strong>DIP</strong> (days in process, minus any days on hold), hold, expeditor
-  date, vendor / P.O. / vendor status / storage, date installed, date to Admin, UL sign, and more. Admin / Ops /
-  Developer only while it's a preview.</p>
+  Mfg Target / Mfg Final, Install Target, RED DATE, DIP / DOH / Actual DIP, hold, expeditor date, vendor / P.O. /
+  vendor status / storage, date installed, date to Admin, UL sign, and more. Admin / Ops / Developer only while it's
+  a preview.</p>
+  <p><strong>Filled in from Business Central</strong> &mdash; you don't type these:</p>
+  <ul>
+    <li><strong>Name</strong> &mdash; the job's <strong>ship-to customer</strong> (or the customer folder on the job's
+    SharePoint link when BC has no name). Editors can <strong>Rename</strong> a job in its panel; <em>Use BC name</em>
+    puts the default back.</li>
+    <li><strong>Sales</strong> &mdash; the salesperson's initials (NH, VB&hellip;; LNI for the house accounts).
+    <strong>Region</strong> follows the salesperson: Quintin Totta, Shelly Poppelreiter, Virginia Baumgartner and Jim
+    Lyle are NEK, everyone else WK. <strong>Location</strong> is the ship-to city and state.</li>
+    <li><strong>Order Date</strong> = the job's <strong>release date</strong>. <strong>DIP</strong> counts the days
+    since it, <strong>DOH</strong> the days on hold (every hold), and <strong>Actual DIP</strong> = DIP &minus; DOH.</li>
+    <li><strong>Value</strong> is the job's total &mdash; its <strong>Sales Order amount</strong> (before tax);
+    <strong>Remaining Balance</strong> is what's left to bill. (Value falls back to the invoice amount on the job's
+    cards until BC has the order amount.)</li>
+    <li><strong>Mfg Target</strong> = release + the job's production lead time, <strong>Install Target</strong> =
+    release + its install lead time (7 / 10 weeks, or a lead-time rule &mdash; the <em>Lead Time Rule</em> column shows
+    which, Settings &rarr; Lead times). <strong>Mfg Target Mod</strong> is the production-completion override from the
+    job's Install Dates (or the job's Airtable Mfg Final date). <strong>Mfg Final</strong> works like the Airtable
+    formula: the modified date when there is one that differs, otherwise Mfg Target.</li>
+  </ul>
   <ul>
     <li><strong>Views</strong> on the left &mdash; <em>All Jobs</em>, <em>Not tracked yet</em> (new BC jobs nobody
     has set up), team views (OPS / MFG, OPS / Install, Warehouse Coord.) and <em>WK Expeditor</em>, which matches the
@@ -889,8 +916,6 @@
     replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
     view. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
-    <li><strong>Value</strong> is the same $ the job shows on the calendar: BC's remaining balance, or the invoice
-    amount entered on the job's cards when BC has none.</li>
     <li><strong>Sync to BC</strong> (editors) &mdash; brings Business Central's Project Planning in line with the
     steppers for every tracked job in one go: each job's <strong>active</strong> department(s) are marked
     <strong>Started</strong> (which is what lists it in BC's step tiles), finished ones <strong>Complete</strong>, and
@@ -903,8 +928,24 @@
     here updates the boards (and Business Central's Project Planning, &sect;5.4) exactly as it would from a card, and
     changes made on the boards show here straight away.</li>
   </ul>
-  <p>The tracking columns (hold, vendor, expeditor, date to Admin&hellip;) are <strong>read-only for now</strong>;
-  editing them, the full lifecycle stepper (New Order through Complete Invoiced) and the Service stepper are next.</p>
+  <h4>Current Status and what it does</h4>
+  <p>Editors change a job's <strong>Current Status</strong> from the drop-down at the top of its panel. Some statuses
+  do more than change the label:</p>
+  <ul>
+    <li><strong>Complete-need paperwork, Complete to Admin, Complete Invoiced, Service Complete to Admin</strong>
+    &mdash; complete <strong>every</strong> step on the stepper.</li>
+    <li><strong>Installation, Install - waiting on product</strong> &mdash; complete every <strong>production</strong>
+    step, so Install becomes the active step.</li>
+    <li>Moving <strong>into a hold</strong> status (Hold - Customer, Service - Hold&hellip;) fills <strong>Date to
+    Hold</strong> with today and records the hold; moving <strong>out of</strong> it fills <strong>Date off
+    Hold</strong>. A later hold starts a new one, and DOH keeps counting the earlier holds' days.</li>
+    <li>The steps it completes reach BC exactly like completing them on the stepper.</li>
+  </ul>
+  <p><strong>Match steppers</strong> (editors, next to Sync to BC) catches up jobs that were already in one of those
+  statuses: it shows how many jobs and steps it would complete, and only changes them when you click
+  <strong>Update</strong>. Run <strong>Sync to BC</strong> afterwards to send the new states to BC.</p>
+  <p>The other tracking columns (vendor, expeditor, date to Admin&hellip;) are <strong>read-only for now</strong>;
+  editing them, custom fields, the full lifecycle stepper and the Service stepper are next.</p>
 
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
@@ -1082,6 +1123,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs: BC-filled columns, status automation and target dates</strong> &mdash; Name (ship-to customer, renamable), Sales, Region, Location, Order Date (= release date), Value (Sales Order amount) and a new Remaining Balance now come from Business Central. Changing a job's <strong>Current Status</strong> completes the stepper steps it implies and stamps Date to Hold / Date off Hold; new <strong>DOH</strong> and <strong>Actual DIP</strong> columns, and <strong>Match steppers</strong> to catch up existing jobs. New <strong>Mfg Target</strong>, <strong>Install Target</strong> and <strong>Mfg Final</strong> dates from editable <strong>lead-time rules</strong> (Settings &rarr; Lead times). <strong>Material Cut</strong> and <strong>Crating</strong> are now stepper steps (BC Substrate Cut/Prep and Crating); Crating is added automatically from crating labor. See &sect;5.4, &sect;5.5, &sect;5.14 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Job Queue groups by BC step, and Sync to BC</strong> &mdash; the Job Queue now opens with <em>From BC steps</em>: a group per Project Planning step (Fabrication, Routing, Painting, Vinyl, Final Assembly; Ready for Install on the install boards) listing the jobs active in it, ready to drag onto the calendar. New <strong>Sync to BC</strong> button on Jobs sends every tracked job's current stepper status (and scheduled dates / assignee) to BC in one go. See &sect;5.8 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Click a job to open it: the same stepper and Install Dates as the boards' job card, so a change here updates the boards and BC. Tracking columns are read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing cut-off days are marked on the calendars</strong> &mdash; with the <strong>$</strong> button on, Production and Installation show a small <em>Billing cut-off</em> label under the date of each month's cut-off. Hover it to see which month it closes and the last install day that still counts. See &sect;4.</td></tr>
@@ -1167,7 +1209,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.13 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.14 · Sep 30, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

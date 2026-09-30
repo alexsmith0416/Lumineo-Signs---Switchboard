@@ -4,6 +4,11 @@ import { useJobScheduleStore } from "../../store/job-schedule-store";
 import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services/job-tracking";
 import JobsGrid from "./JobsGrid";
 import JobsJobPanel from "./JobsJobPanel";
+import StatusBackfillDialog from "./StatusBackfillDialog";
+import { useLeadTimeStore } from "../../store/lead-time-store";
+import { useJobDeptOverrideStore } from "../../store/job-dept-override-store";
+import { leadTimeFor } from "../../services/lead-times";
+import { includedStepDefs } from "../../services/production-steps";
 import JobsViewList from "./JobsViewList";
 import BcSyncDialog from "./BcSyncDialog";
 import { FieldsPanel, FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
@@ -60,6 +65,11 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const bcJobs = useJobTrackingStore((s) => s.bcJobs);
   const tracks = useJobTrackingStore((s) => s.tracks);
   const invoiceByJob = useJobTrackingStore((s) => s.invoiceByJob);
+  const stepInfo = useJobTrackingStore((s) => s.stepInfo);
+  const leadRules = useLeadTimeStore((s) => s.rules);
+  const loadLeadRules = useLeadTimeStore((s) => s.load);
+  const deptOverrides = useJobDeptOverrideStore((s) => s.byJob);
+  const loadDeptOverrides = useJobDeptOverrideStore((s) => s.load);
   const loading = useJobTrackingStore((s) => s.loading);
   const loaded = useJobTrackingStore((s) => s.loaded);
   const error = useJobTrackingStore((s) => s.error);
@@ -71,7 +81,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   useEffect(() => {
     void load();
     void loadSchedules();
-  }, [load, loadSchedules]);
+    void loadLeadRules();
+    void loadDeptOverrides();
+  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides]);
 
   const rows = useMemo(() => {
     const dates = new Map<string, JobScheduleDates>();
@@ -83,10 +95,17 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         scheduledInstallDate: ymd(sch.scheduledInstallDate),
       });
     }
-    return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob);
-  }, [bcJobs, tracks, scheduleByJob, invoiceByJob]);
+    // Each job's lead time follows its stepper steps (lead-time rules, Settings).
+    const leadFor = (jobNo: string) => {
+      const info = stepInfo.get(jobNo);
+      const keys = info ? includedStepDefs(info.production, info.hasInstall, deptOverrides[jobNo] ?? {}).map((d) => d.key) : [];
+      return leadTimeFor(keys, leadRules);
+    };
+    return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob, leadFor);
+  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   // ── Views (editable, per device) ─────────────────────────────────────────
   const [layout, setLayoutState] = useState<ViewLayout>(() => {
@@ -244,6 +263,17 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           {canEdit && (
             <button
               type="button"
+              className="jobs-toolbar__btn"
+              onClick={(e) => { e.stopPropagation(); setBackfilling(true); }}
+              disabled={!loaded}
+              title="Complete the stepper steps each job's Current Status says are done (shows the counts first)"
+            >
+              Match steppers
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
               className="btn-primary jobs-toolbar__sync"
               onClick={(e) => { e.stopPropagation(); setSyncing(true); }}
               disabled={!loaded}
@@ -257,6 +287,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} />
       </section>
+      {backfilling && <StatusBackfillDialog rows={rows} onClose={() => setBackfilling(false)} />}
       {syncing && <BcSyncDialog jobNos={tracks.map((t) => t.jobNo)} onClose={() => setSyncing(false)} />}
       {openJob && (
         <JobsJobPanel

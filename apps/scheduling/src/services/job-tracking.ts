@@ -11,16 +11,29 @@
  * Phase 1 (Sep 29, 2026) is read-only. Current Status is the manual override,
  * else the hold reason, else the status carried over from Airtable. Phase 2
  * derives it from the lifecycle stepper. See START-HERE → Job Tracking.
+ *
+ * BC fills what it knows (stage 1): the name (ship-to customer, unless renamed),
+ * Sales / Region from the salesperson, Location from the ship-to city + state,
+ * Order Date = the release date, Value = the Sales Order amount.
  */
+import { regionForSalesperson, salesInitials } from "./sales-pm";
+import { daysOnHold } from "./job-status";
+import { DEFAULT_LEAD_TIME, jobTargetDates, type LeadTime } from "./lead-times";
 
 /** crfdf_jobtrack, as the app reads it. Dates are "YYYY-MM-DD" (or ""). */
 export interface JobTrack {
+  /** crfdf_jobtrackid (absent on rows not saved yet). */
+  id?: string;
   jobNo: string;
+  /** A manual name that overrides the BC ship-to name ("" = use BC's). */
+  jobName?: string;
   statusOverride: string;
   priority: string;
   holdReason: string;
   dateToHold: string;
   dateOffHold: string;
+  /** Days on hold from earlier, finished holds (see job-status holdTransition). */
+  priorHoldDays?: number;
   orderDate: string;
   mfgFinalDate: string;
   expeditorDate: string;
@@ -48,6 +61,17 @@ export interface JobTrack {
   legacyProcess: string;
 }
 
+/** A tracking row with nothing filled in yet. */
+export function emptyJobTrack(jobNo: string): JobTrack {
+  return {
+    jobNo, jobName: "", priorHoldDays: 0, statusOverride: "", priority: "", holdReason: "", dateToHold: "", dateOffHold: "",
+    orderDate: "", mfgFinalDate: "", expeditorDate: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "",
+    vendor: "", poNumber: "", vendorStatus: "", storageLocation: "", vendorShipDate: "", vendorShipDate2: "",
+    outsourcedArrival: "", graphics: "", routingType: "", powerlines: "", sales: "", location: "", region: "",
+    mfgRegion: "", installRegion: "", ulSign: false, notes: "", legacyStatus: "", legacyProcess: "",
+  };
+}
+
 /** The BC side of a job (crfdf_bcjobs). */
 export interface BcJobSummary {
   jobNo: string;
@@ -55,7 +79,17 @@ export interface BcJobSummary {
   description: string;
   remaining: number;
   city: string;
+  /** Ship-to state ("KS"). */
+  state?: string;
+  /** BC salesperson code ("NHASKELL"). */
   salesperson: string;
+  /** The customer folder in the job's SharePoint URL — the name fallback for
+   *  jobs BC synced with no customer name. */
+  folderName?: string;
+  /** The Sales Order amount (excl. tax), null until the sync has it. */
+  orderAmount?: number | null;
+  /** BC's order-release date ("YYYY-MM-DD" or ""). */
+  releaseDate?: string;
 }
 
 /** The crfdf_jobschedule dates the Jobs view shows ("YYYY-MM-DD" or ""). */
@@ -73,6 +107,8 @@ export interface JobRow {
   id: string;
   jobNo: string;
   name: string;
+  /** The name the job gets when it isn't renamed (BC's ship-to customer). */
+  defaultName: string;
   /** "J39571 McPherson CVB" — the primary column. */
   job: string;
   status: string;
@@ -85,8 +121,16 @@ export interface JobRow {
   region: string;
   priority: string;
   orderDate: string;
+  /** Mfg Modified when set and different from Mfg Target, else Mfg Target. */
   mfgFinalDate: string;
+  /** Release + the job's production lead time. */
+  mfgTarget: string;
+  /** Mfg Modified: the in-app production override, else the Airtable Mfg Final date. */
   mfgTargetMod: string;
+  /** Release + the job's install lead time. */
+  installTarget: string;
+  /** The lead-time rule that set the targets ("" = the 7 / 10 week default). */
+  leadRule: string;
   redDate: string;
   releaseDate: string;
   scheduledInstall: string;
@@ -112,9 +156,16 @@ export interface JobRow {
   process: string;
   mfgRegion: string;
   installRegion: string;
+  /** Total job value: the Sales Order amount. */
   value: number | null;
-  /** Days in process: days since the order, minus days on hold. */
+  /** What's left to bill: BC's remaining balance. */
+  remaining: number | null;
+  /** Days in process: days since the release (Order Date). */
   dip: number | null;
+  /** Days on hold (all holds). */
+  doh: number;
+  /** DIP minus DOH. */
+  actualDip: number | null;
 }
 
 const DAY = 86_400_000;
@@ -127,24 +178,14 @@ const dayOf = (s: string): Date | null => {
 const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /**
- * Days in process (DIP): whole days from the order date to today, minus the
- * days spent on hold (Date to Hold → Date off Hold, or → today while still on
- * hold). Null without an order date. Never negative.
+ * Days in process (DIP): whole days from the order date (= the release date)
+ * to today. Null without one. Never negative. Actual DIP subtracts the days on
+ * hold (job-status `daysOnHold`).
  */
-export function daysInProcess(
-  t: Pick<JobTrack, "orderDate" | "dateToHold" | "dateOffHold">,
-  today: Date,
-): number | null {
-  const opened = dayOf(t.orderDate);
+export function daysInProcess(orderDate: string, today: Date): number | null {
+  const opened = dayOf(orderDate);
   if (!opened) return null;
-  const now = startOfDay(today);
-  let days = Math.round((now.getTime() - opened.getTime()) / DAY);
-  const held = dayOf(t.dateToHold);
-  if (held) {
-    const released = dayOf(t.dateOffHold) ?? now;
-    days -= Math.max(0, Math.round((released.getTime() - held.getTime()) / DAY));
-  }
-  return Math.max(0, days);
+  return Math.max(0, Math.round((startOfDay(today).getTime() - opened.getTime()) / DAY));
 }
 
 /** Current Status (Phase 1): override → hold → Airtable carry-over. */
@@ -157,6 +198,37 @@ export function currentStatus(t: JobTrack | undefined): { status: string; source
   return { status: legacy || "—", source: "airtable" };
 }
 
+/** A BC name that is really just the job number (or blank) isn't a name. */
+const realName = (s: string | undefined, jobNo: string): string => {
+  const v = (s ?? "").trim();
+  return v && v.toUpperCase() !== jobNo.toUpperCase() ? v : "";
+};
+
+/** The job's default name: BC's ship-to customer name, else the customer
+ *  folder from its SharePoint link. "" when BC has neither. */
+export function defaultJobName(bc: BcJobSummary | undefined): string {
+  if (!bc) return "";
+  return realName(bc.name, bc.jobNo) || realName(bc.folderName, bc.jobNo);
+}
+
+/** The customer folder in a job's SharePoint link:
+ *  ".../Shared Documents/S/Shelter Insurance - Josh Alexander/..." → that name. */
+export function sharePointCustomer(url: string): string {
+  const m = /Shared(?:%20| )Documents\/[^/]+\/([^/]+)\//i.exec(url);
+  if (!m) return "";
+  try {
+    return decodeURIComponent(m[1]!).trim();
+  } catch {
+    return m[1]!.trim();
+  }
+}
+
+/** "Wichita, KS" from BC's ship-to city + state. */
+export function shipToLocation(bc: Pick<BcJobSummary, "city" | "state"> | undefined): string {
+  if (!bc) return "";
+  return [bc.city.trim(), (bc.state ?? "").trim().toUpperCase()].filter(Boolean).join(", ");
+}
+
 /** Join BC jobs, tracking rows and schedule dates into Jobs-view rows. */
 export function buildJobRows(
   bcJobs: readonly BcJobSummary[],
@@ -166,6 +238,8 @@ export function buildJobRows(
   /** Invoice amounts typed on the job's calendar cards — the calendar's $
    *  fallback when BC's remaining balance is empty. */
   invoiceByJob: ReadonlyMap<string, number> = new Map(),
+  /** A job's lead time (lead-times.ts `leadTimeFor` over its stepper steps). */
+  leadFor: (jobNo: string) => LeadTime & { rule?: { name: string } | null } = () => DEFAULT_LEAD_TIME,
 ): JobRow[] {
   const bcBy = new Map(bcJobs.map((j) => [j.jobNo, j]));
   const trackBy = new Map(tracks.map((t) => [t.jobNo, t]));
@@ -175,26 +249,43 @@ export function buildJobRows(
     const t = trackBy.get(jobNo);
     const sch = schedules.get(jobNo);
     const { status, source } = currentStatus(t);
-    const name = bc?.name || "";
+    const defaultName = defaultJobName(bc);
+    const name = t?.jobName?.trim() || defaultName;
+    // Release: the in-app override, else BC's. Order Date = the release date;
+    // the Airtable date until there is one.
+    const releaseDate = sch?.releasedDate || bc?.releaseDate || "";
+    const orderDate = releaseDate || t?.orderDate || "";
+    // The Airtable Mfg Final dates were firm dates, so they stand as the
+    // "modified" date until the in-app override replaces them.
+    const mfgModified = sch?.productionCompleteDate || t?.mfgFinalDate || "";
+    const lead = leadFor(jobNo);
+    const targets = jobTargetDates({ release: releaseDate, lead, mfgModified });
+    const code = bc?.salesperson ?? "";
+    const dip = daysInProcess(orderDate, today);
+    const doh = t ? daysOnHold({ dateToHold: t.dateToHold, dateOffHold: t.dateOffHold, priorHoldDays: t.priorHoldDays ?? 0 }, today) : 0;
     return {
       id: jobNo,
       jobNo,
       name,
+      defaultName,
       job: name ? `${jobNo} ${name}` : jobNo,
       status,
       statusSource: source,
       tracked: !!t,
       inBc: !!bc,
       description: bc?.description ?? "",
-      sales: t?.sales || bc?.salesperson || "",
-      location: t?.location || bc?.city || "",
-      region: t?.region ?? "",
+      sales: salesInitials(code) || t?.sales || "",
+      location: shipToLocation(bc) || t?.location || "",
+      region: code ? regionForSalesperson(code) : t?.region || "WK",
       priority: t?.priority ?? "",
-      orderDate: t?.orderDate ?? "",
-      mfgFinalDate: t?.mfgFinalDate ?? "",
-      mfgTargetMod: sch?.productionCompleteDate ?? "",
+      orderDate,
+      mfgFinalDate: targets.mfgFinal || mfgModified,
+      mfgTarget: targets.mfgTarget,
+      mfgTargetMod: mfgModified,
+      installTarget: targets.installTarget,
+      leadRule: lead.rule?.name ?? "",
       redDate: sch?.redDate ?? "",
-      releaseDate: sch?.releasedDate ?? "",
+      releaseDate,
       scheduledInstall: sch?.scheduledInstallDate ?? "",
       notes: t?.notes ?? "",
       powerlines: t?.powerlines ?? "",
@@ -218,10 +309,12 @@ export function buildJobRows(
       process: t?.legacyProcess ?? "",
       mfgRegion: t?.mfgRegion ?? "",
       installRegion: t?.installRegion ?? "",
-      // Same rule as a calendar card's $ (cardMoneyValue): BC remaining balance,
-      // else the invoice amount typed on the job's cards.
-      value: bc && bc.remaining > 0 ? bc.remaining : invoiceByJob.get(jobNo) ?? null,
-      dip: t ? daysInProcess(t, today) : null,
+      // The Sales Order amount, else the invoice amount typed on the job's cards.
+      value: bc?.orderAmount || invoiceByJob.get(jobNo) || null,
+      remaining: bc ? bc.remaining : null,
+      dip,
+      doh,
+      actualDip: dip == null ? null : Math.max(0, dip - doh),
     };
   });
 }
