@@ -614,6 +614,21 @@
   Add Job panel</strong> the board uses (search → Single / Multi / Custom task). Pick your task(s) and click
   <strong>Add to queue</strong> — the job is parked in the queue (with its task text + summed hours) ready to drag onto
   the board whenever you're ready.</p>
+  <h4>From BC steps &mdash; groups that fill themselves</h4>
+  <p>At the top of the queue, <strong>From BC steps</strong> lists every tracked job by the step it's in right now
+  &mdash; the same jobs Business Central shows in its Project Planning step tiles. On the Production board there's a
+  group per step (<em>Fabrication, Routing, Painting, Vinyl, Final Assembly</em>); on the Installation boards,
+  <em>Ready for Install</em> holds that region's jobs whose production is done.</p>
+  <ul>
+    <li>A job is listed under a step when that department is <strong>active</strong> on its stepper. Complete the
+    department and the job moves to the next group straight away.</li>
+    <li>Each card carries the job's BC tasks and hours for that step. <strong>Drag it onto the board</strong> to
+    schedule it &mdash; it makes a normal card, exactly like the Add Job panel would.</li>
+    <li>A job that's already on the calendar for that step stays listed but faded, tagged <strong>Scheduled</strong>.
+    The count on each group reads <em>to schedule / active</em>.</li>
+    <li>These groups are read-only &mdash; they come from the steppers, so you can't rename them or park jobs in
+    them. Your own groups below work as before.</li>
+  </ul>
   <h4>Grouped job cards</h4>
   <p>A <strong>group card</strong> is a container you drop on the board to hold a list of BC jobs — handy for
   "waiting on parts", a punch-list, or any set of jobs a crew can pick up together. It has a <strong>title</strong>,
@@ -876,6 +891,12 @@
     view. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
     <li><strong>Value</strong> is the same $ the job shows on the calendar: BC's remaining balance, or the invoice
     amount entered on the job's cards when BC has none.</li>
+    <li><strong>Sync to BC</strong> (editors) &mdash; brings Business Central's Project Planning in line with the
+    steppers for every tracked job in one go: each job's <strong>active</strong> department(s) are marked
+    <strong>Started</strong> (which is what lists it in BC's step tiles), finished ones <strong>Complete</strong>, and
+    <strong>dates and Assigned To</strong> go only to steps that are on the calendar. It first shows how many updates
+    it would send and asks you to confirm; only what changed since BC was last updated is sent, so running it again
+    later is quick. Everyday changes already reach BC as you make them &mdash; this is the catch-up.</li>
     <li><strong>Click a job</strong> to open it: its tracking details, <strong>where it sits on the Production,
     Installation and Shipping boards</strong>, and the same <strong>production stepper</strong> and <strong>Install
     Dates</strong> as the job card on the boards. It's one system &mdash; completing a department or changing a date
@@ -1061,6 +1082,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 29, 2026</td><td><strong>Job Queue groups by BC step, and Sync to BC</strong> &mdash; the Job Queue now opens with <em>From BC steps</em>: a group per Project Planning step (Fabrication, Routing, Painting, Vinyl, Final Assembly; Ready for Install on the install boards) listing the jobs active in it, ready to drag onto the calendar. New <strong>Sync to BC</strong> button on Jobs sends every tracked job's current stepper status (and scheduled dates / assignee) to BC in one go. See &sect;5.8 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Click a job to open it: the same stepper and Install Dates as the boards' job card, so a change here updates the boards and BC. Tracking columns are read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing cut-off days are marked on the calendars</strong> &mdash; with the <strong>$</strong> button on, Production and Installation show a small <em>Billing cut-off</em> label under the date of each month's cut-off. Hover it to see which month it closes and the last install day that still counts. See &sect;4.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Billing months now follow the billing cut-off</strong> &mdash; set each month's cut-off date and goal in <em>Settings &rarr; Billing periods</em> (Admin / Ops / Developer). A job counts toward the month its install <strong>ends</strong> in, and must end the day before the cut-off; ending on the cut-off day rolls it to the next month. The Installation board's <em>Billing</em> stat and the Monthly Plan both use these months and each month's own goal. See &sect;5.12 and &sect;5.14.</td></tr>
@@ -1145,7 +1167,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.12 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.13 · Sep 29, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

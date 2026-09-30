@@ -5,6 +5,7 @@ import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services
 import JobsGrid from "./JobsGrid";
 import JobsJobPanel from "./JobsJobPanel";
 import JobsViewList from "./JobsViewList";
+import BcSyncDialog from "./BcSyncDialog";
 import { FieldsPanel, FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
 import { JOB_FIELDS } from "./jobs-fields";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
@@ -85,6 +86,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob);
   }, [bcJobs, tracks, scheduleByJob, invoiceByJob]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // ── Views (editable, per device) ─────────────────────────────────────────
   const [layout, setLayoutState] = useState<ViewLayout>(() => {
@@ -239,11 +241,23 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); }} disabled={loading}>
             Refresh
           </button>
+          {canEdit && (
+            <button
+              type="button"
+              className="btn-primary jobs-toolbar__sync"
+              onClick={(e) => { e.stopPropagation(); setSyncing(true); }}
+              disabled={!loaded}
+              title="Send every tracked job's current stepper status (and scheduled dates) to BC Project Planning"
+            >
+              Sync to BC
+            </button>
+          )}
         </div>
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} />
       </section>
+      {syncing && <BcSyncDialog jobNos={tracks.map((t) => t.jobNo)} onClose={() => setSyncing(false)} />}
       {openJob && (
         <JobsJobPanel
           row={rows.find((r) => r.jobNo === openJob.jobNo) ?? openJob}

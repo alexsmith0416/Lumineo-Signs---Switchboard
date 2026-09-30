@@ -72,7 +72,7 @@
           },
           "runtimeConfiguration": {
             "concurrency": {
-              "runs": 1
+              "runs": 10
             }
           }
         }

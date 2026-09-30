@@ -173,7 +173,12 @@ flow = {
                                           "subscriptionRequest/filteringattributes": "crfdf_status"},
                            "host": {**DV_HOST, "operationId": "SubscribeWebhookTrigger"},
                            "authentication": "@parameters('$authentication')"},
-                "runtimeConfiguration": {"concurrency": {"runs": 1}}}},
+                # Up to 10 rows at once. Rows for different (job, step) pairs are
+                # independent; for the SAME pair, Newer_Push marks the older row
+                # superseded, so only the newest state is written. (A same-step
+                # pair that starts within the same instant can still land in
+                # either order - a later edit or Sync to BC corrects it.)
+                "runtimeConfiguration": {"concurrency": {"runs": 10}}}},
             "actions": {"Only_pending_step_rows": {
                 "type": "If",
                 "expression": {"and": [

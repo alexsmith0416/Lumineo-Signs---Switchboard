@@ -78,7 +78,8 @@ written. Shipment-load cards on the install board don't count toward Install.
 ## Flow steps
 
 1. **Trigger** — Dataverse row added/modified on `crfdf_bcpushqueue`
-   (filtering on `crfdf_status`), concurrency 1. Acts only on
+   (filtering on `crfdf_status`), **up to 10 runs at once** (so a Sync to BC
+   drains quickly). Acts only on
    `status = pending`, `kind ∈ {schedule, state}`, and a non-empty
    `planningstep`.
 1b. **Skip stale rows** — if a NEWER row exists for the same job + step + kind

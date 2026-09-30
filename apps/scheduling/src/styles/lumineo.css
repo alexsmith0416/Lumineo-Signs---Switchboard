@@ -5350,3 +5350,61 @@ input, select, textarea {
   border-top: 1px solid var(--border-soft);
   margin-top: 4px;
 }
+
+/* Jobs: Sync to BC */
+.jobs-sync { padding: 12px 16px; font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+.jobs-sync ul { padding-left: 18px; margin: 8px 0; }
+.jobs-sync li { margin-bottom: 6px; }
+.jobs-sync__muted { color: var(--text-tertiary); font-size: 12px; }
+.jobs-sync__error { color: var(--status-red); }
+
+/* Job Queue: BC step groups (read-only, from the steppers) */
+.jq-steps { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+.jq-steps__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 2px 2px 0;
+}
+.jq-steps__loading { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.jq-steps__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.jq-steps__chev { color: var(--text-tertiary); transition: transform 0.12s; }
+.jq-steps__chev--closed { transform: rotate(-90deg); }
+.jq-steps__name { flex: 1; }
+.jq-steps__count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border-radius: 999px;
+  padding: 0 7px;
+}
+.jq-card--scheduled { opacity: 0.6; }
+.jq-card__tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--status-green);
+  border: 1px solid var(--status-green);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+

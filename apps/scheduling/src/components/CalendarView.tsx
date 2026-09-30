@@ -16,6 +16,7 @@ import {
 } from "../store/job-queue-store";
 import { lineFromQueueItem, queueItemFromLine } from "../services/job-queue-data";
 import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
+import { findStepQueueItem } from "../store/step-queue-store";
 import AddJobPanel from "./AddJobPanel";
 import GroupPanel from "./GroupPanel";
 import { isGroupCard } from "../services/group-card";
@@ -716,7 +717,9 @@ export default function CalendarView({
   // placement with the job's stored hours/dept), then remove it from the queue.
   const placeQueueItem = (itemId: string, employeeId: string, day: Date) => {
     const q = queueStore.getState();
-    const item = q.groups.flatMap((g) => g.items).find((it) => it.id === itemId);
+    // A BC step-group card (read-only, computed from the steppers) or a parked item.
+    const stepItem = findStepQueueItem(itemId);
+    const item = stepItem ?? q.groups.flatMap((g) => g.items).find((it) => it.id === itemId);
     if (!item) return;
     const isLane = isLaneEmployeeId(employeeId);
     const deptId = isLane ? laneDeptId(employeeId) : employees.get(employeeId)?.departmentId ?? "";
@@ -730,7 +733,8 @@ export default function CalendarView({
     const line = isLane ? { ...base, departmentWide: true as const } : base;
     const end = calculateEndTime(start, effectiveHours(line, emp), emp, getContext(), line.id);
     void addScheduleLine({ ...line, endDateTime: end });
-    q.removeItem(itemId);
+    // A step card stays in its group (tagged Scheduled); a parked item leaves the queue.
+    if (!stepItem) q.removeItem(itemId);
   };
 
   // Drop a calendar card into a queue group → store it, then delete the line.

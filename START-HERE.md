@@ -320,6 +320,29 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     `crfdf_invoiceamount` on the job's production cards (`jobInvoiceAmounts`).
     Views are per device (like the old app); moving them to Dataverse to share
     across users is an open option.
+  - ✅ **Sync to BC + Job Queue step groups (Sep 29, built).**
+    - **Sync to BC** (Jobs toolbar, editors): `services/bc-full-sync.ts` (pure,
+      4 tests) plans the whole desired BC state for every TRACKED job — `state`
+      rows from the stepper (active dept = Started → BC tiles) + `schedule` rows
+      only for steps with calendar cards — and DIFFS against the newest outbox
+      row per (kind, job, step) (`fetchLastPushes`: pending + synced) so re-runs
+      are small. `store/bc-full-sync-run.ts` + `BcSyncDialog` (plan → confirm →
+      queue with progress; `enqueueBcPushes`, 6 at a time). Same builders as the
+      live pushes. The flow runs **10 rows at once** (Sep 29, Alex) —
+      `runtimeConfiguration.concurrency.runs` in `_gen_planningsteps_flow.py`;
+      Newer_Push still supersedes an older row for the same (job, step). Rows
+      for one step that start in the same instant can land either way round — a
+      later edit or Sync to BC corrects it.
+    - **Job Queue "From BC steps"**: `services/step-queue.ts` (pure, 5 tests) +
+      `store/step-queue-store.ts` + `StepGroupsSection` in `JobQueuePanel`. Read-
+      only groups per BC step (Fabrication, Routing, Painting, Vinyl, Final
+      Assembly; install boards: Ready for Install by region) of tracked jobs whose
+      stepper has that dept ACTIVE. Cards carry the step's BC planning lines
+      (tasks + hours); drop → normal card via `placeQueueItem`
+      (`findStepQueueItem`), item stays (tagged Scheduled). Scheduled =
+      `scheduledSteps()` (all boards, all dates) ∪ the current board.
+    - One cached planning-line read (`allPlanningLines`) now feeds the Jobs
+      steppers AND the queue.
   - **Next:** compare Jobs against Airtable with Alex, then Phase 2 (editing the
     tracking fields, lifecycle + Service steppers, BC job "complete" at Complete to
     Admin).

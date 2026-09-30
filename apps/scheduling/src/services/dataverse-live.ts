@@ -50,6 +50,8 @@ import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
 import type { BillingPeriodRow } from "./billing-periods";
 import type { BcJobSummary, JobTrack } from "./job-tracking";
+import type { LastPush } from "./bc-full-sync";
+import type { StepPlanningLine } from "./step-queue";
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import {
   bcStepForDepartmentName,
@@ -2347,25 +2349,174 @@ function stepInfoFromLines(
   return { production: [...production], hasInstall };
 }
 
-/**
- * Stepper info for EVERY job in one paged read of the BC planning lines (5,000+
- * rows), instead of one request per job. The Jobs view primes the stepper cache
- * with it so the Stepper column draws immediately.
- */
-export async function allJobStepInfo(): Promise<Map<string, { production: string[]; hasInstall: boolean }>> {
-  const rows = await listAll(BC.planning, {
-    select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description",
-    filter: "crfdf_type eq 'Resource'",
-  });
-  const byJob = new Map<string, { resourceNo: string; description: string }[]>();
-  for (const r of rows) {
-    const jobNo = s(r.crfdf_jobno).trim();
-    if (!jobNo) continue;
-    let arr = byJob.get(jobNo);
-    if (!arr) byJob.set(jobNo, (arr = []));
-    arr.push({ resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no), description: s(r.crfdf_description) });
+export interface BcPlanningLineLite {
+  resourceNo: string;
+  description: string;
+  hours: number;
+}
+
+// Every BC resource planning line, keyed by job — ONE paged read (5,000+ rows),
+// shared by the Jobs steppers and the Job Queue's step groups. Cached for the
+// session; pass force to re-read.
+let planningLinesP: Promise<Map<string, BcPlanningLineLite[]>> | null = null;
+export function allPlanningLines(force = false): Promise<Map<string, BcPlanningLineLite[]>> {
+  if (force || !planningLinesP) {
+    planningLinesP = listAll(BC.planning, {
+      select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description,crfdf_quantity",
+      filter: "crfdf_type eq 'Resource'",
+    })
+      .then((rows) => {
+        const byJob = new Map<string, BcPlanningLineLite[]>();
+        for (const r of rows) {
+          const jobNo = s(r.crfdf_jobno).trim();
+          if (!jobNo) continue;
+          let arr = byJob.get(jobNo);
+          if (!arr) byJob.set(jobNo, (arr = []));
+          arr.push({ resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no), description: s(r.crfdf_description), hours: n(r.crfdf_quantity) });
+        }
+        return byJob;
+      })
+      .catch((e) => {
+        planningLinesP = null;
+        throw e;
+      });
   }
+  return planningLinesP;
+}
+
+/**
+ * Stepper info for EVERY job from the shared planning-line read, instead of one
+ * request per job. The Jobs view primes the stepper cache with it so the
+ * Stepper column draws immediately.
+ */
+export async function allJobStepInfo(force = false): Promise<Map<string, { production: string[]; hasInstall: boolean }>> {
+  const byJob = await allPlanningLines(force);
   return new Map([...byJob].map(([jobNo, lines]) => [jobNo, stepInfoFromLines(lines)]));
+}
+
+/** A job's planning lines for one production department (by department name). */
+export function linesForDepartment(lines: readonly BcPlanningLineLite[], deptName: string): BcPlanningLineLite[] {
+  return lines.filter(
+    (l) => isProductionResource(l.resourceNo) && departmentNameForLine(l.resourceNo, l.description) === deptName,
+  );
+}
+
+/** A job's install planning lines. */
+export function installLines(lines: readonly BcPlanningLineLite[]): BcPlanningLineLite[] {
+  return lines.filter((l) => isInstallResource(l.resourceNo));
+}
+
+/** Planning lines shaped for the Job Queue's step groups (department + tasks + hours). */
+export async function queuePlanningLines(): Promise<Map<string, StepPlanningLine[]>> {
+  const byJob = await allPlanningLines();
+  return new Map(
+    [...byJob].map(([jobNo, lines]) => [
+      jobNo,
+      lines.map((l) => ({
+        departmentName: isProductionResource(l.resourceNo) ? departmentNameForLine(l.resourceNo, l.description) ?? "" : "",
+        isInstall: isInstallResource(l.resourceNo),
+        description: l.description,
+        hours: l.hours,
+      })),
+    ]),
+  );
+}
+
+/** `${jobNo}|${bcStep}` for every step that has a card on any board (all dates). */
+export async function scheduledSteps(): Promise<Set<string>> {
+  const [prod, cards, names] = await Promise.all([
+    listAll(SET.lines, { select: "crfdf_jobno,_crfdf_department_value,crfdf_iscustom", filter: "crfdf_jobno ne null" }),
+    listAll(SHIP.cards, { select: "crfdf_jobno,crfdf_iscustom,_crfdf_shipmentload_value", filter: "crfdf_jobno ne null" }),
+    departmentNames(),
+  ]);
+  const out = new Set<string>();
+  for (const r of prod) {
+    if (r.crfdf_iscustom) continue;
+    const step = bcStepForDepartmentName(names.get(s(r["_crfdf_department_value"])));
+    if (step) out.add(`${s(r.crfdf_jobno)}|${step}`);
+  }
+  for (const r of cards) {
+    if (r.crfdf_iscustom || r["_crfdf_shipmentload_value"]) continue;
+    out.add(`${s(r.crfdf_jobno)}|Install`);
+  }
+  return out;
+}
+
+/**
+ * Everything "Sync to BC" needs about the boards, in bulk: every production and
+ * install card, department names, and each person's BC Resource No. (production
+ * roster crfdf_no; install crew by name — see installResourceLookup).
+ */
+export async function fetchSyncSnapshot(): Promise<{
+  productionCards: ScheduleLine[];
+  installCards: ScheduleLine[];
+  departmentName: (id: string) => string | undefined;
+  productionResourceNo: (employeeId: string) => string;
+  installResourceNo: (employeeId: string) => string;
+}> {
+  const [prodRows, cardRows, names, emps, installLookup] = await Promise.all([
+    listAll(SET.lines, { filter: "crfdf_jobno ne null" }),
+    listAll(SHIP.cards, { filter: "crfdf_jobno ne null" }),
+    departmentNames(),
+    listAll(SET.employees, { select: "crfdf_employee1id,crfdf_no" }),
+    installResourceLookup(),
+  ]);
+  const prodNo = new Map(emps.map((e) => [s(e.crfdf_employee1id), s(e.crfdf_no).trim()] as const));
+  return {
+    productionCards: prodRows.map(mapLine).filter((l) => l.jobNo && !l.isCustom),
+    installCards: cardRows.map(mapCardRecord).filter((c) => c.jobNo && !c.isCustom),
+    departmentName: (id) => names.get(id),
+    productionResourceNo: (id) => (isLaneEmployeeId(id) ? "" : prodNo.get(id) ?? ""),
+    installResourceNo: installLookup,
+  };
+}
+
+/** Every step push still in the outbox (pending or synced) — what BC was last told. */
+export async function fetchLastPushes(): Promise<LastPush[]> {
+  const rows = await listAll(BCPUSH_SET, {
+    select: "crfdf_kind,crfdf_jobno,crfdf_planningstep,crfdf_started,crfdf_complete,crfdf_startdatetime,crfdf_enddatetime,crfdf_assignedto,createdon",
+    filter: "(crfdf_kind eq 'state' or crfdf_kind eq 'schedule') and crfdf_status ne 'superseded' and crfdf_status ne 'failed'",
+  });
+  return rows.map((r) => ({
+    kind: s(r.crfdf_kind),
+    jobNo: s(r.crfdf_jobno),
+    planningStep: s(r.crfdf_planningstep),
+    started: Boolean(r.crfdf_started),
+    complete: Boolean(r.crfdf_complete),
+    startDateTime: r.crfdf_startdatetime == null ? null : s(r.crfdf_startdatetime),
+    endDateTime: r.crfdf_enddatetime == null ? null : s(r.crfdf_enddatetime),
+    assignedTo: s(r.crfdf_assignedto),
+    createdOn: s(r.createdon),
+  }));
+}
+
+/**
+ * Queue many pushes (Sync to BC), a few at a time so a 1,000+ row sync doesn't
+ * flood the connector. Unlike `enqueueBcPush` this reports failures — the
+ * caller shows them. Returns how many were queued and how many failed.
+ */
+export async function enqueueBcPushes(
+  pushes: readonly BcPlanningPush[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ queued: number; failed: number }> {
+  let next = 0;
+  let queued = 0;
+  let failed = 0;
+  const worker = async () => {
+    while (next < pushes.length) {
+      const p = pushes[next++]!;
+      try {
+        const res = await dvCreate(BCPUSH_SET, pushToRecord(p));
+        if (res.success) queued++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+      onProgress?.(queued + failed, pushes.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, pushes.length) }, worker));
+  return { queued, failed };
 }
 
 /**

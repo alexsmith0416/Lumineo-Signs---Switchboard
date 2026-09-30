@@ -8,6 +8,8 @@ import AddJobPanel from "./AddJobPanel";
 import JobTaskPicker from "./JobTaskPicker";
 import { QueueEditIcon, QueueToggleIcon } from "./QueueIcons";
 import QueueGroupDialog from "./QueueGroupDialog";
+import { useStepQueue } from "../store/step-queue-store";
+import type { StepQueueGroup } from "../services/step-queue";
 
 /** Build a queue item from the draft the unified Add panel produces. */
 function queueItemFromDraft(draft: ScheduleLine, group: QueueGroup): QueueItem {
@@ -77,6 +79,9 @@ export default function JobQueuePanel({
   const removeItem = useQueueStore((s) => s.removeItem);
   const moveItem = useQueueStore((s) => s.moveItem);
   const kind = useQueueStore((s) => s.kind);
+  const boardSchedule = scheduleStore((s) => s.schedule);
+  // BC step groups — computed live from the steppers (read-only, never stored).
+  const steps = useStepQueue(kind, open, departments, boardSchedule);
 
   const [editing, setEditing] = useState(false);
   const [dialog, setDialog] = useState<{ mode: "add" } | { mode: "edit"; group: QueueGroup } | null>(null);
@@ -125,6 +130,9 @@ export default function JobQueuePanel({
         </div>
 
         <div className="job-queue__body">
+          {steps.groups.length > 0 && (
+            <StepGroupsSection groups={steps.groups} loading={steps.loading} deptMap={deptMap} canEdit={canEdit} />
+          )}
           {groups.length === 0 && (
             <div className="job-queue__empty-all">
               No groups yet.
@@ -572,3 +580,76 @@ function QueueItemEditPanel({
     </div>
   );
 }
+
+// --- BC step groups (read-only, from the steppers) ---------------------------
+// One group per BC Project Planning step, listing the tracked jobs ACTIVE in
+// it — the same jobs BC's step tiles show. Drag a card onto the calendar to
+// schedule that step; it stays listed, tagged Scheduled, until the department
+// is completed on the stepper.
+function StepGroupsSection({
+  groups,
+  loading,
+  deptMap,
+  canEdit,
+}: {
+  groups: StepQueueGroup[];
+  loading: boolean;
+  deptMap: Map<string, Department>;
+  canEdit: boolean;
+}) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  return (
+    <div className="jq-steps">
+      <div className="jq-steps__title">
+        From BC steps
+        {loading && <span className="jq-steps__loading"> · updating…</span>}
+      </div>
+      {groups.map((g) => {
+        const isOpen = open[g.step] ?? g.items.some((i) => !i.scheduled);
+        const waiting = g.items.filter((i) => !i.scheduled).length;
+        return (
+          <div key={g.step} className="jq-group jq-group--step">
+            <button type="button" className="jq-steps__head" onClick={() => setOpen((o) => ({ ...o, [g.step]: !isOpen }))}>
+              <span className={"jq-steps__chev" + (isOpen ? "" : " jq-steps__chev--closed")}>▾</span>
+              <span className="jq-steps__name">{g.step}</span>
+              <span className="jq-steps__count" title={`${waiting} to schedule · ${g.items.length} active in BC`}>
+                {waiting}/{g.items.length}
+              </span>
+            </button>
+            {isOpen && (
+              <div className="jq-group__body">
+                {g.items.length === 0 && <div className="jq-group__empty">No jobs active in this step.</div>}
+                {g.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={"jq-card" + (item.scheduled ? " jq-card--scheduled" : "")}
+                    style={{ borderLeftColor: deptMap.get(item.departmentId)?.color ?? "#c9ced8" }}
+                    draggable={canEdit}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(DND_QUEUE_ITEM, item.id);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
+                    title={canEdit ? "Drag onto the schedule" : undefined}
+                  >
+                    <div className="jq-card__main">
+                      <div className="jq-card__top">
+                        <span className="jq-card__jobno">{item.jobNo}</span>
+                        <span className="jq-card__cust">{item.customerName || "—"}</span>
+                        {item.scheduled && <span className="jq-card__tag">Scheduled</span>}
+                      </div>
+                      {item.planningLineDescription && <div className="jq-card__desc">{item.planningLineDescription}</div>}
+                    </div>
+                    <div className="jq-card__side">
+                      {item.estimatedHours > 0 && <span className="jq-card__hours">{item.estimatedHours}h</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
