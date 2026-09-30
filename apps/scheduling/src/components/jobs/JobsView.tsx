@@ -12,7 +12,10 @@ import { includedStepDefs } from "../../services/production-steps";
 import JobsViewList from "./JobsViewList";
 import BcSyncDialog from "./BcSyncDialog";
 import { FieldsPanel, FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
-import { JOB_FIELDS } from "./jobs-fields";
+import { JOB_FIELDS, customColumn, type JobFieldDef } from "./jobs-fields";
+import { withCustomFields } from "../../services/custom-fields";
+import { useCustomFieldStore } from "../../store/custom-field-store";
+import { AddFieldsDialog, EditFieldDialog } from "./CustomFieldDialogs";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import {
   PRESETS, addSection, addView, defaultLayout, deleteSection, deleteView, duplicateView, moveSection, moveView,
@@ -74,6 +77,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const loaded = useJobTrackingStore((s) => s.loaded);
   const error = useJobTrackingStore((s) => s.error);
   const load = useJobTrackingStore((s) => s.load);
+  const setCustomValue = useJobTrackingStore((s) => s.setCustomValue);
+  const customDefs = useCustomFieldStore((s) => s.defs);
+  const loadCustomDefs = useCustomFieldStore((s) => s.load);
   // Dates come from the SAME job-schedule store the boards' Install Dates use,
   // so an edit anywhere shows here at once (and here → the boards).
   const scheduleByJob = useJobScheduleStore((s) => s.byJob);
@@ -83,7 +89,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     void loadSchedules();
     void loadLeadRules();
     void loadDeptOverrides();
-  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides]);
+    void loadCustomDefs();
+  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs]);
 
   const rows = useMemo(() => {
     const dates = new Map<string, JobScheduleDates>();
@@ -101,11 +108,17 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
       const keys = info ? includedStepDefs(info.production, info.hasInstall, deptOverrides[jobNo] ?? {}).map((d) => d.key) : [];
       return leadTimeFor(keys, leadRules);
     };
-    return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob, leadFor);
-  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules]);
+    const built = buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob, leadFor);
+    // Custom field values ride on each row under the field's key, so search /
+    // filter / sort / group treat them like any other column.
+    const valuesByJob = new Map(tracks.map((t) => [t.jobNo, t.customValues]));
+    return withCustomFields(built, customDefs, (jobNo) => valuesByJob.get(jobNo));
+  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules, customDefs]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [addingField, setAddingField] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
 
   // ── Views (editable, per device) ─────────────────────────────────────────
   const [layout, setLayoutState] = useState<ViewLayout>(() => {
@@ -150,13 +163,28 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     write(WIDTHS_KEY, next);
   };
 
+  // Built-in columns + custom fields, by key.
+  const fieldsByKey = useMemo(() => {
+    const m = new Map<string, JobFieldDef>(Object.entries(JOB_FIELDS));
+    for (const d of customDefs) m.set(d.key, customColumn(d));
+    return m;
+  }, [customDefs]);
   const cols = useMemo(
-    () => view.cols.map((k) => JOB_FIELDS[k]).filter((d): d is NonNullable<typeof d> => !!d && (!d.money || canSeeMoney)),
-    [view, canSeeMoney],
+    () => view.cols.map((k) => fieldsByKey.get(k)).filter((d): d is JobFieldDef => !!d && (!d.money || canSeeMoney)),
+    [view, canSeeMoney, fieldsByKey],
   );
   const allFields = useMemo(
-    () => Object.values(JOB_FIELDS).filter((d) => !d.money || canSeeMoney),
-    [canSeeMoney],
+    () => [...fieldsByKey.values()].filter((d) => !d.money || canSeeMoney),
+    [canSeeMoney, fieldsByKey],
+  );
+  const tracksByJob = useMemo(() => new Map(tracks.map((t) => [t.jobNo, t])), [tracks]);
+  const gridEditing = useMemo(
+    () => ({
+      canEdit,
+      valuesFor: (jobNo: string) => tracksByJob.get(jobNo)?.customValues,
+      onSave: (jobNo: string, key: string, value: unknown) => void setCustomValue(jobNo, key, value),
+    }),
+    [canEdit, tracksByJob, setCustomValue],
   );
   const inView = useMemo(() => (view.preset ? rows.filter(PRESETS[view.preset]) : rows), [rows, view]);
   const shown = useMemo(() => applyGrid(inView, search, prefs), [inView, search, prefs]);
@@ -235,7 +263,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
               </button>
               {panel === "fields" && p === "fields" && (
                 <FieldsPanel fields={allFields} cols={view.cols}
-                  onChange={(next) => setLayout(setViewCols(layout, view.id, next))} onClose={() => setPanel(null)} />
+                  onChange={(next) => setLayout(setViewCols(layout, view.id, next))} onClose={() => setPanel(null)}
+                  onAddField={canEdit ? () => { setPanel(null); setAddingField(true); } : undefined}
+                  onEditField={canEdit ? (key) => { setPanel(null); setEditingField(key); } : undefined} />
               )}
               {panel === "filter" && p === "filter" && (
                 <FilterPanel fields={allFields} filters={prefs.filters} rows={inView}
@@ -285,8 +315,16 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         </div>
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
-          collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} />
+          collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths}
+          fieldsByKey={fieldsByKey} editing={gridEditing} />
       </section>
+      {addingField && (
+        <AddFieldsDialog
+          onAdded={(keys) => setLayout(setViewCols(layout, view.id, [...view.cols, ...keys]))}
+          onClose={() => setAddingField(false)}
+        />
+      )}
+      {editingField && <EditFieldDialog fieldKey={editingField} onClose={() => setEditingField(null)} />}
       {backfilling && <StatusBackfillDialog rows={rows} onClose={() => setBackfilling(false)} />}
       {syncing && <BcSyncDialog jobNos={tracks.map((t) => t.jobNo)} onClose={() => setSyncing(false)} />}
       {openJob && (

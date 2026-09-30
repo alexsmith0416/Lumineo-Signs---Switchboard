@@ -35,6 +35,8 @@ interface JobTrackingState {
    * which pushes the new step states to BC like a stepper click.
    */
   setStatus: (jobNo: string, status: string, by: string) => Promise<void>;
+  /** Set (or clear, with null) one custom field value on a job. */
+  setCustomValue: (jobNo: string, key: string, value: unknown) => Promise<void>;
 }
 
 export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
@@ -82,6 +84,29 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
   },
 
   renameJob: (jobNo, name) => saveTrack(jobNo, { jobName: name.trim() }, "Rename job"),
+
+  setCustomValue: async (jobNo, key, value) => {
+    const apply = (p: Partial<JobTrack>) =>
+      set((s) => {
+        const has = s.tracks.some((t) => t.jobNo === jobNo);
+        return {
+          tracks: has
+            ? s.tracks.map((t) => (t.jobNo === jobNo ? { ...t, ...p } : t))
+            : [...s.tracks, { ...emptyJobTrack(jobNo), ...p }],
+        };
+      });
+    const current = get().tracks.find((t) => t.jobNo === jobNo)?.customValues ?? {};
+    const next = { ...current };
+    if (value == null || (Array.isArray(value) && value.length === 0)) delete next[key];
+    else next[key] = value;
+    apply({ customValues: next });
+    if (!LIVE) return;
+    await persistOrReport("Edit custom field value", async () => {
+      const dv = await import("../services/dataverse-live");
+      const id = await dv.saveJobCustomValue(jobNo, key, value);
+      if (!get().tracks.find((t) => t.jobNo === jobNo)?.id) apply({ id });
+    });
+  },
 
   setStatus: async (jobNo, status, by) => {
     const track = get().tracks.find((t) => t.jobNo === jobNo);

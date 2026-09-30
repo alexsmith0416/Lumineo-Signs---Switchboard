@@ -75,4 +75,9 @@ describe("view layout", () => {
     expect(l.views.x!.cols).toEqual(["job", "status"]);
     expect(l.sections[0]!.viewIds).toEqual(["x", "y"]);
   });
+
+  it("keeps custom field columns, which load after the layout", () => {
+    const l = sanitizeLayout({ sections: [{ id: "a", label: "A", viewIds: ["x"] }], views: { x: { name: "X", cols: ["job", "cf_abc1", "status"] } } }, known);
+    expect(l.views.x!.cols).toEqual(["job", "cf_abc1", "status"]);
+  });
 });

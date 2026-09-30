@@ -10,6 +10,10 @@ import { JobBadge } from "./JobsGrid";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
 import { COMPLETE_STATUSES, INSTALL_STATUSES, isHoldStatus, STATUS_OPTIONS } from "../../services/job-status";
 import { useCurrentUser } from "../../services/current-user";
+import { useCustomFieldStore } from "../../store/custom-field-store";
+import { describeFormula, linkFor } from "../../services/custom-fields";
+import CustomValueEditor from "./CustomValueEditor";
+import { OptionBadges } from "./JobsGrid";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -92,6 +96,8 @@ export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; c
           )}
           {row.notes && <p className="jobs-jobpanel__notes">{row.notes}</p>}
 
+          <CustomFieldsSection row={row} canEdit={canEdit} />
+
           <div className="form-field form-field--block">
             <div className="jobcard__label">On the boards</div>
             {placements === null ? (
@@ -126,6 +132,48 @@ export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; c
             Done
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** The job's custom field values — editable for editors, read-only otherwise. */
+function CustomFieldsSection({ row, canEdit }: { row: JobRow; canEdit: boolean }) {
+  const defs = useCustomFieldStore((s) => s.defs);
+  const values = useJobTrackingStore((s) => s.tracks.find((t) => t.jobNo === row.jobNo)?.customValues);
+  const setCustomValue = useJobTrackingStore((s) => s.setCustomValue);
+  if (!defs.length) return null;
+  const shown = (row as unknown as Record<string, unknown>);
+  return (
+    <div className="form-field form-field--block">
+      <div className="jobcard__label">Custom fields</div>
+      <div className="cf-panel">
+        {defs.map((d) => {
+          const v = shown[d.key];
+          const text = typeof v === "number" ? (d.type === "currency" ? `$${v.toLocaleString("en-US")}` : v.toLocaleString("en-US")) : String(v ?? "");
+          return (
+            <div key={d.key} className="cf-panel__row">
+              <div className="cf-panel__label" title={d.type === "formula-date" && d.formula ? describeFormula(d.formula, defs) : undefined}>
+                {d.label}
+              </div>
+              <div className="cf-panel__value">
+                {canEdit && d.type !== "formula-date" ? (
+                  <CustomValueEditor def={d} value={values?.[d.key]} onSave={(nv) => void setCustomValue(row.jobNo, d.key, nv)} />
+                ) : d.type === "select" || d.type === "multiselect" ? (
+                  <OptionBadges def={d} value={text} />
+                ) : d.type === "bool" ? (
+                  v ? "Yes" : ""
+                ) : d.type === "date" || d.type === "formula-date" ? (
+                  fmt(text) || <span className="jobs-jobpanel__muted">—</span>
+                ) : linkFor(d.type, text) ? (
+                  <a className="jobs-link" href={linkFor(d.type, text)} target="_blank" rel="noreferrer">{text}</a>
+                ) : (
+                  text || <span className="jobs-jobpanel__muted">—</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

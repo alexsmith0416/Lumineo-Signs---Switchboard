@@ -2,8 +2,9 @@
 // the Airtable recreation app (FilterPanel / SortPanel / GroupPanel / ColumnPanel).
 import { useState } from "react";
 import type { JobRow } from "../../services/job-tracking";
-import { JOB_FIELDS, type JobFieldDef } from "./jobs-fields";
-import { JobBadge } from "./JobsGrid";
+import { type JobFieldDef } from "./jobs-fields";
+import { JobBadge, OptionBadges } from "./JobsGrid";
+import { FIELD_TYPES } from "../../services/custom-fields";
 import type { FilterCondition, FilterOp, GroupCriterion, SortCriterion } from "./jobs-grid-state";
 
 const OPS: { value: FilterOp; label: string }[] = [
@@ -51,8 +52,13 @@ export function FilterPanel({ fields, filters, rows, onChange, onClose }: {
 }) {
   const update = (id: string, patch: Partial<FilterCondition>) =>
     onChange(filters.map((f) => (f.id === id ? { ...f, ...patch } : f)));
-  const valuesOf = (field: string) =>
-    [...new Set(rows.map((r) => String((r as unknown as Record<string, unknown>)[field] ?? "")).filter(Boolean))].sort();
+  const byKey = new Map(fields.map((d) => [d.key as string, d]));
+  // Pick-list values: a custom select's options, else the values in the rows.
+  const valuesOf = (field: string) => {
+    const opts = byKey.get(field)?.custom?.opts;
+    if (opts?.length) return opts;
+    return [...new Set(rows.map((r) => String((r as unknown as Record<string, unknown>)[field] ?? "")).filter(Boolean))].sort();
+  };
 
   return (
     <PanelShell
@@ -70,8 +76,8 @@ export function FilterPanel({ fields, filters, rows, onChange, onClose }: {
     >
       {filters.length === 0 && <div className="jobs-panel__empty">No filters. Add a condition below.</div>}
       {filters.map((f, i) => {
-        const def = JOB_FIELDS[f.field];
-        const picker = (f.op === "is_any_of" || f.op === "is_none_of") && def?.type === "badge";
+        const def = byKey.get(f.field);
+        const picker = (f.op === "is_any_of" || f.op === "is_none_of") && (def?.type === "badge" || def?.type === "select");
         const chosen = new Set(f.value.split(",").map((v) => v.trim()).filter(Boolean));
         return (
           <div key={f.id} className="jobs-panel__cond">
@@ -106,7 +112,7 @@ export function FilterPanel({ fields, filters, rows, onChange, onClose }: {
                       else next.add(v);
                       update(f.id, { value: [...next].join(",") });
                     }}>
-                    <JobBadge field={f.field} value={v} />
+                    {def?.custom ? <OptionBadges def={def.custom} value={v} /> : <JobBadge field={f.field} value={v} />}
                   </button>
                 ))}
               </div>
@@ -204,11 +210,15 @@ export function GroupPanel({ fields, groups, onChange, onClose, onCollapseAll, o
   );
 }
 
-export function FieldsPanel({ fields, cols, onChange, onClose }: {
+export function FieldsPanel({ fields, cols, onChange, onClose, onAddField, onEditField }: {
   fields: JobFieldDef[];
   cols: string[];
   onChange: (cols: string[]) => void;
   onClose: () => void;
+  /** Editors: open "Add fields". */
+  onAddField?: () => void;
+  /** Editors: edit a custom field. */
+  onEditField?: (key: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [dragKey, setDragKey] = useState<string | null>(null);
@@ -241,7 +251,25 @@ export function FieldsPanel({ fields, cols, onChange, onClose }: {
     >
       <span className="jobs-fields__grip" aria-hidden="true">{visible && k !== "job" ? "⠿" : ""}</span>
       <input type="checkbox" checked={visible} disabled={k === "job"} onChange={() => toggle(k)} />
-      <span>{byKey.get(k)?.label ?? k}</span>
+      <span className="jobs-fields__name">{byKey.get(k)?.label ?? k}</span>
+      {byKey.get(k)?.custom && (
+        <span className="jobs-fields__custom" title={FIELD_TYPES.find((f) => f.type === byKey.get(k)!.custom!.type)?.label}>
+          {FIELD_TYPES.find((f) => f.type === byKey.get(k)!.custom!.type)?.icon}
+        </span>
+      )}
+      {byKey.get(k)?.custom && onEditField && (
+        <button
+          type="button"
+          className="jobs-fields__edit"
+          title="Edit field"
+          onClick={(e) => {
+            e.preventDefault();
+            onEditField(k);
+          }}
+        >
+          ✎
+        </button>
+      )}
     </label>
   );
 
@@ -255,7 +283,16 @@ export function FieldsPanel({ fields, cols, onChange, onClose }: {
           <button type="button" className="jobs-panel__mini" onClick={() => onChange(["job"])}>Hide all</button>
         </>
       }
-      footer={<span className="jobs-panel__empty" style={{ padding: 0 }}>Drag ⠿ to reorder the shown fields.</span>}
+      footer={
+        <>
+          {onAddField && (
+            <button type="button" className="jobs-panel__add" onClick={onAddField}>
+              + Add field
+            </button>
+          )}
+          <span className="jobs-panel__empty" style={{ padding: 0 }}>Drag ⠿ to reorder the shown fields.</span>
+        </>
+      }
     >
       <div className="jobs-panel__row">
         <input value={search} placeholder="Find a field…" onChange={(e) => setSearch(e.target.value)} />

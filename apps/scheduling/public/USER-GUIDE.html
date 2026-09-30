@@ -944,8 +944,29 @@
   <p><strong>Match steppers</strong> (editors, next to Sync to BC) catches up jobs that were already in one of those
   statuses: it shows how many jobs and steps it would complete, and only changes them when you click
   <strong>Update</strong>. Run <strong>Sync to BC</strong> afterwards to send the new states to BC.</p>
+  <h4>Custom fields</h4>
+  <p>Editors can add their own columns to the job list &mdash; shared with everyone, like the fields in the LNI
+  Production Scheduler. Open <strong>Fields &rarr; + Add field</strong>, type a name, and pick a type:</p>
+  <table>
+    <tr><th>Type</th><th>Holds</th></tr>
+    <tr><td>Text / Long text</td><td>A short value, or several lines (Ctrl+Enter saves a Long text).</td></tr>
+    <tr><td>Number / Currency</td><td>A number; Currency shows as $.</td></tr>
+    <tr><td>Date / Checkbox</td><td>A date picker; a tick box (click the cell to tick or untick).</td></tr>
+    <tr><td>Single Select / Multi Select</td><td>One, or several, of the options you list &mdash; shown as coloured badges.</td></tr>
+    <tr><td>URL / Email / Phone</td><td>A link, email address or phone number you can click.</td></tr>
+    <tr><td>Formula Date</td><td>Calculated, not typed: another date column (Release Date, Mfg Target, Sched. Install, a custom Date field&hellip;) plus or minus a number of days, working days or weeks.</td></tr>
+  </table>
+  <ul>
+    <li><strong>+ Add another</strong> lines up several fields at once; <strong>Done</strong> adds them to the current
+    view. Add them to other views from <strong>Fields</strong>.</li>
+    <li><strong>Fill them in</strong> by clicking the cell in the list (Enter or clicking away saves, Esc cancels), or in
+    the job's panel under <strong>Custom fields</strong>.</li>
+    <li>Custom fields sort, filter (select fields offer their options) and group like any other column.</li>
+    <li><strong>Change or remove a field</strong>: <strong>Fields</strong> &rarr; the ✎ next to it &mdash; rename it, add /
+    rename / remove options and pick their colours, change a formula, or delete the field for everyone.</li>
+  </ul>
   <p>The other tracking columns (vendor, expeditor, date to Admin&hellip;) are <strong>read-only for now</strong>;
-  editing them, custom fields, the full lifecycle stepper and the Service stepper are next.</p>
+  editing them, the full lifecycle stepper and the Service stepper are next.</p>
 
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
@@ -1123,6 +1144,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs: custom fields</strong> &mdash; editors add their own shared columns to the job list from <em>Fields &rarr; + Add field</em>, with the same 12 types as the LNI Production Scheduler: Text, Long text, Number, Currency, Date, Checkbox, Single Select, Multi Select, URL, Email, Phone and Formula Date (another date plus or minus days, working days or weeks). Fill them in right in the list or in the job's panel; edit or delete a field with ✎ in Fields. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: BC-filled columns, status automation and target dates</strong> &mdash; Name (ship-to customer, renamable), Sales, Region, Location, Order Date (= release date), Value (Sales Order amount) and a new Remaining Balance now come from Business Central. Changing a job's <strong>Current Status</strong> completes the stepper steps it implies and stamps Date to Hold / Date off Hold; new <strong>DOH</strong> and <strong>Actual DIP</strong> columns, and <strong>Match steppers</strong> to catch up existing jobs. New <strong>Mfg Target</strong>, <strong>Install Target</strong> and <strong>Mfg Final</strong> dates from editable <strong>lead-time rules</strong> (Settings &rarr; Lead times). <strong>Material Cut</strong> and <strong>Crating</strong> are now stepper steps (BC Substrate Cut/Prep and Crating); Crating is added automatically from crating labor. See &sect;5.4, &sect;5.5, &sect;5.14 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Job Queue groups by BC step, and Sync to BC</strong> &mdash; the Job Queue now opens with <em>From BC steps</em>: a group per Project Planning step (Fabrication, Routing, Painting, Vinyl, Final Assembly; Ready for Install on the install boards) listing the jobs active in it, ready to drag onto the calendar. New <strong>Sync to BC</strong> button on Jobs sends every tracked job's current stepper status (and scheduled dates / assignee) to BC in one go. See &sect;5.8 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>New: Jobs (preview)</strong> &mdash; a job list that is replacing the Airtable Production Schedule / Expeditor sheet. Every open BC job appears automatically with its tracking details, Current Status, DIP and stepper, with Airtable-style views, filters, sorting and grouping. Click a job to open it: the same stepper and Install Dates as the boards' job card, so a change here updates the boards and BC. Tracking columns are read-only for now; Admin / Ops / Developer. See &sect;5.17.</td></tr>
@@ -1209,7 +1231,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.14 · Sep 30, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.15 · Sep 30, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

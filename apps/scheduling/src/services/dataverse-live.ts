@@ -51,6 +51,7 @@ import type { JobSchedule } from "./job-schedule-data";
 import type { BillingPeriodRow } from "./billing-periods";
 import { sharePointCustomer, type BcJobSummary, type JobTrack } from "./job-tracking";
 import type { LeadTimeRule } from "./lead-times";
+import type { CustomFieldDef, CustomValues } from "./custom-fields";
 import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
 import {
@@ -1951,8 +1952,20 @@ export async function fetchJobTracks(): Promise<JobTrack[]> {
       notes: s(r.crfdf_notes),
       legacyStatus: s(r.crfdf_legacystatus),
       legacyProcess: s(r.crfdf_legacyprocess),
+      customValues: parseJsonObject(r.crfdf_customvalues),
     }))
     .filter((t) => t.jobNo);
+}
+
+/** A JSON object column, or {} when blank / not JSON / not an object. */
+function parseJsonObject(v: unknown): Record<string, unknown> {
+  if (typeof v !== "string" || !v.trim()) return {};
+  try {
+    const o = JSON.parse(v) as unknown;
+    return o && typeof o === "object" && !Array.isArray(o) ? (o as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 // crfdf_salesorderamount is added by scripts/add-jobs-name-value-columns.ps1;
@@ -2106,6 +2119,94 @@ export async function saveLeadTimeRules(rules: readonly LeadTimeRule[]): Promise
     }
   }
   return saved;
+}
+
+// ---------------------------------------------------------------------------
+// Custom fields — definitions in crfdf_jobfield (one row per field, its options
+// / colours / formula in crfdf_config JSON), values in crfdf_jobtrack.
+// crfdf_customvalues (JSON keyed by field). Created by
+// scripts/create-customfield-schema.ps1. Rules live in services/custom-fields.ts.
+// ---------------------------------------------------------------------------
+const JOBFIELD_SET = "crfdf_jobfields";
+
+/** Every custom field, in column order. Throws when the table doesn't exist yet. */
+export async function fetchCustomFieldDefs(): Promise<CustomFieldDef[]> {
+  const rows = await list(JOBFIELD_SET, {
+    select: "crfdf_jobfieldid,crfdf_name,crfdf_fieldkey,crfdf_type,crfdf_width,crfdf_config,crfdf_sortorder",
+  });
+  return rows
+    .map((r) => {
+      const cfg = parseJsonObject(r.crfdf_config);
+      return {
+        order: n(r.crfdf_sortorder),
+        def: {
+          key: s(r.crfdf_fieldkey),
+          label: s(r.crfdf_name),
+          type: s(r.crfdf_type, "text") as CustomFieldDef["type"],
+          width: n(r.crfdf_width, 150),
+          ...(Array.isArray(cfg.opts) ? { opts: cfg.opts as string[] } : {}),
+          ...(cfg.optColors && typeof cfg.optColors === "object" ? { optColors: cfg.optColors as Record<string, string> } : {}),
+          ...(cfg.formula && typeof cfg.formula === "object" ? { formula: cfg.formula as CustomFieldDef["formula"] } : {}),
+        } satisfies CustomFieldDef,
+      };
+    })
+    .filter((x) => x.def.key)
+    .sort((a, b) => a.order - b.order)
+    .map((x) => x.def);
+}
+
+/** Create or update one field definition (keyed by crfdf_fieldkey). */
+export async function saveCustomFieldDef(def: CustomFieldDef, order: number): Promise<void> {
+  const rec: Row = {
+    crfdf_name: def.label || "Field",
+    crfdf_fieldkey: def.key,
+    crfdf_type: def.type,
+    crfdf_width: Math.round(def.width),
+    crfdf_config: JSON.stringify({ opts: def.opts, optColors: def.optColors, formula: def.formula }),
+    crfdf_sortorder: order,
+  };
+  const existing = await list(JOBFIELD_SET, { select: "crfdf_jobfieldid", filter: `crfdf_fieldkey eq '${odataLit(def.key)}'` });
+  const res = existing[0]
+    ? await dvUpdate(JOBFIELD_SET, s(existing[0].crfdf_jobfieldid), rec)
+    : await dvCreate(JOBFIELD_SET, { crfdf_jobfieldid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "saveCustomFieldDef failed");
+}
+
+/** Delete a field definition. Its values stay in the jobs' JSON, unused. */
+export async function deleteCustomFieldDef(key: string): Promise<void> {
+  const existing = await list(JOBFIELD_SET, { select: "crfdf_jobfieldid", filter: `crfdf_fieldkey eq '${odataLit(key)}'` });
+  for (const r of existing) {
+    const res = await dvDelete(JOBFIELD_SET, s(r.crfdf_jobfieldid));
+    if (!res.success) throw new Error(res.error?.message ?? "deleteCustomFieldDef failed");
+  }
+}
+
+/**
+ * Set one custom value on a job. Re-reads the job's values first and merges
+ * just this field, so two people editing different fields of the same job
+ * don't overwrite each other. Creates the tracking row for an untracked job.
+ * Returns the row id.
+ */
+export async function saveJobCustomValue(jobNo: string, key: string, value: unknown): Promise<string> {
+  const existing = await list(JOBTRACK_SET, {
+    select: "crfdf_jobtrackid,crfdf_customvalues",
+    filter: `crfdf_jobno eq '${odataLit(jobNo)}'`,
+  });
+  const row = existing[0];
+  const vals: CustomValues = row ? parseJsonObject(row.crfdf_customvalues) : {};
+  if (value == null || (Array.isArray(value) && value.length === 0)) delete vals[key];
+  else vals[key] = value;
+  const json = JSON.stringify(vals);
+  if (row) {
+    const id = s(row.crfdf_jobtrackid);
+    const res = await dvUpdate(JOBTRACK_SET, id, { crfdf_customvalues: json });
+    if (!res.success) throw new Error(res.error?.message ?? "saveJobCustomValue failed");
+    return id;
+  }
+  const id = uuid();
+  const res = await dvCreate(JOBTRACK_SET, { crfdf_jobtrackid: id, crfdf_jobno: jobNo, crfdf_name: jobNo, crfdf_customvalues: json });
+  if (!res.success) throw new Error(res.error?.message ?? "saveJobCustomValue failed");
+  return id;
 }
 
 /** Upsert one month (keyed by crfdf_month). */

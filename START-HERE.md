@@ -215,13 +215,18 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Sep 30, 2026) — Jobs list stages 1–3 shipped; next is
-  STAGE 4: custom fields** (like the LNI Production Scheduler app at
-  `C:\Users\Alex\Documents\LNI-ProductionSchedule` — `src/types/schema.ts`
-  CustomFieldType, `useCustomFields`, `FieldManager`, `FieldEditPanel`). 12
-  types: Text, Long text, Number, Currency, Date, Checkbox, Single Select,
-  Multi Select, URL, Email, Phone, Formula Date. Shared in Dataverse
-  (definitions + per-job values).
+- **📌 RESUME HERE (Sep 30, 2026) — Jobs list stages 1–4 shipped.** Next:
+  editing the other tracking columns (vendor, expeditor, date to Admin…), the
+  lifecycle + Service steppers, BC job "complete" at Complete to Admin.
+  - **Stage 4 (done): custom fields** — `services/custom-fields.ts` (12 types
+    incl. Formula Date = base date ± days / working days / weeks),
+    `store/custom-field-store.ts`, `components/jobs/CustomFieldDialogs.tsx`
+    (Add fields / Edit field), `CustomValueEditor.tsx` (inline grid + panel).
+    Defs in `crfdf_jobfield` (config JSON), values in
+    `crfdf_jobtrack.crfdf_customvalues` (JSON; saves re-read + merge one key).
+    Values ride on each row under the `cf_…` key (`withCustomFields`), so
+    filter / sort / group just work; saved views keep `cf_` keys.
+    Schema: `scripts/create-customfield-schema.ps1` (run Sep 30).
   - **Stage 1 (done):** Name = BC ship-to (fallback: SharePoint customer
     folder; `crfdf_jobtrack.crfdf_jobname` manual rename). Sales initials /
     Region from `services/sales-pm.ts` (NEK = QTOTTA, SPOPPELREITER,

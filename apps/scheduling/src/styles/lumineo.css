@@ -5461,3 +5461,128 @@ input.lead-times__weeks { width: 64px; }
   margin-left: 4px;
 }
 
+
+/* ── Jobs: custom fields ─────────────────────────────────────────────────── */
+.jobs-badge--opt { margin-right: 4px; }
+.jobs-link { color: var(--lumineo-navy); text-decoration: underline; }
+.jobs-grid td.jobs-cell--editable { cursor: text; }
+.jobs-grid td.jobs-cell--editable:hover { box-shadow: inset 0 0 0 1px var(--border); }
+.jobs-grid td.jobs-cell--editing { overflow: visible; position: relative; z-index: 2; padding: 0 4px; }
+.jobs-cell__editor { position: relative; }
+.jobs-cell__editor .cf-edit__area {
+  position: absolute;
+  top: -14px;
+  left: 0;
+  width: max(100%, 240px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.cf-edit__input { width: 100%; min-width: 0; height: 30px; font-size: 12px; }
+textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-family: inherit; }
+.cf-edit__check { width: 16px; height: 16px; cursor: pointer; }
+.cf-edit__multi { display: flex; flex-wrap: wrap; gap: 4px; }
+.cf-edit__multi--pop {
+  position: absolute;
+  top: -14px;
+  left: 0;
+  min-width: max(100%, 220px);
+  max-width: 320px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.cf-edit__opt {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+.jobs-fields__name { flex: 1; min-width: 0; }
+.jobs-fields__custom { font-size: 10px; color: var(--text-tertiary); }
+.jobs-fields__edit {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.jobs-fields__edit:hover { color: var(--lumineo-navy); }
+
+.cf-panel { display: flex; flex-direction: column; gap: 6px; }
+.cf-panel__row { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: center; font-size: 12px; }
+.cf-panel__label { color: var(--text-secondary); font-weight: 600; }
+.cf-panel__value { min-width: 0; color: var(--text-primary); }
+
+.slide-over__panel.cf-dialog { width: min(440px, 100vw); }
+.cf-dialog__body { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.cf-dialog__label {
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.cf-dialog__types { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cf-dialog__type-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.cf-dialog__type-btn:hover { background: var(--bg-tertiary); }
+.cf-dialog__type-btn--on,
+.cf-dialog__type-btn--on:hover { background: var(--lumineo-navy); border-color: var(--lumineo-navy); color: #fff; }
+.cf-dialog__type-icon { width: 24px; font-weight: 700; text-align: center; }
+.cf-dialog__type { font-size: 11px; font-weight: 500; color: var(--text-tertiary); margin-left: 6px; }
+.cf-dialog__staged { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.cf-dialog__staged-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0; }
+.cf-dialog__staged-name { flex: 1; font-weight: 600; }
+.cf-dialog__icon { width: 22px; text-align: center; color: var(--text-secondary); }
+.cf-dialog__opt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cf-dialog__opt .form-field__input { flex: 1; min-width: 120px; }
+.cf-dialog__swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+.cf-dialog__palette { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; padding: 2px 0 4px 28px; }
+.cf-dialog__formula { display: flex; gap: 8px; }
+.cf-dialog__formula input { width: 90px; }
+.cf-dialog__hint { font-size: 11px; color: var(--text-tertiary); }
+.cf-dialog__danger {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.cf-dialog__delete {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--lumineo-red);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}

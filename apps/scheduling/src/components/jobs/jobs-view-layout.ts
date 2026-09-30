@@ -57,7 +57,8 @@ export function sanitizeLayout(raw: unknown, knownFields: ReadonlySet<string>): 
   const views: Record<string, ViewDef> = {};
   for (const [id, v] of Object.entries(l.views)) {
     if (!v || typeof v.name !== "string" || !Array.isArray(v.cols)) continue;
-    const cols = v.cols.filter((c) => knownFields.has(c));
+    // Custom field keys ("cf_…") are kept even before the fields have loaded.
+    const cols = v.cols.filter((c) => knownFields.has(c) || c.startsWith("cf_"));
     views[id] = { ...v, id, cols: cols.includes("job") ? cols : ["job", ...cols] };
   }
   const seen = new Set<string>();

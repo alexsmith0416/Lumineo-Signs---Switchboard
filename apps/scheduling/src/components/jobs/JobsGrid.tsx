@@ -5,6 +5,8 @@ import type { JobRow } from "../../services/job-tracking";
 import DepartmentStepper from "../DepartmentStepper";
 import { useJobSteps } from "../../hooks/useJobSteps";
 import { BADGE_COLORS, JOB_FIELDS, badgeColor, type JobFieldDef } from "./jobs-fields";
+import { contrastText, linkFor, optionColor, type CustomFieldDef } from "../../services/custom-fields";
+import CustomValueEditor from "./CustomValueEditor";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type SortCriterion } from "./jobs-grid-state";
 
 const ROW_H = 40;
@@ -20,8 +22,33 @@ export function JobBadge({ field, value }: { field: string; value: string }) {
   );
 }
 
-/** Read-only virtualised Jobs grid (Phase 1). Ported in spirit from the
- *  Airtable recreation app's Grid.tsx — same grouping / sorting / resizing. */
+/** A custom Single / Multi Select value as coloured option badges. */
+export function OptionBadges({ def, value }: { def: CustomFieldDef; value: string }) {
+  const opts = value.split(",").map((v) => v.trim()).filter(Boolean);
+  return (
+    <>
+      {opts.map((o) => {
+        const bg = optionColor(def, o);
+        return (
+          <span key={o} className="jobs-badge jobs-badge--opt" style={{ background: bg, color: contrastText(bg) }}>
+            {o}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** Custom-field editing for the grid: which cell is open, the raw values, the save. */
+export interface GridEditing {
+  canEdit: boolean;
+  valuesFor: (jobNo: string) => Record<string, unknown> | undefined;
+  onSave: (jobNo: string, key: string, value: unknown) => void;
+}
+
+/** Virtualised Jobs grid. Ported in spirit from the Airtable recreation app's
+ *  Grid.tsx — same grouping / sorting / resizing. Built-in columns are read-only
+ *  (click a row to open the job); editors edit custom-field cells in place. */
 export default function JobsGrid({
   rows,
   cols,
@@ -32,6 +59,8 @@ export default function JobsGrid({
   widths,
   onWidths,
   collapseSignal,
+  fieldsByKey,
+  editing,
 }: {
   rows: JobRow[];
   cols: JobFieldDef[];
@@ -45,9 +74,15 @@ export default function JobsGrid({
   onWidths: (next: Record<string, number>) => void;
   /** Bump .n to collapse (all=true) or expand (all=false) every group. */
   collapseSignal: { n: number; all: boolean };
+  /** Every field by key (built-in + custom), for group headers. */
+  fieldsByKey?: ReadonlyMap<string, JobFieldDef>;
+  editing?: GridEditing;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // The custom-field cell being edited: `${jobNo}\u0000${fieldKey}`.
+  const [openCell, setOpenCell] = useState<string | null>(null);
+  const closeCell = useCallback(() => setOpenCell(null), []);
   // Live width while dragging; committed to the shared widths on mouse-up.
   const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
   const widthOf = (key: string, fallback: number) => (dragging?.key === key ? dragging.w : widths[key] ?? fallback);
@@ -161,21 +196,39 @@ export default function JobsGrid({
             if (item.kind === "header") {
               const n = item.node;
               const isCollapsed = collapsed.has(n.path);
-              const def = JOB_FIELDS[n.field];
+              const def = fieldsByKey?.get(n.field) ?? JOB_FIELDS[n.field];
               return (
                 <tr key={`g:${n.path}`} className={`jobs-group jobs-group--d${n.depth}`} onClick={() => toggle(n.path)}>
                   <td colSpan={cols.length}>
                     <div className="jobs-group__inner" style={{ paddingLeft: 8 + n.depth * 20 }}>
                       <span className={`jobs-group__chev${isCollapsed ? " jobs-group__chev--closed" : ""}`}>▾</span>
                       <span className="jobs-group__field">{def?.label ?? n.field}</span>
-                      {def?.type === "badge" ? <JobBadge field={n.field} value={n.key} /> : <span className="jobs-group__value">{n.key}</span>}
+                      {def?.type === "badge" ? (
+                        <JobBadge field={n.field} value={n.key} />
+                      ) : def?.custom && def.type === "select" && n.key !== "—" ? (
+                        <OptionBadges def={def.custom} value={n.key} />
+                      ) : (
+                        <span className="jobs-group__value">{n.key}</span>
+                      )}
                       <span className="jobs-group__count">{n.count}</span>
                     </div>
                   </td>
                 </tr>
               );
             }
-            return <JobGridRow key={item.row.id} row={item.row} cols={cols} onOpen={onOpen} />;
+            const prefix = `${item.row.jobNo}\u0000`;
+            return (
+              <JobGridRow
+                key={item.row.id}
+                row={item.row}
+                cols={cols}
+                onOpen={onOpen}
+                openKey={openCell?.startsWith(prefix) ? openCell.slice(prefix.length) : null}
+                onOpenCell={setOpenCell}
+                onCloseCell={closeCell}
+                editing={editing}
+              />
+            );
           })}
           {padBot > 0 && (
             <tr aria-hidden="true">
@@ -189,14 +242,66 @@ export default function JobsGrid({
   );
 }
 
-const JobGridRow = memo(function JobGridRow({ row, cols, onOpen }: { row: JobRow; cols: JobFieldDef[]; onOpen: (row: JobRow) => void }) {
+const JobGridRow = memo(function JobGridRow({
+  row,
+  cols,
+  onOpen,
+  openKey,
+  onOpenCell,
+  onCloseCell,
+  editing,
+}: {
+  row: JobRow;
+  cols: JobFieldDef[];
+  onOpen: (row: JobRow) => void;
+  /** The custom field key being edited in this row, if any. */
+  openKey: string | null;
+  onOpenCell: (cell: string) => void;
+  onCloseCell: () => void;
+  editing?: GridEditing;
+}) {
   return (
     <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`} onClick={() => onOpen(row)}>
-      {cols.map((c) => (
-        <td key={c.key} className={c.key === "job" ? "jobs-cell--primary" : undefined}>
-          <Cell row={row} def={c} />
-        </td>
-      ))}
+      {cols.map((c) => {
+        const cf = c.custom;
+        const editable = !!cf && !!editing?.canEdit && cf.type !== "formula-date";
+        const isOpen = editable && openKey === c.key;
+        const cls = [
+          c.key === "job" ? "jobs-cell--primary" : "",
+          editable ? "jobs-cell--editable" : "",
+          isOpen ? "jobs-cell--editing" : "",
+        ].filter(Boolean).join(" ");
+        return (
+          <td
+            key={c.key}
+            className={cls || undefined}
+            onClick={
+              editable
+                ? (e) => {
+                    e.stopPropagation();
+                    if (cf.type === "bool") {
+                      editing!.onSave(row.jobNo, cf.key, !(editing!.valuesFor(row.jobNo)?.[cf.key] === true));
+                    } else if (!isOpen) onOpenCell(`${row.jobNo}\u0000${c.key}`);
+                  }
+                : undefined
+            }
+          >
+            {isOpen ? (
+              <div className="jobs-cell__editor">
+                <CustomValueEditor
+                  inline
+                  def={cf}
+                  value={editing!.valuesFor(row.jobNo)?.[cf.key]}
+                  onSave={(v) => editing!.onSave(row.jobNo, cf.key, v)}
+                  onDone={onCloseCell}
+                />
+              </div>
+            ) : (
+              <Cell row={row} def={c} />
+            )}
+          </td>
+        );
+      })}
     </tr>
   );
 });
@@ -226,6 +331,28 @@ function Cell({ row, def }: { row: JobRow; def: JobFieldDef }) {
     }
     case "bool":
       return v ? <span className="jobs-check" aria-label="Yes">✓</span> : null;
+    case "number":
+      return <span className="jobs-num">{typeof v === "number" ? v.toLocaleString("en-US") : ""}</span>;
+    case "select":
+      return def.custom ? <OptionBadges def={def.custom} value={String(v ?? "")} /> : null;
+    case "link": {
+      const s = String(v ?? "");
+      const href = def.custom ? linkFor(def.custom.type, s) : "";
+      return href ? (
+        <a
+          className="jobs-link"
+          href={href}
+          target={def.custom?.type === "url" ? "_blank" : undefined}
+          rel="noreferrer"
+          title={s}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {s}
+        </a>
+      ) : (
+        <span>{s}</span>
+      );
+    }
     default: {
       const s = String(v ?? "");
       return (

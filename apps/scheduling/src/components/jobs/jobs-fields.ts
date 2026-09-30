@@ -3,16 +3,36 @@
 // viewConfigs.ts) and adapted to JobRow (services/job-tracking.ts). The "/" "X"
 // department columns are gone: the Stepper column replaces them.
 import type { JobRow } from "../../services/job-tracking";
+import type { CustomFieldDef } from "../../services/custom-fields";
 
-export type JobFieldType = "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper";
+export type JobFieldType =
+  | "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper"
+  // custom fields
+  | "number" | "select" | "link";
 
 export interface JobFieldDef {
-  key: keyof JobRow | "stepper";
+  /** A JobRow key, "stepper", or a custom field's "cf_…" key. */
+  key: keyof JobRow | "stepper" | (string & {});
   label: string;
   type: JobFieldType;
   width: number;
   /** Only shown to roles that may see $ values. */
   money?: boolean;
+  /** Set on custom fields. */
+  custom?: CustomFieldDef;
+}
+
+/** A custom field as a Jobs column. */
+export function customColumn(def: CustomFieldDef): JobFieldDef {
+  const type: JobFieldType =
+    def.type === "select" || def.type === "multiselect"
+      ? "select"
+      : def.type === "url" || def.type === "email" || def.type === "phone"
+        ? "link"
+        : def.type === "formula-date"
+          ? "date"
+          : def.type;
+  return { key: def.key, label: def.label, type, width: def.width, custom: def };
 }
 
 const F = (key: JobFieldDef["key"], label: string, type: JobFieldType, width: number, money = false): JobFieldDef => ({

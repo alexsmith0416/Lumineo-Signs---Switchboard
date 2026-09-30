@@ -59,6 +59,8 @@ export interface JobTrack {
   notes: string;
   legacyStatus: string;
   legacyProcess: string;
+  /** Custom field values, keyed by field key (services/custom-fields.ts). */
+  customValues?: Record<string, unknown>;
 }
 
 /** A tracking row with nothing filled in yet. */
