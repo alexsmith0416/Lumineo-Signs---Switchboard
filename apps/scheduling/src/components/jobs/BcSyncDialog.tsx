@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FullSyncPlan } from "../../services/bc-full-sync";
 import { planBcSync, sendBcSync } from "../../store/bc-full-sync-run";
+import { ensureJobsLoaded, useJobTrackingStore } from "../../store/job-tracking-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -15,13 +16,12 @@ type Phase =
  * "Sync to BC": works out what BC Project Planning should say for every tracked
  * job — Started / Complete from the stepper, dates + assignee only for steps on
  * the calendar — shows what would change, and queues it on confirm. The
- * BCPush_PlanningSteps flow then writes it to BC.
+ * BCPush_PlanningSteps flow then writes it to BC. Opened from Settings →
+ * Business Central; it loads the tracked jobs itself.
  */
-export default function BcSyncDialog({ jobNos, onClose }: { jobNos: string[]; onClose: () => void }) {
+export default function BcSyncDialog({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: "planning" });
-  // The job list as it was when the dialog opened — the parent rebuilds its
-  // array on every render, and a re-plan mid-dialog would reset the count.
-  const [jobs] = useState(jobNos);
+  const [jobCount, setJobCount] = useState(0);
 
   useEffect(() => {
     if (!LIVE) {
@@ -29,13 +29,19 @@ export default function BcSyncDialog({ jobNos, onClose }: { jobNos: string[]; on
       return;
     }
     let alive = true;
-    planBcSync(jobs)
+    (async () => {
+      await ensureJobsLoaded();
+      // The tracked jobs as they are now — a re-plan mid-dialog would reset the count.
+      const jobs = useJobTrackingStore.getState().tracks.map((t) => t.jobNo);
+      if (alive) setJobCount(jobs.length);
+      return planBcSync(jobs);
+    })()
       .then((plan) => alive && setPhase({ kind: "ready", plan }))
       .catch((e) => alive && setPhase({ kind: "error", message: e instanceof Error ? e.message : String(e) }));
     return () => {
       alive = false;
     };
-  }, [jobs]);
+  }, []);
 
   const send = async (plan: FullSyncPlan) => {
     setPhase({ kind: "sending", plan, done: 0 });
@@ -49,7 +55,7 @@ export default function BcSyncDialog({ jobNos, onClose }: { jobNos: string[]; on
       <div className="slide-over__panel" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">Sync to Business Central</div>
         <div className="slide-over__body jobs-sync">
-          {phase.kind === "planning" && <p>Comparing {jobs.length.toLocaleString()} tracked jobs with what BC was last sent…</p>}
+          {phase.kind === "planning" && <p>Comparing {jobCount ? `${jobCount.toLocaleString()} tracked jobs` : "the tracked jobs"} with what BC was last sent…</p>}
           {phase.kind === "ready" && (
             phase.plan.pushes.length === 0 ? (
               <p>BC is already up to date — nothing to send.</p>

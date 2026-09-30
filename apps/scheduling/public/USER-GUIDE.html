@@ -745,6 +745,7 @@
     <tr><td>Day hours on hover</td><td>Shows the scheduled-hours pill when you hover a day on someone's row (<em>"6h of 8h · 2h open"</em>). Turn it off for a clean board while dragging cards, or on a wall display. On by default. Doesn't affect the job-card hover preview, which is separate.</td></tr>
     <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Periods</strong> to open the month list. Each month has a <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
     <tr><td>Lead times <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Lead Times</strong>. Sets how many weeks after release a job's <strong>Mfg Target</strong> and <strong>Install Target</strong> fall (default <strong>7</strong> and <strong>10</strong> weeks). Add a rule per combination of steps: name it, pick <em>Only these steps</em> (the job's production steps are all in the rule &mdash; e.g. only Material Cut + Vinyl) or <em>Includes these steps</em> (the job has every one of them, plus maybe others), click the steps, and enter the Mfg and Install weeks. Rules are checked top to bottom (&uarr; &darr; to reorder); the first match wins. Click <strong>Save</strong>. The rules drive the Jobs list and the target dates on every job card.</td></tr>
+    <tr><td>Business Central <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Catch-up tools &mdash; everyday changes (completing a department, a status change, moving a card) already reach BC as you make them. <strong>Match Steppers</strong> completes the stepper steps each job's Current Status says are done (every step for the Complete statuses, the production steps for the Installation statuses); it shows the counts first and changes nothing until you click <strong>Update</strong>. <strong>Sync to BC</strong> brings BC's Project Planning in line with the steppers for every tracked job: <strong>active</strong> departments are marked <strong>Started</strong> (which lists the job in BC's step tiles), finished ones <strong>Complete</strong>, and dates / Assigned To go only to steps on the calendar. It shows how many updates it would send first; only what changed since BC was last updated is sent, and BC receives them over the next while. Run Match Steppers first, then Sync to BC.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
   </table>
 
@@ -916,12 +917,6 @@
     replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
     view. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
-    <li><strong>Sync to BC</strong> (editors) &mdash; brings Business Central's Project Planning in line with the
-    steppers for every tracked job in one go: each job's <strong>active</strong> department(s) are marked
-    <strong>Started</strong> (which is what lists it in BC's step tiles), finished ones <strong>Complete</strong>, and
-    <strong>dates and Assigned To</strong> go only to steps that are on the calendar. It first shows how many updates
-    it would send and asks you to confirm; only what changed since BC was last updated is sent, so running it again
-    later is quick. Everyday changes already reach BC as you make them &mdash; this is the catch-up.</li>
     <li><strong>Click a job</strong> to open it: its tracking details, <strong>where it sits on the Production,
     Installation and Shipping boards</strong>, and the same <strong>production stepper</strong> and <strong>Install
     Dates</strong> as the job card on the boards. It's one system &mdash; completing a department or changing a date
@@ -941,9 +936,8 @@
     Hold</strong>. A later hold starts a new one, and DOH keeps counting the earlier holds' days.</li>
     <li>The steps it completes reach BC exactly like completing them on the stepper.</li>
   </ul>
-  <p><strong>Match steppers</strong> (editors, next to Sync to BC) catches up jobs that were already in one of those
-  statuses: it shows how many jobs and steps it would complete, and only changes them when you click
-  <strong>Update</strong>. Run <strong>Sync to BC</strong> afterwards to send the new states to BC.</p>
+  <p>To catch up jobs that were already in one of those statuses, use <strong>Match Steppers</strong> in
+  <strong>Settings &rarr; Business Central</strong> (&sect;5.14).</p>
   <h4>Custom fields</h4>
   <p>Editors can add their own columns to the job list &mdash; shared with everyone, like the fields in the LNI
   Production Scheduler. Open <strong>Fields &rarr; + Add field</strong>, type a name, and pick a type:</p>
@@ -1144,6 +1138,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Sync to BC and Match Steppers moved to Settings</strong> &mdash; they're occasional catch-up tools (everyday changes reach BC on their own), so they now live in <em>Settings &rarr; Business Central</em> instead of the Jobs toolbar. See &sect;5.14.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: custom fields</strong> &mdash; editors add their own shared columns to the job list from <em>Fields &rarr; + Add field</em>, with the same 12 types as the LNI Production Scheduler: Text, Long text, Number, Currency, Date, Checkbox, Single Select, Multi Select, URL, Email, Phone and Formula Date (another date plus or minus days, working days or weeks). Fill them in right in the list or in the job's panel; edit or delete a field with ✎ in Fields. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: BC-filled columns, status automation and target dates</strong> &mdash; Name (ship-to customer, renamable), Sales, Region, Location, Order Date (= release date), Value (Sales Order amount) and a new Remaining Balance now come from Business Central. Changing a job's <strong>Current Status</strong> completes the stepper steps it implies and stamps Date to Hold / Date off Hold; new <strong>DOH</strong> and <strong>Actual DIP</strong> columns, and <strong>Match steppers</strong> to catch up existing jobs. New <strong>Mfg Target</strong>, <strong>Install Target</strong> and <strong>Mfg Final</strong> dates from editable <strong>lead-time rules</strong> (Settings &rarr; Lead times). <strong>Material Cut</strong> and <strong>Crating</strong> are now stepper steps (BC Substrate Cut/Prep and Crating); Crating is added automatically from crating labor. See &sect;5.4, &sect;5.5, &sect;5.14 and &sect;5.17.</td></tr>
       <tr><td>Sep 29, 2026</td><td><strong>Job Queue groups by BC step, and Sync to BC</strong> &mdash; the Job Queue now opens with <em>From BC steps</em>: a group per Project Planning step (Fabrication, Routing, Painting, Vinyl, Final Assembly; Ready for Install on the install boards) listing the jobs active in it, ready to drag onto the calendar. New <strong>Sync to BC</strong> button on Jobs sends every tracked job's current stepper status (and scheduled dates / assignee) to BC in one go. See &sect;5.8 and &sect;5.17.</td></tr>

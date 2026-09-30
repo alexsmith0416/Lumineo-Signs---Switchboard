@@ -170,3 +170,24 @@ async function jobSteps(jobNo: string) {
     useJobDeptOverrideStore.getState().byJob[jobNo] ?? {},
   );
 }
+
+/** Load the jobs if needed and wait until they're in (also when a load is
+ *  already running) — for screens outside Jobs, e.g. Settings → Business Central. */
+export async function ensureJobsLoaded(): Promise<void> {
+  const s = useJobTrackingStore.getState();
+  if (s.loaded && !s.loading) return;
+  void s.load();
+  await new Promise<void>((resolve) => {
+    const done = () => {
+      const st = useJobTrackingStore.getState();
+      return st.loaded && !st.loading;
+    };
+    if (done()) return resolve();
+    const unsub = useJobTrackingStore.subscribe(() => {
+      if (done()) {
+        unsub();
+        resolve();
+      }
+    });
+  });
+}

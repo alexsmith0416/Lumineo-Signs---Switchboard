@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { JobRow } from "../../services/job-tracking";
+import { currentStatus } from "../../services/job-tracking";
+import { ensureJobsLoaded, useJobTrackingStore } from "../../store/job-tracking-store";
 import { planStatusBackfill, type StatusBackfillItem } from "../../services/job-status";
 import { buildDepartmentSteps } from "../../services/production-steps";
 import { useJobDeptCompletionStore } from "../../store/job-dept-completion-store";
@@ -20,11 +21,10 @@ type Phase =
  * status get every stepper step completed, jobs in an Installation status get
  * their production steps completed. Shows the counts first. Writes the
  * completions only — BC is brought in line afterwards with "Sync to BC".
+ * Opened from Settings → Business Central; it loads the jobs itself.
  */
-export default function StatusBackfillDialog({ rows, onClose }: { rows: JobRow[]; onClose: () => void }) {
+export default function StatusBackfillDialog({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: "planning" });
-  // The rows as they were when the dialog opened (the parent rebuilds its array).
-  const [jobRows] = useState(rows);
   const { fullName, upn } = useCurrentUser();
   const by = `${fullName || upn || "Unknown"} (status backfill)`;
 
@@ -36,12 +36,20 @@ export default function StatusBackfillDialog({ rows, onClose }: { rows: JobRow[]
     let alive = true;
     (async () => {
       const dv = await import("../../services/dataverse-live");
-      await Promise.all([useJobDeptCompletionStore.getState().load(true), useJobDeptOverrideStore.getState().load(true)]);
+      await Promise.all([
+        ensureJobsLoaded(),
+        useJobDeptCompletionStore.getState().load(true),
+        useJobDeptOverrideStore.getState().load(true),
+      ]);
+      // Every BC job (only they have steppers) with its Current Status.
+      const { bcJobs, tracks } = useJobTrackingStore.getState();
+      const trackBy = new Map(tracks.map((t) => [t.jobNo, t]));
+      const jobs = bcJobs.map((j) => ({ jobNo: j.jobNo, status: currentStatus(trackBy.get(j.jobNo)).status }));
       const info = await dv.allJobStepInfo();
       const completions = useJobDeptCompletionStore.getState().byJob;
       const overrides = useJobDeptOverrideStore.getState().byJob;
       const plan = planStatusBackfill(
-        jobRows.filter((r) => r.inBc),
+        jobs,
         (jobNo) => {
           const i = info.get(jobNo) ?? { production: [], hasInstall: false };
           return buildDepartmentSteps(i.production, new Set(Object.keys(completions[jobNo] ?? {})), i.hasInstall, overrides[jobNo] ?? {});
@@ -52,7 +60,7 @@ export default function StatusBackfillDialog({ rows, onClose }: { rows: JobRow[]
     return () => {
       alive = false;
     };
-  }, [jobRows]);
+  }, []);
 
   const apply = async (plan: StatusBackfillItem[]) => {
     setPhase({ kind: "applying", plan, done: 0 });

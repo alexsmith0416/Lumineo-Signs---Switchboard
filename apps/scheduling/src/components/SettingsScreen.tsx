@@ -5,6 +5,7 @@ import { canEditBillingPeriods, isAdminLevel, useCurrentUser } from "../services
 import UsersAdminPanel from "./UsersAdminPanel";
 import BillingPeriodsSection from "./BillingPeriodsSection";
 import LeadTimesSection from "./LeadTimesSection";
+import BusinessCentralSection from "./BusinessCentralSection";
 
 /** App settings. Cascade/conflict behavior + Power Apps header visibility, plus
  *  the admin-only Users manager (tucked away here). */
@@ -171,6 +172,7 @@ export default function SettingsScreen() {
 
       {canEditBillingPeriods(realType) && <BillingPeriodsSection />}
       {canEditBillingPeriods(realType) && <LeadTimesSection />}
+      {canEditBillingPeriods(realType) && <BusinessCentralSection />}
 
       {isAdminLevel(realType) && (
         <div className="settings-section">
