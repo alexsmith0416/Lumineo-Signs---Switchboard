@@ -17,6 +17,7 @@ import { AddFieldsDialog, EditFieldDialog } from "./CustomFieldDialogs";
 import { BUILTIN_EDITS, localDate, trackValue } from "./jobs-editable";
 import { useCurrentUser } from "../../services/current-user";
 import { cleanPrefs, useJobsViewsStore } from "../../store/jobs-views-store";
+import { useSketchStore } from "../../store/sketch-store";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
@@ -77,6 +78,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const { fullName, upn } = useCurrentUser();
   const me = fullName || upn || "Unknown";
   const customDefs = useCustomFieldStore((s) => s.defs);
+  const sketches = useSketchStore((s) => s.byJob);
+  const loadSketches = useSketchStore((s) => s.load);
   const loadCustomDefs = useCustomFieldStore((s) => s.load);
   // Dates come from the SAME job-schedule store the boards' Install Dates use,
   // so an edit anywhere shows here at once (and here → the boards).
@@ -88,7 +91,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     void loadLeadRules();
     void loadDeptOverrides();
     void loadCustomDefs();
-  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs]);
+    void loadSketches();
+  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches]);
 
   const rows = useMemo(() => {
     const dates = new Map<string, JobScheduleDates>();
@@ -110,8 +114,10 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     // Custom field values ride on each row under the field's key, so search /
     // filter / sort / group treat them like any other column.
     const valuesByJob = new Map(tracks.map((t) => [t.jobNo, t.customValues]));
-    return withCustomFields(built, customDefs, (jobNo) => valuesByJob.get(jobNo));
-  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules, customDefs]);
+    // The sketch's file name rides on the row, so "Sketch is empty / not empty" filters work.
+    const withSketch = sketches.size ? built.map((r) => ({ ...r, sketch: sketches.get(r.jobNo)?.fileName ?? "" })) : built;
+    return withCustomFields(withSketch, customDefs, (jobNo) => valuesByJob.get(jobNo));
+  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules, customDefs, sketches]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -294,7 +300,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           </span>
           <span className="jobs-toolbar__spring" />
           <span className="jobs-toolbar__note">Click a job to open it</span>
-          <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); }} disabled={loading}>
+          <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); void loadSketches(true); }} disabled={loading}>
             Refresh
           </button>
         </div>

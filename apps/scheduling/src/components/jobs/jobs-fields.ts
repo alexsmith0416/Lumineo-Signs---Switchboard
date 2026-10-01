@@ -6,7 +6,7 @@ import type { JobRow } from "../../services/job-tracking";
 import type { CustomFieldDef } from "../../services/custom-fields";
 
 export type JobFieldType =
-  | "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper"
+  | "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper" | "sketch"
   // custom fields
   | "number" | "select" | "link";
 
@@ -44,6 +44,7 @@ export const JOB_FIELDS: Record<string, JobFieldDef> = Object.fromEntries(
     F("job", "Job # / Name", "text", 260),
     F("status", "Current Status", "badge", 190),
     F("stepper", "Stepper", "stepper", 190),
+    F("sketch", "Sketch", "sketch", 90),
     F("description", "Description", "multiline", 240),
     F("sales", "Sales", "badge", 80),
     F("location", "Location", "text", 120),
@@ -161,7 +162,7 @@ export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
     label: "Master",
     views: [
       { name: "All Jobs", defaultGroup: "status",
-        cols: ["job", "status", "stepper", "sales", "location", "region", "priority", "orderDate", "mfgFinalDate", "redDate", "scheduledInstall", "dip", "doh", "actualDip", "value", "remaining"] },
+        cols: ["job", "sketch", "status", "stepper", "sales", "location", "region", "priority", "orderDate", "mfgFinalDate", "redDate", "scheduledInstall", "dip", "doh", "actualDip", "value", "remaining"] },
       { name: "Not tracked yet", preset: "untracked",
         cols: ["job", "status", "description", "sales", "location", "value", "remaining"] },
     ],
@@ -181,7 +182,7 @@ export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
     label: "Individual",
     views: [
       { name: "WK Expeditor", defaultGroup: "status",
-        cols: ["job", "status", "stepper", "orderDate", "mfgTarget", "mfgTargetMod", "mfgFinalDate", "installTarget", "sales", "location", "region",
+        cols: ["job", "sketch", "status", "stepper", "orderDate", "mfgTarget", "mfgTargetMod", "mfgFinalDate", "installTarget", "sales", "location", "region",
           "description", "priority", "redDate", "releaseDate", "scheduledInstall", "notes", "powerlines", "holdReason", "dateToHold", "dateOffHold", "expeditor",
           "dateInstalled", "dateToAdmin", "dateInvoiced", "vendor", "po", "vendorStatus", "storageLocation", "vendorShipDate",
           "vendorShipDate2", "outsourcedArrival", "graphics", "routingType", "ulSign", "process", "mfgRegion", "installRegion",

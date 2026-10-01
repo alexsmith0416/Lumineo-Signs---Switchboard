@@ -4,9 +4,13 @@ import { format } from "date-fns";
 import type { JobRow } from "../../services/job-tracking";
 import DepartmentStepper from "../DepartmentStepper";
 import { useJobSteps } from "../../hooks/useJobSteps";
+import { useSketchStore } from "../../store/sketch-store";
 import { BADGE_COLORS, JOB_FIELDS, badgeColor, type JobFieldDef } from "./jobs-fields";
 import { contrastText, linkFor, optionColor, type CustomFieldDef } from "../../services/custom-fields";
 import CustomValueEditor from "./CustomValueEditor";
+import StepperPopover from "./StepperPopover";
+import { createPortal } from "react-dom";
+import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type SortCriterion } from "./jobs-grid-state";
 
 const ROW_H = 40;
@@ -98,6 +102,12 @@ export default function JobsGrid({
   // The custom-field cell being edited: `${jobNo}\u0000${fieldKey}`.
   const [openCell, setOpenCell] = useState<string | null>(null);
   const closeCell = useCallback(() => setOpenCell(null), []);
+  // The row whose stepper is open for editing, and where its cell is on screen.
+  const [stepperFor, setStepperFor] = useState<{ row: JobRow; rect: DOMRect } | null>(null);
+  const closeStepper = useCallback(() => setStepperFor(null), []);
+  // Right-click menu on a job's name: open it in BC / its SharePoint folder.
+  const [menu, setMenu] = useState<{ row: JobRow; x: number; y: number } | null>(null);
+  const openMenu = useCallback((row: JobRow, x: number, y: number) => setMenu({ row, x, y }), []);
   // Live width while dragging; committed to the shared widths on mouse-up.
   const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
   const widthOf = (key: string, fallback: number) =>
@@ -175,7 +185,7 @@ export default function JobsGrid({
           <tr>
             {cols.map((c) => {
               const si = sorts.findIndex((s) => s.field === c.key);
-              const sortable = c.type !== "stepper";
+              const sortable = c.type !== "stepper" && c.type !== "sketch";
               return (
                 <th
                   key={c.key}
@@ -245,6 +255,8 @@ export default function JobsGrid({
                 onOpenCell={setOpenCell}
                 onCloseCell={closeCell}
                 editing={editing}
+                onOpenStepper={editing?.canEdit ? setStepperFor : undefined}
+                onJobMenu={openMenu}
               />
             );
           })}
@@ -256,6 +268,16 @@ export default function JobsGrid({
         </tbody>
       </table>
       {rows.length === 0 && <div className="jobs-empty">No jobs match.</div>}
+      {menu && <JobLinksMenu row={menu.row} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
+      {stepperFor && (
+        <StepperPopover
+          jobNo={stepperFor.row.jobNo}
+          title={stepperFor.row.job}
+          anchor={stepperFor.rect}
+          scrollEl={wrapRef.current}
+          onClose={closeStepper}
+        />
+      )}
     </div>
   );
 }
@@ -268,6 +290,8 @@ const JobGridRow = memo(function JobGridRow({
   onOpenCell,
   onCloseCell,
   editing,
+  onOpenStepper,
+  onJobMenu,
 }: {
   row: JobRow;
   cols: JobFieldDef[];
@@ -277,10 +301,30 @@ const JobGridRow = memo(function JobGridRow({
   onOpenCell: (cell: string) => void;
   onCloseCell: () => void;
   editing?: GridEditing;
+  /** Editors: open this row's stepper for editing, under its cell. */
+  onOpenStepper?: (open: { row: JobRow; rect: DOMRect }) => void;
+  /** Right-click on the job name. */
+  onJobMenu?: (row: JobRow, x: number, y: number) => void;
 }) {
   return (
     <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`} onClick={() => onOpen(row)}>
       {cols.map((c) => {
+        // The stepper opens its own editor (StepperPopover).
+        if (c.type === "stepper" && onOpenStepper && row.inBc) {
+          return (
+            <td
+              key={c.key}
+              className="jobs-cell--editable jobs-cell--stepper"
+              title="Click to update the production stage"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenStepper({ row, rect: e.currentTarget.getBoundingClientRect() });
+              }}
+            >
+              <Cell row={row} def={c} />
+            </td>
+          );
+        }
         const cf = editing?.canEdit ? editing.editorFor(c) : null;
         const editable = !!cf && cf.type !== "formula-date";
         const isOpen = editable && openKey === c.key;
@@ -293,6 +337,14 @@ const JobGridRow = memo(function JobGridRow({
           <td
             key={c.key}
             className={cls || undefined}
+            onContextMenu={
+              c.key === "job" && onJobMenu && row.inBc
+                ? (e) => {
+                    e.preventDefault();
+                    onJobMenu(row, e.clientX, e.clientY);
+                  }
+                : undefined
+            }
             onClick={
               editable
                 ? (e) => {
@@ -326,6 +378,7 @@ const JobGridRow = memo(function JobGridRow({
 
 function Cell({ row, def }: { row: JobRow; def: JobFieldDef }) {
   if (def.type === "stepper") return <StepperCell jobNo={row.inBc ? row.jobNo : undefined} />;
+  if (def.type === "sketch") return <SketchCell jobNo={row.jobNo} />;
   const v = (row as unknown as Record<string, unknown>)[def.key];
   switch (def.type) {
     case "badge":
@@ -388,4 +441,91 @@ function StepperCell({ jobNo }: { jobNo: string | undefined }) {
   const { steps } = useJobSteps(jobNo);
   if (!steps.length) return null;
   return <DepartmentStepper steps={steps} size="sm" />;
+}
+
+/** Right-click menu on a job's name — the same links as a calendar card's menu. */
+function JobLinksMenu({ row, x, y, onClose }: { row: JobRow; x: number; y: number; onClose: () => void }) {
+  const go = (url: string) => {
+    window.open(url, "_blank", "noopener");
+    onClose();
+  };
+  // Portaled to <body>; stopPropagation keeps a click here from reaching the
+  // row (which would open the job) through React's component tree.
+  return createPortal(
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 300 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
+      />
+      <div
+        className="job-context-menu"
+        style={{ position: "fixed", top: Math.min(y, window.innerHeight - 120), left: Math.min(x, window.innerWidth - 220), zIndex: 301 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="job-context-menu__head">{row.jobNo}</div>
+        <button type="button" onClick={() => go(bcJobUrl(row.jobNo))}>
+          Open Project
+        </button>
+        <button type="button" onClick={() => go(row.sharepointUrl || sharepointJobUrl(row.jobNo))}>
+          Open SharePoint Folder
+        </button>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
+/** The job's sketch: a thumbnail that opens the file in SharePoint; a larger
+ *  preview on hover. Blank when the job has no sketch. */
+function SketchCell({ jobNo }: { jobNo: string }) {
+  const sketch = useSketchStore((s) => s.byJob.get(jobNo));
+  const thumb = useSketchStore((s) => s.thumbs.get(jobNo));
+  const wantThumb = useSketchStore((s) => s.wantThumb);
+  const [hover, setHover] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    if (sketch) wantThumb(jobNo);
+  }, [sketch, jobNo, wantThumb]);
+  if (!sketch) return null;
+  const open = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(sketch.fileUrl, "_blank", "noopener");
+  };
+  const isPdf = /\.pdf$/i.test(sketch.fileName);
+  return (
+    <>
+      <button
+        type="button"
+        className="jobs-sketch"
+        title={`${sketch.fileName} — click to open`}
+        onClick={open}
+        onMouseEnter={(e) => thumb && setHover(e.currentTarget.getBoundingClientRect())}
+        onMouseLeave={() => setHover(null)}
+      >
+        {thumb ? <img src={thumb} alt={sketch.fileName} /> : <span className="jobs-sketch__file">{isPdf ? "PDF" : "FILE"}</span>}
+      </button>
+      {hover &&
+        thumb &&
+        createPortal(
+          <div
+            className="jobs-sketch-preview"
+            style={{
+              top: Math.max(8, Math.min(hover.top - 60, window.innerHeight - 268)),
+              left: hover.right + 8 + 330 > window.innerWidth ? hover.left - 338 : hover.right + 8,
+            }}
+          >
+            <img src={thumb} alt="" />
+            <div className="jobs-sketch-preview__name">{sketch.fileName}</div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
 }

@@ -88,6 +88,8 @@ export interface BcJobSummary {
   /** The customer folder in the job's SharePoint URL — the name fallback for
    *  jobs BC synced with no customer name. */
   folderName?: string;
+  /** The job's SharePoint folder (crfdf_sharepointurl), "" when BC has none. */
+  sharepointUrl?: string;
   /** The Sales Order amount (excl. tax), null until the sync has it. */
   orderAmount?: number | null;
   /** BC's order-release date ("YYYY-MM-DD" or ""). */
@@ -111,6 +113,10 @@ export interface JobRow {
   name: string;
   /** The name the job gets when it isn't renamed (BC's ship-to customer). */
   defaultName: string;
+  /** The job's SharePoint folder, "" when BC has none. */
+  sharepointUrl: string;
+  /** The sketch's file name ("" = none) — filled in by the Jobs view from the sketch store. */
+  sketch?: string;
   /** "J39571 McPherson CVB" — the primary column. */
   job: string;
   status: string;
@@ -270,6 +276,7 @@ export function buildJobRows(
       jobNo,
       name,
       defaultName,
+      sharepointUrl: bc?.sharepointUrl ?? "",
       job: name ? `${jobNo} ${name}` : jobNo,
       status,
       statusSource: source,

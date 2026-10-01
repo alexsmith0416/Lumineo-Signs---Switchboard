@@ -12,6 +12,11 @@ export type JobStepInfo = { production: string[]; hasInstall: boolean };
 // planning lines every time, and the same job appears on many cards.
 const infoCache = new Map<string, JobStepInfo>();
 
+/** A job's step info if it's already loaded (e.g. by the Jobs list), else undefined. */
+export function cachedJobStepInfo(jobNo: string): JobStepInfo | undefined {
+  return infoCache.get(jobNo);
+}
+
 /** Pre-fill the cache for many jobs at once (e.g. the Jobs list's bulk load),
  *  so their steppers draw without a request each. Existing entries are kept. */
 export function primeJobStepInfo(all: ReadonlyMap<string, JobStepInfo>): void {

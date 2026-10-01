@@ -1995,6 +1995,7 @@ export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
       state: s(r.crfdf_shiptostate),
       salesperson: s(r.crfdf_salespersoncode).trim().toUpperCase(),
       folderName: sharePointCustomer(s(r.crfdf_sharepointurl)),
+      sharepointUrl: s(r.crfdf_sharepointurl).trim(),
       orderAmount: r.crfdf_salesorderamount == null ? null : n(r.crfdf_salesorderamount),
       releaseDate: r.crfdf_releasedate == null ? "" : String(r.crfdf_releasedate).slice(0, 10),
     }))
@@ -2259,6 +2260,36 @@ export async function saveJobsViewConfig(key: string, value: unknown): Promise<v
     ? await dvUpdate(JOBSVIEW_SET, s(existing[0].crfdf_jobsviewid), rec)
     : await dvCreate(JOBSVIEW_SET, { crfdf_jobsviewid: uuid(), ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "saveJobsViewConfig failed");
+}
+
+// ---------------------------------------------------------------------------
+// Job sketches (crfdf_jobsketch) — filled by the BCSync_JobSketches flow.
+// Created by scripts/create-jobsketch-table.ps1.
+// ---------------------------------------------------------------------------
+const SKETCH_SET = "crfdf_jobsketchs";
+
+/** Every job's sketch file (link + name) — no thumbnails. Throws when the table doesn't exist yet. */
+export async function fetchJobSketches(): Promise<Map<string, { fileUrl: string; fileName: string }>> {
+  const rows = await listAll(SKETCH_SET, { select: "crfdf_jobno,crfdf_fileurl,crfdf_filename" });
+  const out = new Map<string, { fileUrl: string; fileName: string }>();
+  for (const r of rows) {
+    const jobNo = s(r.crfdf_jobno).trim();
+    const fileUrl = s(r.crfdf_fileurl).trim();
+    if (jobNo && fileUrl) out.set(jobNo, { fileUrl, fileName: s(r.crfdf_filename) });
+  }
+  return out;
+}
+
+/** The thumbnails (data: URLs) for a few jobs. */
+export async function fetchSketchThumbnails(jobNos: readonly string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!jobNos.length) return out;
+  const filter = jobNos.map((j) => `crfdf_jobno eq '${odataLit(j)}'`).join(" or ");
+  for (const r of await list(SKETCH_SET, { select: "crfdf_jobno,crfdf_thumbnail", filter })) {
+    const thumb = s(r.crfdf_thumbnail);
+    if (thumb.startsWith("data:image/")) out.set(s(r.crfdf_jobno).trim(), thumb);
+  }
+  return out;
 }
 
 /** Upsert one month (keyed by crfdf_month). */

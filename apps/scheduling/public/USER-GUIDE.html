@@ -921,8 +921,19 @@
     values from a list (<em>is any of</em>). <strong>Sort</strong> &mdash; click a column header, or use the Sort
     button for several levels. <strong>Group</strong> &mdash; nest groups (e.g. Current Status, then Region);
     click a group bar to collapse it &mdash; it stays collapsed in that view (for everyone) until someone expands it.</li>
+    <li><strong>Right-click a job's name</strong> for <strong>Open Project</strong> (the job in Business Central)
+    and <strong>Open SharePoint Folder</strong> &mdash; the same links as a calendar card's right-click menu.</li>
+    <li><strong>Sketch</strong> column &mdash; a thumbnail of the job's sketch from its SharePoint folder, so you can
+    tie the design to the job at a glance. <strong>Hover</strong> it for a bigger preview; <strong>click</strong> it to
+    open the file in SharePoint. The sketch is the newest PDF in the job's folder (or its subfolders) whose name starts
+    with the job number (e.g. <em>J38740 YMCA_Wall Sign.pdf</em>); with no such PDF, the newest picture file. Blank when
+    the folder has neither. Sketches are picked up overnight, so a new one shows the next morning.</li>
     <li><strong>Stepper</strong> column &mdash; the job's production stepper, the same one as on the job card. It
-    replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns.</li>
+    replaces Airtable's <em>/</em> (department needed) and <em>X</em> (department done) columns. Editors
+    <strong>click a job's stepper</strong> to update it right in the list: a pop-up opens with the same controls as the
+    job panel &mdash; click a department, then <strong>Complete</strong> / <strong>Reopen</strong> / <strong>Set
+    active</strong>, or <strong>Edit</strong> to add or remove departments. Changes reach BC the same way. Esc or a
+    click outside closes it.</li>
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
     view and on every row. <strong>Job # / Name</strong> sizes itself to the longest name in the list until you resize
     it by hand; double-click its edge to go back to that. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
@@ -1160,6 +1171,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs: Sketch column and right-click links</strong> &mdash; a thumbnail of each job's sketch from its SharePoint folder (hover for a bigger preview, click to open the file), and right-click a job's name to open it in BC or open its SharePoint folder. See &sect;5.17.</td></tr>
+      <tr><td>Sep 30, 2026</td><td><strong>Jobs: update the stepper from the list</strong> &mdash; click a job's stepper to complete, reopen or set a department active, or add / remove departments, in a pop-up right there &mdash; no need to open the job. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs views are shared, and remember collapsed groups</strong> &mdash; the views and each view's columns, filters, sorts, groups and collapsed groups are now saved for the whole team instead of on each device, and a collapsed group stays collapsed when you come back. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: edit tracking columns in the list</strong> &mdash; editors click a cell to change Current Status, Priority, Hold, vendor details, storage, graphics, routing type, powerlines, regions, the tracking dates, P.O. #, notes and UL Sign; Order / Release Date, Mfg Target Mod, Sched. Install and RED DATE edit the job's Install Dates (shared with the boards). <strong>Job # / Name</strong> now sizes itself to the longest name until you resize it. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>BC's main Production and Installation/Service steps follow the stepper</strong> &mdash; <em>Production</em> is marked Started while any production department is Started and Complete once they're all done; <em>Installation/Service</em> is Started once Install is the active step and Complete when Install is. See &sect;5.4.</td></tr>

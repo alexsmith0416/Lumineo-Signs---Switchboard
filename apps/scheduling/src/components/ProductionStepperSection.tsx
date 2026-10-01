@@ -5,6 +5,7 @@ import { bcHasStep, buildDepartmentSteps, missingStepDefs } from "../services/pr
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../store/job-dept-override-store";
 import { isAdminLevel, useCurrentUser } from "../services/current-user";
+import { cachedJobStepInfo } from "../hooks/useJobSteps";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -22,7 +23,11 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const me = fullName || upn || "Unknown";
 
   // The job's production departments + whether it has install work — live only.
-  const [info, setInfo] = useState<{ production: string[]; hasInstall: boolean } | null>(null);
+  // Starts from the Jobs list's bulk-loaded info when there is one, so it draws
+  // at once; the fresh read below then replaces it.
+  const [info, setInfo] = useState<{ production: string[]; hasInstall: boolean } | null>(
+    () => (jobNo ? cachedJobStepInfo(jobNo) ?? null : null),
+  );
   useEffect(() => {
     if (!LIVE || !jobNo) {
       setInfo({ production: [], hasInstall: false });
