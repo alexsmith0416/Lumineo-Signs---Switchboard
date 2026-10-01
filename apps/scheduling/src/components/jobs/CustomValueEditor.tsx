@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { contrastText, normalizeValue, optionColor, type CustomFieldDef } from "../../services/custom-fields";
+import { normalizeValue, type CustomFieldDef } from "../../services/custom-fields";
+import { customStyle, type OptionStyle } from "./field-options";
+import OptionPicker, { OptionPill } from "./OptionPicker";
 
 /**
  * Edits one custom field value — used in a Jobs grid cell (inline) and in the
  * job panel. Text-like fields save on Enter / leaving the box (Esc cancels);
  * dates, checkboxes and selects save as soon as they change. `onDone` is
- * called when the inline editor should close.
+ * called when the inline editor should close. Single / Multi Select use the
+ * Airtable-style pill list (OptionPicker), coloured by `styleOf`.
  */
 export default function CustomValueEditor({
   def,
@@ -13,12 +16,15 @@ export default function CustomValueEditor({
   onSave,
   onDone,
   inline = false,
+  styleOf,
 }: {
   def: CustomFieldDef;
   value: unknown;
   onSave: (value: unknown) => void;
   onDone?: () => void;
   inline?: boolean;
+  /** An option's colours (built-in columns pass theirs; custom fields default to their own). */
+  styleOf?: (value: string) => OptionStyle;
 }) {
   const save = (raw: unknown) => {
     const next = normalizeValue(def, raw);
@@ -52,29 +58,17 @@ export default function CustomValueEditor({
         />
       );
     case "select":
-      return (
-        <select
-          className="form-field__input cf-edit__input"
-          autoFocus={inline}
-          value={typeof value === "string" ? value : ""}
-          onChange={(e) => {
-            save(e.target.value);
-            onDone?.();
-          }}
-          onBlur={() => onDone?.()}
-          onKeyDown={(e) => e.key === "Escape" && onDone?.()}
-        >
-          <option value="">—</option>
-          {/* Keep a value that isn't one of the options (e.g. carried over from Airtable). */}
-          {[...(typeof value === "string" && value && !(def.opts ?? []).includes(value) ? [value] : []), ...(def.opts ?? [])].map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      );
     case "multiselect":
-      return <MultiSelectEditor def={def} value={value} onSave={save} onDone={onDone} inline={inline} />;
+      return (
+        <ChoiceEditor
+          def={def}
+          value={value}
+          onSave={save}
+          onDone={onDone}
+          inline={inline}
+          styleOf={styleOf ?? ((v) => customStyle(def, v))}
+        />
+      );
     case "formula-date":
       return <span className="jobs-jobpanel__muted">Calculated</span>;
     default:
@@ -146,50 +140,95 @@ function TextEditor({
   );
 }
 
-function MultiSelectEditor({
+/**
+ * Single / Multi Select: the chosen pills and a ▾; the pill list opens under it
+ * (straight away when editing a grid cell). Single: picking saves and closes.
+ * Multi: picking toggles; the list stays open until you click away.
+ */
+function ChoiceEditor({
   def,
   value,
   onSave,
   onDone,
   inline,
+  styleOf,
 }: {
   def: CustomFieldDef;
   value: unknown;
   onSave: (raw: unknown) => void;
   onDone?: () => void;
   inline: boolean;
+  styleOf: (value: string) => OptionStyle;
 }) {
-  const chosen = Array.isArray(value) ? (value as string[]) : [];
+  const multi = def.type === "multiselect";
+  const chosen: string[] = multi
+    ? Array.isArray(value)
+      ? (value as unknown[]).filter((x): x is string => typeof x === "string" && !!x)
+      : []
+    : typeof value === "string" && value
+      ? [value]
+      : [];
   const ref = useRef<HTMLDivElement>(null);
-  // Inline: close when the user clicks anywhere else.
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   useEffect(() => {
-    if (!inline) return;
-    const away = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onDone?.();
-    };
-    document.addEventListener("mousedown", away);
-    return () => document.removeEventListener("mousedown", away);
-  }, [inline, onDone]);
+    if (inline && ref.current) setAnchor(ref.current.getBoundingClientRect());
+  }, [inline]);
+  const close = () => {
+    setAnchor(null);
+    onDone?.();
+  };
 
   return (
-    <div ref={ref} className={`cf-edit__multi${inline ? " cf-edit__multi--pop" : ""}`}>
-      {(def.opts ?? []).length === 0 && <span className="jobs-jobpanel__muted">No options — edit the field to add some.</span>}
-      {(def.opts ?? []).map((o) => {
-        const on = chosen.includes(o);
-        const bg = optionColor(def, o);
-        return (
-          <button
-            key={o}
-            type="button"
-            className={`cf-edit__opt${on ? " cf-edit__opt--on" : ""}`}
-            style={on ? { background: bg, color: contrastText(bg), borderColor: bg } : undefined}
-            aria-pressed={on}
-            onClick={() => onSave(on ? chosen.filter((x) => x !== o) : [...chosen, o])}
-          >
-            {o}
-          </button>
-        );
-      })}
-    </div>
+    <>
+      <div
+        ref={ref}
+        className={`opt-field${inline ? " opt-field--inline" : ""}${anchor ? " opt-field--open" : ""}`}
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (anchor) close();
+          else setAnchor(e.currentTarget.getBoundingClientRect());
+        }}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setAnchor(e.currentTarget.getBoundingClientRect())}
+      >
+        <span className="opt-field__pills">
+          {chosen.length ? (
+            chosen.map((v) => (
+              <OptionPill
+                key={v}
+                value={v}
+                style={styleOf(v)}
+                onRemove={multi ? () => onSave(chosen.filter((x) => x !== v)) : undefined}
+              />
+            ))
+          ) : (
+            <span className="opt-field__empty">Choose…</span>
+          )}
+        </span>
+        <span className="opt-field__chev">▾</span>
+      </div>
+      {anchor && (
+        <OptionPicker
+          anchor={anchor}
+          options={def.opts ?? []}
+          selected={chosen}
+          multi={multi}
+          styleOf={styleOf}
+          onPick={(v) => {
+            if (multi) onSave(chosen.includes(v) ? chosen.filter((x) => x !== v) : [...chosen, v]);
+            else {
+              onSave(v);
+              close();
+            }
+          }}
+          onClear={() => {
+            onSave("");
+            close();
+          }}
+          onClose={close}
+        />
+      )}
+    </>
   );
 }

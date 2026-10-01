@@ -7,7 +7,11 @@
 //                 boards use), so a change shows on the boards too
 //  - "status"   → Current Status, through the status automation (setStatus)
 //
-// Not here on purpose: Sales / Location / Region (filled from BC), Mfg Target /
+// Sales fills from BC's salesperson, but can be changed here: the edit is kept
+// in the app only (crfdf_jobtrack.crfdf_salesoverride), never written to BC;
+// clearing it goes back to BC's value.
+//
+// Not here on purpose: Location / Region (filled from BC), Mfg Target /
 // Install Target / Mfg Final / DIP / DOH (calculated), Value / Remaining
 // Balance (BC), and the Job name (rename in the job panel).
 import type { CustomFieldDef } from "../../services/custom-fields";
@@ -19,6 +23,7 @@ export type TrackEditKey = keyof Pick<
   | "priority" | "holdReason" | "dateToHold" | "dateOffHold" | "expeditorDate" | "dateInstalled" | "dateToAdmin"
   | "dateInvoiced" | "vendor" | "poNumber" | "vendorStatus" | "storageLocation" | "vendorShipDate" | "vendorShipDate2"
   | "outsourcedArrival" | "graphics" | "routingType" | "powerlines" | "mfgRegion" | "installRegion" | "ulSign" | "notes"
+  | "salesOverride"
 >;
 
 export type ScheduleEditKey = "releasedDate" | "productionCompleteDate" | "scheduledInstallDate" | "redDate";
@@ -62,11 +67,14 @@ const STORAGE = [
   "Vinyl Room", "Warehouse - Floor", "Warehouse - South Wall", "Warehouse - West Wall",
 ];
 const HOLDS = STATUS_OPTIONS.filter(isHoldStatus);
+// Sales initials (the LNI list).
+const SALES = ["LNI", "CC", "NH", "DW", "MM", "AS", "DP", "VB", "SP", "AW", "QT", "MS", "TC", "DD", "JA", "JL", "TN"];
 
 /** Editable built-in columns, by Jobs column key. */
 export const BUILTIN_EDITS: Readonly<Record<string, EditTarget>> = Object.fromEntries([
   ["status", { kind: "status", field: field("status", "select", STATUS_OPTIONS) }],
   track("priority", "priority", "select", PRIORITY),
+  track("sales", "salesOverride", "multiselect", SALES),
   track("holdReason", "holdReason", "select", HOLDS),
   track("dateToHold", "dateToHold", "date"),
   track("dateOffHold", "dateOffHold", "date"),
@@ -99,6 +107,7 @@ export const BUILTIN_EDITS: Readonly<Record<string, EditTarget>> = Object.fromEn
 /** A value from the editor, as a crfdf_jobtrack field stores it ("" = cleared). */
 export function trackValue(target: Extract<EditTarget, { kind: "track" }>, v: unknown): string | boolean {
   if (target.field.type === "bool") return v === true;
+  if (target.field.type === "multiselect") return Array.isArray(v) ? v.filter(Boolean).join(", ") : "";
   return typeof v === "string" ? v : "";
 }
 

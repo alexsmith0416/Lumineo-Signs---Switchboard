@@ -7,7 +7,8 @@ Nightly (and on Run), for every open BC job whose SharePoint folder
 (crfdf_bcjobs.crfdf_sharepointurl) is in the JobFiles site:
   1. lists the files in the job's folder AND its subfolders (SharePoint REST
      RenderListDataAsStream, Scope=RecursiveAll), newest first;
-  2. picks the sketch: the newest PDF whose name starts with the job number
+  2. picks the sketch: the file chosen / uploaded in the app (crfdf_pinned), while
+     it still exists; else the newest PDF whose name starts with the job number
      ("J38740 YMCA_Wall Sign.pdf", "J39151-SECURITY 1ST TITLE(HUTCHINSON).pdf")
      - else the newest image (jpg / png / ...) in the folder - else none;
   3. when the pick is new or changed, fetches a thumbnail of it from SharePoint
@@ -132,15 +133,23 @@ per_job = {
         "inputs": {"from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
                    "where": ("@contains(createArray('jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'tif', 'tiff'), "
                              "toLower(coalesce(item()?['File_x0020_Type'], '')))")}},
-    "Pick_Sketch": {
-        "type": "Compose", "runAfter": after("Sketch_PDFs", "Images"),
-        "inputs": "@if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images')))"},
     "Existing_Sketch": {
-        "type": "Query", "runAfter": after("Pick_Sketch"),
+        "type": "Query", "runAfter": after("List_Files"),
         "inputs": {"from": "@body('List_Sketches')?['value']",
                    "where": f"@equals(trim(coalesce(item()?['crfdf_jobno'], '')), {JOBNO})"}},
+    # A file someone chose (or uploaded) in the app wins while it still exists.
+    "Pinned_File": {
+        "type": "Query", "runAfter": after("Existing_Sketch"),
+        "inputs": {"from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
+                   "where": ("@and(not(empty(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))), "
+                             "equals(toLower(coalesce(item()?['FileRef'], '')), "
+                             "toLower(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))))")}},
+    "Pick_Sketch": {
+        "type": "Compose", "runAfter": after("Sketch_PDFs", "Images", "Pinned_File"),
+        "inputs": ("@if(greater(length(body('Pinned_File')), 0), first(body('Pinned_File')), "
+                   "if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images'))))")},
     "Has_Sketch": {
-        "type": "If", "runAfter": after("Existing_Sketch"),
+        "type": "If", "runAfter": after("Pick_Sketch"),
         "expression": {"not": {"equals": [f"@empty({PICK})", True]}},
         "actions": {
             "Sketch_Changed": {
@@ -188,7 +197,7 @@ actions = {
         "entityName": "crfdf_bcjobs", "$select": "crfdf_jobnumber,crfdf_sharepointurl", "$filter": jobs_filter},
         paginate=True),
     "List_Sketches": dv("ListRecords", {
-        "entityName": "crfdf_jobsketchs", "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion"},
+        "entityName": "crfdf_jobsketchs", "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion,crfdf_pinned"},
         paginate=True),
     "Jobs_In_Site": {
         "type": "Query", "runAfter": after("List_Jobs", "List_Sketches"),

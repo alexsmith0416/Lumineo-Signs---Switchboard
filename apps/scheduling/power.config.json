@@ -18,6 +18,22 @@
       ],
       "authenticationType": "Oauth",
       "dataSets": {}
+    },
+    "c6d89607-1d3e-472d-a32d-2d0a24cf8137": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "displayName": "SharePoint",
+      "dataSources": [
+        "documents"
+      ],
+      "dataSets": {
+        "https://luminousneon.sharepoint.com/sites/JobFiles": {
+          "dataSources": {
+            "documents": {
+              "tableName": "Documents"
+            }
+          }
+        }
+      }
     }
   },
   "databaseReferences": {}

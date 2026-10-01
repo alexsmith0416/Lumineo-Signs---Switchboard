@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
 import { useJobScheduleStore } from "../../store/job-schedule-store";
 import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services/job-tracking";
@@ -18,6 +18,9 @@ import { BUILTIN_EDITS, localDate, trackValue } from "./jobs-editable";
 import { useCurrentUser } from "../../services/current-user";
 import { cleanPrefs, useJobsViewsStore } from "../../store/jobs-views-store";
 import { useSketchStore } from "../../store/sketch-store";
+import { useFieldOptionsStore } from "../../store/field-options-store";
+import { builtinOptions, builtinStyle, customStyle, isChoiceColumn } from "./field-options";
+import FieldOptionsDialog from "./FieldOptionsDialog";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
@@ -80,6 +83,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const customDefs = useCustomFieldStore((s) => s.defs);
   const sketches = useSketchStore((s) => s.byJob);
   const loadSketches = useSketchStore((s) => s.load);
+  const optionOverrides = useFieldOptionsStore((s) => s.overrides);
+  const loadFieldOptions = useFieldOptionsStore((s) => s.load);
   const loadCustomDefs = useCustomFieldStore((s) => s.load);
   // Dates come from the SAME job-schedule store the boards' Install Dates use,
   // so an edit anywhere shows here at once (and here → the boards).
@@ -92,7 +97,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     void loadDeptOverrides();
     void loadCustomDefs();
     void loadSketches();
-  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches]);
+    void loadFieldOptions();
+  }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches, loadFieldOptions]);
 
   const rows = useMemo(() => {
     const dates = new Map<string, JobScheduleDates>();
@@ -121,6 +127,8 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
+  // A built-in choice column whose options are being edited.
+  const [editingOptions, setEditingOptions] = useState<{ field: string; label: string } | null>(null);
 
   // ── Views (editable, shared by everyone) ─────────────────────────────────
   const layout = useJobsViewsStore((s) => s.layout);
@@ -179,11 +187,22 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const gridEditing = useMemo(
     () => ({
       canEdit,
-      editorFor: (col: JobFieldDef) => col.custom ?? BUILTIN_EDITS[col.key]?.field ?? null,
-      valueFor: (row: JobRow, col: JobFieldDef) =>
-        col.custom
-          ? tracksByJob.get(row.jobNo)?.customValues?.[col.key]
-          : (row as unknown as Record<string, unknown>)[col.key],
+      editorFor: (col: JobFieldDef) => {
+        if (col.custom) return col.custom;
+        const f = BUILTIN_EDITS[col.key]?.field;
+        // A choice column's dropdown lists the options in their edited order.
+        return f && f.opts ? { ...f, opts: builtinOptions(col.key, optionOverrides[col.key]) } : f ?? null;
+      },
+      styleOf: (col: JobFieldDef, v: string) =>
+        col.custom ? customStyle(col.custom, v) : builtinStyle(col.key, v, optionOverrides[col.key]),
+      valueFor: (row: JobRow, col: JobFieldDef) => {
+        if (col.custom) return tracksByJob.get(row.jobNo)?.customValues?.[col.key];
+        const v = (row as unknown as Record<string, unknown>)[col.key];
+        // A built-in multi-choice column ("VB, NH") edits as a list.
+        return BUILTIN_EDITS[col.key]?.field.type === "multiselect"
+          ? String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean)
+          : v;
+      },
       onSave: (row: JobRow, col: JobFieldDef, value: unknown) => {
         if (col.custom) return void setCustomValue(row.jobNo, col.key, value);
         const target = BUILTIN_EDITS[col.key];
@@ -197,13 +216,23 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         }
       },
     }),
-    [canEdit, tracksByJob, setCustomValue, setStatus, updateSchedule, updateTrack, me],
+    [canEdit, tracksByJob, setCustomValue, setStatus, updateSchedule, updateTrack, me, optionOverrides],
   );
 
   // Job # / Name fits the longest name in the list until it's resized by hand.
   const autoWidths = useMemo(() => ({ job: fitJobColumn(rows) }), [rows]);
   const inView = useMemo(() => (view.preset ? rows.filter(PRESETS[view.preset]) : rows), [rows, view]);
-  const shown = useMemo(() => applyGrid(inView, search, prefs), [inView, search, prefs]);
+  // Choice columns sort and group in their option order (edited with "Edit field…").
+  const orderOf = useCallback(
+    (field: string) => {
+      const col = fieldsByKey.get(field);
+      if (!col || !isChoiceColumn(col)) return undefined;
+      const opts = col.custom ? col.custom.opts ?? [] : builtinOptions(field, optionOverrides[field]);
+      return opts.length ? opts : undefined;
+    },
+    [fieldsByKey, optionOverrides],
+  );
+  const shown = useMemo(() => applyGrid(inView, search, prefs, orderOf), [inView, search, prefs, orderOf]);
 
   const toggleSort = (field: string) => {
     const cur = prefs.sorts.find((s) => s.field === field);
@@ -307,7 +336,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} autoWidths={autoWidths}
-          fieldsByKey={fieldsByKey} editing={gridEditing}
+          fieldsByKey={fieldsByKey} editing={gridEditing} orderOf={orderOf}
+          canEditField={(c) => canEdit && isChoiceColumn(c)}
+          onEditField={(c) => (c.custom ? setEditingField(c.key) : setEditingOptions({ field: c.key, label: c.label }))}
           collapsed={prefs.collapsed ?? []} onCollapsedChange={(collapsed) => setPrefs({ collapsed })} />
       </section>
       {addingField && (
@@ -317,6 +348,15 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         />
       )}
       {editingField && <EditFieldDialog fieldKey={editingField} onClose={() => setEditingField(null)} />}
+      {editingOptions && (
+        <FieldOptionsDialog
+          field={editingOptions.field}
+          label={editingOptions.label}
+          // Columns with no fixed list (Sales, Region…) start from the values in use.
+          seed={[...new Set(rows.map((r) => String((r as unknown as Record<string, unknown>)[editingOptions.field] ?? "")).filter(Boolean))].sort()}
+          onClose={() => setEditingOptions(null)}
+        />
+      )}
       {openJob && (
         <JobsJobPanel
           row={rows.find((r) => r.jobNo === openJob.jobNo) ?? openJob}

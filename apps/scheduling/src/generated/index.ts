@@ -4,7 +4,10 @@
  */
 
 // Models
+export * as CommonModels from './models/CommonModels';
+export * as DocumentsModel from './models/DocumentsModel';
 export * as MicrosoftDataverseModel from './models/MicrosoftDataverseModel';
 
 // Services
+export * from './services/DocumentsService';
 export * from './services/MicrosoftDataverseService';

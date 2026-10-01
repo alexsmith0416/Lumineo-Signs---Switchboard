@@ -137,3 +137,12 @@ describe("job name", () => {
     expect(row).toMatchObject({ name: "Shelter - McPherson", defaultName: "Shelter", job: "J39569 Shelter - McPherson" });
   });
 });
+
+describe("sales override", () => {
+  const bc = [{ jobNo: "J1", name: "A", description: "", remaining: 0, city: "", salesperson: "NHASKELL" }];
+  it("shows BC's salesperson until the app changes it, and BC's again when cleared", () => {
+    expect(buildJobRows(bc, [track({ jobNo: "J1", sales: "VB" })], new Map(), TODAY)[0]!.sales).toBe("NH");
+    expect(buildJobRows(bc, [track({ jobNo: "J1", salesOverride: "NH, VB" })], new Map(), TODAY)[0]!.sales).toBe("NH, VB");
+    expect(buildJobRows(bc, [track({ jobNo: "J1", salesOverride: "" })], new Map(), TODAY)[0]!.sales).toBe("NH");
+  });
+});

@@ -5,7 +5,7 @@ a thumbnail of it, so the Jobs list can show the sketch at a glance (like the
 Airtable attachment column). Clicking the thumbnail opens the file in SharePoint.
 
 Source: `_gen_jobsketches_flow.py` → `BCSync_JobSketches-clientdata.json`;
-packaged by `_build_jobsketches_solution.py` → `Downloads\BCJobSketches_1_0_0_10.zip`
+packaged by `_build_jobsketches_solution.py` → `Downloads\BCJobSketches_1_0_0_12.zip`
 (solution **BCJobSketches**; no secret). Table: `crfdf_jobsketch`
 (`scripts/create-jobsketch-table.ps1`). App: `store/sketch-store.ts`, the
 `SketchCell` in `components/jobs/JobsGrid.tsx`.
@@ -17,6 +17,8 @@ Sketches aren't named "sketch" — they're named after the job, e.g.
 `J39151-SECURITY 1ST TITLE(HUTCHINSON).pdf`, `J38740 YMCA_Wall Sign.pdf`. So, looking
 in the job's folder (`crfdf_bcjobs.crfdf_sharepointurl`) **and its subfolders**:
 
+0. the file **chosen or uploaded in the app** (`crfdf_pinned`, set from the Sketch
+   cell's right-click menu or by dropping a file on it), while it still exists, else
 1. the **newest PDF whose name starts with the job number**, else
 2. the **newest image** (jpg, jpeg, png, gif, bmp, webp, heic, tif), else
 3. nothing — the cell stays blank.
@@ -55,10 +57,19 @@ Unchanged sketches cost no thumbnail call, so nightly runs after the first are q
 | `Thumb_Size` | `c320x240` (cropped/fit box SharePoint renders) |
 | `Only_Job` | blank = every job; a job number = just that job (testing) |
 
+## Choosing / uploading in the app
+
+The app calls SharePoint itself (the SharePoint connector on the app, data source
+`documents`; `src/services/sharepoint.ts`) to list a job's folder, upload a file
+into it (CreateFile) and get a thumbnail link. A choice is saved to the job's
+`crfdf_jobsketch` row with `crfdf_pinned` = the file's server-relative path; the
+flow keeps it on later runs (and makes the stored thumbnail if the app couldn't).
+"Use the automatic pick" clears the pin.
+
 ## Import & test
 
 1. Run `scripts/create-jobsketch-table.ps1` (creates `crfdf_jobsketch`).
-2. Power Apps → Solutions → Import `BCJobSketches_1_0_0_10.zip`: bind **Microsoft
+2. Power Apps → Solutions → Import `BCJobSketches_1_0_0_12.zip`: bind **Microsoft
    Dataverse** to the existing connection and **SharePoint (Job Sketches)** to your
    SharePoint connection (create one if asked). It imports **Off**.
 3. Test one job: edit the flow, set `Only_Job` to e.g. `J38740`, save, **Run**,

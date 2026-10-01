@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
 import type { JobRow } from "../../services/job-tracking";
@@ -9,22 +9,33 @@ import { BADGE_COLORS, JOB_FIELDS, badgeColor, type JobFieldDef } from "./jobs-f
 import { contrastText, linkFor, optionColor, type CustomFieldDef } from "../../services/custom-fields";
 import CustomValueEditor from "./CustomValueEditor";
 import StepperPopover from "./StepperPopover";
+import SketchPicker from "./SketchPicker";
 import { createPortal } from "react-dom";
 import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
-import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type SortCriterion } from "./jobs-grid-state";
+import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type OptionOrder, type SortCriterion } from "./jobs-grid-state";
+import { builtinStyle, type OptionStyle } from "./field-options";
+import { useFieldOptionsStore } from "../../store/field-options-store";
 
 const ROW_H = 40;
 const HEADER_H = 40;
 
 export function JobBadge({ field, value }: { field: string; value: string }) {
+  // Colours edited with "Edit field…" on the column header win over the defaults.
+  const override = useFieldOptionsStore((s) => s.overrides[field]);
   if (!value) return null;
-  const c = BADGE_COLORS[badgeColor(field, value)];
+  const c = override ? builtinStyle(field, value, override) : BADGE_COLORS[badgeColor(field, value)];
   return (
     <span className="jobs-badge" style={{ background: c.bg, color: c.text }}>
       {value}
     </span>
   );
 }
+
+/** Sketch cells: editors can change / upload a job's sketch. */
+const SketchEditContext = createContext<{ canEdit: boolean; openPicker: (row: JobRow) => void }>({
+  canEdit: false,
+  openPicker: () => {},
+});
 
 /** A custom Single / Multi Select value as coloured option badges. */
 export function OptionBadges({ def, value }: { def: CustomFieldDef; value: string }) {
@@ -51,6 +62,8 @@ export interface GridEditing {
   editorFor: (col: JobFieldDef) => CustomFieldDef | null;
   valueFor: (row: JobRow, col: JobFieldDef) => unknown;
   onSave: (row: JobRow, col: JobFieldDef, value: unknown) => void;
+  /** A choice column's option colours (for the dropdown). */
+  styleOf?: (col: JobFieldDef, value: string) => OptionStyle;
 }
 
 /** Virtualised Jobs grid. Ported in spirit from the Airtable recreation app's
@@ -71,6 +84,9 @@ export default function JobsGrid({
   onCollapsedChange,
   fieldsByKey,
   editing,
+  orderOf,
+  onEditField,
+  canEditField,
 }: {
   rows: JobRow[];
   cols: JobFieldDef[];
@@ -92,6 +108,11 @@ export default function JobsGrid({
   /** Every field by key (built-in + custom), for group headers. */
   fieldsByKey?: ReadonlyMap<string, JobFieldDef>;
   editing?: GridEditing;
+  /** Choice columns' option order — groups follow it. */
+  orderOf?: OptionOrder;
+  /** Right-click a header → "Edit field…" (only offered for editable fields). */
+  onEditField?: (col: JobFieldDef) => void;
+  canEditField?: (col: JobFieldDef) => boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const collapsed = useMemo(() => new Set(collapsedPaths), [collapsedPaths]);
@@ -108,12 +129,34 @@ export default function JobsGrid({
   // Right-click menu on a job's name: open it in BC / its SharePoint folder.
   const [menu, setMenu] = useState<{ row: JobRow; x: number; y: number } | null>(null);
   const openMenu = useCallback((row: JobRow, x: number, y: number) => setMenu({ row, x, y }), []);
+  // The job whose sketch is being chosen.
+  const [pickerFor, setPickerFor] = useState<JobRow | null>(null);
+  const sketchEdit = useMemo(() => ({ canEdit: !!editing?.canEdit, openPicker: setPickerFor }), [editing?.canEdit]);
+  // A file dropped anywhere but a Sketch cell would otherwise be opened by the
+  // browser in place of the app.
+  useEffect(() => {
+    if (!editing?.canEdit) return;
+    const stop = (e: DragEvent) => {
+      if (Array.from(e.dataTransfer?.types ?? []).includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
+    return () => {
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("drop", stop);
+    };
+  }, [editing?.canEdit]);
   // Live width while dragging; committed to the shared widths on mouse-up.
   const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
   const widthOf = (key: string, fallback: number) =>
     dragging?.key === key ? dragging.w : widths[key] ?? autoWidths?.[key] ?? fallback;
 
-  const tree = useMemo(() => (groups.length ? buildGroupTree(rows, groups) : null), [rows, groups]);
+  const tree = useMemo(
+    () => (groups.length ? buildGroupTree(rows, groups, 0, "", orderOf) : null),
+    [rows, groups, orderOf],
+  );
+  // Right-click on a column header.
+  const [headMenu, setHeadMenu] = useState<{ col: JobFieldDef; x: number; y: number } | null>(null);
 
   // Collapse / expand every group when the toolbar asks (the signal's .n bumps).
   const treeRef = useRef(tree);
@@ -171,6 +214,7 @@ export default function JobsGrid({
   const padBot = vItems.length ? virt.getTotalSize() - vItems[vItems.length - 1]!.end : 0;
 
   return (
+    <SketchEditContext.Provider value={sketchEdit}>
     <div className="jobs-grid-wrap" ref={wrapRef}>
       {/* An exact width (the sum of the columns) keeps table-layout: fixed in charge,
           so a column is the width it's set to on every row — not sized by the text
@@ -191,6 +235,14 @@ export default function JobsGrid({
                   key={c.key}
                   className={sortable ? "jobs-th--sortable" : undefined}
                   onClick={sortable ? () => onToggleSort(c.key) : undefined}
+                  onContextMenu={
+                    onEditField && canEditField?.(c)
+                      ? (e) => {
+                          e.preventDefault();
+                          setHeadMenu({ col: c, x: e.clientX, y: e.clientY });
+                        }
+                      : undefined
+                  }
                   title={sortable ? "Click to sort" : undefined}
                 >
                   <span className="jobs-th__label">{c.label}</span>
@@ -269,6 +321,36 @@ export default function JobsGrid({
       </table>
       {rows.length === 0 && <div className="jobs-empty">No jobs match.</div>}
       {menu && <JobLinksMenu row={menu.row} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
+      {headMenu &&
+        createPortal(
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 300 }}
+              onClick={() => setHeadMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setHeadMenu(null);
+              }}
+            />
+            <div
+              className="job-context-menu"
+              style={{ position: "fixed", top: headMenu.y, left: Math.min(headMenu.x, window.innerWidth - 220), zIndex: 301 }}
+            >
+              <div className="job-context-menu__head">{headMenu.col.label}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  onEditField?.(headMenu.col);
+                  setHeadMenu(null);
+                }}
+              >
+                Edit field…
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
+      {pickerFor && <SketchPicker row={pickerFor} onClose={() => setPickerFor(null)} />}
       {stepperFor && (
         <StepperPopover
           jobNo={stepperFor.row.jobNo}
@@ -279,6 +361,7 @@ export default function JobsGrid({
         />
       )}
     </div>
+    </SketchEditContext.Provider>
   );
 }
 
@@ -330,6 +413,7 @@ const JobGridRow = memo(function JobGridRow({
         const isOpen = editable && openKey === c.key;
         const cls = [
           c.key === "job" ? "jobs-cell--primary" : "",
+          c.key === "status" ? "jobs-cell--center" : "",
           editable ? "jobs-cell--editable" : "",
           isOpen ? "jobs-cell--editing" : "",
         ].filter(Boolean).join(" ");
@@ -364,6 +448,7 @@ const JobGridRow = memo(function JobGridRow({
                   value={editing!.valueFor(row, c)}
                   onSave={(v) => editing!.onSave(row, c, v)}
                   onDone={onCloseCell}
+                  styleOf={editing!.styleOf ? (v) => editing!.styleOf!(c, v) : undefined}
                 />
               </div>
             ) : (
@@ -378,13 +463,18 @@ const JobGridRow = memo(function JobGridRow({
 
 function Cell({ row, def }: { row: JobRow; def: JobFieldDef }) {
   if (def.type === "stepper") return <StepperCell jobNo={row.inBc ? row.jobNo : undefined} />;
-  if (def.type === "sketch") return <SketchCell jobNo={row.jobNo} />;
+  if (def.type === "sketch") return <SketchCell row={row} />;
   const v = (row as unknown as Record<string, unknown>)[def.key];
   switch (def.type) {
     case "badge":
       return (
         <>
-          <JobBadge field={def.key} value={String(v ?? "")} />
+          {/* Sales can hold several initials ("VB, NH") — one pill each. */}
+          {def.key === "sales"
+            ? String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean).map((x) => (
+                <JobBadge key={x} field={def.key} value={x} />
+              ))
+            : <JobBadge field={def.key} value={String(v ?? "")} />}
           {def.key === "status" && row.statusSource === "override" && <span className="jobs-tag" title="Manual status override">override</span>}
         </>
       );
@@ -484,35 +574,100 @@ function JobLinksMenu({ row, x, y, onClose }: { row: JobRow; x: number; y: numbe
 }
 
 /** The job's sketch: a thumbnail that opens the file in SharePoint; a larger
- *  preview on hover. Blank when the job has no sketch. */
-function SketchCell({ jobNo }: { jobNo: string }) {
+ *  preview on hover. Editors drop a file on it to upload it to the job's
+ *  SharePoint folder as the sketch, or right-click to choose / upload / go back
+ *  to the automatic pick. Blank when the job has no sketch. */
+function SketchCell({ row }: { row: JobRow }) {
+  const jobNo = row.jobNo;
   const sketch = useSketchStore((s) => s.byJob.get(jobNo));
   const thumb = useSketchStore((s) => s.thumbs.get(jobNo));
   const wantThumb = useSketchStore((s) => s.wantThumb);
+  const uploadFile = useSketchStore((s) => s.uploadFile);
+  const unpin = useSketchStore((s) => s.unpin);
+  const { canEdit, openPicker } = useContext(SketchEditContext);
   const [hover, setHover] = useState<DOMRect | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [status, setStatus] = useState<{ busy: boolean; text: string } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   useEffect(() => {
     if (sketch) wantThumb(jobNo);
   }, [sketch, jobNo, wantThumb]);
-  if (!sketch) return null;
-  const open = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(sketch.fileUrl, "_blank", "noopener");
+
+  const editable = canEdit && !!row.sharepointUrl;
+  const upload = async (file: File) => {
+    setStatus({ busy: true, text: `Uploading ${file.name}…` });
+    try {
+      await uploadFile(jobNo, row.sharepointUrl, file);
+      setStatus(null);
+    } catch (e) {
+      setStatus({ busy: false, text: `Upload failed: ${e instanceof Error ? e.message : String(e)}` });
+    }
   };
-  const isPdf = /\.pdf$/i.test(sketch.fileName);
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes("Files");
+  const isPdf = sketch ? /\.pdf$/i.test(sketch.fileName) : false;
+
   return (
-    <>
-      <button
-        type="button"
-        className="jobs-sketch"
-        title={`${sketch.fileName} — click to open`}
-        onClick={open}
-        onMouseEnter={(e) => thumb && setHover(e.currentTarget.getBoundingClientRect())}
-        onMouseLeave={() => setHover(null)}
-      >
-        {thumb ? <img src={thumb} alt={sketch.fileName} /> : <span className="jobs-sketch__file">{isPdf ? "PDF" : "FILE"}</span>}
-      </button>
+    <div
+      className={`jobs-sketch-cell${dragOver ? " jobs-sketch-cell--drop" : ""}${editable && !sketch ? " jobs-sketch-cell--empty" : ""}`}
+      title={editable ? (sketch ? undefined : "Drop a file here, or right-click, to add the sketch") : undefined}
+      onClick={(e) => editable && !sketch && (e.stopPropagation(), openPicker(row))}
+      onContextMenu={
+        editable
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenu({ x: e.clientX, y: e.clientY });
+            }
+          : undefined
+      }
+      onDragOver={
+        editable
+          ? (e) => {
+              if (!hasFiles(e)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+              setDragOver(true);
+            }
+          : undefined
+      }
+      onDragLeave={() => setDragOver(false)}
+      onDrop={
+        editable
+          ? (e) => {
+              if (!hasFiles(e)) return;
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) void upload(file);
+            }
+          : undefined
+      }
+    >
+      {status ? (
+        <span className={`jobs-sketch__status${status.busy ? "" : " jobs-sketch__status--error"}`} title={status.text}>
+          {status.busy ? "Uploading…" : "Failed"}
+        </span>
+      ) : sketch ? (
+        <button
+          type="button"
+          className="jobs-sketch"
+          title={`${sketch.fileName}${sketch.pinned ? " (chosen)" : ""} — click to open`}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(sketch.fileUrl, "_blank", "noopener");
+          }}
+          onMouseEnter={(e) => thumb && setHover(e.currentTarget.getBoundingClientRect())}
+          onMouseLeave={() => setHover(null)}
+        >
+          {thumb ? <img src={thumb} alt={sketch.fileName} /> : <span className="jobs-sketch__file">{isPdf ? "PDF" : "FILE"}</span>}
+        </button>
+      ) : editable ? (
+        <span className="jobs-sketch__add">+</span>
+      ) : null}
       {hover &&
         thumb &&
+        sketch &&
         createPortal(
           <div
             className="jobs-sketch-preview"
@@ -526,6 +681,56 @@ function SketchCell({ jobNo }: { jobNo: string }) {
           </div>,
           document.body,
         )}
-    </>
+      {menu &&
+        createPortal(
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 300 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenu(null);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenu(null);
+              }}
+            />
+            <div
+              className="job-context-menu"
+              style={{ position: "fixed", top: Math.min(menu.y, window.innerHeight - 190), left: Math.min(menu.x, window.innerWidth - 230), zIndex: 301 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="job-context-menu__head">Sketch · {jobNo}</div>
+              {sketch && (
+                <button type="button" onClick={() => (window.open(sketch.fileUrl, "_blank", "noopener"), setMenu(null))}>
+                  Open file
+                </button>
+              )}
+              <button type="button" onClick={() => (setMenu(null), openPicker(row))}>
+                Choose a different file…
+              </button>
+              <label className="job-context-menu__file">
+                Upload a file…
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setMenu(null);
+                    if (f) void upload(f);
+                  }}
+                />
+              </label>
+              {sketch?.pinned && (
+                <button type="button" onClick={() => (setMenu(null), void unpin(jobNo))}>
+                  Use the automatic pick
+                </button>
+              )}
+            </div>
+          </>,
+          document.body,
+        )}
+    </div>
   );
 }

@@ -199,18 +199,36 @@ export function EditFieldDialog({ fieldKey, onClose }: { fieldKey: string; onClo
   );
 }
 
-function OptionsEditor({
+/**
+ * An option list: drag ⠿ to reorder (the order the dropdown shows and the
+ * column sorts / groups in), rename, remove, add, and — when `colors` — pick
+ * each option's colour.
+ */
+export function OptionsEditor({
   def,
   colors = false,
   onChange,
+  colorOf,
 }: {
-  def: Draft;
+  def: Pick<Draft, "opts" | "optColors">;
   /** Show a colour picker per option (editing an existing field). */
   colors?: boolean;
   onChange: (patch: Pick<Draft, "opts" | "optColors">) => void;
+  /** An option's current colour (defaults to the field's own colours). */
+  colorOf?: (opt: string) => string;
 }) {
   const opts = def.opts ?? [];
   const [picking, setPicking] = useState<number | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const colour = colorOf ?? ((o: string) => optionColor(def, o));
+  const move = (from: number, to: number) => {
+    if (from === to) return;
+    const next = [...opts];
+    const [it] = next.splice(from, 1);
+    next.splice(to, 0, it!);
+    onChange({ opts: next, optColors: def.optColors });
+  };
   const rename = (i: number, next: string) => {
     const old = opts[i]!;
     const optColors = { ...(def.optColors ?? {}) };
@@ -225,13 +243,44 @@ function OptionsEditor({
     <>
       <div className="cf-dialog__label">Options</div>
       {opts.map((o, i) => (
-        <div key={i} className="cf-dialog__opt">
+        <div
+          key={i}
+          className={`cf-dialog__opt${dragFrom === i ? " cf-dialog__opt--dragging" : ""}${
+            dragOver === i && dragFrom !== null && dragFrom !== i ? " cf-dialog__opt--over" : ""
+          }`}
+          onDragOver={(e) => {
+            if (dragFrom === null) return;
+            e.preventDefault();
+            setDragOver(i);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragFrom !== null) move(dragFrom, i);
+            setDragFrom(null);
+            setDragOver(null);
+          }}
+        >
+          <span
+            className="cf-dialog__grip"
+            draggable
+            title="Drag to reorder"
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              setDragFrom(i);
+            }}
+            onDragEnd={() => {
+              setDragFrom(null);
+              setDragOver(null);
+            }}
+          >
+            ⠿
+          </span>
           {colors && (
             <button
               type="button"
               className="cf-dialog__swatch"
               title="Colour"
-              style={{ background: optionColor(def, o) }}
+              style={{ background: colour(o) }}
               onClick={() => setPicking(picking === i ? null : i)}
             />
           )}
@@ -257,9 +306,21 @@ function OptionsEditor({
                     setPicking(null);
                   }}
                 >
-                  {optionColor(def, o) === c ? "✓" : ""}
+                  {colour(o) === c ? "✓" : ""}
                 </button>
               ))}
+              {/* Any colour: the browser's colour picker (applies as you choose). */}
+              <label className="cf-dialog__custom-colour" title="Pick any colour">
+                <input
+                  type="color"
+                  value={/^#[0-9a-f]{6}$/i.test(colour(o)) ? colour(o) : "#cccccc"}
+                  onChange={(e) => onChange({ opts, optColors: { ...(def.optColors ?? {}), [o]: e.target.value } })}
+                />
+                Custom…
+              </label>
+              <span className="cf-dialog__preview" style={{ background: colour(o), color: contrastText(colour(o)) }}>
+                {o || "Preview"}
+              </span>
             </div>
           )}
         </div>

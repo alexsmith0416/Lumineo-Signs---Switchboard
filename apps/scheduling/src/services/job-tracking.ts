@@ -51,6 +51,8 @@ export interface JobTrack {
   routingType: string;
   powerlines: string;
   sales: string;
+  /** Sales initials set in the app ("VB, NH") — wins over BC's salesperson; never written to BC. */
+  salesOverride?: string;
   location: string;
   region: string;
   mfgRegion: string;
@@ -69,7 +71,7 @@ export function emptyJobTrack(jobNo: string): JobTrack {
     jobNo, jobName: "", priorHoldDays: 0, statusOverride: "", priority: "", holdReason: "", dateToHold: "", dateOffHold: "",
     orderDate: "", mfgFinalDate: "", expeditorDate: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "",
     vendor: "", poNumber: "", vendorStatus: "", storageLocation: "", vendorShipDate: "", vendorShipDate2: "",
-    outsourcedArrival: "", graphics: "", routingType: "", powerlines: "", sales: "", location: "", region: "",
+    outsourcedArrival: "", graphics: "", routingType: "", powerlines: "", sales: "", salesOverride: "", location: "", region: "",
     mfgRegion: "", installRegion: "", ulSign: false, notes: "", legacyStatus: "", legacyProcess: "",
   };
 }
@@ -283,7 +285,8 @@ export function buildJobRows(
       tracked: !!t,
       inBc: !!bc,
       description: bc?.description ?? "",
-      sales: salesInitials(code) || t?.sales || "",
+      // An edit made in the app wins; else BC's salesperson; else the Airtable value.
+      sales: t?.salesOverride?.trim() || salesInitials(code) || t?.sales || "",
       location: shipToLocation(bc) || t?.location || "",
       region: code ? regionForSalesperson(code) : t?.region || "WK",
       priority: t?.priority ?? "",

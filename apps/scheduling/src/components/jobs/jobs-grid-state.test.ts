@@ -65,3 +65,24 @@ describe("group tree", () => {
     expect(flat.filter((i) => i.kind === "row")).toHaveLength(1);
   });
 });
+
+describe("option order", () => {
+  const rows = [
+    { jobNo: "J1", status: "Installation", priority: "Rush" },
+    { jobNo: "J2", status: "New Order this week", priority: "" },
+    { jobNo: "J3", status: "Custom Status", priority: "RED DATE" },
+  ] as unknown as JobRow[];
+  const order = ["New Order this week", "Installation"];
+  const orderOf = (f: string) => (f === "status" ? order : f === "priority" ? ["RED DATE", "Rush"] : undefined);
+
+  it("groups a choice column in its option order, unlisted values last", () => {
+    const tree = buildGroupTree(rows, [{ field: "status", asc: true }], 0, "", orderOf);
+    expect(tree.map((n) => n.key)).toEqual(["New Order this week", "Installation", "Custom Status"]);
+  });
+  it("sorts by it, blanks last, and orders rows by status by default", () => {
+    const sorted = applyGrid(rows, "", { sorts: [{ field: "priority", asc: true }], filters: [], groups: [] }, orderOf);
+    expect(sorted.map((r) => r.jobNo)).toEqual(["J3", "J1", "J2"]);
+    const byDefault = applyGrid(rows, "", { sorts: [], filters: [], groups: [] }, orderOf);
+    expect(byDefault.map((r) => r.jobNo)).toEqual(["J2", "J1", "J3"]);
+  });
+});

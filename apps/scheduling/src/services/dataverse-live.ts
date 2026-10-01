@@ -1944,6 +1944,7 @@ export async function fetchJobTracks(): Promise<JobTrack[]> {
       routingType: s(r.crfdf_routingtype),
       powerlines: s(r.crfdf_powerlines),
       sales: s(r.crfdf_sales),
+      salesOverride: s(r.crfdf_salesoverride),
       location: s(r.crfdf_location),
       region: s(r.crfdf_region),
       mfgRegion: s(r.crfdf_mfgregion),
@@ -2029,6 +2030,7 @@ const JOBTRACK_COLS = {
   installRegion: "crfdf_installregion",
   ulSign: "crfdf_ulsign",
   notes: "crfdf_notes",
+  salesOverride: "crfdf_salesoverride",
 } as const;
 export type JobTrackPatch = Partial<Pick<JobTrack, keyof typeof JOBTRACK_COLS>>;
 
@@ -2268,16 +2270,70 @@ export async function saveJobsViewConfig(key: string, value: unknown): Promise<v
 // ---------------------------------------------------------------------------
 const SKETCH_SET = "crfdf_jobsketchs";
 
-/** Every job's sketch file (link + name) — no thumbnails. Throws when the table doesn't exist yet. */
-export async function fetchJobSketches(): Promise<Map<string, { fileUrl: string; fileName: string }>> {
-  const rows = await listAll(SKETCH_SET, { select: "crfdf_jobno,crfdf_fileurl,crfdf_filename" });
-  const out = new Map<string, { fileUrl: string; fileName: string }>();
+export interface JobSketchRow {
+  fileUrl: string;
+  fileName: string;
+  /** The file someone chose in the app (server-relative path); "" = the flow's automatic pick. */
+  pinned: string;
+}
+
+// crfdf_pinned is newer than the table (scripts/create-jobsketch-table.ps1 re-run).
+let sketchPinnedCol = true;
+
+/** Every job's sketch file (link + name + pin) — no thumbnails. Throws when the table doesn't exist yet. */
+export async function fetchJobSketches(): Promise<Map<string, JobSketchRow>> {
+  const base = "crfdf_jobno,crfdf_fileurl,crfdf_filename";
+  let rows: Row[];
+  try {
+    rows = await listAll(SKETCH_SET, { select: sketchPinnedCol ? `${base},crfdf_pinned` : base });
+  } catch (e) {
+    if (!sketchPinnedCol || !/pinned/i.test(e instanceof Error ? e.message : String(e))) throw e;
+    sketchPinnedCol = false;
+    rows = await listAll(SKETCH_SET, { select: base });
+  }
+  const out = new Map<string, JobSketchRow>();
   for (const r of rows) {
     const jobNo = s(r.crfdf_jobno).trim();
     const fileUrl = s(r.crfdf_fileurl).trim();
-    if (jobNo && fileUrl) out.set(jobNo, { fileUrl, fileName: s(r.crfdf_filename) });
+    if (jobNo && fileUrl) out.set(jobNo, { fileUrl, fileName: s(r.crfdf_filename), pinned: s(r.crfdf_pinned) });
   }
   return out;
+}
+
+/**
+ * Pin a job's sketch to a file chosen (or uploaded) in the app. The nightly
+ * flow keeps a pinned file instead of making its own pick. `thumbnail` is a
+ * data: URL ("" = none yet; the flow makes one for the pinned file tonight).
+ */
+export async function saveJobSketch(
+  jobNo: string,
+  sketch: { fileUrl: string; fileName: string; pinned: string; thumbnail: string },
+): Promise<void> {
+  if (!sketchPinnedCol) throw new Error("The Pinned File column isn't there yet - re-run scripts/create-jobsketch-table.ps1");
+  const rec: Row = {
+    crfdf_jobno: jobNo,
+    crfdf_name: jobNo,
+    crfdf_fileurl: sketch.fileUrl,
+    crfdf_filename: sketch.fileName,
+    crfdf_pinned: sketch.pinned,
+    // Not the flow's "v4|…" format, so its next run treats the job as changed
+    // and makes a thumbnail if we couldn't.
+    crfdf_fileversion: `app|${sketch.pinned}|${sketch.thumbnail ? "thumb" : "no-thumbnail"}`,
+    crfdf_thumbnail: sketch.thumbnail,
+  };
+  const existing = await list(SKETCH_SET, { select: "crfdf_jobsketchid", filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });
+  const res = existing[0]
+    ? await dvUpdate(SKETCH_SET, s(existing[0].crfdf_jobsketchid), rec)
+    : await dvCreate(SKETCH_SET, { crfdf_jobsketchid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "saveJobSketch failed");
+}
+
+/** Back to the automatic pick: clears the pin (the flow re-picks tonight). */
+export async function unpinJobSketch(jobNo: string): Promise<void> {
+  const existing = await list(SKETCH_SET, { select: "crfdf_jobsketchid", filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });
+  if (!existing[0]) return;
+  const res = await dvUpdate(SKETCH_SET, s(existing[0].crfdf_jobsketchid), { crfdf_pinned: "", crfdf_fileversion: "app|unpinned" });
+  if (!res.success) throw new Error(res.error?.message ?? "unpinJobSketch failed");
 }
 
 /** The thumbnails (data: URLs) for a few jobs. */

@@ -96,7 +96,7 @@
           "inputs": {
             "parameters": {
               "entityName": "crfdf_jobsketchs",
-              "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion"
+              "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion,crfdf_pinned"
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -212,22 +212,10 @@
                     "where": "@contains(createArray('jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'tif', 'tiff'), toLower(coalesce(item()?['File_x0020_Type'], '')))"
                   }
                 },
-                "Pick_Sketch": {
-                  "type": "Compose",
-                  "runAfter": {
-                    "Sketch_PDFs": [
-                      "Succeeded"
-                    ],
-                    "Images": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": "@if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images')))"
-                },
                 "Existing_Sketch": {
                   "type": "Query",
                   "runAfter": {
-                    "Pick_Sketch": [
+                    "List_Files": [
                       "Succeeded"
                     ]
                   },
@@ -236,10 +224,37 @@
                     "where": "@equals(trim(coalesce(item()?['crfdf_jobno'], '')), trim(items('For_each_job')?['crfdf_jobnumber']))"
                   }
                 },
+                "Pinned_File": {
+                  "type": "Query",
+                  "runAfter": {
+                    "Existing_Sketch": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
+                    "where": "@and(not(empty(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))), equals(toLower(coalesce(item()?['FileRef'], '')), toLower(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))))"
+                  }
+                },
+                "Pick_Sketch": {
+                  "type": "Compose",
+                  "runAfter": {
+                    "Sketch_PDFs": [
+                      "Succeeded"
+                    ],
+                    "Images": [
+                      "Succeeded"
+                    ],
+                    "Pinned_File": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": "@if(greater(length(body('Pinned_File')), 0), first(body('Pinned_File')), if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images'))))"
+                },
                 "Has_Sketch": {
                   "type": "If",
                   "runAfter": {
-                    "Existing_Sketch": [
+                    "Pick_Sketch": [
                       "Succeeded"
                     ]
                   },

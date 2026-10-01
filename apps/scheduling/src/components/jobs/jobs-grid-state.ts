@@ -59,8 +59,18 @@ export function matchFilter(row: JobRow, f: FilterCondition): boolean {
   }
 }
 
-/** Search → filters → sort (status tier first, then the user's sorts). */
-export function applyGrid(rows: readonly JobRow[], search: string, prefs: GridPrefs): JobRow[] {
+/** A choice column's option list in order (sorting and grouping follow it), if it has one. */
+export type OptionOrder = (field: string) => readonly string[] | undefined;
+
+/** Where a cell value sits in an option list; a multi-choice cell ("A, B") by its first value. */
+function rank(order: readonly string[], value: string): number {
+  const first = value.split(",")[0]!.trim();
+  const i = order.indexOf(first);
+  return i < 0 ? order.length : i;
+}
+
+/** Search → filters → sort (the user's sorts, then Current Status order). */
+export function applyGrid(rows: readonly JobRow[], search: string, prefs: GridPrefs, orderOf?: OptionOrder): JobRow[] {
   let out = rows as JobRow[];
   const q = search.trim().toLowerCase();
   if (q) {
@@ -78,15 +88,25 @@ export function applyGrid(rows: readonly JobRow[], search: string, prefs: GridPr
   }
   return [...out].sort((a, b) => {
     for (const { field, asc } of prefs.sorts) {
-      const c = compare(a, b, field);
+      const c = compare(a, b, field, orderOf?.(field));
       if (c) return asc ? c : -c;
     }
-    const t = statusTier(a.status) - statusTier(b.status);
+    const statusOrder = orderOf?.("status");
+    const t = statusOrder?.length
+      ? rank(statusOrder, a.status) - rank(statusOrder, b.status)
+      : statusTier(a.status) - statusTier(b.status);
     return t || a.jobNo.localeCompare(b.jobNo);
   });
 }
 
-function compare(a: JobRow, b: JobRow, field: string): number {
+function compare(a: JobRow, b: JobRow, field: string, order?: readonly string[]): number {
+  if (order?.length) {
+    // A choice column sorts in its option order (blank last, unlisted values after the list).
+    const at = text(a, field);
+    const bt = text(b, field);
+    if (!at || !bt) return Number(!at) - Number(!bt);
+    return rank(order, at) - rank(order, bt) || at.localeCompare(bt);
+  }
   const av = (a as unknown as Record<string, unknown>)[field];
   const bv = (b as unknown as Record<string, unknown>)[field];
   if (typeof av === "number" || typeof bv === "number") {
@@ -107,7 +127,13 @@ export interface GroupNode {
   count: number;
 }
 
-export function buildGroupTree(rows: JobRow[], groups: GroupCriterion[], depth = 0, parent = ""): GroupNode[] {
+export function buildGroupTree(
+  rows: JobRow[],
+  groups: GroupCriterion[],
+  depth = 0,
+  parent = "",
+  orderOf?: OptionOrder,
+): GroupNode[] {
   if (!groups.length) return [];
   const [first, ...rest] = groups;
   const buckets = new Map<string, JobRow[]>();
@@ -117,8 +143,14 @@ export function buildGroupTree(rows: JobRow[], groups: GroupCriterion[], depth =
     if (!b) buckets.set(k, (b = []));
     b.push(r);
   }
+  // Groups of a choice column follow its option order; otherwise A→Z.
+  const order = orderOf?.(first!.field);
   const keys = [...buckets.keys()].sort((a, b) =>
-    first!.field === "status" ? statusTier(a) - statusTier(b) || a.localeCompare(b) : a.localeCompare(b, undefined, { numeric: true }),
+    order?.length
+      ? rank(order, a) - rank(order, b) || a.localeCompare(b)
+      : first!.field === "status"
+        ? statusTier(a) - statusTier(b) || a.localeCompare(b)
+        : a.localeCompare(b, undefined, { numeric: true }),
   );
   if (!first!.asc) keys.reverse();
   return keys.map((key) => {
@@ -127,7 +159,7 @@ export function buildGroupTree(rows: JobRow[], groups: GroupCriterion[], depth =
     return {
       key, path, depth, field: first!.field, count: bucket.length,
       rows: rest.length ? [] : bucket,
-      children: rest.length ? buildGroupTree(bucket, rest, depth + 1, path) : [],
+      children: rest.length ? buildGroupTree(bucket, rest, depth + 1, path, orderOf) : [],
     };
   });
 }

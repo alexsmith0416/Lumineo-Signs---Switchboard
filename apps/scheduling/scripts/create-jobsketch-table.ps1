@@ -2,7 +2,9 @@
   Creates crfdf_jobsketch — each job's sketch for the Jobs list "Sketch"
   column: the file in the job's SharePoint folder (its link and name) and a
   small thumbnail picture of it (a data: URL). Filled nightly by the
-  BCSync_JobSketches flow (flows/BCSync_JobSketches.md).
+  BCSync_JobSketches flow (flows/BCSync_JobSketches.md). crfdf_pinned holds a
+  file chosen (or uploaded) in the app, which the flow keeps instead of its
+  own pick. Re-run it to add columns added later (existing ones are skipped).
 
   Uses the Web API with a device-code token (az is blocked by the proxy).
   Run it, open the printed URL, enter the code, sign in as asmith@lumineosigns.com.
@@ -152,6 +154,8 @@ New-Column     'crfdf_jobsketch' 'crfdf_FileUrl'      'File URL'      2000
 New-Column     'crfdf_jobsketch' 'crfdf_FileName'     'File Name'     400
 New-Column     'crfdf_jobsketch' 'crfdf_FileVersion'  'File Version'  200
 New-MemoColumn 'crfdf_jobsketch' 'crfdf_Thumbnail'    'Thumbnail'     1000000
+# The file someone picked in the app (its server-relative path); blank = the automatic pick.
+New-Column     'crfdf_jobsketch' 'crfdf_Pinned'       'Pinned File'   1000
 
 try {
   Invoke-RestMethod -Method Post -Uri "$base/PublishAllXml" -Headers $headers | Out-Null

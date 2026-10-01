@@ -8,7 +8,9 @@ import ProductionStepperSection from "../ProductionStepperSection";
 import { JobTargetsSection } from "../JobTargets";
 import { JobBadge } from "./JobsGrid";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
-import { COMPLETE_STATUSES, INSTALL_STATUSES, isHoldStatus, STATUS_OPTIONS } from "../../services/job-status";
+import { COMPLETE_STATUSES, INSTALL_STATUSES, isHoldStatus } from "../../services/job-status";
+import { useFieldOptionsStore } from "../../store/field-options-store";
+import { builtinOptions } from "./field-options";
 import { useCurrentUser } from "../../services/current-user";
 import { useCustomFieldStore } from "../../store/custom-field-store";
 import { describeFormula, linkFor } from "../../services/custom-fields";
@@ -184,7 +186,10 @@ function CustomFieldsSection({ row, canEdit }: { row: JobRow; canEdit: boolean }
 function StatusPicker({ row }: { row: JobRow }) {
   const setStatus = useJobTrackingStore((s) => s.setStatus);
   const { fullName, upn } = useCurrentUser();
-  const options = STATUS_OPTIONS.includes(row.status) ? STATUS_OPTIONS : [row.status, ...STATUS_OPTIONS];
+  // The status list in its edited order ("Edit field…" on the Current Status header).
+  const statusOverride = useFieldOptionsStore((s) => s.overrides.status);
+  const list = builtinOptions("status", statusOverride);
+  const options = list.includes(row.status) ? list : [row.status, ...list];
   const hint = (s: string) =>
     COMPLETE_STATUSES.has(s)
       ? "completes every step"
