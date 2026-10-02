@@ -142,11 +142,13 @@ export default function SketchPicker({ row, onClose }: { row: JobRow; onClose: (
           />
         </div>
         <div className="users-admin__footer" style={{ gap: 8, flexWrap: "wrap" }}>
-          {sketch?.pinned && (
+          {/* Also offered when there's no sketch — e.g. after Remove File — to
+              let the nightly search pick one again. */}
+          {(sketch?.pinned || !sketch) && (
             <button
               className="btn-secondary"
               disabled={!!busy}
-              title="Let the nightly sketch search pick the file again"
+              title="Let the nightly sketch search pick the file again (from tonight's run)"
               onClick={() => void run("Saving…", () => unpin(row.jobNo))}
             >
               Use the automatic pick

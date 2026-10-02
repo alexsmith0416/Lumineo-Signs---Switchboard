@@ -24,6 +24,8 @@ interface WeekSummaryProps {
   showStats?: boolean;
   /** Right-justified controls — undo/redo + Job Queue (tucked to the top-right). */
   trailing?: React.ReactNode;
+  /** Left-most control, before the stats (the Installation board's WK/NEK toggle). */
+  leading?: React.ReactNode;
 }
 
 function formatMoney(amount: number): string {
@@ -42,6 +44,7 @@ export default function WeekSummary({
   showTotalValue = false,
   showStats = true,
   trailing,
+  leading,
 }: WeekSummaryProps) {
   // The billing period (fiscal month) the viewed week sits in — its dates come
   // from each month's billing cut-off (Settings → Billing periods).
@@ -149,10 +152,11 @@ export default function WeekSummary({
 
   // Nothing to show — e.g. a view-only user (stats hidden, no editor controls).
   // Render nothing rather than an empty bar.
-  if (!showStats && !trailing) return null;
+  if (!showStats && !trailing && !leading) return null;
 
   return (
     <div className="week-summary">
+      {leading && <div className="week-summary__leading">{leading}</div>}
       {showStats && (
         <>
           <Stat label="Utilization" value={`${Math.round(stats.utilization * 100)}%`} highlight />

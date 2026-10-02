@@ -62,7 +62,7 @@ function NavItem({
       <span className="sb-nav__icon">
         <SidebarIcon name={item.icon} />
       </span>
-      <span>{item.label}</span>
+      <span className="sb-nav__label">{item.label}</span>
     </button>
   );
 }
@@ -118,7 +118,7 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
         <span className="sb-toggle__icon">
           <SidebarIcon name={nextIsDark ? "moon" : "sun"} size={16} />
         </span>
-        <span>{nextIsDark ? "Dark" : "Light"}</span>
+        <span className="sb-theme-toggle__label">{nextIsDark ? "Dark" : "Light"}</span>
       </button>
       <nav className="sb-nav">
         {OTHER.map((i) => (

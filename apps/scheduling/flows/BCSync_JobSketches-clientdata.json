@@ -110,19 +110,43 @@
             }
           }
         },
+        "Removed_Rows": {
+          "type": "Query",
+          "runAfter": {
+            "List_Sketches": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@body('List_Sketches')?['value']",
+            "where": "@equals(coalesce(item()?['crfdf_pinned'], ''), '(removed)')"
+          }
+        },
+        "Removed_Jobs": {
+          "type": "Select",
+          "runAfter": {
+            "Removed_Rows": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@body('Removed_Rows')",
+            "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"
+          }
+        },
         "Jobs_In_Site": {
           "type": "Query",
           "runAfter": {
             "List_Jobs": [
               "Succeeded"
             ],
-            "List_Sketches": [
+            "Removed_Jobs": [
               "Succeeded"
             ]
           },
           "inputs": {
             "from": "@body('List_Jobs')?['value']",
-            "where": "@startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), toLower(concat(parameters('Sp_Site'), '/')))"
+            "where": "@and(startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), toLower(concat(parameters('Sp_Site'), '/'))), not(contains(body('Removed_Jobs'), trim(coalesce(item()?['crfdf_jobnumber'], '')))))"
           }
         },
         "For_each_job": {

@@ -73,6 +73,44 @@ export async function pdfThumbnail(bytes: Uint8Array): Promise<string> {
   }
 }
 
+/**
+ * Every page of a PDF (up to `maxPages`) drawn `width` px wide, as JPEG data:
+ * URLs — for the full-size sketch viewer. `onPage` reports each page as it's
+ * drawn so the first shows straight away.
+ */
+export async function pdfPages(
+  bytes: Uint8Array,
+  width: number,
+  maxPages = 20,
+  onPage?: (index: number, dataUrl: string, total: number) => void,
+): Promise<{ pages: string[]; total: number }> {
+  const pdfjs = await loadPdfjs();
+  const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise;
+  const pages: string[] = [];
+  try {
+    const total = doc.numPages;
+    for (let n = 1; n <= Math.min(total, maxPages); n++) {
+      const page = await doc.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: width / base.width });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) break;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const url = canvas.toDataURL("image/jpeg", 0.9);
+      pages.push(url);
+      onPage?.(n - 1, url, total);
+    }
+    return { pages, total };
+  } finally {
+    void doc.destroy();
+  }
+}
+
 async function imageThumbnail(bytes: Uint8Array, type: string): Promise<string> {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: type === "jpg" ? "image/jpeg" : `image/${type}` }));
   try {

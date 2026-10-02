@@ -18,6 +18,12 @@ export default function SettingsScreen() {
   const setShowNowLine = useSettingsStore((s) => s.setShowNowLine);
   const showDayHours = useSettingsStore((s) => s.showDayHours);
   const setShowDayHours = useSettingsStore((s) => s.setShowDayHours);
+  const compactSidebar = useSettingsStore((s) => s.compactSidebar);
+  const setCompactSidebar = useSettingsStore((s) => s.setCompactSidebar);
+  const hideWeekendDefault = useSettingsStore((s) => s.hideWeekendDefault);
+  const showDayValue = useSettingsStore((s) => s.showDayValue);
+  const setShowDayValue = useSettingsStore((s) => s.setShowDayValue);
+  const setHideWeekendDefault = useSettingsStore((s) => s.setHideWeekendDefault);
   const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
   // Only real admins see + open the Users manager.
   const { realType } = useCurrentUser();
@@ -167,6 +173,82 @@ export default function SettingsScreen() {
 
         <div className="settings-row__status">
           The hover readout is <strong>{showDayHours ? "on" : "off"}</strong>.
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Compact sidebar</div>
+            <div className="settings-row__desc">
+              Shrinks the side navigation to a slim strip of icons (with the Lumineo logo on
+              top) so the schedule gets more of the screen. Move the mouse over the strip and
+              it opens out to the full sidebar; move away and it slides back.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={compactSidebar}
+            aria-label="Compact sidebar"
+            className={"settings-switch" + (compactSidebar ? " settings-switch--on" : "")}
+            onClick={() => setCompactSidebar(!compactSidebar)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          The sidebar is <strong>{compactSidebar ? "compact" : "full"}</strong>.
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Hide the weekend by default</div>
+            <div className="settings-row__desc">
+              Opens the Production and Installation calendars with <strong>Saturday and Sunday
+              hidden</strong>, so Monday–Friday spread across the full width. You can still
+              show or hide the weekend any time by <strong>right-clicking a day header</strong>.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={hideWeekendDefault}
+            aria-label="Hide the weekend by default"
+            className={"settings-switch" + (hideWeekendDefault ? " settings-switch--on" : "")}
+            onClick={() => setHideWeekendDefault(!hideWeekendDefault)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          The calendars open with the weekend <strong>{hideWeekendDefault ? "hidden" : "shown"}</strong>.
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__text">
+            <div className="settings-row__title">Day value on hover</div>
+            <div className="settings-row__desc">
+              Hovering a <strong>day header</strong> on the Production or Installation calendar pops up
+              the total value scheduled that day — <strong>WK</strong>, <strong>NEK</strong> and the two{" "}
+              <strong>combined</strong>. Each job counts once per day it's on, at the value its cards
+              show (BC remaining balance, else the invoice amount). Only shown to people who can see $.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showDayValue}
+            aria-label="Day value on hover"
+            className={"settings-switch" + (showDayValue ? " settings-switch--on" : "")}
+            onClick={() => setShowDayValue(!showDayValue)}
+          >
+            <span className="settings-switch__knob" />
+          </button>
+        </div>
+
+        <div className="settings-row__status">
+          The day-value popup is <strong>{showDayValue ? "on" : "off"}</strong>.
         </div>
       </div>
 

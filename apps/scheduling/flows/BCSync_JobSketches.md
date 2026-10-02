@@ -66,6 +66,12 @@ into it (CreateFile) and get a thumbnail link. A choice is saved to the job's
 flow keeps it on later runs (and makes the stored thumbnail if the app couldn't).
 "Use the automatic pick" clears the pin.
 
+**Remove File** (Jobs list) sets `crfdf_pinned` = `(removed)` and clears the row's
+link, name and thumbnail. The flow skips those jobs entirely (`Removed_Rows` /
+`Removed_Jobs`, filtered out of `Jobs_In_Site`), so it never picks a file for them
+again until a file is chosen/uploaded or "Use the automatic pick" clears the
+marker. Nothing in SharePoint is ever changed. (Needs flow 1.0.0.14+.)
+
 ## Import & test
 
 1. Run `scripts/create-jobsketch-table.ps1` (creates `crfdf_jobsketch`).

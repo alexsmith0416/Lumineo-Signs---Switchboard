@@ -17,6 +17,13 @@ export function cachedJobStepInfo(jobNo: string): JobStepInfo | undefined {
   return infoCache.get(jobNo);
 }
 
+// While the Jobs list's bulk stepper read is running, rows wait for it instead
+// of each fetching their own planning lines.
+let bulkPending: Promise<unknown> | null = null;
+export function setBulkStepInfoPending(p: Promise<unknown> | null): void {
+  bulkPending = p;
+}
+
 /** Pre-fill the cache for many jobs at once (e.g. the Jobs list's bulk load),
  *  so their steppers draw without a request each. Existing entries are kept. */
 export function primeJobStepInfo(all: ReadonlyMap<string, JobStepInfo>): void {
@@ -54,8 +61,13 @@ export function useJobSteps(jobNo: string | undefined): {
       return;
     }
     let alive = true;
-    void import("../services/dataverse-live")
-      .then((m) => m.jobStepInfo(jobNo))
+    const pending = bulkPending;
+    void (pending ? pending.catch(() => undefined) : Promise.resolve())
+      .then(() => {
+        const primed = infoCache.get(jobNo);
+        if (primed) return primed;
+        return import("../services/dataverse-live").then((m) => m.jobStepInfo(jobNo));
+      })
       .then((d) => {
         infoCache.set(jobNo, d);
         if (alive) setInfo(d);

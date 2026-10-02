@@ -111,6 +111,21 @@ export function fileUrlOf(fileRef: string): string {
   return SP_ORIGIN + fileRef.replace(/%/g, "%25").replace(/ /g, "%20").replace(/#/g, "%23");
 }
 
+/** Server-relative path of a SharePoint file link (the reverse of fileUrlOf). */
+export function fileRefOf(fileUrl: string): string {
+  const path = fileUrl.startsWith(SP_ORIGIN) ? fileUrl.slice(SP_ORIGIN.length) : fileUrl;
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
+/** SharePoint's own download link for a file (opens in a new tab and downloads it). */
+export function downloadUrlOf(fileUrl: string): string {
+  return `${SP_ORIGIN}/sites/JobFiles/_layouts/15/download.aspx?SourceUrl=${encodeURIComponent(fileUrl)}`;
+}
+
 /** Every file in a job's folder and its subfolders, newest first. */
 export async function listJobFiles(folderUrl: string): Promise<SpFile[]> {
   const folder = folderPathOf(folderUrl);

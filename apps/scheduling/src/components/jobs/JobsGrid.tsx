@@ -10,6 +10,7 @@ import { contrastText, linkFor, optionColor, type CustomFieldDef } from "../../s
 import CustomValueEditor from "./CustomValueEditor";
 import StepperPopover from "./StepperPopover";
 import SketchPicker from "./SketchPicker";
+import SketchViewer, { RemoveSketchConfirm } from "./SketchViewer";
 import { createPortal } from "react-dom";
 import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type OptionOrder, type SortCriterion } from "./jobs-grid-state";
@@ -573,10 +574,11 @@ function JobLinksMenu({ row, x, y, onClose }: { row: JobRow; x: number; y: numbe
   );
 }
 
-/** The job's sketch: a thumbnail that opens the file in SharePoint; a larger
- *  preview on hover. Editors drop a file on it to upload it to the job's
- *  SharePoint folder as the sketch, or right-click to choose / upload / go back
- *  to the automatic pick. Blank when the job has no sketch. */
+/** The job's sketch: a thumbnail that opens the file full size in the sketch
+ *  viewer; a larger preview on hover. Editors drop a file on it to upload it to
+ *  the job's SharePoint folder as the sketch, or right-click to choose / upload /
+ *  go back to the automatic pick / remove it from the list (never deleting the
+ *  SharePoint file). Blank when the job has no sketch. */
 function SketchCell({ row }: { row: JobRow }) {
   const jobNo = row.jobNo;
   const sketch = useSketchStore((s) => s.byJob.get(jobNo));
@@ -584,7 +586,10 @@ function SketchCell({ row }: { row: JobRow }) {
   const wantThumb = useSketchStore((s) => s.wantThumb);
   const uploadFile = useSketchStore((s) => s.uploadFile);
   const unpin = useSketchStore((s) => s.unpin);
+  const removeSketch = useSketchStore((s) => s.remove);
   const { canEdit, openPicker } = useContext(SketchEditContext);
+  const [viewing, setViewing] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [hover, setHover] = useState<DOMRect | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<{ busy: boolean; text: string } | null>(null);
@@ -652,10 +657,11 @@ function SketchCell({ row }: { row: JobRow }) {
         <button
           type="button"
           className="jobs-sketch"
-          title={`${sketch.fileName}${sketch.pinned ? " (chosen)" : ""} — click to open`}
+          title={`${sketch.fileName}${sketch.pinned ? " (chosen)" : ""} — click to view`}
           onClick={(e) => {
             e.stopPropagation();
-            window.open(sketch.fileUrl, "_blank", "noopener");
+            setHover(null);
+            setViewing(true);
           }}
           onMouseEnter={(e) => thumb && setHover(e.currentTarget.getBoundingClientRect())}
           onMouseLeave={() => setHover(null)}
@@ -703,8 +709,13 @@ function SketchCell({ row }: { row: JobRow }) {
             >
               <div className="job-context-menu__head">Sketch · {jobNo}</div>
               {sketch && (
+                <button type="button" onClick={() => (setMenu(null), setViewing(true))}>
+                  View
+                </button>
+              )}
+              {sketch && (
                 <button type="button" onClick={() => (window.open(sketch.fileUrl, "_blank", "noopener"), setMenu(null))}>
-                  Open file
+                  Open in SharePoint
                 </button>
               )}
               <button type="button" onClick={() => (setMenu(null), openPicker(row))}>
@@ -727,10 +738,36 @@ function SketchCell({ row }: { row: JobRow }) {
                   Use the automatic pick
                 </button>
               )}
+              {sketch && (
+                <button type="button" className="job-context-menu__danger" onClick={() => (setMenu(null), setConfirmRemove(true))}>
+                  Remove File
+                </button>
+              )}
             </div>
           </>,
           document.body,
         )}
+      {viewing && sketch && (
+        <SketchViewer
+          jobNo={jobNo}
+          sketch={sketch}
+          canRemove={editable}
+          onRemove={() => setConfirmRemove(true)}
+          onClose={() => setViewing(false)}
+        />
+      )}
+      {confirmRemove && sketch && (
+        <RemoveSketchConfirm
+          jobNo={jobNo}
+          fileName={sketch.fileName}
+          onCancel={() => setConfirmRemove(false)}
+          onConfirm={() => {
+            setConfirmRemove(false);
+            setViewing(false);
+            void removeSketch(jobNo);
+          }}
+        />
+      )}
     </div>
   );
 }

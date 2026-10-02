@@ -11,6 +11,10 @@ Nightly (and on Run), for every open BC job whose SharePoint folder
      it still exists; else the newest PDF whose name starts with the job number
      ("J38740 YMCA_Wall Sign.pdf", "J39151-SECURITY 1ST TITLE(HUTCHINSON).pdf")
      - else the newest image (jpg / png / ...) in the folder - else none;
+     A job whose sketch was REMOVED in the app (crfdf_pinned = "(removed)") is
+     skipped entirely, so the flow never picks a file for it again (choosing or
+     uploading a file in the app replaces the marker). Nothing in SharePoint is
+     ever changed;
   3. when the pick is new or changed, fetches a thumbnail of it from SharePoint
      (the v2.0 drive thumbnails API, by the file's path in the library, renders
      page 1 of a PDF) and saves the
@@ -35,6 +39,9 @@ SP = {"apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
       "connectionName": "shared_sharepointonline"}
 
 JOB = "items('For_each_job')"
+# crfdf_pinned value the app writes for "Remove File" (keep in step with
+# SKETCH_REMOVED in src/services/dataverse-live.ts).
+REMOVED = "(removed)"
 JOBNO = f"trim({JOB}?['crfdf_jobnumber'])"
 FOLDER_URL = f"trim({JOB}?['crfdf_sharepointurl'])"
 
@@ -199,12 +206,22 @@ actions = {
     "List_Sketches": dv("ListRecords", {
         "entityName": "crfdf_jobsketchs", "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion,crfdf_pinned"},
         paginate=True),
+    # Jobs whose sketch was removed in the app ("Remove File") - left alone.
+    "Removed_Rows": {
+        "type": "Query", "runAfter": after("List_Sketches"),
+        "inputs": {"from": "@body('List_Sketches')?['value']",
+                   "where": f"@equals(coalesce(item()?['crfdf_pinned'], ''), '{REMOVED}')"}},
+    "Removed_Jobs": {
+        "type": "Select", "runAfter": after("Removed_Rows"),
+        "inputs": {"from": "@body('Removed_Rows')", "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"}},
     "Jobs_In_Site": {
-        "type": "Query", "runAfter": after("List_Jobs", "List_Sketches"),
-        # Only folders in the JobFiles site (a couple point at a personal OneDrive).
+        "type": "Query", "runAfter": after("List_Jobs", "Removed_Jobs"),
+        # Only folders in the JobFiles site (a couple point at a personal OneDrive),
+        # and not jobs whose sketch was removed in the app.
         "inputs": {"from": "@body('List_Jobs')?['value']",
-                   "where": ("@startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), "
-                             "toLower(concat(parameters('Sp_Site'), '/')))")}},
+                   "where": ("@and(startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), "
+                             "toLower(concat(parameters('Sp_Site'), '/'))), "
+                             "not(contains(body('Removed_Jobs'), trim(coalesce(item()?['crfdf_jobnumber'], '')))))")}},
     "For_each_job": {
         "type": "Foreach", "foreach": "@body('Jobs_In_Site')", "runAfter": after("Jobs_In_Site"),
         "runtimeConfiguration": {"concurrency": {"repetitions": 8}},

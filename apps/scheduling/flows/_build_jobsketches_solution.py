@@ -20,7 +20,7 @@ STAGE   = r"C:\Users\Alex\Downloads\bcjobsketches_build"
 # ONLY_JOB=J38740 builds a test copy that runs for that one job only (the flow
 # designer doesn't show flow parameters, so it's set here instead).
 ONLY_JOB = os.environ.get("ONLY_JOB", "").strip()
-VERSION  = "1.0.0.11" if ONLY_JOB else "1.0.0.12"
+VERSION  = "1.0.0.13" if ONLY_JOB else "1.0.0.14"
 OUT_ZIP  = (rf"C:\Users\Alex\Downloads\BCJobSketches_TEST_{ONLY_JOB}.zip" if ONLY_JOB
             else rf"C:\Users\Alex\Downloads\BCJobSketches_{VERSION.replace('.', '_')}.zip")
 

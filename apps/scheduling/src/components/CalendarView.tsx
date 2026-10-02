@@ -38,7 +38,8 @@ import { GroupIcon } from "./GroupIcon";
 import { LockIcon } from "./LockIcon";
 import { PrintIcon } from "./PrintIcon";
 import EmployeeAdminPanel from "./EmployeeAdminPanel";
-import JobCard, { cardHasAddons, cardAddonCount } from "./JobCard";
+import JobCard, { cardHasAddons, cardAddonCount, cardMoneyValue } from "./JobCard";
+import { dayValue } from "../services/day-values";
 import EditJobPanel from "./EditJobPanel";
 import WeekSummary from "./WeekSummary";
 import { useBillingPeriodStore } from "../store/billing-period-store";
@@ -64,6 +65,21 @@ interface CalendarViewProps {
   kindMeta: ScheduleKindMeta;
   readOnly?: boolean;
   bannerSlot?: React.ReactNode;
+  /** A control at the left end of the stats bar (the Installation WK/NEK toggle). */
+  summaryLeading?: React.ReactNode;
+  /**
+   * $ scheduled per day, popped up on day-header hover (Settings → Display →
+   * Day value on hover). Omit it for people who can't see money.
+   */
+  dayValues?: {
+    /** Region of a card on THIS board ("WK" / "NEK"; production: the job's region). */
+    regionOf: (line: ScheduleLine) => string | null;
+    /** This board's own region, listed first (the install boards). */
+    currentRegion?: string;
+    /** Install: the other region's cards for a date range, for the combined total. Keep it stable (useCallback). */
+    loadOther?: (from: Date, to: Date) => Promise<ScheduleLine[]>;
+    otherRegion?: string;
+  };
   toolbarExtras?: React.ReactNode;
   addAction?: React.ReactNode;
   onEmptyCellClick?: (cell: { start: Date; employeeId: string }) => void;
@@ -295,7 +311,7 @@ function useStackedAddons(): boolean {
  *  grid. Feeds the un-stacked height estimate so it stays accurate (no clip) as
  *  the window resizes. 0 until first measured — estimateWrappedLines falls back
  *  to a conservative width until then. */
-function useDayColumnWidth(gridRef: React.RefObject<HTMLDivElement | null>): number {
+function useDayColumnWidth(gridRef: React.RefObject<HTMLDivElement | null>, dayCount: number): number {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
     const grid = gridRef.current;
@@ -310,7 +326,9 @@ function useDayColumnWidth(gridRef: React.RefObject<HTMLDivElement | null>): num
     const ro = new ResizeObserver(measure);
     ro.observe(grid);
     return () => ro.disconnect();
-  }, [gridRef]);
+    // The grid keeps its width when the weekend is hidden/shown, so re-measure
+    // when the column count changes too.
+  }, [gridRef, dayCount]);
   return width;
 }
 
@@ -319,7 +337,10 @@ function useDayColumnWidth(gridRef: React.RefObject<HTMLDivElement | null>): num
 // clipping a bar's end to Friday makes a job that spills past Friday "skip the
 // weekend" — it shows an overflow arrow and resumes on next week's Monday,
 // mirroring the engine (weekends are zero-capacity for these employees).
-function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: boolean): CardLayout[] {
+// `lastIdx` is the last column on screen: 6 normally, 4 when the weekend is
+// hidden (a card starting on the weekend isn't drawn; one running into it is
+// clipped at Friday with an overflow arrow).
+function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: boolean, lastIdx = 6): CardLayout[] {
   const out: CardLayout[] = [];
   const ordered = [...lines].sort(
     (a, b) => a.startDateTime.getTime() - b.startDateTime.getTime(),
@@ -343,9 +364,9 @@ function computeRowCards(lines: ScheduleLine[], weekStart: Date, skipWeekend: bo
     // hours-derived end.
     const endIdx =
       line.spanDays && line.spanDays >= 1 ? startIdx + (line.spanDays - 1) : naturalEndIdx;
-    if (endIdx < 0 || startIdx > 6) continue;
+    if (endIdx < 0 || startIdx > lastIdx) continue;
     const clippedStart = Math.max(0, startIdx);
-    let clippedEnd = Math.min(6, endIdx);
+    let clippedEnd = Math.min(lastIdx, endIdx);
     // Don't draw a weekday employee's bar across the weekend columns.
     if (skipWeekend && clippedStart <= 4) clippedEnd = Math.min(clippedEnd, 4);
     if (clippedEnd < clippedStart) continue;
@@ -375,6 +396,8 @@ export default function CalendarView({
   kindMeta,
   readOnly = false,
   bannerSlot,
+  summaryLeading,
+  dayValues,
   toolbarExtras,
   addAction,
   onEmptyCellClick,
@@ -668,7 +691,12 @@ export default function CalendarView({
   // Narrow screens stack the crew/weather/$ addons vertically (they don't fit
   // on one row in a mobile day column) — the lane grows to fit them.
   const stackAddons = useStackedAddons();
-  const dayColWidth = useDayColumnWidth(gridRef);
+  // Weekend shown/hidden (right-click a day header; default from Settings).
+  const hideWeekend = useSettingsStore((s) => s.hideWeekend);
+  const setHideWeekend = useSettingsStore((s) => s.setHideWeekend);
+  const dayCount = hideWeekend ? 5 : 7;
+  const [dayMenu, setDayMenu] = useState<{ x: number; y: number } | null>(null);
+  const dayColWidth = useDayColumnWidth(gridRef, dayCount);
 
   // "Now" indicator — a faint pulsing red line at the current day + time, drawn
   // as a CSS-grid overlay that mirrors the header columns (no measurement, so it
@@ -685,6 +713,7 @@ export default function CalendarView({
     const now = new Date();
     const dayIdx = getDayIndex(now, weekStart);
     if (dayIdx < 0 || dayIdx > 6) return null; // not viewing the current week
+    if (hideWeekend && dayIdx > 4) return null; // today is a hidden weekend day
     const mins = now.getHours() * 60 + now.getMinutes();
     const frac = Math.min(1, Math.max(0, (mins - 8 * 60) / (8 * 60))); // 08:00–16:00
     return { dayIdx, frac };
@@ -760,6 +789,75 @@ export default function CalendarView({
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [weekStart]);
+  // The columns on screen: Mon–Sun, or Mon–Fri with the weekend hidden.
+  const visibleDays = useMemo(() => {
+    return hideWeekend ? days.slice(0, 5) : days;
+  }, [days, hideWeekend]);
+
+  // Day value on hover: the day header under the mouse, and (install) the
+  // other region's cards for this week — re-read each time the mouse enters the
+  // header row so it reflects edits on the other board.
+  const showDayValue = useSettingsStore((s) => s.showDayValue) && !!dayValues;
+  const [valueDayIdx, setValueDayIdx] = useState<number | null>(null);
+  const [otherLines, setOtherLines] = useState<ScheduleLine[]>([]);
+  const loadOther = dayValues?.loadOther;
+  const refreshOtherLines = useCallback(() => {
+    if (!showDayValue || !loadOther) return;
+    loadOther(days[0]!, addDays(days[0]!, 7))
+      .then(setOtherLines)
+      .catch((e) => console.warn("[day value] couldn't read the other region", e));
+  }, [showDayValue, loadOther, days]);
+  useEffect(() => {
+    setOtherLines([]);
+    refreshOtherLines();
+  }, [refreshOtherLines]);
+  const dayValueTip = (day: Date) => {
+    if (!dayValues) return null;
+    const otherIds = new Set(otherLines.map((l) => l.id));
+    const v = dayValue(
+      [...schedule, ...otherLines],
+      day,
+      (l) => (otherIds.has(l.id) ? (dayValues.otherRegion ?? null) : dayValues.regionOf(l)),
+      cardMoneyValue,
+    );
+    // WK and NEK always listed (this board's region first); "Other" only when
+    // some job has no region.
+    const regions = [
+      ...(dayValues.currentRegion ? [dayValues.currentRegion] : []),
+      ...["WK", "NEK"].filter((r) => r !== dayValues.currentRegion),
+      ...(v.byRegion.Other ? ["Other"] : []),
+    ];
+    const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+    const jobsLabel = (n: number) => `${n} job${n === 1 ? "" : "s"}`;
+    return (
+      <div className="day-value-tip" role="tooltip">
+        <div className="day-value-tip__title">{format(day, "EEE, MMM d")}</div>
+        {regions.map((r) => {
+          const rv = v.byRegion[r] ?? { total: 0, jobs: 0 };
+          return (
+            <div
+              key={r}
+              className={"day-value-tip__row" + (r === dayValues.currentRegion ? " day-value-tip__row--current" : "")}
+            >
+              <span>{r === "Other" ? "Other / not set" : r}</span>
+              <span>
+                <span className="day-value-tip__money">{money(rv.total)}</span>
+                <span className="day-value-tip__jobs">{jobsLabel(rv.jobs)}</span>
+              </span>
+            </div>
+          );
+        })}
+        <div className="day-value-tip__row day-value-tip__row--total">
+          <span>{dayValues.loadOther ? "WK + NEK combined" : "Total"}</span>
+          <span>
+            <span className="day-value-tip__money">{money(v.combined.total)}</span>
+            <span className="day-value-tip__jobs">{jobsLabel(v.combined.jobs)}</span>
+          </span>
+        </div>
+        {!dayValues.loadOther && <div className="day-value-tip__note">Split by each job's region on the Jobs list.</div>}
+      </div>
+    );
+  };
 
   const grouped = useMemo(() => {
     const out = new Map<string, Employee[]>();
@@ -925,6 +1023,7 @@ export default function CalendarView({
           combinedBillingThisWeek={combinedBillingThisWeek}
           loadPeriodLines={showBillingStats ? loadPeriodLines : undefined}
           showStats={!readOnly}
+          leading={summaryLeading}
           trailing={
             !readOnly || enableJobQueue ? (
               <>
@@ -1041,6 +1140,7 @@ export default function CalendarView({
       <div
         className="calendar-grid"
         ref={gridRef}
+        style={{ "--cal-days": dayCount } as React.CSSProperties}
         onMouseOver={onBoardMouseOver}
         onMouseLeave={() => {
           hoveredLineRef.current = null;
@@ -1058,7 +1158,7 @@ export default function CalendarView({
             </div>
           </div>
         )}
-        <div className="calendar-header-row">
+        <div className="calendar-header-row" onMouseEnter={loadOther ? refreshOtherLines : undefined}>
           <div
             className={
               "calendar-header-cell calendar-header-cell--resource" +
@@ -1088,12 +1188,30 @@ export default function CalendarView({
               </span>
             )}
           </div>
-          {days.map((d) => (
+          {visibleDays.map((d, i) => (
             <div
               key={d.toISOString()}
               className={`calendar-header-cell${isWeekend(d) ? " calendar-header-cell--weekend" : ""}`}
+              // No native tooltip while the day-value popup is on (they'd overlap).
+              title={
+                showDayValue
+                  ? undefined
+                  : hideWeekend && i === 4
+                    ? "Saturday & Sunday are hidden — right-click to show them"
+                    : "Right-click to hide or show the weekend"
+              }
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setDayMenu({ x: e.clientX, y: e.clientY });
+              }}
+              onMouseEnter={showDayValue ? () => setValueDayIdx(i) : undefined}
+              onMouseLeave={showDayValue ? () => setValueDayIdx(null) : undefined}
             >
-              <div>{format(d, "EEE")}</div>
+              {showDayValue && valueDayIdx === i && dayValueTip(d)}
+              <div>
+                {format(d, "EEE")}
+                {hideWeekend && i === 4 && <span className="calendar-header-cell__hidden"> · Sat–Sun hidden</span>}
+              </div>
               <div style={{ fontWeight: 400, fontSize: 11 }}>{format(d, "MMM d")}</div>
               {showBillingCutoffs && <BillingCutoffLabel day={d} />}
             </div>
@@ -1172,6 +1290,7 @@ export default function CalendarView({
                 mirrored.length ? [...empLines, ...mirrored] : empLines,
                 days[0]!,
                 !emp.worksWeekends,
+                dayCount - 1,
               );
               // laneHeight is a first-pass ESTIMATE; EmployeeRow measures the real
               // card heights on mount and tightens the row to fit (so an un-stacked
@@ -1214,7 +1333,7 @@ export default function CalendarView({
                       ? (e) => onRosterRowDrop(e, emp.id)
                       : undefined
                   }
-                  days={days}
+                  days={visibleDays}
                   cards={cards}
                   scheduleCtx={context}
                   assistDays={assistDaysByEmployee?.get(emp.id)}
@@ -1325,6 +1444,23 @@ export default function CalendarView({
         />
       )}
 
+      {dayMenu && (
+        <>
+          <div className="context-menu__backdrop" onClick={() => setDayMenu(null)} />
+          <div className="context-menu" style={{ top: dayMenu.y, left: dayMenu.x }} role="menu">
+            <button
+              type="button"
+              className="context-menu__item"
+              onClick={() => {
+                setHideWeekend(!hideWeekend);
+                setDayMenu(null);
+              }}
+            >
+              {hideWeekend ? "Show Weekend (Sat & Sun)" : "Hide Weekend (Sat & Sun)"}
+            </button>
+          </div>
+        </>
+      )}
       {bannerMenu && (
         <>
           <div className="context-menu__backdrop" onClick={() => setBannerMenu(null)} />
@@ -1704,7 +1840,8 @@ function EmployeeRow({
     const strip = daysRef.current;
     if (!strip) return 0;
     const rect = strip.getBoundingClientRect();
-    return Math.max(0, Math.min(6, Math.floor(((clientX - rect.left) / rect.width) * 7)));
+    const n = days.length; // 7, or 5 with the weekend hidden
+    return Math.max(0, Math.min(n - 1, Math.floor(((clientX - rect.left) / rect.width) * n)));
   };
 
   // This person's cards on weekday `dayIdx`, in visual top-to-bottom order
@@ -1869,7 +2006,7 @@ function EmployeeRow({
           return (
             <div
               className="day-hours-tip"
-              style={{ left: `${(hoursDayIdx / 7) * 100}%`, width: `${100 / 7}%` }}
+              style={{ left: `${(hoursDayIdx / days.length) * 100}%`, width: `${100 / days.length}%` }}
             >
               {load.blocked ? (
                 <span className="day-hours-tip__blocked">{load.blockLabel || "Off"} · blocked</span>
@@ -1896,8 +2033,8 @@ function EmployeeRow({
           <div
             className="reorder-insert-line"
             style={{
-              left: `${(reorderInsert.dayIdx / 7) * 100}%`,
-              width: `${100 / 7}%`,
+              left: `${(reorderInsert.dayIdx / days.length) * 100}%`,
+              width: `${100 / days.length}%`,
               top: reorderInsert.topPx,
             }}
           />
@@ -1971,6 +2108,7 @@ function EmployeeRow({
             showWeather={showWeather}
             highlighted={highlightedLineIds?.has(card.line.id) ?? false}
             daysRef={daysRef}
+            dayCount={days.length}
             // Drops landing on a card forward to the row strip so the task
             // stacks onto whatever day is under the cursor (lane allocator
             // handles the visual stacking).
@@ -2022,6 +2160,8 @@ interface GanttCardProps {
   showWeather: boolean;
   highlighted: boolean;
   daysRef: React.RefObject<HTMLDivElement | null>;
+  /** Day columns on screen: 7, or 5 with the weekend hidden. */
+  dayCount: number;
   onCardDragOver: (e: React.DragEvent) => void;
   onCardDrop: (e: React.DragEvent) => void;
   /** Report drag start/end so the row can detect a same-day reorder. */
@@ -2052,6 +2192,7 @@ function GanttCard({
   showWeather,
   highlighted,
   daysRef,
+  dayCount,
   onDragStartLine,
   onDragEndLine,
   onCardDragOver,
@@ -2102,12 +2243,12 @@ function GanttCard({
     newStart: Date;
   } | null>(null);
 
-  const widthPct = (spanDays / 7) * 100;
-  const leftPct = (startIdx / 7) * 100;
+  const widthPct = (spanDays / dayCount) * 100;
+  const leftPct = (startIdx / dayCount) * 100;
   const previewWidthPct = resizePreview
     ? widthPct + (resizePreview.deltaPx / (daysRef.current?.clientWidth || 1)) * 100
     : widthPct;
-  const previewLeftPct = movePreview ? leftPct + (movePreview.deltaDays / 7) * 100 : leftPct;
+  const previewLeftPct = movePreview ? leftPct + (movePreview.deltaDays / dayCount) * 100 : leftPct;
 
   const top = 4 + lane * laneHeight;
 
@@ -2117,7 +2258,7 @@ function GanttCard({
     e.stopPropagation();
     const dayContainer = daysRef.current;
     if (!dayContainer) return;
-    const dayWidth = dayContainer.clientWidth / 7;
+    const dayWidth = dayContainer.clientWidth / dayCount;
     const startX = e.clientX;
     // Right-edge drag sets the card's VISUAL day span only — no hours change, no
     // cascade, no dialog. A quick way to lay out the week; edit actual hours in
@@ -2165,7 +2306,7 @@ function GanttCard({
     e.stopPropagation();
     const dayContainer = daysRef.current;
     if (!dayContainer) return;
-    const dayWidth = dayContainer.clientWidth / 7;
+    const dayWidth = dayContainer.clientWidth / dayCount;
     const startX = e.clientX;
     const baseStart = line.startDateTime;
 
@@ -2173,7 +2314,7 @@ function GanttCard({
       // Clamp so the start stays inside the visible Mon–Sun week (the card
       // doesn't slide off to another week and vanish from view).
       const raw = Math.round((clientX - startX) / dayWidth);
-      const deltaDays = Math.max(-startIdx, Math.min(6 - startIdx, raw));
+      const deltaDays = Math.max(-startIdx, Math.min(dayCount - 1 - startIdx, raw));
       const newStart = new Date(baseStart);
       newStart.setDate(newStart.getDate() + deltaDays);
       return { deltaDays, newStart };

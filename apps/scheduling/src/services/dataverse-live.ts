@@ -2352,6 +2352,33 @@ export async function saveJobSketch(
   if (!res.success) throw new Error(res.error?.message ?? "saveJobSketch failed");
 }
 
+/** crfdf_pinned for a sketch removed in the app ("Remove File"); the nightly
+ *  flow skips these jobs (keep in step with REMOVED in flows/_gen_jobsketches_flow.py). */
+export const SKETCH_REMOVED = "(removed)";
+
+/**
+ * "Remove File": take the sketch off the Jobs list. ONLY the crfdf_jobsketch
+ * row changes (link, name and thumbnail cleared, marked removed so the flow
+ * doesn't pick a file again) — nothing in SharePoint is touched.
+ */
+export async function removeJobSketch(jobNo: string): Promise<void> {
+  if (!sketchPinnedCol) throw new Error("The Pinned File column isn't there yet - re-run scripts/create-jobsketch-table.ps1");
+  const rec: Row = {
+    crfdf_jobno: jobNo,
+    crfdf_name: jobNo,
+    crfdf_fileurl: "",
+    crfdf_filename: "",
+    crfdf_pinned: SKETCH_REMOVED,
+    crfdf_fileversion: "app|removed",
+    crfdf_thumbnail: "",
+  };
+  const existing = await list(SKETCH_SET, { select: "crfdf_jobsketchid", filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });
+  const res = existing[0]
+    ? await dvUpdate(SKETCH_SET, s(existing[0].crfdf_jobsketchid), rec)
+    : await dvCreate(SKETCH_SET, { crfdf_jobsketchid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "removeJobSketch failed");
+}
+
 /** Back to the automatic pick: clears the pin (the flow re-picks tonight). */
 export async function unpinJobSketch(jobNo: string): Promise<void> {
   const existing = await list(SKETCH_SET, { select: "crfdf_jobsketchid", filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });

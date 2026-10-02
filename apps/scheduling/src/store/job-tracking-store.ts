@@ -60,17 +60,25 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
         return;
       }
       const [dv, steps] = await Promise.all([import("../services/dataverse-live"), import("../hooks/useJobSteps")]);
-      // One batch: jobs, tracking rows, EVERY job's stepper info (one paged read
-      // instead of a request per row) and the calendar invoice amounts. The
-      // extras are best-effort — a failure there must not block the list.
-      const [bcJobs, tracks, stepInfo, invoiceByJob] = await Promise.all([
-        dv.fetchBcJobSummaries(),
-        dv.fetchJobTracks(),
-        dv.allJobStepInfo().catch((e) => {
-          console.warn("[jobs] bulk stepper load failed; steppers load per row", e);
-          return null;
-        }),
-        dv.jobInvoiceAmounts().catch(() => new Map<string, number>()),
+      const t0 = performance.now();
+      const ms = () => `${Math.round(performance.now() - t0)} ms`;
+      // The list shows as soon as the jobs + tracking rows are in. EVERY job's
+      // stepper info (one big paged read of the planning lines) and the
+      // calendar invoice amounts fill in after; they're best-effort — a failure
+      // there must not block the list. Rows on screen meanwhile wait for the
+      // bulk read rather than fetching their own steppers.
+      const stepInfoP = dv.allJobStepInfo().catch((e) => {
+        console.warn("[jobs] bulk stepper load failed; steppers load per row", e);
+        return null;
+      });
+      const invoiceP = dv.jobInvoiceAmounts().catch(() => new Map<string, number>());
+      steps.setBulkStepInfoPending(stepInfoP);
+      const [bcJobs, tracks] = await Promise.all([dv.fetchBcJobSummaries(), dv.fetchJobTracks()]);
+      console.info(`[load] jobs list (BC jobs + tracking): ${ms()}`);
+      set({ bcJobs, tracks, loaded: true, loading: false });
+      const [stepInfo, invoiceByJob] = await Promise.all([
+        stepInfoP.then((v) => (console.info(`[load] jobs steppers: ${ms()}`), v)),
+        invoiceP.then((v) => (console.info(`[load] jobs invoice amounts: ${ms()}`), v)),
       ]);
       if (stepInfo) {
         // Jobs with no resource planning lines are known-empty, not "fetch me".
@@ -78,7 +86,8 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
         for (const j of bcJobs) if (!all.has(j.jobNo)) all.set(j.jobNo, { production: [], hasInstall: false });
         steps.primeJobStepInfo(all);
       }
-      set({ bcJobs, tracks, invoiceByJob, stepInfo: stepInfo ?? new Map(), loaded: true, loading: false });
+      steps.setBulkStepInfoPending(null);
+      set({ invoiceByJob, stepInfo: stepInfo ?? new Map() });
     } catch (e) {
       console.error("[jobs] load failed", e);
       set({ loaded: true, loading: false, error: e instanceof Error ? e.message : String(e) });

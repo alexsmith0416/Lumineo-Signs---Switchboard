@@ -30,6 +30,8 @@ interface SketchState {
   uploadFile: (jobNo: string, folderUrl: string, file: File) => Promise<void>;
   /** Back to the flow's automatic pick (from tonight's run). */
   unpin: (jobNo: string) => Promise<void>;
+  /** Take the sketch off the Jobs list (the SharePoint file is NOT touched). */
+  remove: (jobNo: string) => Promise<void>;
 }
 
 const pending = new Set<string>();
@@ -105,6 +107,19 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     });
     await persistOrReport("Use the automatic sketch", async () =>
       (await import("../services/dataverse-live")).unpinJobSketch(jobNo),
+    );
+  },
+
+  remove: async (jobNo) => {
+    set((s) => {
+      const byJob = new Map(s.byJob);
+      const thumbs = new Map(s.thumbs);
+      byJob.delete(jobNo);
+      thumbs.delete(jobNo);
+      return { byJob, thumbs };
+    });
+    await persistOrReport("Remove the sketch from the Jobs list", async () =>
+      (await import("../services/dataverse-live")).removeJobSketch(jobNo),
     );
   },
 

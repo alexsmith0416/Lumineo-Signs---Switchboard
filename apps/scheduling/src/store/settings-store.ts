@@ -31,6 +31,16 @@ const NOW_LINE_KEY = "lumineo.settings.showNowLine";
 // ("6h of 8h · 2h open"). Default ON. Off for anyone who finds it distracting
 // while dragging cards around, or on a wall display.
 const DAY_HOURS_KEY = "lumineo.settings.showDayHours";
+// Compact sidebar: a slim icon rail that widens to the full sidebar while the
+// mouse is over it, giving the schedule more room. Default OFF (full sidebar).
+const COMPACT_SIDEBAR_KEY = "lumineo.settings.compactSidebar";
+// Open the calendars with Saturday and Sunday hidden. Default OFF (shown).
+// Right-clicking a day header shows/hides them for the moment; this sets how
+// the boards start.
+const HIDE_WEEKEND_KEY = "lumineo.settings.hideWeekend";
+// Hovering a day header pops up the $ scheduled that day (this board's region,
+// the other region, combined). Default OFF.
+const DAY_VALUE_KEY = "lumineo.settings.showDayValue";
 // Tick-box columns on a shipping load's printed sheet: the library of column
 // names the picker offers, and which of them currently print. Applies to every
 // printed load (it's how YOUR sheet looks), not stored per load.
@@ -95,6 +105,16 @@ interface SettingsState {
   setShowNowLine: (value: boolean) => void;
   showDayHours: boolean;
   setShowDayHours: (value: boolean) => void;
+  compactSidebar: boolean;
+  setCompactSidebar: (value: boolean) => void;
+  /** Start the calendars with the weekend hidden (saved). */
+  hideWeekendDefault: boolean;
+  setHideWeekendDefault: (value: boolean) => void;
+  showDayValue: boolean;
+  setShowDayValue: (value: boolean) => void;
+  /** Weekend hidden right now (right-click a day header; starts from the default). */
+  hideWeekend: boolean;
+  setHideWeekend: (value: boolean) => void;
   /** Column names the print picker offers (built-ins + the user's own). */
   printCheckOptions: string[];
   /** Which of them print, as tick-box columns. */
@@ -132,6 +152,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     writeBool(DAY_HOURS_KEY, value);
     set({ showDayHours: value });
   },
+  compactSidebar: readBool(COMPACT_SIDEBAR_KEY, false),
+  setCompactSidebar: (value) => {
+    writeBool(COMPACT_SIDEBAR_KEY, value);
+    set({ compactSidebar: value });
+  },
+  hideWeekendDefault: readBool(HIDE_WEEKEND_KEY, false),
+  setHideWeekendDefault: (value) => {
+    writeBool(HIDE_WEEKEND_KEY, value);
+    set({ hideWeekendDefault: value, hideWeekend: value });
+  },
+  showDayValue: readBool(DAY_VALUE_KEY, false),
+  setShowDayValue: (value) => {
+    writeBool(DAY_VALUE_KEY, value);
+    set({ showDayValue: value });
+  },
+  hideWeekend: readBool(HIDE_WEEKEND_KEY, false),
+  setHideWeekend: (value) => set({ hideWeekend: value }),
   printCheckOptions: withBuiltIns(readList(PRINT_CHECK_OPTIONS_KEY, BUILT_IN_CHECK_COLUMNS)),
   printCheckColumns: readList(PRINT_CHECK_COLUMNS_KEY, BUILT_IN_CHECK_COLUMNS),
 

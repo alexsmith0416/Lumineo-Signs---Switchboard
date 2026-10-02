@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useJobTrackingStore } from "../store/job-tracking-store";
+import { useSettingsStore } from "../store/settings-store";
 import { addDays, format, startOfWeek } from "date-fns";
 import { useScheduleStore } from "../store/schedule-store";
 import { useAssistStore } from "../store/assist-store";
@@ -32,6 +34,21 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
   const departments = useScheduleStore((s) => s.departments);
   const [showInvoice, setShowInvoice] = useState(true);
   const showMoney = canSeeMoney && showInvoice;
+
+  // Day value on hover: production has one board, so a day's $ is split by each
+  // job's region from the Jobs list (Mfg Region, else BC Region).
+  const showDayValue = useSettingsStore((s) => s.showDayValue);
+  const tracks = useJobTrackingStore((s) => s.tracks);
+  const loadTracks = useJobTrackingStore((s) => s.load);
+  useEffect(() => {
+    if (showDayValue && canSeeMoney) void loadTracks();
+  }, [showDayValue, canSeeMoney, loadTracks]);
+  const dayValues = useMemo(() => {
+    if (!canSeeMoney) return undefined;
+    const norm = (v: string) => (/^nek$/i.test(v.trim()) ? "NEK" : /^wk$/i.test(v.trim()) ? "WK" : "");
+    const regionByJob = new Map(tracks.map((t) => [t.jobNo, norm(t.mfgRegion) || norm(t.region)]));
+    return { regionOf: (l: ScheduleLine) => regionByJob.get(l.jobNo) || null };
+  }, [canSeeMoney, tracks]);
   const [addJobContext, setAddJobContext] = useState<{
     start?: Date;
     employeeId?: string;
@@ -105,6 +122,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         showInvoice={showMoney}
         showBillingCutoffs={showMoney}
         showTotalValue={showMoney}
+        dayValues={dayValues}
         bannerSlot={bannerSlot}
         onNavigate={onNavigate}
         supportsScenarioSandbox={true}

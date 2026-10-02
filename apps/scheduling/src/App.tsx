@@ -20,6 +20,7 @@ import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
 import { useSettingsStore } from "./store/settings-store";
+import { useJobTrackingStore } from "./store/job-tracking-store";
 import { useJobScheduleStore } from "./store/job-schedule-store";
 import { useJobDeptCompletionStore } from "./store/job-dept-completion-store";
 
@@ -55,6 +56,7 @@ export default function App() {
   // Presentation ("TV") mode: hide the app chrome and show the current screen
   // full-bleed. Exits on ESC.
   const presentationMode = useSettingsStore((s) => s.presentationMode);
+  const compactSidebar = useSettingsStore((s) => s.compactSidebar);
   const setPresentationMode = useSettingsStore((s) => s.setPresentationMode);
 
   // The toggle lives on the Settings screen, so remember the last real screen
@@ -132,6 +134,15 @@ export default function App() {
     void useJobDeptCompletionStore.getState().load();
   }, []);
 
+  // Warm the Jobs list in the background a few seconds after start (once the
+  // board on screen has loaded), so opening Jobs is near-instant.
+  const canSeeJobs = permissions.monthly;
+  useEffect(() => {
+    if (!canSeeJobs) return;
+    const timer = setTimeout(() => void useJobTrackingStore.getState().load(), 5000);
+    return () => clearTimeout(timer);
+  }, [canSeeJobs]);
+
   // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.
   const canEdit = permissions.editSchedule;
 
@@ -144,7 +155,12 @@ export default function App() {
   }
 
   return (
-    <div className={"app-shell" + (presentationMode ? " app-shell--presentation" : "")}>
+    <div
+      className={
+        "app-shell" +
+        (presentationMode ? " app-shell--presentation" : compactSidebar ? " app-shell--rail" : "")
+      }
+    >
       {!presentationMode && (
         <Sidebar
           current={view}

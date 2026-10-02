@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, format, isSameDay, startOfDay, startOfWeek } from "date-fns";
 import {
   useInstallationStoreNEK,
@@ -193,22 +193,38 @@ export default function InstallationCalendar({
     }
   }, [wkSchedule, nekSchedule, jobSchedByJob, updateJobSched]);
 
-  // The WK/NEK region toggle sits directly under the page header, left-justified
-  // (a banner above the board), on both desktop and mobile.
+  // Day value on hover: this region's day total, the other region's, and both
+  // combined (the other board's cards are read for the week on screen).
+  const otherRegion: Region = region === "WK" ? "NEK" : "WK";
+  const loadOtherRegion = useCallback(
+    (from: Date, to: Date) =>
+      (region === "WK" ? useInstallationStoreNEK : useInstallationStoreWK)
+        .getState()
+        .dataSource.loadScheduleLines(from, to),
+    [region],
+  );
+  const dayValues = useMemo(
+    () =>
+      canSeeMoney
+        ? { regionOf: () => region, currentRegion: region, otherRegion, loadOther: loadOtherRegion }
+        : undefined,
+    [canSeeMoney, region, otherRegion, loadOtherRegion],
+  );
+
+  // The WK/NEK region toggle sits at the left end of the stats bar (no banner
+  // row of its own), so the header matches Production's.
   const regionToggle = (
-    <div className="region-banner">
-      <div className="region-toggle" role="group" aria-label="Region">
-        {(["WK", "NEK"] as const).map((r) => (
-          <button
-            key={r}
-            type="button"
-            className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
-            onClick={() => setRegion(r)}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
+    <div className="region-toggle" role="group" aria-label="Region">
+      {(["WK", "NEK"] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
+          onClick={() => setRegion(r)}
+        >
+          {r}
+        </button>
+      ))}
     </div>
   );
 
@@ -274,7 +290,8 @@ export default function InstallationCalendar({
         showMonthlyGoal={showMoney}
         combinedBillingThisWeek={showMoney ? combinedThisWeek : undefined}
         toolbarExtras={toolbar}
-        bannerSlot={regionToggle}
+        summaryLeading={regionToggle}
+        dayValues={dayValues}
         installLayout
         onNavigate={onNavigate}
         supportsScenarioSandbox={!!onNavigate}
