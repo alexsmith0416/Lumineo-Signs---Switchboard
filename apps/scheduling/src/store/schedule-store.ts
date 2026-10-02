@@ -261,6 +261,7 @@ export function createScheduleStore(
       const start = startOfWeek(weekStart ?? get().weekStart, { weekStartsOn: 1 });
       const end = endOfWeek(addDays(start, 6), { weekStartsOn: 1 });
       set({ loading: true, error: null, weekStart: start });
+      const t0 = performance.now();
       // Never read mid-write: wait for any optimistic edits still persisting so
       // the reload can't overwrite them with stale server data.
       await settleWrites();
@@ -273,6 +274,7 @@ export function createScheduleStore(
           ds.loadWorkHours(start, end),
           ds.loadOvertimeOverrides(start, end),
         ]);
+        console.info(`[load] ${get().boardId} board data: ${Math.round(performance.now() - t0)} ms`);
         let empMap = new Map(employees.map((e) => [e.id, e]));
         const deptMap = new Map(departments.map((d) => [d.id, d]));
         // Overlay this week's roster overrides (people reordered / moved to a

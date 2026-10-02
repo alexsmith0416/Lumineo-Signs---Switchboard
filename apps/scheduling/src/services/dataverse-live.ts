@@ -455,7 +455,7 @@ export const liveProductionDataSource: ScheduleDataSource = {
     // Overlap window, not "starts in this week" — see week-window.ts. A task
     // that runs across a week boundary must load on BOTH weeks' boards.
     const filter = scheduleLineWindowFilter(from, to);
-    const rows = await list(SET.lines, { filter, orderby: "crfdf_startdatetime asc" });
+    const rows = await timed("production cards", list(SET.lines, { filter, orderby: "crfdf_startdatetime asc" }));
     const lines = rows.map(mapLine);
     // Overlay the current ship-to / sales-order customer name + outstanding
     // value from BC so cards reflect BC even for lines created earlier. Falls
@@ -714,6 +714,60 @@ function createLiveInstallDataSource(
   locations: number[],
 ): ScheduleDataSource {
   const region: InstallRegionKey = isNek ? "nek" : "wk";
+  // Every card in this region, with BC's name / remaining value / salesperson /
+  // SharePoint link and BC-derived crew filled in. The BC lookups are cached
+  // bulk reads, and none of them can stop the board loading — a card just
+  // shows without that detail.
+  const REGION_READ_TTL_MS = 5_000;
+  let regionRead: { at: number; p: Promise<ScheduleLine[]> } | null = null;
+  const orEmpty = <K, V>(p: Promise<Map<K, V>>, what: string): Promise<Map<K, V>> =>
+    p.catch((e) => {
+      console.warn(`[install] couldn't read ${what}`, e);
+      return new Map<K, V>();
+    });
+  const readRegionCards = async (): Promise<ScheduleLine[]> => {
+    const rows = await timed(`${region} install cards`, list(SHIP.cards, { filter: `crfdf_region eq ${isNek}` }));
+    const mapped = rows.map(mapCardRecord);
+    const crewJobs = mapped.filter((l) => l.jobNo && !hasManualCrew(l)).map((l) => l.jobNo);
+    const [meta, salesByJob, spByJob, planning] = await Promise.all([
+      orEmpty(timed("BC job values", bcJobMetaByJobNo()), "BC jobs"),
+      orEmpty(timed("BC salespeople", salespersonByJobNo()), "salespeople"),
+      orEmpty(timed("SharePoint links", sharepointUrlByJobNo()), "SharePoint links"),
+      orEmpty(timed(`${region} crew planning lines`, planningLinesForJobs(crewJobs)), "planning lines"),
+    ]);
+    // Auto-fill crew (trips/men/trucks) from BC planning lines for any card
+    // that has no manually-entered crew (crfdf_crew* still wins).
+    const crewByJob = new Map<string, BcJobCrew>();
+    for (const jn of new Set(crewJobs)) {
+      const lines = planning.get(jn);
+      const c = lines ? deriveCrewFromLines(lines.map((l) => ({ ...l, estimatedHours: l.hours }))) : null;
+      if (c) crewByJob.set(jn, c);
+    }
+    const all = mapped.map((l) => {
+      const m = l.jobNo ? meta.get(l.jobNo) : undefined;
+      const sales = l.jobNo ? salesByJob.get(l.jobNo) : undefined;
+      const sp = l.jobNo ? spByJob.get(l.jobNo) : undefined;
+      const c = l.jobNo && !hasManualCrew(l) ? crewByJob.get(l.jobNo) : undefined;
+      if (!m && !c && !sales && !sp) return l;
+      return {
+        ...l,
+        ...(m
+          ? {
+              customerName: m.name || l.customerName,
+              remainingValue: m.remaining,
+              installZip: l.installZip || m.shipToZip || null,
+            }
+          : {}),
+        ...(sales ? { salespersonCode: sales } : {}),
+        ...(sp ? { sharepointUrl: sp } : {}),
+        ...(c
+          ? { crewTrips: c.crewTrips, crewPersons: c.crewPersons, crewTrucks: c.crewTrucks }
+          : {}),
+      };
+    });
+    setRegionCards(region, all);
+    return all;
+  };
   return {
     kind: "installation",
 
@@ -740,49 +794,16 @@ function createLiveInstallDataSource(
     // We load ALL of this region's cards into the reactive cache (so the
     // Shipping "Scheduled" badge is accurate) and return the week's subset.
     async loadScheduleLines(from: Date, to: Date): Promise<ScheduleLine[]> {
-      const rows = await list(SHIP.cards, { filter: `crfdf_region eq ${isNek}` });
-      const [meta, salesByJob, spByJob] = await Promise.all([
-        bcJobMetaByJobNo(),
-        salespersonByJobNo(),
-        sharepointUrlByJobNo(),
-      ]);
-      const mapped = rows.map(mapCardRecord);
-      // Auto-fill crew (trips/men/trucks) from BC planning lines for any card
-      // that has no manually-entered crew. One planning-line read per distinct
-      // job on the board that needs it; manual entry (crfdf_crew*) still wins.
-      const needCrew = [
-        ...new Set(mapped.filter((l) => l.jobNo && !hasManualCrew(l)).map((l) => l.jobNo)),
-      ];
-      const crewByJob = new Map<string, BcJobCrew>();
-      await Promise.all(
-        needCrew.map(async (jn) => {
-          const c = deriveCrewFromLines(await planningLinesFor(jn));
-          if (c) crewByJob.set(jn, c);
-        }),
-      );
-      const all = mapped.map((l) => {
-        const m = l.jobNo ? meta.get(l.jobNo) : undefined;
-        const sales = l.jobNo ? salesByJob.get(l.jobNo) : undefined;
-        const sp = l.jobNo ? spByJob.get(l.jobNo) : undefined;
-        const c = l.jobNo && !hasManualCrew(l) ? crewByJob.get(l.jobNo) : undefined;
-        if (!m && !c && !sales && !sp) return l;
-        return {
-          ...l,
-          ...(m
-            ? {
-                customerName: m.name || l.customerName,
-                remainingValue: m.remaining,
-                installZip: l.installZip || m.shipToZip || null,
-              }
-            : {}),
-          ...(sales ? { salespersonCode: sales } : {}),
-          ...(sp ? { sharepointUrl: sp } : {}),
-          ...(c
-            ? { crewTrips: c.crewTrips, crewPersons: c.crewPersons, crewTrucks: c.crewTrucks }
-            : {}),
-        };
-      });
-      setRegionCards(region, all);
+      // The board, its Billing stat and the Monthly Plan all read the whole
+      // region — share one read for a few seconds instead of repeating it.
+      if (!regionRead || Date.now() - regionRead.at > REGION_READ_TTL_MS) {
+        const p = readRegionCards();
+        regionRead = { at: Date.now(), p };
+        p.catch(() => {
+          if (regionRead?.p === p) regionRead = null;
+        });
+      }
+      const all = await regionRead.p;
       // Overlap window (see week-window.ts): a card that starts before this week
       // but runs into it still belongs on the board.
       return all.filter((l) => overlapsWindow(l, from, to));
@@ -795,6 +816,7 @@ function createLiveInstallDataSource(
     },
 
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
+      regionRead = null; // the next load must see this change
       let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
         // Newer columns may be missing — drop them and retry so the edit sticks.
@@ -813,6 +835,7 @@ function createLiveInstallDataSource(
       return line;
     },
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
+      regionRead = null; // the next load must see this change
       const id = uuid();
       const rec = () => ({ crfdf_installcardid: id, ...cardToRecord(line, isNek, true) });
       let res = await dvCreate(SHIP.cards, rec());
@@ -830,6 +853,7 @@ function createLiveInstallDataSource(
       return created;
     },
     async deleteScheduleLine(id: string): Promise<void> {
+      regionRead = null; // the next load must see this change
       const before = await lineById(SHIP.cards, "crfdf_installcardid", id, mapCardRecord);
       const res = await dvDelete(SHIP.cards, id);
       if (!res.success) throw new Error(res.error?.message ?? `DeleteInstallCard(${id}) failed`);
@@ -2702,26 +2726,79 @@ export interface BcPlanningLineLite {
   resourceNo: string;
   description: string;
   hours: number;
+  /** BC job task no ("4020" = install travel — one per trip). */
+  jobTaskNo: string;
 }
 
 // Every BC resource planning line, keyed by job — ONE paged read (5,000+ rows),
 // shared by the Jobs steppers and the Job Queue's step groups. Cached for the
 // session; pass force to re-read.
 let planningLinesP: Promise<Map<string, BcPlanningLineLite[]>> | null = null;
+let planningLinesLoaded: Map<string, BcPlanningLineLite[]> | null = null;
+
+/**
+ * Planning lines for just these jobs: the shared full read if it's already
+ * loaded, else a few small filtered reads (40 jobs each, in parallel) — far
+ * lighter than all 7,000+ lines when a board only needs its own jobs.
+ */
+export async function planningLinesForJobs(jobNos: readonly string[]): Promise<Map<string, BcPlanningLineLite[]>> {
+  if (planningLinesLoaded) return planningLinesLoaded;
+  const jobs = [...new Set(jobNos.filter(Boolean))];
+  const byJob = new Map<string, BcPlanningLineLite[]>();
+  const chunks: string[][] = [];
+  for (let i = 0; i < jobs.length; i += 40) chunks.push(jobs.slice(i, i + 40));
+  const pages = await Promise.all(
+    chunks.map((c) =>
+      list(BC.planning, {
+        select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description,crfdf_quantity,crfdf_jobtaskno",
+        filter: `crfdf_type eq 'Resource' and (${c.map((j) => `crfdf_jobno eq '${odataLit(j)}'`).join(" or ")})`,
+      }),
+    ),
+  );
+  for (const r of pages.flat()) {
+    const jobNo = s(r.crfdf_jobno).trim();
+    if (!jobNo) continue;
+    let arr = byJob.get(jobNo);
+    if (!arr) byJob.set(jobNo, (arr = []));
+    arr.push({
+      resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no),
+      description: s(r.crfdf_description),
+      hours: n(r.crfdf_quantity),
+      jobTaskNo: s(r.crfdf_jobtaskno),
+    });
+  }
+  return byJob;
+}
+
+/** Log how long a load step took (open the console to see where time goes). */
+async function timed<T>(label: string, p: Promise<T>): Promise<T> {
+  const t0 = performance.now();
+  try {
+    return await p;
+  } finally {
+    console.info(`[load] ${label}: ${Math.round(performance.now() - t0)} ms`);
+  }
+}
 export function allPlanningLines(force = false): Promise<Map<string, BcPlanningLineLite[]>> {
   if (force || !planningLinesP) {
     planningLinesP = listAll(BC.planning, {
-      select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description,crfdf_quantity",
+      select: "crfdf_jobno,crfdf_resourceno,crfdf_no,crfdf_description,crfdf_quantity,crfdf_jobtaskno",
       filter: "crfdf_type eq 'Resource'",
     })
       .then((rows) => {
         const byJob = new Map<string, BcPlanningLineLite[]>();
+        planningLinesLoaded = byJob;
         for (const r of rows) {
           const jobNo = s(r.crfdf_jobno).trim();
           if (!jobNo) continue;
           let arr = byJob.get(jobNo);
           if (!arr) byJob.set(jobNo, (arr = []));
-          arr.push({ resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no), description: s(r.crfdf_description), hours: n(r.crfdf_quantity) });
+          arr.push({
+            resourceNo: s(r.crfdf_resourceno) || s(r.crfdf_no),
+            description: s(r.crfdf_description),
+            hours: n(r.crfdf_quantity),
+            jobTaskNo: s(r.crfdf_jobtaskno),
+          });
         }
         return byJob;
       })
