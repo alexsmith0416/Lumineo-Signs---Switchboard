@@ -2772,6 +2772,7 @@ export async function queuePlanningLines(): Promise<Map<string, StepPlanningLine
               : "",
           isInstall: !crating && isInstallResource(l.resourceNo),
           description: l.description,
+          resourceNo: l.resourceNo,
           hours: l.hours,
         };
       }),

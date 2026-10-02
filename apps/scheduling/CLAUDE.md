@@ -146,13 +146,14 @@ No cut-off → calendar month; no goal → `DEFAULT_MONTHLY_GOAL` ($1.1M). The
 Installation board's "Billing · <month>" stat (`WeekSummary`) uses the same
 periods.
 
-The "AI auto-fill" button runs a deterministic greedy algorithm
-(`autofillToGoal` inside `MonthlyPlanView.tsx`) over the `INSTALL_CANDIDATES`
-pool (`data/mock-install-candidates.ts`) — sorted by promised-date with a
-per-week soft cap of `monthlyGoal / numWeeks`. Today the pool is a fixed
-mock; in production it should be a Dataverse view of jobs whose production
-status is `ready-for-install` or `near-complete`. Replace the import with
-a real service when that view exists.
+Booked $ reads every WK / NEK install card around the period
+(`dataSource.loadScheduleLines`), each job once at `cardMoneyValue`, in the week
+its last card ends. Pools (Past due / Ready / Near complete) come from the Jobs
+rows (`hooks/useJobRows.ts`) + steppers + BC install planning lines
+(`useStepQueueData`). Auto-fill + pools + week math are pure, in
+`services/gameplan.ts` (tested). Commit sets `scheduledInstallDate` (job-schedule
+store) and adds the jobs to a "Planned · week of …" group in the region's Install
+Job Queue (`addToNamedGroup`).
 
 ## Card layouts
 

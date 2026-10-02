@@ -9,6 +9,7 @@ import JobTaskPicker from "./JobTaskPicker";
 import { QueueEditIcon, QueueToggleIcon } from "./QueueIcons";
 import QueueGroupDialog from "./QueueGroupDialog";
 import { useStepQueue } from "../store/step-queue-store";
+import { useStepColorsStore } from "../store/step-colors-store";
 import type { StepQueueGroup } from "../services/step-queue";
 
 /** Build a queue item from the draft the unified Add panel produces. */
@@ -598,6 +599,14 @@ function StepGroupsSection({
   canEdit: boolean;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // Header colours, shared by everyone (editors change them with ✎).
+  const colors = useStepColorsStore((s) => s.byStep);
+  const loadColors = useStepColorsStore((s) => s.load);
+  const setColor = useStepColorsStore((s) => s.setColor);
+  const [editing, setEditing] = useState<string | null>(null);
+  useEffect(() => {
+    void loadColors();
+  }, [loadColors]);
   return (
     <div className="jq-steps">
       <div className="jq-steps__title">
@@ -607,15 +616,39 @@ function StepGroupsSection({
       {groups.map((g) => {
         const isOpen = open[g.step] ?? g.items.some((i) => !i.scheduled);
         const waiting = g.items.filter((i) => !i.scheduled).length;
+        const c = colors[g.step];
         return (
           <div key={g.step} className="jq-group jq-group--step">
-            <button type="button" className="jq-steps__head" onClick={() => setOpen((o) => ({ ...o, [g.step]: !isOpen }))}>
-              <span className={"jq-steps__chev" + (isOpen ? "" : " jq-steps__chev--closed")}>▾</span>
+            <div
+              role="button"
+              tabIndex={0}
+              className="jq-steps__head"
+              style={c ? { background: c.color, color: c.textColor } : undefined}
+              onClick={() => setOpen((o) => ({ ...o, [g.step]: !isOpen }))}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setOpen((o) => ({ ...o, [g.step]: !isOpen }))}
+            >
+              <span className={"jq-steps__chev" + (isOpen ? "" : " jq-steps__chev--closed")} style={c ? { color: c.textColor } : undefined}>
+                ▾
+              </span>
               <span className="jq-steps__name">{g.step}</span>
               <span className="jq-steps__count" title={`${waiting} to schedule · ${g.items.length} active in BC`}>
                 {waiting}/{g.items.length}
               </span>
-            </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  className="jq-steps__edit"
+                  title="Change this header's colour"
+                  style={c ? { color: c.textColor } : undefined}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(g.step);
+                  }}
+                >
+                  ✎
+                </button>
+              )}
+            </div>
             {isOpen && (
               <div className="jq-group__body">
                 {g.items.length === 0 && <div className="jq-group__empty">No jobs active in this step.</div>}
@@ -649,6 +682,25 @@ function StepGroupsSection({
           </div>
         );
       })}
+      {editing && (
+        <QueueGroupDialog
+          colorOnly
+          initial={{ name: editing, color: colors[editing]?.color ?? "#E4E7EC", textColor: colors[editing]?.textColor ?? "#2A2F3A" }}
+          onCancel={() => setEditing(null)}
+          onReset={
+            colors[editing]
+              ? () => {
+                  setColor(editing, null);
+                  setEditing(null);
+                }
+              : undefined
+          }
+          onSave={({ color, textColor }) => {
+            setColor(editing, { color, textColor });
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

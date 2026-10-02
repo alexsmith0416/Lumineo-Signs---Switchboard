@@ -5859,3 +5859,16 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.jq-steps__head { cursor: pointer; user-select: none; }
+.jq-steps__edit {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+}
+.jq-steps__head:hover .jq-steps__edit,
+.jq-steps__edit:focus-visible { opacity: 0.85; }
+.jq-steps__edit:hover { opacity: 1; }

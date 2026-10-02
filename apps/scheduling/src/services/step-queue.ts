@@ -34,6 +34,8 @@ export interface StepPlanningLine {
   departmentName: string;
   isInstall: boolean;
   description: string;
+  /** BC resource ("WK 2 MAN - TBD" on install lines gives the crew size). */
+  resourceNo: string;
   hours: number;
 }
 

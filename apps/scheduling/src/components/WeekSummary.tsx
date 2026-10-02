@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { addDays, format, startOfWeek } from "date-fns";
 import { useBillingPeriodStore } from "../store/billing-period-store";
 import { billingPeriodFor } from "../services/billing-periods";
 import { dayLoad, getDayCapacity, isWeekend } from "../engine/capacity";
-import type { ScheduleContext } from "../engine/types";
+import type { ScheduleContext, ScheduleLine } from "../engine/types";
 import { cardMoneyValue } from "./JobCard";
 
 interface WeekSummaryProps {
@@ -14,6 +14,9 @@ interface WeekSummaryProps {
    *  Billing periods). */
   showMonthlyGoal?: boolean;
   combinedBillingThisWeek?: number;
+  /** Reads the board's cards for a date range, so the month's billing covers
+   *  the whole billing period — not just the week on screen. */
+  loadPeriodLines?: (from: Date, to: Date) => Promise<ScheduleLine[]>;
   /** Show a "Total Value" stat — sum of each current job's remaining value. */
   showTotalValue?: boolean;
   /** Show the utilization stats. Hidden for view-only users (the stats are an
@@ -35,6 +38,7 @@ export default function WeekSummary({
   showBillingStats = false,
   showMonthlyGoal = false,
   combinedBillingThisWeek,
+  loadPeriodLines,
   showTotalValue = false,
   showStats = true,
   trailing,
@@ -51,6 +55,20 @@ export default function WeekSummary({
     [weekStart, periodRows],
   );
   const monthlyGoal = showMonthlyGoal ? period.goal : undefined;
+
+  // The whole billing period's cards (plus a margin: a job's earlier cards, and
+  // later ones that move its billing out). Re-read when the period changes.
+  const [periodLines, setPeriodLines] = useState<ScheduleLine[] | null>(null);
+  useEffect(() => {
+    if (!showBillingStats || !loadPeriodLines) return;
+    let live = true;
+    loadPeriodLines(addDays(period.start, -42), addDays(period.end, 90))
+      .then((lines) => live && setPeriodLines(lines))
+      .catch((e) => console.warn("[week-summary] couldn't read the billing period", e));
+    return () => {
+      live = false;
+    };
+  }, [showBillingStats, loadPeriodLines, period.start, period.end]);
 
   const stats = useMemo(() => {
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
@@ -87,7 +105,13 @@ export default function WeekSummary({
     const allJobs = new Map<string, number>();
     // A job bills in the period its install ENDS in — its latest card end.
     const lastEnd = new Map<string, Date>();
-    for (const line of context.schedule) {
+    // The week on screen is live (edits show at once); the rest of the period
+    // comes from periodLines.
+    const onScreen = new Set(context.schedule.map((l) => l.id));
+    const elsewhere = (periodLines ?? []).filter(
+      (l) => !onScreen.has(l.id) && !(l.startDateTime >= start && l.startDateTime < weekEnd),
+    );
+    for (const line of [...context.schedule, ...elsewhere]) {
       const v = cardMoneyValue(line) ?? 0;
       if (v <= 0) continue;
       const s0 = line.startDateTime;
@@ -117,7 +141,7 @@ export default function WeekSummary({
       monthBilling,
       totalValue,
     };
-  }, [context, weekStart, period]);
+  }, [context, weekStart, period, periodLines]);
 
   const goalProgress =
     monthlyGoal && monthlyGoal > 0 ? stats.monthBilling / monthlyGoal : null;

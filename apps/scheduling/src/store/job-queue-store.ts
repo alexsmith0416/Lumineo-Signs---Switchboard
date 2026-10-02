@@ -24,6 +24,15 @@ export interface JobQueueState {
 
   /** Add a fully-built item (id/groupId/sortOrder already set). */
   addItem: (item: QueueItem) => void;
+  /**
+   * Put jobs in the group with this name (made if there isn't one; the group is
+   * saved before its items). Jobs already in that group are skipped. Returns
+   * how many were added.
+   */
+  addToNamedGroup: (
+    group: { name: string; color: string; textColor: string },
+    items: Array<Omit<QueueItem, "id" | "groupId" | "sortOrder">>,
+  ) => Promise<number>;
   updateItem: (id: string, changes: Partial<QueueItem>) => void;
   removeItem: (id: string) => void;
   /** Move an item to a group at a target index (reorder within or across groups). */
@@ -121,6 +130,31 @@ export function createJobQueueStore(kind: QueueKind): UseJobQueueStore {
         ),
       });
       void persistOrReport("Add job to queue", () => ds.createItem(item));
+    },
+
+    addToNamedGroup: async ({ name, color, textColor }, items) => {
+      let group = get().groups.find((g) => g.name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (!group) {
+        group = { id: newId(), kind, name, color, textColor, collapsed: false, sortOrder: get().groups.length, items: [] };
+        set({ groups: [...get().groups, group] });
+        try {
+          await ds.createGroup(group);
+        } catch (e) {
+          // Without the group its items can't save — take it back off the screen.
+          const id = group.id;
+          set({ groups: get().groups.filter((g) => g.id !== id) });
+          throw e;
+        }
+      }
+      const groupId = group.id;
+      const have = new Set(group.items.map((i) => i.jobNo));
+      const fresh = items.filter((i) => !have.has(i.jobNo));
+      const start = group.items.length;
+      const built: QueueItem[] = fresh.map((i, n) => ({ ...i, id: newId(), groupId, sortOrder: start + n }));
+      if (!built.length) return 0;
+      set({ groups: get().groups.map((g) => (g.id === groupId ? { ...g, items: [...g.items, ...built] } : g)) });
+      await Promise.all(built.map((it) => persistOrReport("Add job to queue", () => ds.createItem(it))));
+      return built.length;
     },
 
     updateItem: (id, changes) => {

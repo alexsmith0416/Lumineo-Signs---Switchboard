@@ -23,10 +23,16 @@ export default function QueueGroupDialog({
   onSave,
   noun = "group",
   placeholder = "e.g. Needs Scheduled",
+  colorOnly = false,
+  onReset,
 }: {
-  initial?: QueueGroup;
+  initial?: Pick<QueueGroup, "name" | "color" | "textColor">;
   onCancel: () => void;
   onSave: (vals: { name: string; color: string; textColor: string }) => void;
+  /** Only the colour can change (e.g. a "From BC steps" header — its name is BC's step). */
+  colorOnly?: boolean;
+  /** Offer "Use default colour" (colour-only mode). */
+  onReset?: () => void;
   /** What the caller calls one of these — the Shipping staging board says
    *  "list", the calendar Job Queue says "group". Lower-case; titles capitalize. */
   noun?: string;
@@ -40,8 +46,11 @@ export default function QueueGroupDialog({
   return (
     <div className="modal-scrim" onClick={onCancel}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ width: 380 }}>
-        <div className="modal-card__title">{initial ? `Edit ${noun}` : `New ${noun}`}</div>
+        <div className="modal-card__title">
+          {colorOnly ? `${initial?.name ?? Noun} colour` : initial ? `Edit ${noun}` : `New ${noun}`}
+        </div>
         <div className="modal-card__body">
+          {!colorOnly && (
           <div className="form-field">
             <div className="form-field__label">{Noun} name</div>
             <input
@@ -55,6 +64,7 @@ export default function QueueGroupDialog({
               }}
             />
           </div>
+          )}
           <div className="form-field">
             <div className="form-field__label">Header color</div>
             <div className="jq-swatches">
@@ -94,19 +104,26 @@ export default function QueueGroupDialog({
               />
             </div>
           </div>
-          <div className="form-field">
-            <div className="form-field__label">Auto-fill from BC</div>
-            <button className="form-field__input" type="button" disabled title="Planned">
-              Set up a BC filter — coming soon
-            </button>
-          </div>
+          {!colorOnly && (
+            <div className="form-field">
+              <div className="form-field__label">Auto-fill from BC</div>
+              <button className="form-field__input" type="button" disabled title="Planned">
+                Set up a BC filter — coming soon
+              </button>
+            </div>
+          )}
         </div>
         <div className="modal-card__actions">
+          {onReset && (
+            <button className="btn-secondary" style={{ marginRight: "auto" }} onClick={onReset}>
+              Use default colour
+            </button>
+          )}
           <button className="btn-secondary" onClick={onCancel}>
             Cancel
           </button>
           <button className="btn-primary" disabled={!name.trim()} onClick={() => onSave({ name, color, textColor })}>
-            {initial ? "Save" : `Add ${noun}`}
+            {initial || colorOnly ? "Save" : `Add ${noun}`}
           </button>
         </div>
       </div>

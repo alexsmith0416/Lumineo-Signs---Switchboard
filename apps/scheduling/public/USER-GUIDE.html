@@ -633,6 +633,9 @@
   a Crating card drops onto the Assembly lane); on the Installation boards,
   <em>Ready for Install</em> holds that region's jobs whose production is done.</p>
   <ul>
+    <li><strong>Header colours</strong> &mdash; editors hover a step's header and click <strong>✎</strong> to pick its
+    colour (a swatch, or <em>Custom color</em> for any background and text colour); <em>Use default colour</em> puts it
+    back. The colours are shared by everyone and show on both the Production and Installation boards.</li>
     <li>A job is listed under a step when that department is <strong>active</strong> on its stepper. Complete the
     department and the job moves to the next group straight away.</li>
     <li>Each card carries the job's BC tasks and hours for that step. <strong>Drag it onto the board</strong> to
@@ -723,12 +726,35 @@
   <p>A safe copy of the board for "what-if" planning. Make changes, see the impact, and only <strong>commit</strong> them
   to the live schedule when you're happy — or discard them. Admin/Ops only.</p>
 
-  <h3>5.12 &nbsp;Monthly Plan &amp; AI auto-fill</h3>
-  <p>A roll-up of installation billing across both regions for the current <strong>billing month</strong>, with
-  per-week cards and a line for that month's goal. The header shows which installs count — e.g.
-  <em>"October 2026 billing · installs ending Sep 25 – Oct 23"</em>. The <strong>AI auto-fill</strong> button greedily
-  fills the month from the pool of jobs that are ready for install, respecting promised dates and a per-week cap.
-  Admin/Ops only.</p>
+  <h3>5.12 &nbsp;Monthly Plan (gameplanning) &amp; auto-fill</h3>
+  <p>Install billing across both regions for the current <strong>billing month</strong>, with a card per week and that
+  month's goal. The header shows which installs count — e.g.
+  <em>"October 2026 billing · installs ending Sep 25 – Oct 23"</em> — plus what's <strong>Booked</strong>, WK / NEK,
+  progress and the <strong>Gap</strong> to the goal. Admin/Ops only.</p>
+  <ul>
+    <li><strong>Booked</strong> is every job on the WK and NEK install boards, counted <strong>once</strong> at its
+    calendar value (BC remaining balance, else the card's invoice amount), in the week its install <strong>ends</strong>
+    (its last card). Each week card shows its jobs on hover and the crew hours booked against what the crews have
+    (40 h a crew a week). <strong>↻ Refresh</strong> re-reads the boards.</li>
+    <li>Three <strong>pools</strong> of jobs from the Jobs list:
+      <ul>
+        <li><strong>Past due</strong> — not installed yet, and the date it was needed by has passed (its RED date, else
+        Sched. Install, else Install Target), most late first. It shows whether the job is on an install board or not
+        scheduled at all. These need attention now.</li>
+        <li><strong>Ready for install</strong> — production is done (Install is the active stepper step) and the job isn't on
+        an install board yet.</li>
+        <li><strong>Near complete</strong> — one production step left and not on an install board yet.</li>
+      </ul>
+      Each shows the install hours and crew size from the job's BC install planning lines (e.g. <em>WK 2 MAN</em>) and its value. Install hours are crew-hours for a 2-man crew: every trip's crew line and travel are added up, and a bigger crew line (e.g. <em>4 MAN</em>) counts once per 2 men. Past-due jobs that are still early in production stay in the Past due list but aren't auto-filled.</li>
+    <li><strong>✨ Auto-fill</strong> plans Ready and Near-complete jobs into this month's weeks, from this week on:
+    past-due jobs first, then by needed-by date, then the bigger value. A job goes in the first week with room for its $
+    (toward the weekly target) and its install hours (that region's crew hours less what's booked); a near-complete job
+    goes no earlier than the week after its <strong>Mfg Final</strong> date. Jobs it couldn't place are listed with the reason.</li>
+    <li>In the proposal, untick anything you don't want and press <strong>Commit</strong>. Each job's
+    <strong>Sched. Install</strong> is set to the Monday of its week (shown on the Jobs list and the job's Install Dates), and
+    it's added to a <strong>"Planned · week of …"</strong> group in that region's Install Job Queue, ready to drag onto the
+    board for the exact crew and day. Committing needs schedule edit access.</li>
+  </ul>
   <p><strong>Billing months follow the billing cut-off, not the calendar.</strong> A job counts toward the month its
   install <strong>ends</strong> in, and it has to end the <strong>day before</strong> that month's cut-off so the order
   can be turned in — an install that ends <em>on</em> the cut-off day counts toward the next month. The cut-off dates
@@ -1186,8 +1212,10 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 1, 2026</td><td><strong>Colour the Job Queue's BC step headers</strong> &mdash; hover a "From BC steps" header (Fabrication, Routing, … Ready for Install) and click ✎ to set its colour, for everyone. See &sect;5.8.</td></tr>
       <tr><td>Oct 1, 2026</td><td><strong>Custom pill colours, and editable Sales</strong> &mdash; <em>Edit field…</em> now offers <em>Custom…</em> for any colour on any pick-list option. Sales is a multi-choice you can change in the list (it still fills from BC; the change stays in the app and never goes to BC). See &sect;5.17.</td></tr>
       <tr><td>Oct 1, 2026</td><td><strong>Jobs: Airtable-style pick-lists you can reorder</strong> &mdash; clicking a status (or any pick-list) opens the choices as coloured pills with a search box. Right-click a pick-list column's header &rarr; <em>Edit field…</em> to drag the options into order, add new ones (e.g. a new status) and change colours &mdash; sorting and grouping follow that order. See &sect;5.17.</td></tr>
+      <tr><td>Oct 1, 2026</td><td><strong>Monthly Plan works from real jobs</strong> &mdash; Booked billing now covers the whole billing month on both install boards (each job counted once, in the week its install ends), with new <strong>Past due</strong>, <strong>Ready for install</strong> and <strong>Near complete</strong> pools from the Jobs list. <strong>Auto-fill</strong> plans past-due jobs first within each region's crew hours, and <strong>Commit</strong> sets each job's Sched. Install and adds it to a "Planned · week of …" group in the Install Job Queue. The Installation board's <em>Billing</em> month stat now counts the whole month too. See &sect;5.12.</td></tr>
       <tr><td>Oct 1, 2026</td><td><strong>Jobs: choose or upload the sketch</strong> &mdash; drop a file on a job's Sketch cell to upload it to the job's SharePoint folder and make it the sketch, or right-click the cell to choose a different file from the folder (with a preview) or go back to the automatic pick. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: Sketch column and right-click links</strong> &mdash; a thumbnail of each job's sketch from its SharePoint folder (hover for a bigger preview, click to open the file), and right-click a job's name to open it in BC or open its SharePoint folder. See &sect;5.17.</td></tr>
       <tr><td>Sep 30, 2026</td><td><strong>Jobs: update the stepper from the list</strong> &mdash; click a job's stepper to complete, reopen or set a department active, or add / remove departments, in a pop-up right there &mdash; no need to open the job. See &sect;5.17.</td></tr>

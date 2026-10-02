@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
 import { dayLoad, effectiveHours, isWeekend } from "../engine/capacity";
 import { calculateEndTime } from "../engine/time-walker";
@@ -615,6 +615,11 @@ export default function CalendarView({
   const enterScenario = scenarioStore((s) => s.enter);
   const addScenarioChange = scenarioStore((s) => s.addChange);
   const getContext = useStore((s) => s.getContext);
+  // The board's cards for any range (WeekSummary's whole-billing-period figure).
+  const loadPeriodLines = useCallback(
+    (from: Date, to: Date) => useStore.getState().dataSource.loadScheduleLines(from, to),
+    [useStore],
+  );
   // Undo/redo history for this board (move/resize/add/delete). Session-scoped,
   // 20 steps, cleared on reload — see history-store.
   const boardId = useStore((s) => s.boardId);
@@ -918,6 +923,7 @@ export default function CalendarView({
           showTotalValue={showTotalValue}
           showMonthlyGoal={showMonthlyGoal}
           combinedBillingThisWeek={combinedBillingThisWeek}
+          loadPeriodLines={showBillingStats ? loadPeriodLines : undefined}
           showStats={!readOnly}
           trailing={
             !readOnly || enableJobQueue ? (

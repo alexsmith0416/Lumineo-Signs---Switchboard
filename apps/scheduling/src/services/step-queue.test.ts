@@ -9,9 +9,9 @@ const steps = (...a: Array<[string, St]>) => a.map(([key, state]) => ({ key, sta
 
 const lines = new Map([
   ["J1", [
-    { departmentName: "Metal Fab", isInstall: false, description: "Cabinet Metal Labor", hours: 12 },
-    { departmentName: "Paint", isInstall: false, description: "Paint Cabinet Labor", hours: 6 },
-    { departmentName: "", isInstall: true, description: "Install Labor", hours: 16 },
+    { departmentName: "Metal Fab", isInstall: false, description: "Cabinet Metal Labor", resourceNo: "", hours: 12 },
+    { departmentName: "Paint", isInstall: false, description: "Paint Cabinet Labor", resourceNo: "", hours: 6 },
+    { departmentName: "", isInstall: true, description: "Install Labor", resourceNo: "", hours: 16 },
   ]],
 ]);
 

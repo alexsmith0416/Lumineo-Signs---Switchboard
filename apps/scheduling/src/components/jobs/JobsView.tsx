@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
 import { useJobScheduleStore } from "../../store/job-schedule-store";
-import { buildJobRows, type JobRow, type JobScheduleDates } from "../../services/job-tracking";
+import type { JobRow } from "../../services/job-tracking";
+import { useJobRows } from "../../hooks/useJobRows";
 import JobsGrid from "./JobsGrid";
 import JobsJobPanel from "./JobsJobPanel";
 import { useLeadTimeStore } from "../../store/lead-time-store";
 import { useJobDeptOverrideStore } from "../../store/job-dept-override-store";
-import { leadTimeFor } from "../../services/lead-times";
-import { includedStepDefs } from "../../services/production-steps";
 import JobsViewList from "./JobsViewList";
 import { FieldsPanel, FilterPanel, GroupPanel, SortPanel } from "./JobsPanels";
 import { JOB_FIELDS, customColumn, type JobFieldDef } from "./jobs-fields";
@@ -56,19 +55,11 @@ function write(key: string, value: unknown) {
 
 type Panel = "fields" | "filter" | "sort" | "group" | null;
 
-const ymd = (d: Date | null | undefined): string =>
-  d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
-
 const KNOWN_FIELDS = new Set(Object.keys(JOB_FIELDS));
 
 export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolean; canEdit: boolean }) {
-  const bcJobs = useJobTrackingStore((s) => s.bcJobs);
   const tracks = useJobTrackingStore((s) => s.tracks);
-  const invoiceByJob = useJobTrackingStore((s) => s.invoiceByJob);
-  const stepInfo = useJobTrackingStore((s) => s.stepInfo);
-  const leadRules = useLeadTimeStore((s) => s.rules);
   const loadLeadRules = useLeadTimeStore((s) => s.load);
-  const deptOverrides = useJobDeptOverrideStore((s) => s.byJob);
   const loadDeptOverrides = useJobDeptOverrideStore((s) => s.load);
   const loading = useJobTrackingStore((s) => s.loading);
   const loaded = useJobTrackingStore((s) => s.loaded);
@@ -86,9 +77,6 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const optionOverrides = useFieldOptionsStore((s) => s.overrides);
   const loadFieldOptions = useFieldOptionsStore((s) => s.load);
   const loadCustomDefs = useCustomFieldStore((s) => s.load);
-  // Dates come from the SAME job-schedule store the boards' Install Dates use,
-  // so an edit anywhere shows here at once (and here → the boards).
-  const scheduleByJob = useJobScheduleStore((s) => s.byJob);
   const loadSchedules = useJobScheduleStore((s) => s.load);
   useEffect(() => {
     void load();
@@ -100,30 +88,15 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
     void loadFieldOptions();
   }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches, loadFieldOptions]);
 
+  const built = useJobRows();
   const rows = useMemo(() => {
-    const dates = new Map<string, JobScheduleDates>();
-    for (const [jobNo, sch] of Object.entries(scheduleByJob)) {
-      dates.set(jobNo, {
-        redDate: ymd(sch.redDate),
-        productionCompleteDate: ymd(sch.productionCompleteDate),
-        releasedDate: ymd(sch.releasedDate),
-        scheduledInstallDate: ymd(sch.scheduledInstallDate),
-      });
-    }
-    // Each job's lead time follows its stepper steps (lead-time rules, Settings).
-    const leadFor = (jobNo: string) => {
-      const info = stepInfo.get(jobNo);
-      const keys = info ? includedStepDefs(info.production, info.hasInstall, deptOverrides[jobNo] ?? {}).map((d) => d.key) : [];
-      return leadTimeFor(keys, leadRules);
-    };
-    const built = buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob, leadFor);
     // Custom field values ride on each row under the field's key, so search /
     // filter / sort / group treat them like any other column.
     const valuesByJob = new Map(tracks.map((t) => [t.jobNo, t.customValues]));
     // The sketch's file name rides on the row, so "Sketch is empty / not empty" filters work.
     const withSketch = sketches.size ? built.map((r) => ({ ...r, sketch: sketches.get(r.jobNo)?.fileName ?? "" })) : built;
     return withCustomFields(withSketch, customDefs, (jobNo) => valuesByJob.get(jobNo));
-  }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules, customDefs, sketches]);
+  }, [built, tracks, customDefs, sketches]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
