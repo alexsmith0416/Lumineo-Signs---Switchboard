@@ -1657,11 +1657,15 @@ input.lead-times__weeks { width: 64px; }
   gap: 6px;
 }
 
-/* "· Sat–Sun hidden" on Friday's header while the weekend is hidden. */
-.calendar-header-cell__hidden {
-  font-weight: 400;
-  font-size: 10px;
-  opacity: 0.7;
+/* "Sat–Sun Hidden" after the "Week of" date while the weekend is hidden. */
+.calendar-toolbar__hidden {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
 }
 .calendar-header-cell--weekend {
   background: var(--bg-tertiary);
@@ -1683,6 +1687,14 @@ input.lead-times__weeks { width: 64px; }
 }
 
 /* Right-click context menu (department banner: add employee / team job). */
+/* Menus portalled to the page (e.g. the day-header menu) — above the sticky
+   calendar header (z-index 80) and the compact sidebar. */
+.context-menu__backdrop.context-menu--top {
+  z-index: 500;
+}
+.context-menu.context-menu--top {
+  z-index: 501;
+}
 .context-menu__backdrop {
   position: fixed;
   inset: 0;

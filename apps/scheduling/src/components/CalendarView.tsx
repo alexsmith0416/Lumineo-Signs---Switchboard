@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format, isSameDay, startOfWeek } from "date-fns";
 import { dayLoad, effectiveHours, isWeekend } from "../engine/capacity";
@@ -1109,7 +1110,14 @@ export default function CalendarView({
           )}
           <button onClick={() => void loadWeek(addDays(weekStart, 7))} aria-label="Next week">Next ›</button>
         </div>
-        <div className="calendar-toolbar__label">Week of {format(weekStart, "MMM d, yyyy")}</div>
+        <div className="calendar-toolbar__label">
+          Week of {format(weekStart, "MMM d, yyyy")}
+          {hideWeekend && (
+            <span className="calendar-toolbar__hidden" title="Right-click a day header to show Saturday & Sunday">
+              Sat–Sun Hidden
+            </span>
+          )}
+        </div>
         <div className="calendar-toolbar__tools">
           {toolbarExtras}
           <button
@@ -1208,10 +1216,7 @@ export default function CalendarView({
               onMouseLeave={showDayValue ? () => setValueDayIdx(null) : undefined}
             >
               {showDayValue && valueDayIdx === i && dayValueTip(d)}
-              <div>
-                {format(d, "EEE")}
-                {hideWeekend && i === 4 && <span className="calendar-header-cell__hidden"> · Sat–Sun hidden</span>}
-              </div>
+              <div>{format(d, "EEE")}</div>
               <div style={{ fontWeight: 400, fontSize: 11 }}>{format(d, "MMM d")}</div>
               {showBillingCutoffs && <BillingCutoffLabel day={d} />}
             </div>
@@ -1444,23 +1449,33 @@ export default function CalendarView({
         />
       )}
 
-      {dayMenu && (
-        <>
-          <div className="context-menu__backdrop" onClick={() => setDayMenu(null)} />
-          <div className="context-menu" style={{ top: dayMenu.y, left: dayMenu.x }} role="menu">
-            <button
-              type="button"
-              className="context-menu__item"
-              onClick={() => {
-                setHideWeekend(!hideWeekend);
+      {/* Portalled to the page so it sits above the sticky day-header row. */}
+      {dayMenu &&
+        createPortal(
+          <>
+            <div
+              className="context-menu__backdrop context-menu--top"
+              onClick={() => setDayMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
                 setDayMenu(null);
               }}
-            >
-              {hideWeekend ? "Show Weekend (Sat & Sun)" : "Hide Weekend (Sat & Sun)"}
-            </button>
-          </div>
-        </>
-      )}
+            />
+            <div className="context-menu context-menu--top" style={{ top: dayMenu.y, left: dayMenu.x }} role="menu">
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  setHideWeekend(!hideWeekend);
+                  setDayMenu(null);
+                }}
+              >
+                {hideWeekend ? "Show Weekend (Sat & Sun)" : "Hide Weekend (Sat & Sun)"}
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
       {bannerMenu && (
         <>
           <div className="context-menu__backdrop" onClick={() => setBannerMenu(null)} />
