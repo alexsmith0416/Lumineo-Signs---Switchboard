@@ -55,6 +55,7 @@ import type { CustomFieldDef, CustomValues } from "./custom-fields";
 import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
 import { sortJobPOs, type JobPO } from "./job-pos";
+import type { JobDescriptions } from "./job-descriptions";
 import {
   departmentNameForLine,
   isCratingLine,
@@ -3050,4 +3051,25 @@ export async function fetchJobPOs(jobNo: string): Promise<JobPO[]> {
       }))
       .filter((p) => p.poNo),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Job descriptions (crfdf_jobdesc) — filled hourly by the BCSync_JobDescriptions
+// flow from our BC API page jobDescriptions. Read-only here.
+// Created by scripts/create-jobdesc-table.ps1.
+// ---------------------------------------------------------------------------
+const JOBDESC_SET = "crfdf_jobdescs";
+
+/** One job's Field / Production / Extended Description ("" = none). Throws when the table doesn't exist yet. */
+export async function fetchJobDescriptions(jobNo: string): Promise<JobDescriptions> {
+  const rows = await list(JOBDESC_SET, {
+    select: "crfdf_fielddesc,crfdf_proddesc,crfdf_extdesc",
+    filter: `crfdf_jobno eq '${odataLit(jobNo)}'`,
+  });
+  const r = rows[0];
+  return {
+    field: s(r?.crfdf_fielddesc).trim(),
+    production: s(r?.crfdf_proddesc).trim(),
+    extended: s(r?.crfdf_extdesc).trim(),
+  };
 }

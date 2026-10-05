@@ -453,6 +453,7 @@ export default function EditJobPanel({
             showWeather={isInstallUser}
             weatherDate={line.startDateTime}
             fallbackZip={line.installZip ?? undefined}
+            showExtended={!readOnly}
           />
         )}
 

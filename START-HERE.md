@@ -243,10 +243,27 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       archived, highest archive version wins. First run: **629 rows, verified
       exact** by `scripts/verify-jobpo-sync.ps1`. Production cutover: publish
       the ext there + switch `Bc_ApiBase` / `Bc_CompanyId`.
-  - **Phase 2b (next):** collapsible Field Description + Production Description
-    (all roles), Extended Description (editors only). The descriptions are
-    custom fields on Job (167) / Job Card (88) from an add-on extension —
-    **need the field names + extension from Page Inspection (Alex)**.
+  - ✅ **Phase 2b — Descriptions: DONE + DEPLOYED (Oct 5, guide v3.19).**
+    ▸ Field Description + ▸ Production Description (all roles), ▸ Extended
+    Description (editors: EditJobPanel `showExtended={!readOnly}`). Full
+    write-up: `flows/BCSync_JobDescriptions.md`. Key facts:
+    - The fields are **Blobs** on Job from Infotech's "Lumineo Signs -
+      Projects" ext (tableext 60200 `ICG.LMN.Job`): 60215 Field, 60214 Prod,
+      60202 Extended (60219 Design & Estimating — Alex: not wanted). Found by
+      downloading the Infotech symbols from `/dev/packages` (device code).
+    - BC ext **v1.0.0.11**: API page 58403 `jobDescriptions` reads them by
+      field number (RecordRef — no dependency on Infotech's app). 🔴 They're
+      stored in BC's default **MSDos** encoding (’ = C2, ” = C4): read UTF-8,
+      else MSDos. UTF-8-only threw for the whole response; a Windows fallback
+      showed ’ ” as Â Ä.
+    - `crfdf_jobdesc` (`scripts/create-jobdesc-table.ps1`) filled **hourly**
+      by **BCSync_JobDescriptions** (`BCJobDescriptions_1_0_0_1.zip`, ON in
+      UAT); writes only jobs whose BC lastModified moved; open jobs only.
+      First run 707 rows, **verified exact** (`scripts/verify-jobdesc-sync.ps1`).
+  - **Next:** check a view-only user can read `crfdf_jobpo` / `crfdf_jobdesc`
+    (new tables — their security role may need Read); then the older Next
+    items below (tracking columns, lifecycle + Service steppers, BC job
+    "complete" at Complete to Admin).
   - BCSync_SalesLines ship-to patch: **confirmed already applied** (script
     re-run Oct 4 changed nothing).
 - **(Oct 4, 2026) — everything through `5bccbda` (Oct 2) is

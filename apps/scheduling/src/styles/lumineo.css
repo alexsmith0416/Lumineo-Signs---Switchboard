@@ -6245,6 +6245,15 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   font-size: 12px;
   white-space: pre-wrap;
 }
+/* BC description text (job panel) — as typed in BC; long ones scroll. */
+.job-desc {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  color: var(--text-primary);
+  max-height: 320px;
+  overflow-y: auto;
+}
 /* Purchase orders (job panel) — PO # links to BC; open orders show BC's status. */
 .job-po-list {
   list-style: none;

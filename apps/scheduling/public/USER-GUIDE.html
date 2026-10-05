@@ -491,6 +491,14 @@
     day at the job's ZIP (the same forecast as the card's hover preview).</li>
     <li><strong>&#9656; Salesperson &amp; Project Manager</strong> &mdash; click the heading to open it (it starts closed).
     Shows the job's BC salesperson and that salesperson's project manager.</li>
+    <li><strong>&#9656; Field Description</strong> and <strong>&#9656; Production Description</strong> &mdash; click to open.
+    The job's descriptions from Business Central, exactly as typed there (the same text that prints on the job traveler):
+    the <em>Field Description</em> holds the install manager's / salesperson's instructions for the install crew
+    (power lines, who to call on site&hellip;), the <em>Production Description</em> the production manager's instructions
+    for the shop. Long descriptions scroll inside the section. &ldquo;Nothing entered in BC&rdquo; means the field is empty
+    in BC.</li>
+    <li><strong>&#9656; Extended Description</strong> &mdash; <strong>editors only</strong>. The sales description used on
+    proposals.</li>
     <li><strong>&#9656; Purchase orders</strong> &mdash; click to open (it starts closed). Every purchase order written to
     the job in Business Central, newest first: the <strong>PO #</strong> (click it to open the order in BC), the
     <strong>vendor</strong>, and the <strong>date ordered</strong>. While an order is still open in BC its badge shows BC's
@@ -499,8 +507,8 @@
     refreshed from BC <strong>every night</strong>, so a PO created today shows up tomorrow morning. Only open jobs have
     their POs listed.</li>
   </ul>
-  <p>Coming next to the same area, also as click-to-open sections: the job's <strong>Field Description</strong> and
-  <strong>Production Description</strong> from BC, and for editors the <strong>Extended Description</strong>.</p>
+  <p>The descriptions are refreshed from BC <strong>every hour</strong> and the purchase orders <strong>every night</strong>,
+  so an edit made in BC shows here within the hour (descriptions) or the next morning (POs). Reopen the card to see it.</p>
   <p><strong>View-only users</strong> (Production, Install, Sales, PM) see the panel down to these job details &mdash; the
   job and card text, tasks, target dates, stepper, address and details &mdash; and a <strong>Close</strong> button. The
   editing fields (employee, start / end, hours, install dates, trips and crew, Final install) only appear for
@@ -1118,9 +1126,10 @@
     <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td></tr>
   </table>
   <p>View-only roles can still <strong>open a job's card</strong> to read its details — production stage, tasks, target
-  dates, the ship-to address (Google Maps / Copy) and the salesperson &amp; project manager, plus the scheduled day's
-  weather for install crews (&sect;5.3) — they just can't change anything. Editor-only tools (the Job Queue, roster
-  editing, the card's edit fields, the Install Dates fields, and the lock toggle) don't appear for them.</p>
+  dates, the ship-to address (Google Maps / Copy), the Field and Production Descriptions, the purchase orders and the
+  salesperson &amp; project manager, plus the scheduled day's weather for install crews (&sect;5.3) — they just can't
+  change anything. Editor-only tools (the Job Queue, roster editing, the card's edit fields, the Install Dates fields,
+  the Extended Description, and the lock toggle) don't appear for them.</p>
   <div class="note box"><span class="box__label">Two different things</span>
   <strong>Who can open the app</strong> is controlled by sharing it in Power Apps. <strong>What a signed-in person sees</strong>
   is the role set in Manage users. Setting a role does not, by itself, grant someone access to open the app.</div>
@@ -1246,6 +1255,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 5, 2026</td><td><strong>Job descriptions in the card panel</strong> &mdash; click-to-open <strong>Field Description</strong> and <strong>Production Description</strong> sections show the job's instructions from Business Central for everyone (the same text as the job traveler), and editors also get the <strong>Extended Description</strong>. Refreshed from BC hourly. See &sect;5.3.</td></tr>
       <tr><td>Oct 4, 2026</td><td><strong>Purchase orders in the card panel</strong> &mdash; a click-to-open <strong>Purchase orders</strong> section below the stepper lists every PO written to the job in Business Central: PO # (opens the order in BC), vendor and date ordered, with BC's status while the order is open and <em>Closed</em> once it's archived. Refreshed from BC nightly. See &sect;5.3.</td></tr>
       <tr><td>Oct 4, 2026</td><td><strong>Job details in the card panel, by role</strong> &mdash; clicking a card now shows the job's <strong>ship-to address</strong> (click for <em>Open in Google Maps</em> or <em>Copy address</em>) and a click-to-open <strong>Salesperson &amp; Project Manager</strong> section below the stepper; install crews also see the <strong>weather</strong> for the card's day. View-only users no longer see a form of greyed-out edit fields &mdash; just the job's details and Close. The panel's <strong>Target dates</strong> &mdash; and the card's hover preview &mdash; now match the Jobs list (Mfg target, and Scheduled install or Install target). Field / Production Descriptions from BC are coming next. See &sect;5.3, &sect;5.5 and &sect;7.</td></tr>
       <tr><td>Oct 2, 2026</td><td><strong>Hidden weekend: tidier day headers</strong> &mdash; with the weekend hidden, a <em>Sat&ndash;Sun Hidden</em> tag now sits next to the <em>Week of</em> date instead of on Friday's header, so the day headers stay centred. The right-click <em>Hide / Show Weekend</em> menu now opens on top of the day-header row instead of behind it. See &sect;5.14.</td></tr>
@@ -1350,7 +1360,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.18 · Oct 4, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.19 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

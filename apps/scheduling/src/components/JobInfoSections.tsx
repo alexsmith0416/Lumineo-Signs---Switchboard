@@ -4,6 +4,8 @@ import { formatShipTo, googleMapsUrl } from "../services/ship-to";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { ARCHIVED, bcPurchaseOrderUrl, formatOrderDate } from "../services/job-pos";
 import { useJobPOs } from "../hooks/useJobPOs";
+import { useJobDescriptions } from "../hooks/useJobDescriptions";
+import type { JobDescriptions } from "../services/job-descriptions";
 import WeatherChip from "./WeatherChip";
 
 /** Copy text to the clipboard — the async API when the host allows it, else the
@@ -94,6 +96,17 @@ function Collapsible({ title, children }: { title: string; children: ReactNode }
   );
 }
 
+/** One of the job's BC descriptions, as typed in BC (line breaks kept).
+ *  Rendered only when its section is opened, so the read happens then. */
+function Description({ jobNo, which }: { jobNo: string; which: keyof JobDescriptions }) {
+  const { desc, loading, error } = useJobDescriptions(jobNo);
+  if (loading) return <span className="job-info__empty">Loading…</span>;
+  if (error) return <span className="job-info__empty">{error}</span>;
+  const text = desc[which];
+  if (!text) return <span className="job-info__empty">Nothing entered in BC</span>;
+  return <div className="job-desc">{text}</div>;
+}
+
 /** The job's purchase orders from BC: PO # (opens it in BC), vendor, date ordered.
  *  Rendered only when its section is opened, so the read happens then. */
 function PurchaseOrders({ jobNo }: { jobNo: string }) {
@@ -126,7 +139,8 @@ function PurchaseOrders({ jobNo }: { jobNo: string }) {
 /**
  * Job details for the card panel, below the stepper: the ship-to address (Maps /
  * Copy), weather on the card's day (install users), and collapsible Salesperson
- * & Project Manager and Purchase orders (from BC). Everything comes from the Jobs list's row, so it matches
+ * & Project Manager, the job's BC descriptions (Field and Production for
+ * everyone, Extended for editors) and Purchase orders. Everything comes from the Jobs list's row, so it matches
  * the list.
  */
 export default function JobInfoSections({
@@ -134,6 +148,7 @@ export default function JobInfoSections({
   showWeather = false,
   weatherDate,
   fallbackZip,
+  showExtended = false,
 }: {
   jobNo: string;
   /** Weather for the scheduled day (install users). */
@@ -142,6 +157,8 @@ export default function JobInfoSections({
   weatherDate?: Date;
   /** The card's own install ZIP when BC has no ship-to ZIP. */
   fallbackZip?: string;
+  /** Extended Description (the sales / proposal text) — editors only. */
+  showExtended?: boolean;
 }) {
   const row = useJobRow(jobNo);
   const address = formatShipTo(row?.shipTo);
@@ -161,6 +178,17 @@ export default function JobInfoSections({
           <div className="job-targets__title">Weather · scheduled day</div>
           <WeatherChip zip={zip} forDate={weatherDate} size="expanded" />
         </div>
+      )}
+      <Collapsible title="Field Description">
+        <Description jobNo={jobNo} which="field" />
+      </Collapsible>
+      <Collapsible title="Production Description">
+        <Description jobNo={jobNo} which="production" />
+      </Collapsible>
+      {showExtended && (
+        <Collapsible title="Extended Description">
+          <Description jobNo={jobNo} which="extended" />
+        </Collapsible>
       )}
       <Collapsible title="Salesperson & Project Manager">
         <div className="job-targets__row">
