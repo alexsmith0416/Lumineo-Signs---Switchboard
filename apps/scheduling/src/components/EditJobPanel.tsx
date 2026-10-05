@@ -15,6 +15,8 @@ import JobTaskPicker from "./JobTaskPicker";
 import JobSchedulePanel from "./JobSchedulePanel";
 import ProductionStepperSection from "./ProductionStepperSection";
 import { JobTargetsSection, ProductionCompleteField } from "./JobTargets";
+import JobInfoSections from "./JobInfoSections";
+import { useCurrentUser } from "../services/current-user";
 
 // Start/End are edited as dates only, but the engine schedules with times, so we
 // keep the time-of-day on the underlying datetime-local string and only swap the
@@ -89,6 +91,9 @@ export default function EditJobPanel({
 
   // Trips/crew and Install ZIP are install-only widgets.
   const isInstall = dataSource.kind === "installation";
+  // Install crews also get the scheduled day's weather in the job details.
+  const { type: userType } = useCurrentUser();
+  const isInstallUser = userType === "install-wk" || userType === "install-nek";
   // Respect the global cascade setting on save (matches drag/resize behavior);
   // cascade off = move/resize this task only, no downstream push.
   const cascadeEnabled = useSettingsStore((s) => s.cascadeEnabled);
@@ -442,6 +447,19 @@ export default function EditJobPanel({
 
         {line.jobNo && !line.isCustom && <ProductionStepperSection jobNo={line.jobNo} />}
 
+        {line.jobNo && !line.isCustom && !isCreate && (
+          <JobInfoSections
+            jobNo={line.jobNo}
+            showWeather={isInstallUser}
+            weatherDate={line.startDateTime}
+            fallbackZip={line.installZip ?? undefined}
+          />
+        )}
+
+        {/* The edit fields — editors only. View-only users see the job's details
+            above instead of a form of disabled inputs. */}
+        {!readOnly && (
+        <>
         <div className="form-field">
           <div className="form-field__label">Employee</div>
           <select
@@ -613,6 +631,8 @@ export default function EditJobPanel({
             ignoreLineId={line.id}
             hideComparison={isCreate}
           />
+        )}
+        </>
         )}
 
         <div style={{ flex: 1 }} />

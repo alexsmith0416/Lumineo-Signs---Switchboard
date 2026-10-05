@@ -483,6 +483,22 @@
   flows around it. On Installation you also set <strong>trips, men, trucks</strong>, the <strong>install ZIP</strong>,
   and the <strong>Final install</strong> flag (5.5). You can <strong>Duplicate</strong> the card onto other people, or
   <strong>Delete</strong> it.</p>
+  <p><strong>Job details</strong> sit just below the production stepper, for everyone who opens a card:</p>
+  <ul>
+    <li><strong>Ship-to address</strong> &mdash; the job's ship-to address from Business Central, shown as a link. Click it
+    and choose <em>Open in Google Maps</em> (directions on a phone or computer) or <em>Copy address</em>.</li>
+    <li><strong>Weather &middot; scheduled day</strong> &mdash; for <strong>install crews</strong>: the forecast for the card's
+    day at the job's ZIP (the same forecast as the card's hover preview).</li>
+    <li><strong>&#9656; Salesperson &amp; Project Manager</strong> &mdash; click the heading to open it (it starts closed).
+    Shows the job's BC salesperson and that salesperson's project manager.</li>
+  </ul>
+  <p>Coming next to the same area, also as click-to-open sections: the job's <strong>Field Description</strong> and
+  <strong>Production Description</strong> from BC, the <strong>purchase orders</strong> written to the job (PO #, vendor,
+  date ordered, with the PO # opening the order in BC), and for editors the <strong>Extended Description</strong>.</p>
+  <p><strong>View-only users</strong> (Production, Install, Sales, PM) see the panel down to these job details &mdash; the
+  job and card text, tasks, target dates, stepper, address and details &mdash; and a <strong>Close</strong> button. The
+  editing fields (employee, start / end, hours, install dates, trips and crew, Final install) only appear for
+  editors.</p>
   <p>The panel also shows the job's <strong>production stage</strong> (5.4), the <strong>Job tasks</strong> checklist
   (5.6), and — for editors — the <strong>Install Dates</strong> (5.5). View-only roles see a read-only version of the card.</p>
 
@@ -548,8 +564,11 @@
 
   <h3>5.5 &nbsp;Target &amp; install dates</h3>
   <p>Every BC job card shows a <strong>Target dates</strong> section (in the Edit Job panel, between the card text and
-  the production stepper — and on the card's <strong>hover preview</strong>). These are computed guides, not committed
-  dates:</p>
+  the production stepper — and on the card's <strong>hover preview</strong>). In the panel they're the <strong>same dates as
+  the Jobs list</strong> (&sect;5.17): <strong>Mfg target</strong> (the Jobs list's Mfg Final &mdash; marked
+  <em>(modified)</em> when a modified date replaces the target) and the <strong>Scheduled install</strong>, or the
+  <strong>Install target</strong> until install is scheduled. The hover preview and jobs not on the Jobs list use the
+  computed guides below. These are guides, not committed dates:</p>
   <ul>
     <li><strong>Target production complete</strong> — the job's <strong>production lead time</strong> after its
     <em>release date</em>: <strong>7 weeks</strong> by default, or what a <strong>lead-time rule</strong> in
@@ -1092,9 +1111,10 @@
     <tr><td>WK / NEK Install</td><td>Installation (their region)</td><td>No</td><td>View-only</td></tr>
     <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td></tr>
   </table>
-  <p>View-only roles can still <strong>open a job's card</strong> to read its details — production stage, tasks, and
-  dates — they just can't change anything. Editor-only tools (the Job Queue, roster editing, the Install Dates fields,
-  and the lock toggle) don't appear for them.</p>
+  <p>View-only roles can still <strong>open a job's card</strong> to read its details — production stage, tasks, target
+  dates, the ship-to address (Google Maps / Copy) and the salesperson &amp; project manager, plus the scheduled day's
+  weather for install crews (&sect;5.3) — they just can't change anything. Editor-only tools (the Job Queue, roster
+  editing, the card's edit fields, the Install Dates fields, and the lock toggle) don't appear for them.</p>
   <div class="note box"><span class="box__label">Two different things</span>
   <strong>Who can open the app</strong> is controlled by sharing it in Power Apps. <strong>What a signed-in person sees</strong>
   is the role set in Manage users. Setting a role does not, by itself, grant someone access to open the app.</div>
@@ -1220,6 +1240,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 4, 2026</td><td><strong>Job details in the card panel, by role</strong> &mdash; clicking a card now shows the job's <strong>ship-to address</strong> (click for <em>Open in Google Maps</em> or <em>Copy address</em>) and a click-to-open <strong>Salesperson &amp; Project Manager</strong> section below the stepper; install crews also see the <strong>weather</strong> for the card's day. View-only users no longer see a form of greyed-out edit fields &mdash; just the job's details and Close. The panel's <strong>Target dates</strong> now match the Jobs list (Mfg target, and Scheduled install or Install target). Field / Production Descriptions and purchase orders from BC are coming next. See &sect;5.3, &sect;5.5 and &sect;7.</td></tr>
       <tr><td>Oct 2, 2026</td><td><strong>Hidden weekend: tidier day headers</strong> &mdash; with the weekend hidden, a <em>Sat&ndash;Sun Hidden</em> tag now sits next to the <em>Week of</em> date instead of on Friday's header, so the day headers stay centred. The right-click <em>Hide / Show Weekend</em> menu now opens on top of the day-header row instead of behind it. See &sect;5.14.</td></tr>
       <tr><td>Oct 1, 2026</td><td><strong>Jobs: view sketches full size, remove a sketch, faster list</strong> &mdash; click a sketch to open it over the dimmed list (like Airtable) with Download, Open in SharePoint and Remove. <em>Remove File</em> (right-click a sketch) takes it off the Jobs list after you confirm &mdash; the file stays in SharePoint. The Jobs list now shows as soon as the jobs are read, with steppers and targets filling in a moment later, and is loaded in the background after the app opens. The compact sidebar opens more smoothly (nothing shifts) and closes as soon as the mouse leaves it. See &sect;5.17.</td></tr>
       <tr><td>Oct 1, 2026</td><td><strong>Day value on hover, and a tidier Installation header</strong> &mdash; turn on <em>Settings &rarr; Display &rarr; Day value on hover</em>, then hover any day header to see the $ scheduled that day for WK, NEK and both combined. The Installation board's <strong>WK / NEK</strong> switch now sits at the left of the stats bar (no separate bar above it), matching Production. See &sect;5.14.</td></tr>
@@ -1322,7 +1343,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.16 · Oct 2, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.17 · Oct 4, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

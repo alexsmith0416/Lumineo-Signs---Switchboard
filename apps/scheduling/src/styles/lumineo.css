@@ -6142,3 +6142,106 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .sketch-remove .modal-card__body p {
   margin: 0 0 8px;
 }
+
+/* Job panel details below the stepper — ship-to address (Maps / Copy), weather,
+   and collapsible sections (Salesperson & PM, descriptions, POs). */
+.job-info {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.job-info__row {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.job-info__empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.job-addr {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.job-addr__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--lumineo-navy);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  text-align: left;
+}
+.job-addr__copied {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.job-addr__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.job-addr__menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 7px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.job-addr__menu button:hover {
+  background: var(--bg-tertiary);
+}
+.job-info__section {
+  border-bottom: 1px solid var(--border);
+}
+.job-info__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.job-info__toggle:hover {
+  background: var(--bg-tertiary);
+}
+.job-info__chev {
+  width: 10px;
+}
+.job-info__body {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

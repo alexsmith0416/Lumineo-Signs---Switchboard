@@ -2001,7 +2001,7 @@ let orderAmountCol = true;
 export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
   const base =
     "crfdf_jobnumber,crfdf_appjobname,crfdf_customername,crfdf_description,crfdf_remainingbalance," +
-    "crfdf_shiptocity,crfdf_shiptostate,crfdf_salespersoncode,crfdf_sharepointurl,crfdf_releasedate";
+    "crfdf_shiptoaddress,crfdf_shiptocity,crfdf_shiptostate,crfdf_shiptozip,crfdf_salespersoncode,crfdf_sharepointurl,crfdf_releasedate";
   let rows: Row[];
   try {
     rows = await list(BC.jobs, { select: orderAmountCol ? `${base},crfdf_salesorderamount` : base });
@@ -2018,6 +2018,8 @@ export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
       remaining: n(r.crfdf_remainingbalance),
       city: s(r.crfdf_shiptocity),
       state: s(r.crfdf_shiptostate),
+      address: s(r.crfdf_shiptoaddress),
+      zip: s(r.crfdf_shiptozip),
       salesperson: s(r.crfdf_salespersoncode).trim().toUpperCase(),
       folderName: sharePointCustomer(s(r.crfdf_sharepointurl)),
       sharepointUrl: s(r.crfdf_sharepointurl).trim(),

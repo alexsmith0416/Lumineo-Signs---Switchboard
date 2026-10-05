@@ -215,7 +215,24 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 4, 2026) — everything through `5bccbda` (Oct 2) is
+- **📌 RESUME HERE (Oct 4, 2026) — Job panel by role, phase 1 DEPLOYED.**
+  Clicking a card: below the stepper, `components/JobInfoSections.tsx` shows the
+  ship-to address (Google Maps / Copy; `services/ship-to.ts`), install crews get
+  the card day's weather, and ▸ Salesperson & Project Manager (collapsed).
+  View-only users no longer get the disabled edit fields (EditJobPanel wraps
+  them in `!readOnly`). Panel Target dates = the Jobs list's (`useJobRow`):
+  Mfg target (Mfg Final) + Scheduled install, else Install target. The hover
+  tooltip still uses `computeJobTargets` (offered to switch). Guide v3.17.
+  - **Phase 2 (next):** collapsible Field Description + Production Description
+    (all roles), Extended Description (editors only), and POs (all roles: PO #
+    → BC link, vendor, date ordered). The descriptions are custom fields on
+    Job (167) / Job Card (88) from an add-on extension — **need the field
+    names + extension from Page Inspection (Alex)**. POs: Alex chose a
+    read-only page in `bc/lumineo-planning-ext` over Purchase Line + Purchase
+    Line Archive by Project No. → new Dataverse table + sync flow.
+  - BCSync_SalesLines ship-to patch: **confirmed already applied** (script
+    re-run Oct 4 changed nothing).
+- **(Oct 4, 2026) — everything through `5bccbda` (Oct 2) is
   committed, pushed AND deployed** (build 00:23 Oct 2, commit 00:25). Guide v3.16.
   Shipped Sep 30 – Oct 2 (details in the commit messages):
   - **Jobs:** edit tracking columns in the list (`a573c50` — status, priority,
@@ -249,7 +266,7 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     in UAT**. Switches to Production with the cutover (below).
   - **Location fix:** `scripts/patch-saleslines-flow-shipto.ps1` makes the
     nightly BCSync_SalesLines write the Sales Order's ship-to city / state /
-    address (BCSync_Jobs writes the bill-to customer's) — **user to run**.
+    address (BCSync_Jobs writes the bill-to customer's) — ✅ applied (checked Oct 4).
   - **Stage 4 (done): custom fields** — `services/custom-fields.ts` (12 types
     incl. Formula Date = base date ± days / working days / weeks),
     `store/custom-field-store.ts`, `components/jobs/CustomFieldDialogs.tsx`

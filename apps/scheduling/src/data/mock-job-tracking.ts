@@ -31,6 +31,8 @@ export const MOCK_BC_JOBS: BcJobSummary[] = Array.from({ length: 60 }, (_, i) =>
   orderAmount: 8_000 + ((i * 7919) % 90_000),
   city: CITIES[i % CITIES.length]!,
   state: "KS",
+  address: `${100 + ((i * 37) % 900)} ${["Main St", "N Broadway", "E Douglas Ave", "W 21st St"][i % 4]}`,
+  zip: ["67202", "67501", "67401", "67801", "66603", "66044", "66061"][i % 7]!,
   salesperson: SALES[i % SALES.length]!,
 }));
 

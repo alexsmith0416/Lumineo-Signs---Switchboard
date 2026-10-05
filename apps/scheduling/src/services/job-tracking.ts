@@ -16,6 +16,7 @@
  * Sales / Region from the salesperson, Location from the ship-to city + state,
  * Order Date = the release date, Value = the Sales Order amount.
  */
+import type { ShipTo } from "./ship-to";
 import { regionForSalesperson, salesInitials } from "./sales-pm";
 import { daysOnHold } from "./job-status";
 import { DEFAULT_LEAD_TIME, jobTargetDates, type LeadTime } from "./lead-times";
@@ -85,6 +86,10 @@ export interface BcJobSummary {
   city: string;
   /** Ship-to state ("KS"). */
   state?: string;
+  /** Ship-to street address ("123 Main St"). */
+  address?: string;
+  /** Ship-to ZIP. */
+  zip?: string;
   /** BC salesperson code ("NHASKELL"). */
   salesperson: string;
   /** The customer folder in the job's SharePoint URL — the name fallback for
@@ -127,7 +132,11 @@ export interface JobRow {
   inBc: boolean;
   description: string;
   sales: string;
+  /** BC salesperson code ("NHASKELL"), "" when BC has none. */
+  salespersonCode: string;
   location: string;
+  /** Full BC ship-to address (street, city, state, ZIP). */
+  shipTo: ShipTo;
   region: string;
   priority: string;
   orderDate: string;
@@ -287,7 +296,9 @@ export function buildJobRows(
       description: bc?.description ?? "",
       // An edit made in the app wins; else BC's salesperson; else the Airtable value.
       sales: t?.salesOverride?.trim() || salesInitials(code) || t?.sales || "",
+      salespersonCode: code,
       location: shipToLocation(bc) || t?.location || "",
+      shipTo: { address: bc?.address ?? "", city: bc?.city ?? "", state: bc?.state ?? "", zip: bc?.zip ?? "" },
       region: code ? regionForSalesperson(code) : t?.region || "WK",
       priority: t?.priority ?? "",
       orderDate,

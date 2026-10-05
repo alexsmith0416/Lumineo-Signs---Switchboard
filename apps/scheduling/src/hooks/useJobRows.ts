@@ -55,3 +55,10 @@ export function useJobRows(): JobRow[] {
     return buildJobRows(bcJobs, tracks, dates, new Date(), invoiceByJob, leadFor);
   }, [bcJobs, tracks, scheduleByJob, invoiceByJob, stepInfo, deptOverrides, leadRules]);
 }
+
+/** One job's Jobs-list row (same dates, targets and BC details), or undefined
+ *  while the list loads / for a job that isn't on it. */
+export function useJobRow(jobNo: string | undefined): JobRow | undefined {
+  const rows = useJobRows();
+  return useMemo(() => (jobNo ? rows.find((r) => r.jobNo === jobNo) : undefined), [rows, jobNo]);
+}

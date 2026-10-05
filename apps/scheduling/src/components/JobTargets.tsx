@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { format } from "date-fns";
 import { useJobTargets } from "../hooks/useJobTargets";
+import { useJobRow } from "../hooks/useJobRows";
 import { useJobScheduleStore } from "../store/job-schedule-store";
 
 const fmtLong = (d: Date | null): string => (d ? format(d, "EEE MMM d, yyyy") : "—");
@@ -20,7 +21,43 @@ const toDateInput = (d: Date | null): string => (d ? format(d, "yyyy-MM-dd") : "
 const fmtShort = (d: Date): string => format(d, "MM/dd/yy");
 
 export function JobTargetsSection({ jobNo }: { jobNo: string }) {
+  const row = useJobRow(jobNo);
   const { targets, redDate, scheduledInstall } = useJobTargets(jobNo);
+  // The Jobs list's own targets when the job is on it, so the panel and the list
+  // always agree: Mfg target (Mfg Final — the modified date when set) and the
+  // scheduled install, else the install target.
+  const mfg = parseDateInput(row?.mfgFinalDate ?? "");
+  if (row && mfg) {
+    const sched = parseDateInput(row.scheduledInstall);
+    const instTarget = parseDateInput(row.installTarget);
+    return (
+      <>
+        {redDate && <div className="job-red-bar">Red Date: {fmtShort(redDate)}</div>}
+        <div className="job-targets">
+          <div className="job-targets__title">Target dates</div>
+          <div className="job-targets__row">
+            <span className="job-targets__label">
+              Mfg target{row.mfgTargetMod && row.mfgFinalDate === row.mfgTargetMod ? " (modified)" : ""}
+            </span>
+            <strong>{fmtLong(mfg)}</strong>
+          </div>
+          {sched ? (
+            <div className="job-targets__row">
+              <span className="job-targets__label">Scheduled install</span>
+              <strong>{fmtLong(sched)}</strong>
+            </div>
+          ) : (
+            instTarget && (
+              <div className="job-targets__row">
+                <span className="job-targets__label">Install target</span>
+                <strong>{fmtLong(instTarget)}</strong>
+              </div>
+            )
+          )}
+        </div>
+      </>
+    );
+  }
   if (!targets.targetProductionComplete) return null;
   return (
     <>
