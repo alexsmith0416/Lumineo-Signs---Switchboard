@@ -215,7 +215,30 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Sep 30, 2026) — Jobs list stages 1–4 shipped.** Next:
+- **📌 RESUME HERE (Oct 4, 2026) — everything through `5bccbda` (Oct 2) is
+  committed, pushed AND deployed** (build 00:23 Oct 2, commit 00:25). Guide v3.16.
+  Shipped Sep 30 – Oct 2 (details in the commit messages):
+  - **Jobs:** edit tracking columns in the list (`a573c50` — status, priority,
+    hold, vendor, dates, notes…), shared views, choose / upload / remove sketches
+    (SharePoint connector, `services/sharepoint.ts`; pinned via
+    `crfdf_jobsketch.crfdf_pinned`; BCSync_JobSketches 1.0.0.14 skips removed
+    jobs), full-size sketch viewer, Airtable-style pick-lists (`OptionPicker`,
+    Edit field… reorder / recolour), editable Sales
+    (`crfdf_jobtrack.crfdf_salesoverride`, never sent to BC), list shows before
+    steppers load + preloads 5s after start.
+  - **Monthly Plan on real data** (`services/gameplan.ts`, `hooks/useJobRows.ts`);
+    mock `INSTALL_CANDIDATES` gone (the Phase 3 Gameplanning item is done).
+  - **Install board loads in ~1.5s** (batched BC crew read, shared region read).
+  - **Display:** compact sidebar, hide weekend (right-click a day header;
+    "Sat–Sun Hidden" tag by the week date), day value on hover
+    (`services/day-values.ts`), WK/NEK toggle inside the stats bar.
+  - Job Queue "From BC steps" header colours (shared).
+  - Untracked `flows/saleslines-clientdata-backup-*.json` are pre-patch flow
+    backups — deliberately not committed.
+  - **Next:** any tracking columns still read-only (check expeditor / date to
+    Admin), the lifecycle + Service steppers, BC job "complete" at Complete to
+    Admin. User-side items from Sep 30 below are still open unless Alex says so.
+- **(Sep 30, 2026) — Jobs list stages 1–4 shipped.** Next:
   editing the other tracking columns (vendor, expeditor, date to Admin…), the
   lifecycle + Service steppers, BC job "complete" at Complete to Admin.
   - **New orders flow (built Sep 30, UAT):** `flows/BCSync_NewOrders.md` —
