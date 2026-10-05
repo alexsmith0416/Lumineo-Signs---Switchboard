@@ -15,6 +15,7 @@ import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
 import { useJobTargets } from "../hooks/useJobTargets";
+import { useJobListTargets } from "./JobTargets";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -659,6 +660,8 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
   const { targets: jobTargets, redDate: jobRed, scheduledInstall: jobScheduled } = useJobTargets(
     line.isCustom ? undefined : line.jobNo || undefined,
   );
+  // Same dates as the Jobs list (and the card panel) when the job is on it.
+  const listTargets = useJobListTargets(line.isCustom ? undefined : line.jobNo || undefined);
 
   return (
     <div
@@ -797,6 +800,25 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
           />
         )}
 
+        {listTargets ? (
+          <>
+            <Row
+              label={listTargets.mfgModified ? "Mfg target (mod.)" : "Mfg target"}
+              value={format(listTargets.mfg, "EEE MMM d")}
+            />
+            {jobRed && (
+              <Row label="Red date" value={<span style={{ color: "var(--lumineo-red)", fontWeight: 700 }}>{format(jobRed, "EEE MMM d")}</span>} />
+            )}
+            {listTargets.scheduledInstall ? (
+              <Row label="Install" value={format(listTargets.scheduledInstall, "EEE MMM d")} />
+            ) : (
+              listTargets.installTarget && (
+                <Row label="Install target" value={format(listTargets.installTarget, "EEE MMM d")} />
+              )
+            )}
+          </>
+        ) : (
+        <>
         {jobTargets.targetProductionComplete && (
           <Row label="Target prod." value={format(jobTargets.targetProductionComplete, "EEE MMM d")} />
         )}
@@ -812,6 +834,8 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
               value={`${format(jobTargets.installWindowStart, "MMM d")} – ${format(jobTargets.installWindowEnd, "MMM d")}`}
             />
           )
+        )}
+        </>
         )}
 
         {steps.length > 0 && (

@@ -221,8 +221,9 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   the card day's weather, and ▸ Salesperson & Project Manager (collapsed).
   View-only users no longer get the disabled edit fields (EditJobPanel wraps
   them in `!readOnly`). Panel Target dates = the Jobs list's (`useJobRow`):
-  Mfg target (Mfg Final) + Scheduled install, else Install target. The hover
-  tooltip still uses `computeJobTargets` (offered to switch). Guide v3.17.
+  Mfg target (Mfg Final) + Scheduled install, else Install target — the hover
+  tooltip uses the same (`useJobListTargets` in `JobTargets.tsx`);
+  `computeJobTargets` is only the fallback for jobs not on the list. Guide v3.17.
   - **Phase 2 (next):** collapsible Field Description + Production Description
     (all roles), Extended Description (editors only), and POs (all roles: PO #
     → BC link, vendor, date ordered). The descriptions are custom fields on
