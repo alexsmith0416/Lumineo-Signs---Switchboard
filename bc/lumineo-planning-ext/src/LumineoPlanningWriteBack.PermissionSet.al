@@ -1,4 +1,5 @@
-// Everything the BC push flow's service principal needs to use the page.
+// Everything the BC flows' service principal needs: the planning page (push)
+// and the job PO queries (read).
 // Assign to the Entra Application Card alongside ICG.PROJPLANNING.ADM (or in
 // place of it, once verified — this is narrower).
 permissionset 58400 "LUM PLANNING WB"
@@ -11,5 +12,12 @@ permissionset 58400 "LUM PLANNING WB"
         tabledata "ICG.IPP.ProjectPlanningStep" = R,
         tabledata "ICG.IPP.ProjPlanTripResource" = R,
         tabledata Job = R,
-        tabledata Resource = R;
+        tabledata Resource = R,
+        // Job POs (read-only queries for the sync flow).
+        query "Lumineo Job POs" = X,
+        query "Lumineo Job PO Archive" = X,
+        tabledata "Purchase Header" = R,
+        tabledata "Purchase Line" = R,
+        tabledata "Purchase Header Archive" = R,
+        tabledata "Purchase Line Archive" = R;
 }

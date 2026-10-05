@@ -224,13 +224,29 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   Mfg target (Mfg Final) + Scheduled install, else Install target — the hover
   tooltip uses the same (`useJobListTargets` in `JobTargets.tsx`);
   `computeJobTargets` is only the fallback for jobs not on the list. Guide v3.17.
-  - **Phase 2 (next):** collapsible Field Description + Production Description
-    (all roles), Extended Description (editors only), and POs (all roles: PO #
-    → BC link, vendor, date ordered). The descriptions are custom fields on
-    Job (167) / Job Card (88) from an add-on extension — **need the field
-    names + extension from Page Inspection (Alex)**. POs: Alex chose a
-    read-only page in `bc/lumineo-planning-ext` over Purchase Line + Purchase
-    Line Archive by Project No. → new Dataverse table + sync flow.
+  - ✅ **Phase 2a — Purchase orders: DONE + DEPLOYED (Oct 4, guide v3.18).**
+    ▸ Purchase orders in the card panel (all roles): PO # → BC (open → page 50,
+    archived → 9347), vendor, date ordered, BC status / "Closed". Full write-up:
+    `flows/BCSync_JobPOs.md`. Key facts:
+    - BC ext **v1.0.0.8**: API queries 58401 `jobPurchaseOrders` / 58402
+      `jobPurchaseOrderArchives` under `api/lumineo/planning/v1.0`. 🔴 The
+      `QueryType = Normal` + Web Services route (v1.0.0.6/7) was NEVER exposed
+      over OData — 404 for every login incl. Alex's. Don't go back to it; the
+      `LumineoJobPOs` / `LumineoJobPOArchive` Web Services rows can be deleted.
+    - Access: `LUM JOB PO READ` (permissionsetextension of D365 BUS FULL
+      ACCESS, v1.0.0.7). The app user CAN'T self-assign `LUM PLANNING WB`
+      (BC: SECURITY only hands out sets the assigner holds) — an admin with
+      SUPER must do it; then the extension can go.
+    - `crfdf_jobpo` (`scripts/create-jobpo-table.ps1`, run Oct 4) filled by
+      **BCSync_JobPOs** (nightly 5:15 CT, solution `BCJobPOs_1_0_0_2.zip`,
+      imported + ON in UAT). Open jobs only (`crfdf_bcjobs`); open beats
+      archived, highest archive version wins. First run: **629 rows, verified
+      exact** by `scripts/verify-jobpo-sync.ps1`. Production cutover: publish
+      the ext there + switch `Bc_ApiBase` / `Bc_CompanyId`.
+  - **Phase 2b (next):** collapsible Field Description + Production Description
+    (all roles), Extended Description (editors only). The descriptions are
+    custom fields on Job (167) / Job Card (88) from an add-on extension —
+    **need the field names + extension from Page Inspection (Alex)**.
   - BCSync_SalesLines ship-to patch: **confirmed already applied** (script
     re-run Oct 4 changed nothing).
 - **(Oct 4, 2026) — everything through `5bccbda` (Oct 2) is

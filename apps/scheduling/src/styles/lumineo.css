@@ -6245,3 +6245,58 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   font-size: 12px;
   white-space: pre-wrap;
 }
+/* Purchase orders (job panel) — PO # links to BC; open orders show BC's status. */
+.job-po-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  white-space: normal;
+}
+.job-po {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.job-po:last-child {
+  border-bottom: none;
+}
+.job-po__top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.job-po__no {
+  font-weight: 700;
+  color: var(--lumineo-navy);
+  text-underline-offset: 2px;
+}
+.job-po__status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #e1f0ff;
+  color: #0b4a8b;
+}
+[data-theme="dark"] .job-po__status {
+  background: #12324f;
+  color: #9fcbff;
+}
+.job-po__status--archived {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+.job-po__date {
+  margin-left: auto;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.job-po__vendor {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

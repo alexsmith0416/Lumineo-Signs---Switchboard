@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useJobRow } from "../hooks/useJobRows";
 import { formatShipTo, googleMapsUrl } from "../services/ship-to";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
+import { ARCHIVED, bcPurchaseOrderUrl, formatOrderDate } from "../services/job-pos";
+import { useJobPOs } from "../hooks/useJobPOs";
 import WeatherChip from "./WeatherChip";
 
 /** Copy text to the clipboard — the async API when the host allows it, else the
@@ -92,10 +94,39 @@ function Collapsible({ title, children }: { title: string; children: ReactNode }
   );
 }
 
+/** The job's purchase orders from BC: PO # (opens it in BC), vendor, date ordered.
+ *  Rendered only when its section is opened, so the read happens then. */
+function PurchaseOrders({ jobNo }: { jobNo: string }) {
+  const { pos, loading, error } = useJobPOs(jobNo);
+  if (loading) return <span className="job-info__empty">Loading…</span>;
+  if (error) return <span className="job-info__empty">{error}</span>;
+  if (!pos.length) return <span className="job-info__empty">No purchase orders in BC</span>;
+  return (
+    <ul className="job-po-list">
+      {pos.map((po) => (
+        <li key={po.poNo} className="job-po">
+          <div className="job-po__top">
+            <a className="job-po__no" href={bcPurchaseOrderUrl(po)} target="_blank" rel="noopener noreferrer">
+              {po.poNo}
+            </a>
+            {po.status && (
+              <span className={`job-po__status${po.status === ARCHIVED ? " job-po__status--archived" : ""}`}>
+                {po.status === ARCHIVED ? "Closed" : po.status}
+              </span>
+            )}
+            <span className="job-po__date">{po.orderDate ? formatOrderDate(po.orderDate) : "—"}</span>
+          </div>
+          <div className="job-po__vendor">{po.vendorName || po.vendorNo || "—"}</div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Job details for the card panel, below the stepper: the ship-to address (Maps /
  * Copy), weather on the card's day (install users), and collapsible Salesperson
- * & Project Manager. Everything comes from the Jobs list's row, so it matches
+ * & Project Manager and Purchase orders (from BC). Everything comes from the Jobs list's row, so it matches
  * the list.
  */
 export default function JobInfoSections({
@@ -140,6 +171,9 @@ export default function JobInfoSections({
           <span className="job-targets__label">Project manager</span>
           <strong>{pm?.name || "—"}</strong>
         </div>
+      </Collapsible>
+      <Collapsible title="Purchase orders">
+        <PurchaseOrders jobNo={jobNo} />
       </Collapsible>
     </div>
   );

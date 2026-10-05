@@ -54,6 +54,7 @@ import type { LeadTimeRule } from "./lead-times";
 import type { CustomFieldDef, CustomValues } from "./custom-fields";
 import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
+import { sortJobPOs, type JobPO } from "./job-pos";
 import {
   departmentNameForLine,
   isCratingLine,
@@ -3023,4 +3024,30 @@ export async function probeLive(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error("[live] probe failed:", err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Job purchase orders (crfdf_jobpo) — filled nightly by the BCSync_JobPOs flow
+// from our BC queries LumineoJobPOs + LumineoJobPOArchive. Read-only here.
+// Created by scripts/create-jobpo-table.ps1.
+// ---------------------------------------------------------------------------
+const JOBPO_SET = "crfdf_jobpos";
+
+/** One job's purchase orders, newest order first. Throws when the table doesn't exist yet. */
+export async function fetchJobPOs(jobNo: string): Promise<JobPO[]> {
+  const rows = await list(JOBPO_SET, {
+    select: "crfdf_pono,crfdf_vendorno,crfdf_vendorname,crfdf_orderdate,crfdf_postatus",
+    filter: `crfdf_jobno eq '${odataLit(jobNo)}'`,
+  });
+  return sortJobPOs(
+    rows
+      .map((r) => ({
+        poNo: s(r.crfdf_pono).trim(),
+        vendorNo: s(r.crfdf_vendorno).trim(),
+        vendorName: s(r.crfdf_vendorname).trim(),
+        orderDate: s(r.crfdf_orderdate).trim(),
+        status: s(r.crfdf_postatus).trim(),
+      }))
+      .filter((p) => p.poNo),
+  );
 }
