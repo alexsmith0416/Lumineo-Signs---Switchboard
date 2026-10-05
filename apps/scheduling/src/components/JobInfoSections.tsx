@@ -149,6 +149,7 @@ export default function JobInfoSections({
   weatherDate,
   fallbackZip,
   showExtended = false,
+  grouped = false,
 }: {
   jobNo: string;
   /** Weather for the scheduled day (install users). */
@@ -159,6 +160,10 @@ export default function JobInfoSections({
   fallbackZip?: string;
   /** Extended Description (the sales / proposal text) — editors only. */
   showExtended?: boolean;
+  /** Fold everything under one click-to-open "Job Information" heading — the
+   *  editor's panel, which also carries the edit fields. View-only users get
+   *  the sections laid out flat. */
+  grouped?: boolean;
 }) {
   const row = useJobRow(jobNo);
   const address = formatShipTo(row?.shipTo);
@@ -166,9 +171,10 @@ export default function JobInfoSections({
   const sales = personByCode(row?.salespersonCode);
   const pm = pmForSalespersonCode(row?.salespersonCode);
   const salesName = sales?.name || row?.salespersonCode || row?.sales || "";
+  const [groupOpen, setGroupOpen] = useState(false);
 
-  return (
-    <div className="job-info">
+  const sections = (
+    <>
       <div className="job-info__row">
         <div className="job-targets__title">Ship-to address</div>
         {address ? <AddressLink address={address} /> : <span className="job-info__empty">No address in BC</span>}
@@ -203,6 +209,24 @@ export default function JobInfoSections({
       <Collapsible title="Purchase orders">
         <PurchaseOrders jobNo={jobNo} />
       </Collapsible>
+    </>
+  );
+
+  if (!grouped) return <div className="job-info">{sections}</div>;
+  return (
+    <div className="job-info">
+      <div className="job-info__group">
+        <button
+          type="button"
+          className="job-info__toggle job-info__group-toggle"
+          onClick={() => setGroupOpen((v) => !v)}
+          aria-expanded={groupOpen}
+        >
+          <span className="job-info__chev" aria-hidden="true">{groupOpen ? "▾" : "▸"}</span>
+          Job Information
+        </button>
+        {groupOpen && <div className="job-info__group-body">{sections}</div>}
+      </div>
     </div>
   );
 }

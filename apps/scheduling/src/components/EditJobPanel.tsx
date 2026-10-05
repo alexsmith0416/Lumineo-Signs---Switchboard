@@ -402,6 +402,8 @@ export default function EditJobPanel({
           )}
         </div>
 
+        {/* Everything between the title and the buttons scrolls; the buttons stay put. */}
+        <div className="slide-over__body">
         <div className="form-field">
           <div className="form-field__label">Job description</div>
           <textarea
@@ -454,6 +456,7 @@ export default function EditJobPanel({
             weatherDate={line.startDateTime}
             fallbackZip={line.installZip ?? undefined}
             showExtended={!readOnly}
+            grouped={!readOnly}
           />
         )}
 
@@ -635,10 +638,10 @@ export default function EditJobPanel({
         )}
         </>
         )}
-
-        <div style={{ flex: 1 }} />
+        </div>
 
         <div
+          className="slide-over__footer"
           style={{
             padding: 12,
             borderTop: "1px solid var(--border)",

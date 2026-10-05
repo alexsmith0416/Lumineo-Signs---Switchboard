@@ -6245,6 +6245,25 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   font-size: 12px;
   white-space: pre-wrap;
 }
+/* Editors: every job detail folded under one "Job Information" heading
+   (they also have the edit fields below). The sections inside are indented
+   behind a navy rule so it reads as one group. */
+.job-info__group {
+  border-bottom: 1px solid var(--border);
+}
+.job-info__group-toggle {
+  font-size: 11px;
+  color: var(--lumineo-navy);
+}
+.job-info__group-body {
+  border-top: 1px solid var(--border);
+  border-left: 3px solid var(--lumineo-navy);
+  margin-left: 12px;
+}
+.job-info__group-body > .job-info__row:last-child,
+.job-info__group-body > .job-info__section:last-child {
+  border-bottom: none;
+}
 /* BC description text (job panel) — as typed in BC; long ones scroll. */
 .job-desc {
   white-space: pre-wrap;
