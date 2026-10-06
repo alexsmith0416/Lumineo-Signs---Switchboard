@@ -4,7 +4,7 @@ import { applyGrid, buildGroupTree, flattenTree, matchFilter, type FilterConditi
 
 const row = (o: Partial<JobRow>): JobRow =>
   ({
-    id: o.jobNo ?? "J1", jobNo: "J1", name: "", job: "J1", status: "Installation", statusSource: "airtable",
+    id: o.jobNo ?? "J1", jobNo: "J1", name: "", job: "J1", status: "Installation", statusSource: "airtable", statusAuto: "",
     tracked: true, inBc: true, description: "", sales: "", location: "", region: "", priority: "", orderDate: "",
     mfgFinalDate: "", mfgTargetMod: "", redDate: "", releaseDate: "", scheduledInstall: "", notes: "", powerlines: "", holdReason: "", dateToHold: "",
     dateOffHold: "", expeditor: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "", vendor: "", po: "",

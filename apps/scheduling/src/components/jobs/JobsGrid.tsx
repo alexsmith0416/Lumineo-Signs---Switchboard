@@ -16,6 +16,7 @@ import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type OptionOrder, type SortCriterion } from "./jobs-grid-state";
 import { builtinStyle, type OptionStyle } from "./field-options";
 import { useFieldOptionsStore } from "../../store/field-options-store";
+import { AutoStatusTag } from "./ShopFloorHistory";
 
 const ROW_H = 40;
 const HEADER_H = 40;
@@ -457,7 +458,7 @@ const JobGridRow = memo(function JobGridRow({
                 />
               </div>
             ) : (
-              <Cell row={row} def={c} />
+              <Cell row={row} def={c} canDismissAuto={!!editing?.canEditField("status")} />
             )}
           </td>
         );
@@ -466,7 +467,7 @@ const JobGridRow = memo(function JobGridRow({
   );
 });
 
-function Cell({ row, def }: { row: JobRow; def: JobFieldDef }) {
+function Cell({ row, def, canDismissAuto = false }: { row: JobRow; def: JobFieldDef; canDismissAuto?: boolean }) {
   if (def.type === "stepper") return <StepperCell jobNo={row.inBc ? row.jobNo : undefined} />;
   if (def.type === "sketch") return <SketchCell row={row} />;
   const v = (row as unknown as Record<string, unknown>)[def.key];
@@ -480,7 +481,7 @@ function Cell({ row, def }: { row: JobRow; def: JobFieldDef }) {
                 <JobBadge key={x} field={def.key} value={x} />
               ))
             : <JobBadge field={def.key} value={String(v ?? "")} />}
-          {def.key === "status" && row.statusSource === "override" && <span className="jobs-tag" title="Manual status override">override</span>}
+          {def.key === "status" && <AutoStatusTag jobNo={row.jobNo} auto={row.statusAuto} canDismiss={canDismissAuto} />}
         </>
       );
     case "date": {

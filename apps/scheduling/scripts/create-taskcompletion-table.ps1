@@ -18,6 +18,14 @@
       crfdf_state         text   pending → done / skipped (set by the app)
       crfdf_result        text   what the app did ("Completed Paint · status → MFG - Vinyl Cut")
       crfdf_processedat   text   when the app handled it (ISO)
+      crfdf_department    text   the department it completed ("Routing")       — Oct 6, for Jobs → History
+      crfdf_nextdept      text   the job's new active step ("Metal Fab" / "All steps complete")
+      crfdf_statusfrom    text   Current Status before
+      crfdf_statusto      text   Current Status after ("" = left as it was)
+
+    crfdf_jobtrack
+      crfdf_statusauto    text   set when a punch moved the status ("Punch · <name> · <date>");
+                                 cleared when someone dismisses the Auto tag or sets the status by hand
 
   Uses the Web API with a device-code token (az is blocked by the proxy).
   Run it, open the printed URL, enter the code, sign in as asmith@lumineosigns.com.
@@ -174,6 +182,13 @@ New-Column    $t 'crfdf_Source'       'Source'           20
 New-Column    $t 'crfdf_State'        'State'            20
 New-Column    $t 'crfdf_Result'       'Result'           500
 New-Column    $t 'crfdf_ProcessedAt'  'Processed At'     40
+New-Column    $t 'crfdf_Department'   'Department'       60
+New-Column    $t 'crfdf_NextDept'     'Next Department'  60
+New-Column    $t 'crfdf_StatusFrom'   'Status From'      100
+New-Column    $t 'crfdf_StatusTo'     'Status To'        100
+
+Write-Host "Job tracking: auto-status marker..." -ForegroundColor Cyan
+New-Column    'crfdf_jobtrack' 'crfdf_StatusAuto' 'Status Set Automatically' 200
 
 try {
   Invoke-RestMethod -Method Post -Uri "$base/PublishAllXml" -Headers $headers | Out-Null

@@ -26,7 +26,7 @@ import { buildDepartmentSteps, stepLabel } from "../services/production-steps";
 import { currentStatus } from "../services/job-tracking";
 import { deptForCompletion } from "../services/task-completion";
 import { nextStatus } from "../services/status-rules";
-import type { TaskCompletionRow } from "../services/dataverse-live";
+import type { TaskCompletionDetail, TaskCompletionRow } from "../services/dataverse-live";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const EVERY_MS = 2 * 60_000;
@@ -47,8 +47,17 @@ async function stepsFor(jobNo: string) {
   return steps;
 }
 
+type Outcome = { state: "done" | "skipped"; result: string; detail?: Partial<TaskCompletionDetail> };
+
+/** The job's active step after the completion, for History ("All steps complete" when none is left). */
+function nextDeptLabel(steps: ReadonlyArray<{ key: string; state: string }>): string {
+  const active = steps.find((s) => s.state === "active");
+  if (active) return stepLabel(active.key);
+  return steps.length && steps.every((s) => s.state === "completed") ? "All steps complete" : "";
+}
+
 /** Apply one tick; returns the row's outcome. */
-async function applyOne(t: TaskCompletionRow): Promise<{ state: "done" | "skipped"; result: string }> {
+async function applyOne(t: TaskCompletionRow): Promise<Outcome> {
   const dv = await import("../services/dataverse-live");
   if (!t.jobNo) return { state: "skipped", result: "No job on the punch" };
   const steps = await stepsFor(t.jobNo);
@@ -68,7 +77,7 @@ async function applyOne(t: TaskCompletionRow): Promise<{ state: "done" | "skippe
   if (!pick.key) return { state: "skipped", result: `${pick.why} — ${task}` };
   const label = stepLabel(pick.key);
   if (!before.some((s) => s.key === pick.key)) {
-    return { state: "skipped", result: `${label} (${pick.why}) isn't on this job's stepper — ${task}` };
+    return { state: "skipped", result: `${label} (${pick.why}) isn't on this job's stepper — ${task}`, detail: { department: label } };
   }
 
   const who = t.resourceName || t.resourceNo || "shop floor";
@@ -85,12 +94,15 @@ async function applyOne(t: TaskCompletionRow): Promise<{ state: "done" | "skippe
   await ensureJobsLoaded();
   const track = useJobTrackingStore.getState().tracks.find((x) => x.jobNo === t.jobNo);
   const current = currentStatus(track).status;
-  const target = nextStatus(steps(), current, useStatusRulesStore.getState().rules);
+  const after = steps();
+  const target = nextStatus(after, current, useStatusRulesStore.getState().rules);
+  const detail = { department: label, nextDept: nextDeptLabel(after), statusFrom: current, statusTo: target ?? "" };
   if (target) {
-    await useJobTrackingStore.getState().setStatus(t.jobNo, target, `${by} · ${format(new Date(), "M/d/yyyy")}`);
-    return { state: "done", result: `${what} · status ${current} → ${target}` };
+    const stamp = `${by} · ${format(new Date(), "M/d/yyyy")}`;
+    await useJobTrackingStore.getState().setStatus(t.jobNo, target, stamp, stamp);
+    return { state: "done", result: `${what} · status ${current} → ${target}`, detail };
   }
-  return { state: "done", result: `${what} · status left as ${current}` };
+  return { state: "done", result: `${what} · status left as ${current}`, detail };
 }
 
 /** Handle every pending tick once (a run already going is left to finish). */
@@ -110,7 +122,7 @@ export async function processTaskCompletions(): Promise<void> {
     for (const t of pending) {
       try {
         const out = await applyOne(t);
-        await dv.markTaskCompletion(t.id, out.state, out.result);
+        await dv.markTaskCompletion(t.id, out.state, out.result, out.detail);
       } catch (e) {
         // Left "pending" — the next run tries again (every step is idempotent).
         console.warn(`[task-completions] BC entry ${t.entryNo} (${t.jobNo}) failed; will retry`, e);

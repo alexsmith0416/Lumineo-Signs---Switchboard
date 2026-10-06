@@ -6492,3 +6492,86 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Jobs: the Auto tag a shop-floor punch leaves on a status (dismissable). */
+.jobs-tag--auto {
+  color: var(--lumineo-navy);
+  border-color: var(--lumineo-navy);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.jobs-tag__x {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+}
+.jobs-tag__x:hover { color: var(--lumineo-red); }
+
+/* Jobs → History (shop-floor "Task complete" moves). Pinned to the window
+   under the button, right-aligned (ShopFloorHistory sets the position). */
+.sfh { width: min(980px, calc(100vw - 48px)); z-index: 60; }
+.sfh__filters { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.sfh__chip {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sfh__chip:hover { background: var(--bg-tertiary); }
+.sfh__chip--on { border-color: var(--lumineo-navy); color: var(--lumineo-navy); }
+.sfh__body { max-height: min(60vh, 560px); overflow: auto; }
+.sfh__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sfh__table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.sfh__table td { padding: 6px 8px; border-bottom: 1px solid var(--border-soft, var(--border)); vertical-align: top; }
+.sfh__when { white-space: nowrap; }
+.sfh__when span,
+.sfh__sub { display: block; font-size: 11px; color: var(--text-tertiary); }
+.sfh__job {
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--lumineo-navy);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.sfh__from { color: var(--text-tertiary); }
+.sfh__muted { color: var(--text-tertiary); font-style: italic; }
+.sfh__skipped { color: #8a5300; }
+.sfh__review { text-align: right; white-space: nowrap; }
+.sfh__reviewed {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border: 1px solid var(--lumineo-navy);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--lumineo-navy);
+  cursor: pointer;
+}
+.sfh__reviewed:hover { background: var(--bg-tertiary); }

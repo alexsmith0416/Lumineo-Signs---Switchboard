@@ -17,6 +17,7 @@ import { describeFormula, linkFor } from "../../services/custom-fields";
 import CustomValueEditor from "./CustomValueEditor";
 import { OptionBadges } from "./JobsGrid";
 import { canEditJobField, type JobEditAccess } from "../../services/job-edit-access";
+import { AutoStatusTag } from "./ShopFloorHistory";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -93,7 +94,7 @@ export default function JobsJobPanel({
         <div className="slide-over__body jobs-jobpanel">
           <div className="jobs-jobpanel__status">
             {canEditJobField(edit, "status") ? <StatusPicker row={row} /> : <JobBadge field="status" value={row.status} />}
-            {row.statusSource === "override" && <span className="jobs-tag">override</span>}
+            <AutoStatusTag jobNo={row.jobNo} auto={row.statusAuto} canDismiss={canEditJobField(edit, "status")} />
             {!row.inBc && <span className="jobs-tag jobs-tag--warn">not in BC sync</span>}
             {!row.tracked && <span className="jobs-jobpanel__muted">New BC job — no tracking details yet.</span>}
           </div>

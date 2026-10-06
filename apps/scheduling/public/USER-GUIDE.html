@@ -583,11 +583,13 @@
   <p>Employees can complete their department right from the <strong>Business Central punch screens</strong> &mdash; no
   one has to click it in the app:</p>
   <ul>
-    <li><strong>Moving to the next job</strong> (the usual way): on <strong>Clock In Job</strong>, when you're already
-    punched into a job, the page shows <em>Currently on: J12345 / task</em> and a <strong>Complete current task</strong>
-    checkbox. Tick it before you punch into the new job if you finished the one you're leaving.</li>
-    <li><strong>Clocking out</strong> at the end of a task (lunch, end of day): <strong>Clock Out Job</strong> has a
-    <strong>Task complete</strong> checkbox.</li>
+    <li><strong>Moving to the next job</strong> (the usual way): <strong>Clock In Project</strong> always shows
+    <em>Currently on</em> and a <strong>Complete current task</strong> checkbox. When you're already punched into a job
+    it reads <em>Currently on: J12345 / task</em> and the checkbox works &mdash; tick it before you punch into the new
+    job if you finished the one you're leaving. When you aren't punched in (first punch of the day, back from
+    lunch) it reads <em>Not clocked in to a project</em> and the checkbox is greyed out.</li>
+    <li><strong>Clocking out</strong> (lunch, end of day): <strong>Clock Out Project</strong> has a
+    <strong>Task complete</strong> checkbox &mdash; tick it if you finished the task you're clocking out of.</li>
   </ul>
   <p>Within a few minutes, that <strong>department completes on the job's stepper</strong> (stamped <em>Punch ·
   employee name</em>), the next department becomes active and BC Project Planning follows, and the job's
@@ -597,6 +599,19 @@
   stepper moves. Which status each step means is set in <strong>Settings → Status rules</strong>; editors can always
   change a job's status by hand afterwards. Each job's ticks, and what the app did with them, are listed in the Jobs
   list's job panel under <strong>Shop floor · Task complete</strong>.</p>
+  <p><strong>Keeping on top of the automatic moves:</strong></p>
+  <ul>
+    <li>A status a punch moved gets an <strong>AUTO</strong> tag beside it in the Jobs list and the job panel (hover it
+    for who and when). Once you've checked it, click its <strong>×</strong> to clear the tag &mdash; the status stays.
+    Picking a status by hand also clears it. (Clearing the tag needs the right to change Current Status.)</li>
+    <li><strong>History</strong> (the clock button left of <em>Refresh</em> in the Jobs toolbar) lists every tick from
+    the last 30 days, newest first: the <strong>date</strong> and time, <strong>job</strong> (click to open it),
+    <strong>resource</strong>, <strong>task</strong>, the department it <strong>completed</strong>, the step the job
+    <strong>moved to</strong>, and the <strong>Current Status</strong> change (old → new, or <em>Unchanged</em>).
+    Ticks the app couldn't use show as <em>Skipped</em> with the reason. The number on the button is how many jobs
+    still have an AUTO tag. Filter with <em>All / Status moves / Needs review / Skipped</em>; <strong>✓ Reviewed</strong>
+    on a row (or <strong>Mark all reviewed</strong>) clears the AUTO tags.</li>
+  </ul>
   <div class="note box"><span class="box__label">Good to know</span>
   The department comes from the job task's planning lines (or the employee's own department when the task covers
   several). Ticks are applied by the app of an Admin / Ops / Developer who has it open &mdash; during the day that's
@@ -1298,6 +1313,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 6, 2026</td><td><strong>Jobs → History, and a dismissable AUTO tag</strong> &mdash; a <strong>History</strong> button (left of Refresh) lists every shop-floor <em>Task complete</em> from the last 30 days: date, job, resource, task, the department completed, the step it moved to and the Current Status change. A status a punch moved now shows an <strong>AUTO</strong> tag you can clear with × once reviewed (or ✓ Reviewed in History); the old, permanent <em>override</em> tag is gone. See &sect;5.4.</td></tr>
+      <tr><td>Oct 6, 2026</td><td><strong>Complete current task always on Clock In Project</strong> &mdash; the checkbox and <em>Currently on</em> line now always show on BC's Clock In Project page; the checkbox is greyed out when you aren't punched into a job. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Complete a step from the BC punch screens</strong> &mdash; a <strong>Complete current task</strong> checkbox on Clock In Job (when moving to the next job) and <strong>Task complete</strong> on Clock Out Job. Ticking it completes that department on the job's stepper and moves the job's Current Status to the next step's status (set in the new <strong>Settings → Status rules</strong>). See &sect;5.4.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Give one person edit rights to specific Jobs fields</strong> &mdash; in Settings → Users → Manage users…, each person's <strong>Jobs</strong> button picks exactly which Jobs-list fields they may change (e.g. Vendor Status and Date Installed). Everything else stays view only for them. See &sect;5.17.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Everyone can see the Jobs list</strong> &mdash; Production, Install, Sales and PM users now have <strong>Jobs</strong> in the sidebar, view only: pick a view, search, filter / sort / group for themselves (not saved, nobody else's view changes) and open a job. Editing the list and its shared views stays with Admin / Ops / Developer. See &sect;5.17 and &sect;7.</td></tr>
@@ -1407,7 +1424,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.23 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.25 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

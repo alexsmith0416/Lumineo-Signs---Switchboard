@@ -1,6 +1,6 @@
-// Clock In Job: when the employee is already punched into a job, offer
-// "Complete current task" — ticking it marks the task they are leaving as done.
-// Hidden when they are not punched into a job (first punch of the day).
+// Clock In Job (BC: "Clock In Project"): "Complete current task" — ticking it
+// marks the task the employee is leaving as done. Always shown, but greyed
+// out unless they are punched into a job right now (first punch of the day).
 pageextension 58410 "LUM Clock In Job" extends "ICG Clock In Job"
 {
     layout
@@ -12,14 +12,13 @@ pageextension 58410 "LUM Clock In Job" extends "ICG Clock In Job"
                 ApplicationArea = All;
                 Caption = 'Currently on';
                 Editable = false;
-                Visible = IsOnJob;
                 ToolTip = 'The project and task you are punched into now. Tick Complete current task if you finished it.';
             }
             field(LUMCompleteCurrent; CompleteCurrent)
             {
                 ApplicationArea = All;
                 Caption = 'Complete current task';
-                Visible = IsOnJob;
+                Enabled = IsOnJob;
                 ToolTip = 'Tick if you finished the task you are punched into now. Clocking in to the new job then marks that department complete on the job.';
 
                 trigger OnValidate()
@@ -68,8 +67,10 @@ pageextension 58410 "LUM Clock In Job" extends "ICG Clock In Job"
         if ResourceNo = '' then
             exit;
         ShopFloorForJobs.GetClockedIn(ResourceNo, CurJobNo, CurTaskNo);
-        if CurJobNo = '' then
+        if CurJobNo = '' then begin
+            CurrentTaskText := 'Not clocked in to a project';
             exit;
+        end;
         IsOnJob := true;
         CurrentTaskText := CurJobNo;
         if CurTaskNo <> '' then begin

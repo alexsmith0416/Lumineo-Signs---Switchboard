@@ -22,6 +22,8 @@ import { builtinOptions, builtinStyle, customStyle, isChoiceColumn } from "./fie
 import FieldOptionsDialog from "./FieldOptionsDialog";
 import { canEditJobField, hasAnyJobEdits, type JobEditAccess } from "../../services/job-edit-access";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
+import { ShopFloorHistoryPanel } from "./ShopFloorHistory";
+import { HistoryIcon } from "../HistoryIcon";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
   renameSection, renameView, setViewCols,
@@ -54,7 +56,7 @@ function write(key: string, value: unknown) {
 }
 
 
-type Panel = "fields" | "filter" | "sort" | "group" | null;
+type Panel = "fields" | "filter" | "sort" | "group" | "history" | null;
 
 const KNOWN_FIELDS = new Set(Object.keys(JOB_FIELDS));
 
@@ -226,6 +228,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
   };
 
   const counts = { fields: 0, filter: prefs.filters.length, sort: prefs.sorts.length, group: prefs.groups.length };
+  const autoCount = useMemo(() => rows.filter((r) => r.statusAuto).length, [rows]);
   const LABELS = { fields: "Fields", filter: "Filter", sort: "Sort", group: "Group" } as const;
 
   return (
@@ -324,6 +327,22 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
                 ? `You can edit ${grantedCount} field${grantedCount === 1 ? "" : "s"} · click a job to open it`
                 : "View only · click a job to open it"}
           </span>
+          <div className="jobs-toolbar__btn-wrap" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className={`jobs-toolbar__btn${panel === "history" ? " jobs-toolbar__btn--on" : ""}`}
+              onClick={() => setPanel(panel === "history" ? null : "history")}
+              title="Shop-floor history: what the BC punch “Task complete” ticks moved automatically"
+            >
+              <HistoryIcon />
+              History
+              {autoCount > 0 && <span className="jobs-toolbar__count" title="Jobs with an Auto tag to review">{autoCount}</span>}
+            </button>
+            {panel === "history" && (
+              <ShopFloorHistoryPanel rows={rows} canDismiss={canEditJobField(edit, "status")}
+                onOpenJob={(r) => { setPanel(null); setOpenJob(r); }} onClose={() => setPanel(null)} />
+            )}
+          </div>
           <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); void loadSketches(true); }} disabled={loading}>
             Refresh
           </button>

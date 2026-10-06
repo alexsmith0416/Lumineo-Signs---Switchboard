@@ -215,7 +215,33 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 4, 2026) — Job panel by role, phase 1 DEPLOYED.**
+- **📌 RESUME HERE (Oct 6, 2026) — Shop-floor "Task complete" is LIVE in UAT
+  + Jobs → History DEPLOYED (guide v3.25).** Full write-up:
+  `apps/scheduling/flows/BCSync_TaskCompletions.md`.
+  - ✅ `crfdf_taskcompletion` created (`scripts/create-taskcompletion-table.ps1`,
+    re-runnable; Oct 6 added `crfdf_department` / `nextdept` / `statusfrom` /
+    `statusto` + `crfdf_jobtrack.crfdf_statusauto`). BCTaskCompletions_1_0_0_1
+    imported + ON (first import failed 80071151 = SolutionConcurrencyFailure —
+    a publish was still running; a plain re-import worked).
+  - ✅ **Verified end to end:** J26609 / 2010 Routing Labor, Clock Out tick →
+    row in ~35 s → app completed Routing, next dept active, status moved.
+  - ✅ **AUTO tag replaces "override"** (Alex, Oct 6): the old tag only meant
+    "status set in the app, not Airtable" and could never be cleared. Now a
+    punch's status move sets `statusAuto` ("Punch · name · date") → AUTO tag
+    with × (`dismissAuto`); a manual status pick clears it.
+    `components/jobs/ShopFloorHistory.tsx` = the tag + the **History** panel
+    (button left of Refresh, `HistoryIcon.tsx`; last 30 days; filters; ✓
+    Reviewed / Mark all reviewed). Failing-save case in `optimistic-edit.test.ts`.
+  - ⏳ **BC ext v1.0.0.13 compiled, NOT yet published (Alex to publish to UAT):**
+    Clock In Project always shows "Currently on" + "Complete current task",
+    greyed out (Enabled) unless punched in. Then test both states.
+  - **Next:** Infotech's *Clock In / Out Multiple Projects/Nestings* pages
+    (70210/70211) have no tick — add if crews use them. Security roles:
+    view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
+    `crfdf_jobdesc`; Admin/Ops/Dev need Write on `crfdf_taskcompletion` (their
+    sessions apply ticks). BC entry no 1 never reached Dataverse (only entry 2)
+    — check BC if it matters.
+- **(Oct 4, 2026) — Job panel by role, phase 1 DEPLOYED.**
   Clicking a card: below the stepper, `components/JobInfoSections.tsx` shows the
   ship-to address (Google Maps / Copy; `services/ship-to.ts`), install crews get
   the card day's weather, and ▸ Salesperson & Project Manager (collapsed).

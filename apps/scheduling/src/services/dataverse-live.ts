@@ -1948,6 +1948,7 @@ export async function fetchJobTracks(): Promise<JobTrack[]> {
       jobNo: s(r.crfdf_jobno).trim(),
       jobName: s(r.crfdf_jobname),
       statusOverride: s(r.crfdf_statusoverride),
+      statusAuto: s(r.crfdf_statusauto),
       priority: s(r.crfdf_priority),
       holdReason: s(r.crfdf_holdreason),
       dateToHold: s(r.crfdf_datetohold),
@@ -2035,6 +2036,7 @@ export async function fetchBcJobSummaries(): Promise<BcJobSummary[]> {
 const JOBTRACK_COLS = {
   jobName: "crfdf_jobname",
   statusOverride: "crfdf_statusoverride",
+  statusAuto: "crfdf_statusauto",
   holdReason: "crfdf_holdreason",
   dateToHold: "crfdf_datetohold",
   dateOffHold: "crfdf_dateoffhold",
@@ -3099,6 +3101,21 @@ export interface TaskCompletionRow {
   source: string;
   state: string;
   result: string;
+  processedAt: Date | null;
+  /** What the app did, field by field (rows applied before Oct 6 have only `result`). */
+  department: string;
+  nextDept: string;
+  statusFrom: string;
+  /** "" = the status was left as it was. */
+  statusTo: string;
+}
+
+/** The parts of a tick's outcome the Jobs → History list shows as columns. */
+export interface TaskCompletionDetail {
+  department: string;
+  nextDept: string;
+  statusFrom: string;
+  statusTo: string;
 }
 
 function mapTaskCompletion(r: Row): TaskCompletionRow {
@@ -3114,6 +3131,11 @@ function mapTaskCompletion(r: Row): TaskCompletionRow {
     source: s(r.crfdf_source),
     state: s(r.crfdf_state),
     result: s(r.crfdf_result),
+    processedAt: dtOrNull(r.crfdf_processedat),
+    department: s(r.crfdf_department),
+    nextDept: s(r.crfdf_nextdept),
+    statusFrom: s(r.crfdf_statusfrom),
+    statusTo: s(r.crfdf_statusto),
   };
 }
 
@@ -3129,12 +3151,29 @@ export async function fetchTaskCompletionsForJob(jobNo: string): Promise<TaskCom
   return rows.map(mapTaskCompletion);
 }
 
-/** Record what the app did with a tick ("done" / "skipped" + a sentence). */
-export async function markTaskCompletion(id: string, state: "done" | "skipped", result: string): Promise<void> {
+/** Every tick from the last `days` days, newest first (Jobs → History). */
+export async function fetchRecentTaskCompletions(days = 30): Promise<TaskCompletionRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const rows = await list(TASKDONE_SET, { filter: `createdon ge ${since}`, orderby: "crfdf_entryno desc" });
+  return rows.map(mapTaskCompletion);
+}
+
+/** Record what the app did with a tick ("done" / "skipped" + a sentence, and
+ *  the department / status details when there are any). */
+export async function markTaskCompletion(
+  id: string,
+  state: "done" | "skipped",
+  result: string,
+  detail?: Partial<TaskCompletionDetail>,
+): Promise<void> {
   const res = await dvUpdate(TASKDONE_SET, id, {
     crfdf_state: state,
     crfdf_result: result.slice(0, 500),
     crfdf_processedat: new Date().toISOString(),
+    crfdf_department: detail?.department ?? "",
+    crfdf_nextdept: detail?.nextDept ?? "",
+    crfdf_statusfrom: detail?.statusFrom ?? "",
+    crfdf_statusto: detail?.statusTo ?? "",
   });
   if (!res.success) throw new Error(res.error?.message ?? `markTaskCompletion(${id}) failed`);
 }

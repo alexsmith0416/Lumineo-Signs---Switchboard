@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createScheduleStore } from "./schedule-store";
 import { useWriteStatusStore } from "./write-status-store";
 import { createBillingPeriodStore } from "./billing-period-store";
@@ -184,5 +184,40 @@ describe("a billing-period edit whose save fails", () => {
     const failed = useWriteStatusStore.getState().failed;
     expect(failed).toHaveLength(1);
     expect(failed[0]!.label).toBe("Save billing period");
+  });
+});
+
+describe("dismissing a job's Auto status tag when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the tag dismissed on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveJobTrack: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { useJobTrackingStore } = await import("./job-tracking-store");
+    const { emptyJobTrack } = await import("../services/job-tracking");
+    status.getState().clear();
+    useJobTrackingStore.setState({
+      tracks: [{ ...emptyJobTrack("J26609"), id: "t1", statusOverride: "MFG - Len Metal Fab", statusAuto: "Punch · Alex Smith · 10/6/2026" }],
+    });
+
+    await useJobTrackingStore.getState().dismissAuto("J26609");
+    await flush();
+
+    const t = useJobTrackingStore.getState().tracks[0]!;
+    expect(t.statusAuto).toBe("");
+    expect(t.statusOverride).toBe("MFG - Len Metal Fab");
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Dismiss auto status tag");
   });
 });

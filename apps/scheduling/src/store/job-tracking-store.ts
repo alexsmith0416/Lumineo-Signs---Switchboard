@@ -33,8 +33,12 @@ interface JobTrackingState {
    * Set a job's Current Status. Stamps the hold dates on the way into / out of
    * a hold, and completes the stepper steps the status implies (job-status.ts),
    * which pushes the new step states to BC like a stepper click.
+   * `auto` marks a shop-floor punch's move ("Punch · <name> · <date>" → the
+   * Auto tag); a status set by hand clears that marker.
    */
-  setStatus: (jobNo: string, status: string, by: string) => Promise<void>;
+  setStatus: (jobNo: string, status: string, by: string, auto?: string) => Promise<void>;
+  /** Dismiss a job's Auto tag (the status stays as it is). */
+  dismissAuto: (jobNo: string) => Promise<void>;
   /** Change tracking fields on a job (the Jobs grid's editable columns). */
   updateTrack: (jobNo: string, patch: TrackPatch) => Promise<void>;
   /** Set (or clear, with null) one custom field value on a job. */
@@ -121,10 +125,15 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     });
   },
 
-  setStatus: async (jobNo, status, by) => {
+  setStatus: async (jobNo, status, by, auto) => {
     const track = get().tracks.find((t) => t.jobNo === jobNo);
     const prev = currentStatus(track).status;
-    if (status === prev && track?.statusOverride === status) return;
+    const statusAuto = auto ?? "";
+    if (status === prev && track?.statusOverride === status) {
+      // Same status picked by hand: still counts as reviewing the Auto tag.
+      if (!auto && track.statusAuto) await saveTrack(jobNo, { statusAuto: "" }, "Dismiss auto status tag");
+      return;
+    }
     const t = track ?? emptyJobTrack(jobNo);
     const hold = holdTransition(
       { holdReason: t.holdReason, dateToHold: t.dateToHold, dateOffHold: t.dateOffHold, priorHoldDays: t.priorHoldDays ?? 0 },
@@ -132,7 +141,7 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
       status,
       format(new Date(), "yyyy-MM-dd"),
     );
-    const saving = saveTrack(jobNo, { statusOverride: status, ...hold }, "Change job status");
+    const saving = saveTrack(jobNo, { statusOverride: status, statusAuto, ...hold }, "Change job status");
 
     // Stepper automation: complete what the status implies.
     const steps = await jobSteps(jobNo);
@@ -141,6 +150,11 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
       await useJobDeptCompletionStore.getState().completeMany(jobNo, keys, by, steps.map((s) => s.key));
     }
     await saving;
+  },
+
+  dismissAuto: async (jobNo) => {
+    if (!get().tracks.find((t) => t.jobNo === jobNo)?.statusAuto) return;
+    await saveTrack(jobNo, { statusAuto: "" }, "Dismiss auto status tag");
   },
 }));
 

@@ -29,6 +29,9 @@ export interface JobTrack {
   /** A manual name that overrides the BC ship-to name ("" = use BC's). */
   jobName?: string;
   statusOverride: string;
+  /** Set when a shop-floor punch moved the status ("Punch · <name> · <date>");
+   *  "" once someone dismisses the Auto tag or sets the status by hand. */
+  statusAuto?: string;
   priority: string;
   holdReason: string;
   dateToHold: string;
@@ -69,7 +72,7 @@ export interface JobTrack {
 /** A tracking row with nothing filled in yet. */
 export function emptyJobTrack(jobNo: string): JobTrack {
   return {
-    jobNo, jobName: "", priorHoldDays: 0, statusOverride: "", priority: "", holdReason: "", dateToHold: "", dateOffHold: "",
+    jobNo, jobName: "", priorHoldDays: 0, statusOverride: "", statusAuto: "", priority: "", holdReason: "", dateToHold: "", dateOffHold: "",
     orderDate: "", mfgFinalDate: "", expeditorDate: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "",
     vendor: "", poNumber: "", vendorStatus: "", storageLocation: "", vendorShipDate: "", vendorShipDate2: "",
     outsourcedArrival: "", graphics: "", routingType: "", powerlines: "", sales: "", salesOverride: "", location: "", region: "",
@@ -128,6 +131,9 @@ export interface JobRow {
   job: string;
   status: string;
   statusSource: StatusSource;
+  /** A shop-floor punch moved this status and nobody has dismissed it yet
+   *  ("Punch · <name> · <date>"); "" otherwise. Shown as the Auto tag. */
+  statusAuto: string;
   tracked: boolean;
   inBc: boolean;
   description: string;
@@ -291,6 +297,8 @@ export function buildJobRows(
       job: name ? `${jobNo} ${name}` : jobNo,
       status,
       statusSource: source,
+      // Only while the punch's status still stands.
+      statusAuto: source === "override" ? t?.statusAuto ?? "" : "",
       tracked: !!t,
       inBc: !!bc,
       description: bc?.description ?? "",
