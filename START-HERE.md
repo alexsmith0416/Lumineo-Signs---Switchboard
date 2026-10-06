@@ -260,6 +260,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       by **BCSync_JobDescriptions** (`BCJobDescriptions_1_0_0_1.zip`, ON in
       UAT); writes only jobs whose BC lastModified moved; open jobs only.
       First run 707 rows, **verified exact** (`scripts/verify-jobdesc-sync.ps1`).
+  - ✅ **Oct 5 — Jobs access (deployed, guide v3.22).** Everyone sees Jobs
+    (`permissions.jobs`); full edit by role (`editJobs`: Admin / Dev / Ops).
+    Others are view only (views store `readOnly` → never writes the SHARED
+    views; filter/sort/group session-only) unless granted fields per login in
+    Settings → Users → Manage users → **Jobs** button
+    (`crfdf_appuser.crfdf_jobeditfields`, column created Oct 5;
+    `services/job-edit-access.ts`, `jobs-grantable-fields.ts`). Grants are
+    app-side: the person's Dataverse role still needs Write on the tables.
+    Card panel scrolls; editors get details under one "Job Information" group.
   - **Next:** check a view-only user can read `crfdf_jobpo` / `crfdf_jobdesc`
     (new tables — their security role may need Read); then the older Next
     items below (tracking columns, lifecycle + Service steppers, BC job
