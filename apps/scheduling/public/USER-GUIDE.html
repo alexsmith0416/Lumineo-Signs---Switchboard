@@ -579,6 +579,29 @@
     (so more than one can be in progress at once). These edits are saved per job.</li>
   </ul>
 
+  <h4>Completing a step from the shop floor (BC job punches)</h4>
+  <p>Employees can complete their department right from the <strong>Business Central punch screens</strong> &mdash; no
+  one has to click it in the app:</p>
+  <ul>
+    <li><strong>Moving to the next job</strong> (the usual way): on <strong>Clock In Job</strong>, when you're already
+    punched into a job, the page shows <em>Currently on: J12345 / task</em> and a <strong>Complete current task</strong>
+    checkbox. Tick it before you punch into the new job if you finished the one you're leaving.</li>
+    <li><strong>Clocking out</strong> at the end of a task (lunch, end of day): <strong>Clock Out Job</strong> has a
+    <strong>Task complete</strong> checkbox.</li>
+  </ul>
+  <p>Within a few minutes, that <strong>department completes on the job's stepper</strong> (stamped <em>Punch ·
+  employee name</em>), the next department becomes active and BC Project Planning follows, and the job's
+  <strong>Current Status</strong> moves to the status for the new active step &mdash; e.g. completing Metal Fab moves
+  a job from <em>MFG - Len Metal Fab</em> to <em>MFG - Paint Prep / Paint</em>. Jobs on a <strong>hold</strong> or a
+  special status (Service, Morton, Billboards, Refurb, Complete to Admin&hellip;) keep their status &mdash; only the
+  stepper moves. Which status each step means is set in <strong>Settings → Status rules</strong>; editors can always
+  change a job's status by hand afterwards. Each job's ticks, and what the app did with them, are listed in the Jobs
+  list's job panel under <strong>Shop floor · Task complete</strong>.</p>
+  <div class="note box"><span class="box__label">Good to know</span>
+  The department comes from the job task's planning lines (or the employee's own department when the task covers
+  several). Ticks are applied by the app of an Admin / Ops / Developer who has it open &mdash; during the day that's
+  within minutes; a tick made overnight is applied when the office opens the app in the morning.</div>
+
   <h3>5.5 &nbsp;Target &amp; install dates</h3>
   <p>Every BC job card shows a <strong>Target dates</strong> section (in the Edit Job panel, between the card text and
   the production stepper — and on the card's <strong>hover preview</strong>). Both show the <strong>same dates as
@@ -816,6 +839,7 @@
     <tr><td>Day value on hover</td><td>Hover a <strong>day header</strong> on the Production or Installation calendar to pop up the total value scheduled that day. On Installation it shows this board's region (bold), the other region, and <strong>WK + NEK combined</strong>. On Production it shows WK, NEK and the total, split by each job's region on the Jobs list (Mfg Region, else Region). Each job counts once per day it has a card on, at the value its cards show (BC remaining balance, else the invoice amount); a job on both regions' boards the same day counts once in the combined figure. Only for people who can see $. Off by default; saved on this device.</td></tr>
     <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Periods</strong> to open the month list. Each month has a <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
     <tr><td>Lead times <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Lead Times</strong>. Sets how many weeks after release a job's <strong>Mfg Target</strong> and <strong>Install Target</strong> fall (default <strong>7</strong> and <strong>10</strong> weeks). Add a rule per combination of steps: name it, pick <em>Only these steps</em> (the job's production steps are all in the rule &mdash; e.g. only Material Cut + Vinyl) or <em>Includes these steps</em> (the job has every one of them, plus maybe others), click the steps, and enter the Mfg and Install weeks. Rules are checked top to bottom (&uarr; &darr; to reorder); the first match wins. Click <strong>Save</strong>. The rules drive the Jobs list and the target dates on every job card.</td></tr>
+    <tr><td>Status rules <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Status Rules</strong>. For each stepper step, the <strong>Current Status</strong> a job moves to when that step becomes active after a shop-floor completion (&sect;5.4) &mdash; e.g. Paint &rarr; <em>MFG - Paint Prep / Paint</em>; plus the status once every step is complete. Saved for everyone as soon as you pick one; <strong>Reset</strong> goes back to the default.</td></tr>
     <tr><td>Business Central <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Catch-up tools &mdash; everyday changes (completing a department, a status change, moving a card) already reach BC as you make them. <strong>Match Steppers</strong> completes the stepper steps each job's Current Status says are done (every step for the Complete statuses, the production steps for the Installation statuses); it shows the counts first and changes nothing until you click <strong>Update</strong>. <strong>Sync to BC</strong> brings BC's Project Planning in line with the steppers for every tracked job: <strong>active</strong> departments are marked <strong>Started</strong> (which lists the job in BC's step tiles), finished ones <strong>Complete</strong>, and dates / Assigned To go only to steps on the calendar. It shows how many updates it would send first; only what changed since BC was last updated is sent, and BC receives them over the next while. Run Match Steppers first, then Sync to BC.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below). Each user's
     <strong>Jobs</strong> button chooses which Jobs-list fields they may edit (&sect;5.17).</td></tr>
@@ -1274,6 +1298,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 6, 2026</td><td><strong>Complete a step from the BC punch screens</strong> &mdash; a <strong>Complete current task</strong> checkbox on Clock In Job (when moving to the next job) and <strong>Task complete</strong> on Clock Out Job. Ticking it completes that department on the job's stepper and moves the job's Current Status to the next step's status (set in the new <strong>Settings → Status rules</strong>). See &sect;5.4.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Give one person edit rights to specific Jobs fields</strong> &mdash; in Settings → Users → Manage users…, each person's <strong>Jobs</strong> button picks exactly which Jobs-list fields they may change (e.g. Vendor Status and Date Installed). Everything else stays view only for them. See &sect;5.17.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Everyone can see the Jobs list</strong> &mdash; Production, Install, Sales and PM users now have <strong>Jobs</strong> in the sidebar, view only: pick a view, search, filter / sort / group for themselves (not saved, nobody else's view changes) and open a job. Editing the list and its shared views stays with Admin / Ops / Developer. See &sect;5.17 and &sect;7.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Card panel scrolls; Job Information group for editors</strong> &mdash; the card panel now scrolls when its contents run past the screen (the Save / Cancel buttons stay put). For editors, the ship-to address, weather, descriptions, salesperson &amp; PM and purchase orders are folded under one <strong>Job Information</strong> heading; view-only users still see them laid out. See &sect;5.3.</td></tr>
@@ -1382,7 +1407,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.22 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.23 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

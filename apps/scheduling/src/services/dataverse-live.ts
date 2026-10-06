@@ -3078,3 +3078,90 @@ export async function fetchJobDescriptions(jobNo: string): Promise<JobDescriptio
     extended: s(r?.crfdf_extdesc).trim(),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Shop-floor task completions (crfdf_taskcompletion) — "Task complete" ticks on
+// BC job punches, copied in by the BCSync_TaskCompletions flow as "pending";
+// store/task-completion-processor.ts applies them and records the outcome.
+// Created by scripts/create-taskcompletion-table.ps1.
+// ---------------------------------------------------------------------------
+const TASKDONE_SET = "crfdf_taskcompletions";
+
+export interface TaskCompletionRow {
+  id: string;
+  entryNo: number;
+  jobNo: string;
+  jobTaskNo: string;
+  taskDescription: string;
+  resourceNo: string;
+  resourceName: string;
+  completedAt: Date | null;
+  source: string;
+  state: string;
+  result: string;
+}
+
+function mapTaskCompletion(r: Row): TaskCompletionRow {
+  return {
+    id: s(r.crfdf_taskcompletionid),
+    entryNo: n(r.crfdf_entryno),
+    jobNo: s(r.crfdf_jobno).trim(),
+    jobTaskNo: s(r.crfdf_jobtaskno).trim(),
+    taskDescription: s(r.crfdf_taskdesc).trim(),
+    resourceNo: s(r.crfdf_resourceno).trim(),
+    resourceName: s(r.crfdf_resourcename).trim(),
+    completedAt: dtOrNull(r.crfdf_completedat),
+    source: s(r.crfdf_source),
+    state: s(r.crfdf_state),
+    result: s(r.crfdf_result),
+  };
+}
+
+/** Ticks not applied yet, oldest first. */
+export async function fetchPendingTaskCompletions(): Promise<TaskCompletionRow[]> {
+  const rows = await list(TASKDONE_SET, { filter: "crfdf_state eq 'pending'", orderby: "crfdf_entryno asc" });
+  return rows.map(mapTaskCompletion);
+}
+
+/** One job's ticks, newest first (the Jobs panel's "Shop floor" list). */
+export async function fetchTaskCompletionsForJob(jobNo: string): Promise<TaskCompletionRow[]> {
+  const rows = await list(TASKDONE_SET, { filter: `crfdf_jobno eq '${odataLit(jobNo)}'`, orderby: "crfdf_entryno desc" });
+  return rows.map(mapTaskCompletion);
+}
+
+/** Record what the app did with a tick ("done" / "skipped" + a sentence). */
+export async function markTaskCompletion(id: string, state: "done" | "skipped", result: string): Promise<void> {
+  const res = await dvUpdate(TASKDONE_SET, id, {
+    crfdf_state: state,
+    crfdf_result: result.slice(0, 500),
+    crfdf_processedat: new Date().toISOString(),
+  });
+  if (!res.success) throw new Error(res.error?.message ?? `markTaskCompletion(${id}) failed`);
+}
+
+/** A job task's planning lines (labor categories), for "which department". */
+export async function taskPlanningLines(jobNo: string, jobTaskNo: string): Promise<BcPlanningLineLite[]> {
+  const lines = (await planningLinesForJobs([jobNo])).get(jobNo) ?? [];
+  return lines.filter((l) => l.jobTaskNo.trim() === jobTaskNo.trim());
+}
+
+/** Production roster: BC resource no → the employee's department name. */
+let deptByResourceP: Promise<Map<string, string>> | null = null;
+export function employeeDeptByResource(): Promise<Map<string, string>> {
+  deptByResourceP ??= Promise.all([list(SET.departments, {}), list(SET.employees, {})])
+    .then(([depts, emps]) => {
+      const nameById = new Map(depts.map((d) => [s(d.crfdf_department1id), s(d.crfdf_departmentname).trim()]));
+      const out = new Map<string, string>();
+      for (const e of emps) {
+        const no = s(e.crfdf_no).trim();
+        const dept = nameById.get(s(e["_crfdf_department_value"])) || s(e.crfdf_departmentname).trim();
+        if (no && dept) out.set(no, dept);
+      }
+      return out;
+    })
+    .catch((e) => {
+      deptByResourceP = null;
+      throw e;
+    });
+  return deptByResourceP;
+}

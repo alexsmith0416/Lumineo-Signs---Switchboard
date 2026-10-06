@@ -17,7 +17,7 @@ import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCards } from "./services/install-cards";
-import { useCurrentUser } from "./services/current-user";
+import { useCurrentUser, TYPE_CONFIG } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
 import { useSettingsStore } from "./store/settings-store";
 import { useJobTrackingStore } from "./store/job-tracking-store";
@@ -80,7 +80,7 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser } =
+  const { role, loading: userLoading, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser, realType } =
     useCurrentUser();
 
   // Demo sandbox. Demo users boot LOCKED into it (welcome tour shown); anyone
@@ -142,6 +142,19 @@ export default function App() {
     const timer = setTimeout(() => void useJobTrackingStore.getState().load(), 5000);
     return () => clearTimeout(timer);
   }, [canSeeJobs]);
+
+  // Shop-floor "Task complete" ticks (BC punches) → stepper + Current Status.
+  // Applied by the open sessions of people who edit the whole Jobs list (by
+  // their REAL login, not a "view as" preview); never in the demo sandbox.
+  const appliesTicks = !userLoading && !!TYPE_CONFIG[realType]?.editJobs && realType !== "demo" && !demoMode;
+  useEffect(() => {
+    if (!appliesTicks) return;
+    let stop = () => {};
+    void import("./store/task-completion-processor").then((m) => {
+      stop = m.startTaskCompletionProcessor();
+    });
+    return () => stop();
+  }, [appliesTicks]);
 
   // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.
   const canEdit = permissions.editSchedule;

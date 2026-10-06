@@ -2,7 +2,7 @@
   "id": "7aa51704-725d-423a-a9b0-ddcdd7fcfdad",
   "name": "lumineo-planning-ext",
   "publisher": "Lumineo Signs",
-  "version": "1.0.0.11",
+  "version": "1.0.0.12",
   "brief": "",
   "description": "",
   "privacyStatement": "",
@@ -16,6 +16,18 @@
       "name": "Infotech Project Planning",
       "publisher": "Infotech Consulting Group",
       "version": "28.0.84.0"
+    },
+    {
+      "id": "3e0b7896-73bd-438d-8dc3-35614b69744e",
+      "name": "Infotech Shop Floor Base",
+      "publisher": "Infotech Consulting Group",
+      "version": "28.0.0.0"
+    },
+    {
+      "id": "6ac76918-f969-413a-b159-dc7bef22275e",
+      "name": "Infotech Shop Floor for Projects",
+      "publisher": "Infotech Consulting Group",
+      "version": "28.0.0.0"
     }
   ],
   "screenshots": [],

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import type { JobRow } from "../../services/job-tracking";
-import type { ActivePlacement } from "../../services/dataverse-live";
+import type { ActivePlacement, TaskCompletionRow } from "../../services/dataverse-live";
 import JobTaskPicker from "../JobTaskPicker";
 import JobSchedulePanel from "../JobSchedulePanel";
 import ProductionStepperSection from "../ProductionStepperSection";
@@ -130,6 +130,8 @@ export default function JobsJobPanel({
               </div>
             )}
           </div>
+
+          <ShopFloorTicks jobNo={row.jobNo} />
 
           {row.inBc && (
             <>
@@ -283,3 +285,45 @@ function fmt(ymd: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
   return m ? format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), "MMM d, yyyy") : "";
 }
+
+/** "Task complete" ticks from BC job punches for this job, newest first, with
+ *  what the app did with each (completed a department, moved the status, or
+ *  why it skipped). Hidden when there are none. Live only. */
+function ShopFloorTicks({ jobNo }: { jobNo: string }) {
+  const [ticks, setTicks] = useState<TaskCompletionRow[]>([]);
+  useEffect(() => {
+    if (!LIVE) return;
+    let alive = true;
+    void import("../../services/dataverse-live")
+      .then((m) => m.fetchTaskCompletionsForJob(jobNo))
+      .then((rows) => alive && setTicks(rows.slice(0, 10)))
+      .catch(() => alive && setTicks([]));
+    return () => {
+      alive = false;
+    };
+  }, [jobNo]);
+  if (!ticks.length) return null;
+  return (
+    <div className="form-field form-field--block">
+      <div className="jobcard__label">Shop floor · Task complete</div>
+      <ul className="shopfloor-ticks">
+        {ticks.map((t) => (
+          <li key={t.id}>
+            <div className="shopfloor-ticks__top">
+              <strong>{t.resourceName || t.resourceNo}</strong>
+              <span>
+                {t.jobTaskNo}
+                {t.taskDescription && ` · ${t.taskDescription}`}
+              </span>
+              <span className="shopfloor-ticks__when">{t.completedAt ? format(t.completedAt, "MMM d, h:mm a") : ""}</span>
+            </div>
+            <div className={`shopfloor-ticks__result shopfloor-ticks__result--${t.state || "pending"}`}>
+              {t.state === "pending" || !t.state ? "Waiting to be applied…" : t.result}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
