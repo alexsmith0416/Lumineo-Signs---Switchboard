@@ -235,8 +235,17 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
   - ✅ **BC ext v1.0.0.13 published to UAT (Oct 6):** Clock In Project always
     shows "Currently on" + "Complete current task", greyed out (Enabled) unless
     punched in. Still to test both states on the page.
-  - **Next:** Infotech's *Clock In / Out Multiple Projects/Nestings* pages
-    (70210/70211) have no tick — add if crews use them. Security roles:
+  - ⏳ **BC ext v1.0.0.14 compiled, NOT yet published:** crews use Infotech's
+    *Clock In / Out Multiple Projects/Nestings* (70210/70211), so both now get a
+    *Mark tasks complete* part (page 58412) — a Task complete checkbox per open
+    punch, held in table 58411 "LUM Punch Tick" (labor entry line). Recorded
+    when the punch closes (ICG Labor Entry OnAfterModifyEvent, DateTime Out
+    set) + any leftovers on Submit of either page; Source "Multi Clock In/Out".
+    ⚠️ Infotech's Multiple pages have NO integration events and their Open
+    Project Punches part is Editable = false — that's why it's our own part +
+    a table event. Untested: whether Clock In Multiple closes the open punches
+    (either way the Submit flush records the ticks). Guide v3.26 (not deployed).
+  - **Next:** test v1.0.0.14 on both Multiple pages. Security roles:
     view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
     `crfdf_jobdesc`; Admin/Ops/Dev need Write on `crfdf_taskcompletion` (their
     sessions apply ticks). BC entry no 1 never reached Dataverse (only entry 2)

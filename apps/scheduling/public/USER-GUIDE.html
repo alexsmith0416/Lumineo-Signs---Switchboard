@@ -590,6 +590,12 @@
     lunch) it reads <em>Not clocked in to a project</em> and the checkbox is greyed out.</li>
     <li><strong>Clocking out</strong> (lunch, end of day): <strong>Clock Out Project</strong> has a
     <strong>Task complete</strong> checkbox &mdash; tick it if you finished the task you're clocking out of.</li>
+    <li><strong>On several projects at once</strong>: <strong>Clock In Multiple Projects/Nestings</strong> and
+    <strong>Clock Out Multiple Projects/Nestings</strong> show a <strong>Mark tasks complete</strong> list under the
+    open punches &mdash; one row per project you're punched into, each with its own <strong>Task complete</strong>
+    checkbox. Tick every project you finished, then <em>Submit</em> (clocking out, or clocking into a new project).
+    Each ticked project is completed separately. A tick also counts if the punch is closed some other way later in
+    the day. History shows these as <em>Multi Clock Out</em> / <em>Multi Clock In</em>.</li>
   </ul>
   <p>Within a few minutes, that <strong>department completes on the job's stepper</strong> (stamped <em>Punch ·
   employee name</em>), the next department becomes active and BC Project Planning follows, and the job's
@@ -1313,6 +1319,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 6, 2026</td><td><strong>Task complete on the Multiple Projects/Nestings pages</strong> &mdash; Clock In and Clock Out Multiple Projects/Nestings now list your open punches under <strong>Mark tasks complete</strong>, with a <strong>Task complete</strong> checkbox for each project, so crews on several jobs at once can complete each one separately. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Jobs → History, and a dismissable AUTO tag</strong> &mdash; a <strong>History</strong> button (left of Refresh) lists every shop-floor <em>Task complete</em> from the last 30 days: date, job, resource, task, the department completed, the step it moved to and the Current Status change. A status a punch moved now shows an <strong>AUTO</strong> tag you can clear with × once reviewed (or ✓ Reviewed in History); the old, permanent <em>override</em> tag is gone. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Complete current task always on Clock In Project</strong> &mdash; the checkbox and <em>Currently on</em> line now always show on BC's Clock In Project page; the checkbox is greyed out when you aren't punched into a job. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Complete a step from the BC punch screens</strong> &mdash; a <strong>Complete current task</strong> checkbox on Clock In Job (when moving to the next job) and <strong>Task complete</strong> on Clock Out Job. Ticking it completes that department on the job's stepper and moves the job's Current Status to the next step's status (set in the new <strong>Settings → Status rules</strong>). See &sect;5.4.</td></tr>
@@ -1424,7 +1431,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.25 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.26 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
