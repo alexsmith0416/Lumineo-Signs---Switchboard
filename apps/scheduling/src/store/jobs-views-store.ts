@@ -16,6 +16,11 @@ import { JOB_FIELDS } from "../components/jobs/jobs-fields";
  * (scripts/create-jobsview-table.ps1) views stay on this device, as before.
  *
  * Which view you last had open, and column widths, stay per person.
+ *
+ * READ-ONLY users (no Jobs edit rights — see `setReadOnly`) never write the
+ * shared copy: they can't change the layout at all, and their sorts / filters /
+ * groups apply to their own screen for the session only (not even saved on the
+ * device), so nobody else's view moves.
  */
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const LAYOUT_KEY = "lumineo.jobs.layout.v1";
@@ -57,6 +62,9 @@ interface JobsViewsState {
   loaded: boolean;
   /** True when the views are saved for everyone; false = this device only. */
   shared: boolean;
+  /** No Jobs edit rights: layout changes are ignored, prefs stay in this session. */
+  readOnly: boolean;
+  setReadOnly: (readOnly: boolean) => void;
   load: (knownFields: ReadonlySet<string>, force?: boolean) => Promise<void>;
   setLayout: (layout: ViewLayout) => void;
   prefsFor: (view: ViewDef) => GridPrefs;
@@ -65,7 +73,8 @@ interface JobsViewsState {
 
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 function saveLater(key: string, value: unknown) {
-  if (!LIVE || !useJobsViewsStore.getState().shared) return;
+  const { shared, readOnly } = useJobsViewsStore.getState();
+  if (!LIVE || !shared || readOnly) return;
   clearTimeout(timers.get(key));
   timers.set(
     key,
@@ -98,6 +107,8 @@ export const useJobsViewsStore = create<JobsViewsState>((set, get) => ({
   prefsByView: localPrefs(initialLayout),
   loaded: false,
   shared: false,
+  readOnly: false,
+  setReadOnly: (readOnly) => set({ readOnly }),
 
   load: async (knownFields, force = false) => {
     if (get().loaded && !force) return;
@@ -135,6 +146,7 @@ export const useJobsViewsStore = create<JobsViewsState>((set, get) => ({
   },
 
   setLayout: (layout) => {
+    if (get().readOnly) return;
     set({ layout });
     write(LAYOUT_KEY, layout);
     saveLater("layout", layout);
@@ -144,6 +156,7 @@ export const useJobsViewsStore = create<JobsViewsState>((set, get) => ({
 
   setPrefs: (viewId, prefs) => {
     set((s) => ({ prefsByView: { ...s.prefsByView, [viewId]: prefs } }));
+    if (get().readOnly) return;
     write(PREFS_KEY(viewId), prefs);
     saveLater(`prefs:${viewId}`, prefs);
   },

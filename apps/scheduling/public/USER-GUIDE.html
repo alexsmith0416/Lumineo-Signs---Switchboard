@@ -949,8 +949,15 @@
   <em>LNI Production Schedule / Expeditor</em>. Every <strong>open BC job</strong> is on it automatically, from the
   moment the job is opened in Business Central, with its tracking details alongside: Current Status, order date,
   Mfg Target / Mfg Final, Install Target, RED DATE, DIP / DOH / Actual DIP, hold, expeditor date, vendor / P.O. /
-  vendor status / storage, date installed, date to Admin, UL sign, and more. Admin / Ops / Developer only while it's
-  a preview.</p>
+  vendor status / storage, date installed, date to Admin, UL sign, and more.</p>
+  <p><strong>Who can use it:</strong> <strong>everyone</strong> can open the Jobs list. <strong>Admin / Ops /
+  Developer</strong> can change it &mdash; the tracking columns, status, sketches, custom fields and the shared views.
+  Everyone else gets it <strong>view only</strong> (the toolbar says so): pick a view, search, and use
+  <strong>Filter</strong>, <strong>Sort</strong> and <strong>Group</strong> to look at the list your way &mdash; those
+  changes are just for you and reset when you reload, so nobody else's view moves &mdash; and click a job to read its
+  details. Adding, renaming, reordering or deleting views, the <strong>Fields</strong> button, editing a cell and
+  changing a sketch are editor-only. $ columns (Value, Remaining Balance, and any Currency custom field) only show
+  for people who can see $.</p>
   <p><strong>Filled in from Business Central</strong> &mdash; you don't type these:</p>
   <ul>
     <li><strong>Name</strong> &mdash; the job's <strong>ship-to customer</strong> (or the customer folder on the job's
@@ -1122,11 +1129,11 @@
   <p>Your <strong>login</strong> determines which screen you land on and what you can see or do. Admins manage this in
   <strong>Settings → Users → Manage users…</strong> (no developer needed).</p>
   <table>
-    <tr><th>Role</th><th>Opens on</th><th>Sees $ / Monthly / Sandbox</th><th>Can edit</th></tr>
-    <tr><td>Admin / Operations / Developer</td><td>Production</td><td>Yes</td><td>Yes</td></tr>
-    <tr><td>Production</td><td>Production</td><td>No</td><td>View-only</td></tr>
-    <tr><td>WK / NEK Install</td><td>Installation (their region)</td><td>No</td><td>View-only</td></tr>
-    <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td></tr>
+    <tr><th>Role</th><th>Opens on</th><th>Sees $ / Monthly / Sandbox</th><th>Can edit</th><th>Jobs list</th></tr>
+    <tr><td>Admin / Operations / Developer</td><td>Production</td><td>Yes</td><td>Yes</td><td>Edit</td></tr>
+    <tr><td>Production</td><td>Production</td><td>No</td><td>View-only</td><td>View only</td></tr>
+    <tr><td>WK / NEK Install</td><td>Installation (their region)</td><td>No</td><td>View-only</td><td>View only</td></tr>
+    <tr><td>Sales / PM</td><td>My Active Jobs</td><td>No</td><td>View-only</td><td>View only</td></tr>
   </table>
   <p>View-only roles can still <strong>open a job's card</strong> to read its details — production stage, tasks, target
   dates, the ship-to address (Google Maps / Copy), the Field and Production Descriptions, the purchase orders and the
@@ -1258,6 +1265,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 5, 2026</td><td><strong>Everyone can see the Jobs list</strong> &mdash; Production, Install, Sales and PM users now have <strong>Jobs</strong> in the sidebar, view only: pick a view, search, filter / sort / group for themselves (not saved, nobody else's view changes) and open a job. Editing the list and its shared views stays with Admin / Ops / Developer. See &sect;5.17 and &sect;7.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Card panel scrolls; Job Information group for editors</strong> &mdash; the card panel now scrolls when its contents run past the screen (the Save / Cancel buttons stay put). For editors, the ship-to address, weather, descriptions, salesperson &amp; PM and purchase orders are folded under one <strong>Job Information</strong> heading; view-only users still see them laid out. See &sect;5.3.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Job descriptions in the card panel</strong> &mdash; click-to-open <strong>Field Description</strong> and <strong>Production Description</strong> sections show the job's instructions from Business Central for everyone (the same text as the job traveler), and editors also get the <strong>Extended Description</strong>. Refreshed from BC hourly. See &sect;5.3.</td></tr>
       <tr><td>Oct 4, 2026</td><td><strong>Purchase orders in the card panel</strong> &mdash; a click-to-open <strong>Purchase orders</strong> section below the stepper lists every PO written to the job in Business Central: PO # (opens the order in BC), vendor and date ordered, with BC's status while the order is open and <em>Closed</em> once it's archived. Refreshed from BC nightly. See &sect;5.3.</td></tr>
@@ -1364,7 +1372,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.20 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.21 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

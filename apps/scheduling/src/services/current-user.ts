@@ -68,6 +68,13 @@ export interface Permissions {
   /** May edit the schedules — drag/drop, add/edit/delete jobs, roster admin,
    *  shipping loads. When false the boards are view-only (Admin/Ops only). */
   editSchedule: boolean;
+  /** May open the Jobs list (everyone). */
+  jobs: boolean;
+  /** May change anything on the Jobs list — tracking columns, status, sketches,
+   *  custom fields, the shared views. Without it the list is read-only (pick a
+   *  view, search, filter / sort / group for yourself, open a job). Per type for
+   *  now (Admin / Developer / Ops); individual grants can be layered on later. */
+  editJobs: boolean;
 }
 
 interface TypeConfig {
@@ -82,25 +89,27 @@ interface TypeConfig {
   scenarios: boolean;
   /** May edit schedules (vs. view-only). */
   editSchedule: boolean;
+  /** May edit the Jobs list (everyone may view it). */
+  editJobs: boolean;
   /** For installers: which install region their board defaults to. */
   installRegion?: "WK" | "NEK";
 }
 
 export const TYPE_CONFIG: Record<UserType, TypeConfig> = {
-  admin: { label: "Admin", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  admin: { label: "Admin", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true, editJobs: true },
   // Developer mirrors Admin (full access + may "view as" any user). The type
   // slug is "developer"; only the label differs.
-  developer: { label: "Developer", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  developer: { label: "Developer", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true, editJobs: true },
   // Label is "Operations" but the type slug stays "ops" (Dataverse crfdf_usertype).
-  ops: { label: "Operations", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
-  production: { label: "Production", defaultView: "production", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
-  "install-wk": { label: "WK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "WK" },
-  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, installRegion: "NEK" },
-  sales: { label: "Sales", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
-  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false },
+  ops: { label: "Operations", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true, editJobs: true },
+  production: { label: "Production", defaultView: "production", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, editJobs: false },
+  "install-wk": { label: "WK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, editJobs: false, installRegion: "WK" },
+  "install-nek": { label: "NEK Install", defaultView: "installation", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, editJobs: false, installRegion: "NEK" },
+  sales: { label: "Sales", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, editJobs: false },
+  pm: { label: "Project Manager", defaultView: "my-schedule", money: false, crew: false, monthly: false, scenarios: false, editSchedule: false, editJobs: false },
   // Demo/trainee: full sandbox access so they can try everything. Real data is
   // never at risk — App boots this type into the locked in-memory demo.
-  demo: { label: "Demo", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true },
+  demo: { label: "Demo", defaultView: "production", money: true, crew: true, monthly: true, scenarios: true, editSchedule: true, editJobs: true },
 };
 
 // Roster: login email (lower-case) → user type. Fill this from the provided list.
@@ -280,6 +289,8 @@ export function useCurrentUser(): CurrentUser {
       monthly: cfg.monthly,
       scenarios: cfg.scenarios,
       editSchedule: cfg.editSchedule,
+      jobs: true,
+      editJobs: cfg.editJobs,
     },
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,

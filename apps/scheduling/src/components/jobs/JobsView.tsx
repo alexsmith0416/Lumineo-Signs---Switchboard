@@ -109,6 +109,11 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   const prefsByView = useJobsViewsStore((s) => s.prefsByView);
   const setViewPrefs = useJobsViewsStore((s) => s.setPrefs);
   const loadViews = useJobsViewsStore((s) => s.load);
+  const setViewsReadOnly = useJobsViewsStore((s) => s.setReadOnly);
+  // Before the views load: a read-only user must never write the shared copy.
+  useEffect(() => {
+    setViewsReadOnly(!canEdit);
+  }, [canEdit, setViewsReadOnly]);
   useEffect(() => {
     void loadViews(KNOWN_FIELDS);
   }, [loadViews]);
@@ -254,6 +259,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           }
         }}
         onMoveSection={(id, index) => setLayout(moveSection(layout, id, index))}
+        readOnly={!canEdit}
       />
 
       <section className="jobs-main">
@@ -266,7 +272,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
             onChange={(e) => setSearch(e.target.value)}
             onClick={(e) => e.stopPropagation()}
           />
-          {(["fields", "filter", "sort", "group"] as const).map((p) => (
+          {/* Fields changes the shared view's columns — editors only. Filter /
+              sort / group stay available to everyone (session-only when read-only). */}
+          {(canEdit ? (["fields", "filter", "sort", "group"] as const) : (["filter", "sort", "group"] as const)).map((p) => (
             <div key={p} className="jobs-toolbar__btn-wrap" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
@@ -301,7 +309,9 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
             {loading && !loaded ? "Loading jobs…" : `${shown.length.toLocaleString()} of ${inView.length.toLocaleString()} jobs`}
           </span>
           <span className="jobs-toolbar__spring" />
-          <span className="jobs-toolbar__note">Click a job to open it</span>
+          <span className="jobs-toolbar__note">
+            {canEdit ? "Click a job to open it" : "View only · click a job to open it"}
+          </span>
           <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); void loadSketches(true); }} disabled={loading}>
             Refresh
           </button>
@@ -334,6 +344,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         <JobsJobPanel
           row={rows.find((r) => r.jobNo === openJob.jobNo) ?? openJob}
           canEdit={canEdit}
+          canSeeMoney={canSeeMoney}
           onClose={() => setOpenJob(null)}
         />
       )}

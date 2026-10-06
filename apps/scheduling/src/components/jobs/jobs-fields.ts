@@ -32,7 +32,8 @@ export function customColumn(def: CustomFieldDef): JobFieldDef {
         : def.type === "formula-date"
           ? "date"
           : def.type;
-  return { key: def.key, label: def.label, type, width: def.width, custom: def };
+  // A Currency field is a $ figure — hidden from users without $ access, like Value.
+  return { key: def.key, label: def.label, type, width: def.width, custom: def, money: def.type === "currency" };
 }
 
 const F = (key: JobFieldDef["key"], label: string, type: JobFieldType, width: number, money = false): JobFieldDef => ({

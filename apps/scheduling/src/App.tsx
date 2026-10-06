@@ -136,7 +136,7 @@ export default function App() {
 
   // Warm the Jobs list in the background a few seconds after start (once the
   // board on screen has loaded), so opening Jobs is near-instant.
-  const canSeeJobs = permissions.monthly;
+  const canSeeJobs = permissions.jobs;
   useEffect(() => {
     if (!canSeeJobs) return;
     const timer = setTimeout(() => void useJobTrackingStore.getState().load(), 5000);
@@ -168,7 +168,7 @@ export default function App() {
           myScheduleLabel={myScheduleLabel}
           showMonthly={permissions.monthly}
           showScenario={permissions.scenarios}
-          showJobs={permissions.monthly}
+          showJobs={permissions.jobs}
         />
       )}
 
@@ -202,7 +202,7 @@ export default function App() {
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
-          {view === "jobs" && permissions.monthly && <JobsView canSeeMoney={permissions.money} canEdit={canEdit} />}
+          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} canEdit={permissions.editJobs} />}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen
@@ -237,7 +237,7 @@ export default function App() {
         myScheduleLabel={myScheduleLabel}
         showMonthly={permissions.monthly}
         showScenario={permissions.scenarios}
-        showJobs={permissions.monthly}
+        showJobs={permissions.jobs}
       />
     </div>
   );

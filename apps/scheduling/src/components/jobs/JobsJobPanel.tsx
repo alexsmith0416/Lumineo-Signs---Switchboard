@@ -32,7 +32,18 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
  * (jobs-editable.ts).
  * The name can be edited: it defaults to BC's ship-to customer name.
  */
-export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; canEdit: boolean; onClose: () => void }) {
+export default function JobsJobPanel({
+  row,
+  canEdit,
+  canSeeMoney,
+  onClose,
+}: {
+  row: JobRow;
+  canEdit: boolean;
+  /** $ access — Currency custom fields are hidden without it. */
+  canSeeMoney: boolean;
+  onClose: () => void;
+}) {
   const [placements, setPlacements] = useState<ActivePlacement[] | null>(null);
   useEffect(() => {
     if (!LIVE) {
@@ -99,7 +110,7 @@ export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; c
           )}
           {row.notes && <p className="jobs-jobpanel__notes">{row.notes}</p>}
 
-          <CustomFieldsSection row={row} canEdit={canEdit} />
+          <CustomFieldsSection row={row} canEdit={canEdit} canSeeMoney={canSeeMoney} />
 
           <div className="form-field form-field--block">
             <div className="jobcard__label">On the boards</div>
@@ -141,8 +152,9 @@ export default function JobsJobPanel({ row, canEdit, onClose }: { row: JobRow; c
 }
 
 /** The job's custom field values — editable for editors, read-only otherwise. */
-function CustomFieldsSection({ row, canEdit }: { row: JobRow; canEdit: boolean }) {
-  const defs = useCustomFieldStore((s) => s.defs);
+function CustomFieldsSection({ row, canEdit, canSeeMoney }: { row: JobRow; canEdit: boolean; canSeeMoney: boolean }) {
+  const allDefs = useCustomFieldStore((s) => s.defs);
+  const defs = canSeeMoney ? allDefs : allDefs.filter((d) => d.type !== "currency");
   const values = useJobTrackingStore((s) => s.tracks.find((t) => t.jobNo === row.jobNo)?.customValues);
   const setCustomValue = useJobTrackingStore((s) => s.setCustomValue);
   if (!defs.length) return null;

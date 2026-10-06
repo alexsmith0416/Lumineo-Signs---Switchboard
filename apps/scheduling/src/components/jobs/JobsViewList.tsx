@@ -5,7 +5,8 @@ import type { ViewLayout } from "./jobs-view-layout";
  * The Jobs views sidebar (like the Airtable recreation app's): drag views and
  * sections to reorder (views can move between sections), double-click a name to
  * rename, hover a view for duplicate / delete, "+ Add view" per section and
- * "+ Add section" at the bottom.
+ * "+ Add section" at the bottom. `readOnly` (users without Jobs edit rights):
+ * pick a view, nothing else — the views are shared by everyone.
  */
 export default function JobsViewList({
   layout,
@@ -20,6 +21,7 @@ export default function JobsViewList({
   onRenameSection,
   onDeleteSection,
   onMoveSection,
+  readOnly = false,
 }: {
   layout: ViewLayout;
   activeId: string;
@@ -33,6 +35,7 @@ export default function JobsViewList({
   onRenameSection: (id: string, label: string) => void;
   onDeleteSection: (id: string) => void;
   onMoveSection: (id: string, index: number) => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState<{ kind: "view" | "section"; id: string; draft: string } | null>(null);
   const [drag, setDrag] = useState<{ kind: "view" | "section"; id: string } | null>(null);
@@ -106,18 +109,18 @@ export default function JobsViewList({
           <div className="jobs-views__section-drop" {...sectionDropZone(si)} />
           <div
             className="jobs-views__label"
-            draggable={!editing}
+            draggable={!editing && !readOnly}
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = "move";
               e.dataTransfer.setData("text/plain", section.id);
               setDrag({ kind: "section", id: section.id });
             }}
             onDragEnd={endDrag}
-            onDoubleClick={() => setEditing({ kind: "section", id: section.id, draft: section.label })}
-            title="Drag to reorder · double-click to rename"
+            onDoubleClick={readOnly ? undefined : () => setEditing({ kind: "section", id: section.id, draft: section.label })}
+            title={readOnly ? undefined : "Drag to reorder · double-click to rename"}
           >
             {editing?.kind === "section" && editing.id === section.id ? editInput : <span>{section.label}</span>}
-            {layout.sections.length > 1 && !editing && (
+            {layout.sections.length > 1 && !editing && !readOnly && (
               <button
                 type="button"
                 className="jobs-views__icon"
@@ -137,7 +140,7 @@ export default function JobsViewList({
               <div key={id}>
                 <div
                   className={`jobs-views__item${id === activeId ? " jobs-views__item--active" : ""}${drag?.id === id ? " jobs-views__item--dragging" : ""}`}
-                  draggable={!editing}
+                  draggable={!editing && !readOnly}
                   onDragStart={(e) => {
                     e.dataTransfer.effectAllowed = "move";
                     e.dataTransfer.setData("text/plain", id);
@@ -145,17 +148,18 @@ export default function JobsViewList({
                   }}
                   onDragEnd={endDrag}
                   onClick={() => onSelect(id)}
-                  onDoubleClick={() => setEditing({ kind: "view", id, draft: v.name })}
+                  onDoubleClick={readOnly ? undefined : () => setEditing({ kind: "view", id, draft: v.name })}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === "Enter" && onSelect(id)}
-                  title="Click to open · drag to reorder · double-click to rename"
+                  title={readOnly ? "Click to open" : "Click to open · drag to reorder · double-click to rename"}
                 >
                   {editing?.kind === "view" && editing.id === id ? (
                     editInput
                   ) : (
                     <>
                       <span className="jobs-views__name">{v.name}</span>
+                      {!readOnly && (
                       <span className="jobs-views__actions">
                         <button type="button" className="jobs-views__icon" title="Duplicate view" aria-label={`Duplicate ${v.name}`}
                           onClick={(e) => { e.stopPropagation(); onDuplicate(id); }}>⧉</button>
@@ -167,6 +171,7 @@ export default function JobsViewList({
                             }}>✕</button>
                         )}
                       </span>
+                      )}
                     </>
                   )}
                 </div>
@@ -174,15 +179,19 @@ export default function JobsViewList({
               </div>
             );
           })}
-          <button type="button" className="jobs-views__add" onClick={() => onAddView(section.id)}>
-            + Add view
-          </button>
+          {!readOnly && (
+            <button type="button" className="jobs-views__add" onClick={() => onAddView(section.id)}>
+              + Add view
+            </button>
+          )}
         </div>
       ))}
       <div className="jobs-views__section-drop" {...sectionDropZone(layout.sections.length)} />
-      <button type="button" className="jobs-views__add jobs-views__add--section" onClick={onAddSection}>
-        + Add section
-      </button>
+      {!readOnly && (
+        <button type="button" className="jobs-views__add jobs-views__add--section" onClick={onAddSection}>
+          + Add section
+        </button>
+      )}
     </nav>
   );
 }
