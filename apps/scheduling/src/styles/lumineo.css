@@ -3508,6 +3508,89 @@ input.lead-times__weeks { width: 64px; }
   align-items: center;
   gap: 8px;
 }
+/* Per-user Jobs edit access (Manage users): "Jobs: all" (role), "Jobs: view",
+   or "Jobs: N fields" — the button opens the field checklist. */
+.users-admin__jobs {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.users-admin__jobs:hover {
+  background: var(--bg-tertiary);
+}
+.users-admin__jobs--some {
+  border-color: var(--lumineo-navy);
+  color: var(--lumineo-navy);
+  font-weight: 600;
+}
+.users-admin__jobs--all {
+  cursor: default;
+  border-style: dashed;
+}
+.users-admin__jobs--all:hover {
+  background: var(--bg-secondary);
+}
+.jobedit-dialog {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+.jobedit-dialog__tools {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 8px;
+}
+.jobedit-dialog__tools .form-field__input {
+  flex: 1;
+}
+.jobedit-dialog__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 8px;
+}
+.jobedit-dialog__group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  margin: 10px 0 4px;
+}
+.jobedit-dialog__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.jobedit-dialog__item:hover {
+  background: var(--bg-tertiary);
+}
+.jobedit-dialog__item input {
+  margin-top: 2px;
+}
+.jobedit-dialog__hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.jobedit-dialog__count {
+  margin-right: auto;
+  align-self: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 .users-admin__row--muted {
   opacity: 0.72;
 }

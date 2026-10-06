@@ -80,7 +80,7 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, permissions, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser } =
+  const { role, loading: userLoading, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser } =
     useCurrentUser();
 
   // Demo sandbox. Demo users boot LOCKED into it (welcome tour shown); anyone
@@ -202,7 +202,7 @@ export default function App() {
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
-          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} canEdit={permissions.editJobs} />}
+          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={jobEdit} />}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen

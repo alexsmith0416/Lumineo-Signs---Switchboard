@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { personByCode } from "./sales-pm";
 import { useImpersonationStore } from "../store/impersonation-store";
 import { useUserDirectoryStore } from "../store/user-directory-store";
+import { jobEditAccess, type JobEditAccess } from "./job-edit-access";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -71,9 +72,9 @@ export interface Permissions {
   /** May open the Jobs list (everyone). */
   jobs: boolean;
   /** May change anything on the Jobs list — tracking columns, status, sketches,
-   *  custom fields, the shared views. Without it the list is read-only (pick a
-   *  view, search, filter / sort / group for yourself, open a job). Per type for
-   *  now (Admin / Developer / Ops); individual grants can be layered on later. */
+   *  custom fields, the shared views (role: Admin / Developer / Ops). Anyone
+   *  else is view only, except the fields granted to their login — see
+   *  CurrentUser.jobEdit. */
   editJobs: boolean;
 }
 
@@ -198,6 +199,9 @@ export interface CurrentUser {
   defaultView: AppView;
   /** Preferred install region (for installer types). */
   installRegion?: "WK" | "NEK";
+  /** Exactly what this login may change on the Jobs list: everything (editJobs
+   *  role), or the fields granted to it in Settings → Users (crfdf_appuser). */
+  jobEdit: JobEditAccess;
   /** True when the signed-in login is a demo/trainee account — App boots it
    *  locked into the demo sandbox. */
   isDemoUser: boolean;
@@ -253,6 +257,7 @@ export function useCurrentUser(): CurrentUser {
   // deploy. Gate loading on it (live) so we don't flash the wrong landing view.
   const dirByEmail = useUserDirectoryStore((s) => s.byEmail);
   const dirLoaded = useUserDirectoryStore((s) => s.loaded);
+  const jobFieldsByEmail = useUserDirectoryStore((s) => s.jobFieldsByEmail);
   useEffect(() => {
     void useUserDirectoryStore.getState().load();
   }, []);
@@ -292,6 +297,8 @@ export function useCurrentUser(): CurrentUser {
       jobs: true,
       editJobs: cfg.editJobs,
     },
+    // Grants belong to the signed-in login; "view as" previews the ROLE only.
+    jobEdit: jobEditAccess(cfg.editJobs, active ? [] : jobFieldsByEmail[state.upn?.trim().toLowerCase() ?? ""] ?? []),
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,
     isDemoUser: realType === "demo",

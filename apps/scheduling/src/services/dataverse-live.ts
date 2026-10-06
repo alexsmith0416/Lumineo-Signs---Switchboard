@@ -2425,6 +2425,9 @@ export interface AppUserRow {
   email: string;
   userType: string;
   displayName: string;
+  /** Jobs-list fields this login may edit (crfdf_jobeditfields, comma-separated
+   *  keys; "" = view only). Absent until scripts/add-appuser-jobeditfields-column.ps1. */
+  jobEditFields: string;
 }
 
 function mapAppUser(r: Row): AppUserRow {
@@ -2434,6 +2437,7 @@ function mapAppUser(r: Row): AppUserRow {
     // Normalize casing/whitespace so "Admin" / "Install-WK" match the slugs.
     userType: s(r.crfdf_usertype).trim().toLowerCase() || "admin",
     displayName: s(r.crfdf_displayname),
+    jobEditFields: s(r.crfdf_jobeditfields),
   };
 }
 
@@ -2446,6 +2450,7 @@ function appUserToRecord(u: Partial<AppUserRow>): Row {
   }
   if (u.userType !== undefined) rec.crfdf_usertype = u.userType;
   if (u.displayName !== undefined) rec.crfdf_displayname = u.displayName;
+  if (u.jobEditFields !== undefined) rec.crfdf_jobeditfields = u.jobEditFields;
   return rec;
 }
 
@@ -2454,7 +2459,7 @@ export async function fetchAppUsers(): Promise<AppUserRow[]> {
   return rows.map(mapAppUser).filter((u) => u.email);
 }
 
-export async function createAppUser(u: AppUserRow): Promise<void> {
+export async function createAppUser(u: Omit<AppUserRow, "jobEditFields"> & { jobEditFields?: string }): Promise<void> {
   const rec = { crfdf_appuserid: u.id, ...appUserToRecord(u) };
   const res = await dvCreate(APPUSER_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createAppUser failed");

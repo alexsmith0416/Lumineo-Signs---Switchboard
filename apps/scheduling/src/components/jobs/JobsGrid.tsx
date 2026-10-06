@@ -58,7 +58,10 @@ export function OptionBadges({ def, value }: { def: CustomFieldDef; value: strin
 /** In-place editing for the grid (editors only): which columns take an editor,
  *  a cell's current value, and the save. */
 export interface GridEditing {
+  /** Any edit at all (full editor, or at least one granted field). */
   canEdit: boolean;
+  /** May this login change the field with this key (Sketch / Stepper included)? */
+  canEditField: (key: string) => boolean;
   /** The editor for a column, or null when it isn't editable. */
   editorFor: (col: JobFieldDef) => CustomFieldDef | null;
   valueFor: (row: JobRow, col: JobFieldDef) => unknown;
@@ -132,11 +135,12 @@ export default function JobsGrid({
   const openMenu = useCallback((row: JobRow, x: number, y: number) => setMenu({ row, x, y }), []);
   // The job whose sketch is being chosen.
   const [pickerFor, setPickerFor] = useState<JobRow | null>(null);
-  const sketchEdit = useMemo(() => ({ canEdit: !!editing?.canEdit, openPicker: setPickerFor }), [editing?.canEdit]);
+  const canEditSketch = !!editing?.canEditField("sketch");
+  const sketchEdit = useMemo(() => ({ canEdit: canEditSketch, openPicker: setPickerFor }), [canEditSketch]);
   // A file dropped anywhere but a Sketch cell would otherwise be opened by the
   // browser in place of the app.
   useEffect(() => {
-    if (!editing?.canEdit) return;
+    if (!canEditSketch) return;
     const stop = (e: DragEvent) => {
       if (Array.from(e.dataTransfer?.types ?? []).includes("Files")) e.preventDefault();
     };
@@ -146,7 +150,7 @@ export default function JobsGrid({
       window.removeEventListener("dragover", stop);
       window.removeEventListener("drop", stop);
     };
-  }, [editing?.canEdit]);
+  }, [canEditSketch]);
   // Live width while dragging; committed to the shared widths on mouse-up.
   const [dragging, setDragging] = useState<{ key: string; w: number } | null>(null);
   const widthOf = (key: string, fallback: number) =>
@@ -308,7 +312,7 @@ export default function JobsGrid({
                 onOpenCell={setOpenCell}
                 onCloseCell={closeCell}
                 editing={editing}
-                onOpenStepper={editing?.canEdit ? setStepperFor : undefined}
+                onOpenStepper={editing?.canEditField("stepper") ? setStepperFor : undefined}
                 onJobMenu={openMenu}
               />
             );

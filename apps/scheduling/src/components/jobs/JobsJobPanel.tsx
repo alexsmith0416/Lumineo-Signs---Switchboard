@@ -16,6 +16,7 @@ import { useCustomFieldStore } from "../../store/custom-field-store";
 import { describeFormula, linkFor } from "../../services/custom-fields";
 import CustomValueEditor from "./CustomValueEditor";
 import { OptionBadges } from "./JobsGrid";
+import { canEditJobField, type JobEditAccess } from "../../services/job-edit-access";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -34,12 +35,13 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
  */
 export default function JobsJobPanel({
   row,
-  canEdit,
+  edit,
   canSeeMoney,
   onClose,
 }: {
   row: JobRow;
-  canEdit: boolean;
+  /** What this login may change: everything, or only its granted fields. */
+  edit: JobEditAccess;
   /** $ access — Currency custom fields are hidden without it. */
   canSeeMoney: boolean;
   onClose: () => void;
@@ -90,12 +92,12 @@ export default function JobsJobPanel({
 
         <div className="slide-over__body jobs-jobpanel">
           <div className="jobs-jobpanel__status">
-            {canEdit ? <StatusPicker row={row} /> : <JobBadge field="status" value={row.status} />}
+            {canEditJobField(edit, "status") ? <StatusPicker row={row} /> : <JobBadge field="status" value={row.status} />}
             {row.statusSource === "override" && <span className="jobs-tag">override</span>}
             {!row.inBc && <span className="jobs-tag jobs-tag--warn">not in BC sync</span>}
             {!row.tracked && <span className="jobs-jobpanel__muted">New BC job — no tracking details yet.</span>}
           </div>
-          <JobNameField row={row} canEdit={canEdit} />
+          <JobNameField row={row} canEdit={canEditJobField(edit, "job")} />
           {row.description && <p className="jobs-jobpanel__desc">{row.description}</p>}
 
           {facts.length > 0 && (
@@ -110,7 +112,7 @@ export default function JobsJobPanel({
           )}
           {row.notes && <p className="jobs-jobpanel__notes">{row.notes}</p>}
 
-          <CustomFieldsSection row={row} canEdit={canEdit} canSeeMoney={canSeeMoney} />
+          <CustomFieldsSection row={row} edit={edit} canSeeMoney={canSeeMoney} />
 
           <div className="form-field form-field--block">
             <div className="jobcard__label">On the boards</div>
@@ -133,7 +135,9 @@ export default function JobsJobPanel({
             <>
               <ProductionStepperSection jobNo={row.jobNo} />
               <JobTargetsSection jobNo={row.jobNo} />
-              <JobSchedulePanel jobNo={row.jobNo} readOnly={!canEdit} />
+              {/* Edits four dates at once, so full editors only — a login granted
+                  one of those dates changes it in the list's own column. */}
+              <JobSchedulePanel jobNo={row.jobNo} readOnly={!edit.all} />
               <div className="form-field form-field--block">
                 <JobTaskPicker jobNo={row.jobNo} kind="production" currentDescriptions={[]} disabled onChange={() => {}} />
               </div>
@@ -151,8 +155,8 @@ export default function JobsJobPanel({
   );
 }
 
-/** The job's custom field values — editable for editors, read-only otherwise. */
-function CustomFieldsSection({ row, canEdit, canSeeMoney }: { row: JobRow; canEdit: boolean; canSeeMoney: boolean }) {
+/** The job's custom field values — each editable when this login may edit that field. */
+function CustomFieldsSection({ row, edit, canSeeMoney }: { row: JobRow; edit: JobEditAccess; canSeeMoney: boolean }) {
   const allDefs = useCustomFieldStore((s) => s.defs);
   const defs = canSeeMoney ? allDefs : allDefs.filter((d) => d.type !== "currency");
   const values = useJobTrackingStore((s) => s.tracks.find((t) => t.jobNo === row.jobNo)?.customValues);
@@ -172,7 +176,7 @@ function CustomFieldsSection({ row, canEdit, canSeeMoney }: { row: JobRow; canEd
                 {d.label}
               </div>
               <div className="cf-panel__value">
-                {canEdit && d.type !== "formula-date" ? (
+                {canEditJobField(edit, d.key) && d.type !== "formula-date" ? (
                   <CustomValueEditor def={d} value={values?.[d.key]} onSave={(nv) => void setCustomValue(row.jobNo, d.key, nv)} />
                 ) : d.type === "select" || d.type === "multiselect" ? (
                   <OptionBadges def={d} value={text} />

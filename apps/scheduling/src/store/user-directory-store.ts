@@ -7,6 +7,7 @@ import {
 } from "../services/dataverse-live";
 import type { UserType } from "../services/current-user";
 import { persistOrReport } from "./write-status-store";
+import { formatJobEditFields, parseJobEditFields } from "../services/job-edit-access";
 
 /**
  * The editable login-role directory (crfdf_appuser). Loaded once at startup and
@@ -26,12 +27,16 @@ export interface DirectoryUser {
   email: string;
   userType: UserType;
   displayName: string;
+  /** Jobs-list fields this login may edit (granted in Manage users; [] = view only). */
+  jobEditFields: string[];
 }
 
 interface UserDirectoryState {
   users: DirectoryUser[];
   /** Lower-cased email → type, for fast lookup by useCurrentUser. */
   byEmail: Record<string, UserType>;
+  /** Lower-cased email → the Jobs fields granted to that login. */
+  jobFieldsByEmail: Record<string, string[]>;
   loaded: boolean;
   loading: boolean;
 
@@ -42,6 +47,8 @@ interface UserDirectoryState {
     changes: { email?: string; userType?: UserType; displayName?: string },
   ) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
+  /** Grant exactly these Jobs fields to a login (replaces its grants). */
+  setJobEditFields: (id: string, keys: string[]) => Promise<void>;
 }
 
 const indexByEmail = (users: DirectoryUser[]): Record<string, UserType> => {
@@ -50,9 +57,17 @@ const indexByEmail = (users: DirectoryUser[]): Record<string, UserType> => {
   return m;
 };
 
+const indexJobFields = (users: DirectoryUser[]): Record<string, string[]> => {
+  const m: Record<string, string[]> = {};
+  for (const u of users) if (u.email && u.jobEditFields.length) m[u.email.toLowerCase()] = u.jobEditFields;
+  return m;
+};
+const indexes = (users: DirectoryUser[]) => ({ byEmail: indexByEmail(users), jobFieldsByEmail: indexJobFields(users) });
+
 export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
   users: [],
   byEmail: {},
+  jobFieldsByEmail: {},
   loaded: false,
   loading: false,
 
@@ -71,8 +86,9 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
         email: r.email,
         userType: r.userType as UserType,
         displayName: r.displayName,
+        jobEditFields: parseJobEditFields(r.jobEditFields),
       }));
-      set({ users, byEmail: indexByEmail(users), loaded: true, loading: false });
+      set({ users, ...indexes(users), loaded: true, loading: false });
     } catch (e) {
       // Leave users empty; useCurrentUser merges USER_DIRECTORY as the fallback.
       console.error("[user-directory] load failed — using code fallback", e);
@@ -89,9 +105,9 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
       await get().updateUser(existing.id, { userType, displayName });
       return;
     }
-    const user: DirectoryUser = { id: newId(), email: clean, userType, displayName };
+    const user: DirectoryUser = { id: newId(), email: clean, userType, displayName, jobEditFields: [] };
     const users = [...get().users, user];
-    set({ users, byEmail: indexByEmail(users) });
+    set({ users, ...indexes(users) });
     if (LIVE) {
       void persistOrReport("Add user", () => createAppUser({ id: user.id, email: clean, userType, displayName }));
     }
@@ -102,7 +118,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
     const users = get().users.map((u) =>
       u.id === id ? { ...u, ...changes, email: email ?? u.email } : u,
     );
-    set({ users, byEmail: indexByEmail(users) });
+    set({ users, ...indexes(users) });
     if (LIVE) {
       void persistOrReport("Edit user", () => updateAppUser(id, { ...changes, ...(email ? { email } : {}) }));
     }
@@ -110,9 +126,18 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
 
   removeUser: async (id) => {
     const users = get().users.filter((u) => u.id !== id);
-    set({ users, byEmail: indexByEmail(users) });
+    set({ users, ...indexes(users) });
     if (LIVE) {
-      void persistOrReport("Delete card preset", () => deleteAppUser(id));
+      void persistOrReport("Delete user", () => deleteAppUser(id));
+    }
+  },
+
+  setJobEditFields: async (id, keys) => {
+    const clean = parseJobEditFields(formatJobEditFields(keys));
+    const users = get().users.map((u) => (u.id === id ? { ...u, jobEditFields: clean } : u));
+    set({ users, ...indexes(users) });
+    if (LIVE) {
+      void persistOrReport("Save Jobs edit fields", () => updateAppUser(id, { jobEditFields: formatJobEditFields(clean) }));
     }
   },
 }));

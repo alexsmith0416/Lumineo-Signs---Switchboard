@@ -817,7 +817,8 @@
     <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Periods</strong> to open the month list. Each month has a <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
     <tr><td>Lead times <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Lead Times</strong>. Sets how many weeks after release a job's <strong>Mfg Target</strong> and <strong>Install Target</strong> fall (default <strong>7</strong> and <strong>10</strong> weeks). Add a rule per combination of steps: name it, pick <em>Only these steps</em> (the job's production steps are all in the rule &mdash; e.g. only Material Cut + Vinyl) or <em>Includes these steps</em> (the job has every one of them, plus maybe others), click the steps, and enter the Mfg and Install weeks. Rules are checked top to bottom (&uarr; &darr; to reorder); the first match wins. Click <strong>Save</strong>. The rules drive the Jobs list and the target dates on every job card.</td></tr>
     <tr><td>Business Central <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Catch-up tools &mdash; everyday changes (completing a department, a status change, moving a card) already reach BC as you make them. <strong>Match Steppers</strong> completes the stepper steps each job's Current Status says are done (every step for the Complete statuses, the production steps for the Installation statuses); it shows the counts first and changes nothing until you click <strong>Update</strong>. <strong>Sync to BC</strong> brings BC's Project Planning in line with the steppers for every tracked job: <strong>active</strong> departments are marked <strong>Started</strong> (which lists the job in BC's step tiles), finished ones <strong>Complete</strong>, and dates / Assigned To go only to steps on the calendar. It shows how many updates it would send first; only what changed since BC was last updated is sent, and BC receives them over the next while. Run Match Steppers first, then Sync to BC.</td></tr>
-    <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below).</td></tr>
+    <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below). Each user's
+    <strong>Jobs</strong> button chooses which Jobs-list fields they may edit (&sect;5.17).</td></tr>
   </table>
 
   <h3>5.15 &nbsp;The Shipping board — building a load</h3>
@@ -956,7 +957,15 @@
   <strong>Filter</strong>, <strong>Sort</strong> and <strong>Group</strong> to look at the list your way &mdash; those
   changes are just for you and reset when you reload, so nobody else's view moves &mdash; and click a job to read its
   details. Adding, renaming, reordering or deleting views, the <strong>Fields</strong> button, editing a cell and
-  changing a sketch are editor-only. $ columns (Value, Remaining Balance, and any Currency custom field) only show
+  changing a sketch are editor-only.</p>
+  <p><strong>Letting someone edit certain fields:</strong> an admin can give one person edit rights to
+  <em>specific</em> fields only &mdash; <strong>Settings → Users → Manage users…</strong>, click that person's
+  <strong>Jobs</strong> button (it reads <em>Jobs: view</em>, or <em>Jobs: 3 fields</em> once some are given), tick
+  the fields (e.g. Vendor Status, Date Installed, a custom field; also Current Status, Job name, Stepper or Sketch)
+  and <strong>Save</strong>. That person can then change exactly those cells &mdash; their toolbar reads <em>You can
+  edit 3 fields</em> &mdash; and nothing else: every other field, the views, Fields and field options stay view only
+  for them. The job panel's Install Dates box stays editor-only; a person given one of those dates changes it in its
+  column on the list. Admin / Operations / Developer show <em>Jobs: all</em> &mdash; they edit everything by role. $ columns (Value, Remaining Balance, and any Currency custom field) only show
   for people who can see $.</p>
   <p><strong>Filled in from Business Central</strong> &mdash; you don't type these:</p>
   <ul>
@@ -1265,6 +1274,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 5, 2026</td><td><strong>Give one person edit rights to specific Jobs fields</strong> &mdash; in Settings → Users → Manage users…, each person's <strong>Jobs</strong> button picks exactly which Jobs-list fields they may change (e.g. Vendor Status and Date Installed). Everything else stays view only for them. See &sect;5.17.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Everyone can see the Jobs list</strong> &mdash; Production, Install, Sales and PM users now have <strong>Jobs</strong> in the sidebar, view only: pick a view, search, filter / sort / group for themselves (not saved, nobody else's view changes) and open a job. Editing the list and its shared views stays with Admin / Ops / Developer. See &sect;5.17 and &sect;7.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Card panel scrolls; Job Information group for editors</strong> &mdash; the card panel now scrolls when its contents run past the screen (the Save / Cancel buttons stay put). For editors, the ship-to address, weather, descriptions, salesperson &amp; PM and purchase orders are folded under one <strong>Job Information</strong> heading; view-only users still see them laid out. See &sect;5.3.</td></tr>
       <tr><td>Oct 5, 2026</td><td><strong>Job descriptions in the card panel</strong> &mdash; click-to-open <strong>Field Description</strong> and <strong>Production Description</strong> sections show the job's instructions from Business Central for everyone (the same text as the job traveler), and editors also get the <strong>Extended Description</strong>. Refreshed from BC hourly. See &sect;5.3.</td></tr>
@@ -1372,7 +1382,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.21 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.22 · Oct 5, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { TYPE_CONFIG, USER_DIRECTORY, type UserType } from "../services/current-user";
-import { useUserDirectoryStore } from "../store/user-directory-store";
+import { useUserDirectoryStore, type DirectoryUser } from "../store/user-directory-store";
+import JobEditFieldsDialog from "./JobEditFieldsDialog";
 
 const TYPE_OPTIONS = Object.keys(TYPE_CONFIG) as UserType[];
 
@@ -9,12 +10,18 @@ const TYPE_OPTIONS = Object.keys(TYPE_CONFIG) as UserType[];
  * crfdf_appuser directory: add a login, set its role, or remove it — no deploy
  * needed. Entries still in the hardcoded code list (not yet overridden by a
  * table row) show read-only, with an Override to pull them into the table.
+ *
+ * "Jobs" per user: Admin / Developer / Ops edit the whole Jobs list by role;
+ * anyone else is view only there unless specific fields are granted to them
+ * (JobEditFieldsDialog → crfdf_appuser.crfdf_jobeditfields).
  */
 export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
   const users = useUserDirectoryStore((s) => s.users);
   const addUser = useUserDirectoryStore((s) => s.addUser);
   const updateUser = useUserDirectoryStore((s) => s.updateUser);
   const removeUser = useUserDirectoryStore((s) => s.removeUser);
+  const setJobEditFields = useUserDirectoryStore((s) => s.setJobEditFields);
+  const [grantFor, setGrantFor] = useState<DirectoryUser | null>(null);
 
   const [newEmail, setNewEmail] = useState("");
   const [newType, setNewType] = useState<UserType>("production");
@@ -62,6 +69,10 @@ export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
 
         <div className="slide-over__body users-admin">
           <p className="users-admin__note">
+            <strong>Jobs</strong>: Admin, Developer and Operations edit the whole Jobs list. Everyone else is view
+            only there — click their <em>Jobs</em> button to let them edit specific fields.
+          </p>
+          <p className="users-admin__note">
             Sets each login&apos;s role. Who can open the app at all is controlled by sharing it
             in Power Apps — this only changes what a signed-in user sees. Any login not listed
             defaults to Admin.
@@ -96,6 +107,20 @@ export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
                 <span className="users-admin__row-email" title={u.email}>
                   {u.email}
                 </span>
+                {TYPE_CONFIG[u.userType]?.editJobs ? (
+                  <span className="users-admin__jobs users-admin__jobs--all" title="Edits the whole Jobs list (by role)">
+                    Jobs: all
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={"users-admin__jobs" + (u.jobEditFields.length ? " users-admin__jobs--some" : "")}
+                    title="Choose the Jobs-list fields this person may edit"
+                    onClick={() => setGrantFor(u)}
+                  >
+                    {u.jobEditFields.length ? `Jobs: ${u.jobEditFields.length} field${u.jobEditFields.length === 1 ? "" : "s"}` : "Jobs: view"}
+                  </button>
+                )}
                 {roleSelect(u.userType, (t) => void updateUser(u.id, { userType: t }), "users-admin__role")}
                 <button
                   className="users-admin__remove"
@@ -129,6 +154,16 @@ export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+
+        {grantFor && (
+          <JobEditFieldsDialog
+            email={grantFor.email}
+            initial={grantFor.jobEditFields}
+            canSeeMoney={!!TYPE_CONFIG[grantFor.userType]?.money}
+            onSave={(keys) => void setJobEditFields(grantFor.id, keys)}
+            onClose={() => setGrantFor(null)}
+          />
+        )}
 
         <div className="users-admin__footer">
           <button className="btn-primary" onClick={onClose}>

@@ -20,6 +20,7 @@ import { useSketchStore } from "../../store/sketch-store";
 import { useFieldOptionsStore } from "../../store/field-options-store";
 import { builtinOptions, builtinStyle, customStyle, isChoiceColumn } from "./field-options";
 import FieldOptionsDialog from "./FieldOptionsDialog";
+import { canEditJobField, hasAnyJobEdits, type JobEditAccess } from "../../services/job-edit-access";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
@@ -57,7 +58,12 @@ type Panel = "fields" | "filter" | "sort" | "group" | null;
 
 const KNOWN_FIELDS = new Set(Object.keys(JOB_FIELDS));
 
-export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolean; canEdit: boolean }) {
+export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; edit: JobEditAccess }) {
+  // Full editors (role) change anything, the list's structure included. Anyone
+  // else changes only the fields granted to their login — never views, Fields,
+  // field options or custom field definitions.
+  const canEdit = edit.all;
+  const grantedCount = edit.fields.size;
   const tracks = useJobTrackingStore((s) => s.tracks);
   const loadLeadRules = useLeadTimeStore((s) => s.load);
   const loadDeptOverrides = useJobDeptOverrideStore((s) => s.load);
@@ -164,8 +170,10 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
   // In-place editing: custom fields, plus the built-in columns in jobs-editable.ts.
   const gridEditing = useMemo(
     () => ({
-      canEdit,
+      canEdit: hasAnyJobEdits(edit),
+      canEditField: (key: string) => canEditJobField(edit, key),
       editorFor: (col: JobFieldDef) => {
+        if (!canEditJobField(edit, col.key)) return null;
         if (col.custom) return col.custom;
         const f = BUILTIN_EDITS[col.key]?.field;
         // A choice column's dropdown lists the options in their edited order.
@@ -194,7 +202,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
         }
       },
     }),
-    [canEdit, tracksByJob, setCustomValue, setStatus, updateSchedule, updateTrack, me, optionOverrides],
+    [edit, tracksByJob, setCustomValue, setStatus, updateSchedule, updateTrack, me, optionOverrides],
   );
 
   // Job # / Name fits the longest name in the list until it's resized by hand.
@@ -310,7 +318,11 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
           </span>
           <span className="jobs-toolbar__spring" />
           <span className="jobs-toolbar__note">
-            {canEdit ? "Click a job to open it" : "View only · click a job to open it"}
+            {canEdit
+              ? "Click a job to open it"
+              : grantedCount > 0
+                ? `You can edit ${grantedCount} field${grantedCount === 1 ? "" : "s"} · click a job to open it`
+                : "View only · click a job to open it"}
           </span>
           <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); void loadSketches(true); }} disabled={loading}>
             Refresh
@@ -343,7 +355,7 @@ export default function JobsView({ canSeeMoney, canEdit }: { canSeeMoney: boolea
       {openJob && (
         <JobsJobPanel
           row={rows.find((r) => r.jobNo === openJob.jobNo) ?? openJob}
-          canEdit={canEdit}
+          edit={edit}
           canSeeMoney={canSeeMoney}
           onClose={() => setOpenJob(null)}
         />
