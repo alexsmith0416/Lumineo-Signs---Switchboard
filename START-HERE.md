@@ -232,9 +232,9 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     `components/jobs/ShopFloorHistory.tsx` = the tag + the **History** panel
     (button left of Refresh, `HistoryIcon.tsx`; last 30 days; filters; ✓
     Reviewed / Mark all reviewed). Failing-save case in `optimistic-edit.test.ts`.
-  - ⏳ **BC ext v1.0.0.13 compiled, NOT yet published (Alex to publish to UAT):**
-    Clock In Project always shows "Currently on" + "Complete current task",
-    greyed out (Enabled) unless punched in. Then test both states.
+  - ✅ **BC ext v1.0.0.13 published to UAT (Oct 6):** Clock In Project always
+    shows "Currently on" + "Complete current task", greyed out (Enabled) unless
+    punched in. Still to test both states on the page.
   - **Next:** Infotech's *Clock In / Out Multiple Projects/Nestings* pages
     (70210/70211) have no tick — add if crews use them. Security roles:
     view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
