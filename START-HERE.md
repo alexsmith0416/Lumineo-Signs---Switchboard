@@ -245,7 +245,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     Project Punches part is Editable = false — that's why it's our own part +
     a table event. Untested: whether Clock In Multiple closes the open punches
     (either way the Submit flush records the ticks). Guide v3.26 deployed Oct 6.
-  - **Next:** test v1.0.0.14 on both Multiple pages. Security roles:
+  - ✅ **v1.0.0.14 verified (Oct 6):** one Clock Out Multiple submit (Tanner Rue)
+    → J34707 / J32765 / J36571, one row each, "Multi Clock Out", all applied.
+    ⚠️ They were applied by an Admin/Ops session still on pre-deploy code (no
+    History details, no AUTO tag) — left as is (Alex: done in real life). Open
+    sessions keep old code until reloaded; there's no "new version" check yet
+    (offered: skip tick processing on an outdated build).
+  - **Next:** Security roles:
     view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
     `crfdf_jobdesc`; Admin/Ops/Dev need Write on `crfdf_taskcompletion` (their
     sessions apply ticks). BC entry no 1 never reached Dataverse (only entry 2)
