@@ -258,9 +258,57 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       done, it's the active lifecycle stage — departments still go active
       only after it, so the department line / step queue / BC tiles may look
       behind for older jobs). Don't run Sync to BC before Match Steppers.
-    - ❓ **Alex has more lifecycle-step issues to resolve** — not described yet.
-      Start the next session by asking what they are (look at a few real jobs'
-      steppers together first).
+    - 🔴 **REDESIGN AGREED (Alex, Oct 7 ~2:30 AM) — NOT BUILT YET. This replaces
+      the lifecycle-on-the-stepper approach. Build it next:**
+      1. **Stepper = departments + Install only, everywhere** (Jobs list, job
+         panel, pop-up, card hovers). Remove the lifecycle nodes (NO UM RP PU
+         RI CP CA CI) from the stepper. The **Current Status IS the lifecycle**
+         in the app. Service stepper (service jobs) stays.
+      2. **Status moves drive BC's lifecycle steps** (Started / Complete),
+         stamped **Completed By = the mover's BC Resource No.** (crfdf_appuser
+         BC No.; blank if they have none — never guessed). Page 58400 already
+         exposes writable `Completed_By`; the outbox / BCPush_PlanningSteps
+         flow need to carry it (no column for it today).
+         - New Order this week → BC *New Order This Week* Started.
+         - Upcoming Mfg. → NOTW Complete; *Upcoming Manufacturing* Started.
+         - Mfg. Ready for Planning → UM Complete; *Manufacturing Ready for
+           Planning* Started.
+         - **First production department status** ("MFG - …", Steel MFG, NEK -
+           Production, Manufacturing, Active) → every earlier lifecycle step
+           Complete.
+         - **Purchasing: not tracked by the app at all** (BC Job Purchasing is
+           the purchaser's).
+         - **"Install - Ready for Planning"** (a status Alex added in Edit field
+           — check its exact text in the live option list) = Product Ready for
+           Install Scheduling: stepper **Install active**; BC *Product Ready for
+           Install Scheduling* Started (Install NOT started).
+         - **"Install - waiting on product"** → BC *Install-Waiting on Product*
+           Started; Install active on the stepper.
+         - **Installation** → BC *Install* Started; *Product Ready for Install
+           Scheduling* Complete.
+         - **"MFG - Vinyl Install"** → stepper **Vinyl AND Install both active**
+           (= the vinyl tech installs); BC *Vinyl Install Only* Started and
+           *Vinyl* Complete.
+         - **Install completed** (stepper Complete, or a punch's Task complete on
+           install) → status auto-moves to **Complete-need paperwork**, every
+           earlier step completes, **Date Installed** = that date (editable).
+           BC: Install Complete; *Complete-Need Paperwork* Started.
+         - **Complete to Admin** → **Date to Admin** = today, always. BC job
+           "complete" flag stays here; Complete-Need Paperwork Complete.
+         - **Installation → Complete to Admin directly** (Install not completed)
+           → complete every stepper step, Date Installed = today, Date to
+           Admin = today.
+         - **Moving BACKWARD re-opens in BC**: steps after the new status go
+           back to not Complete / not Started (and Install etc. re-open on the
+           stepper) — BC always mirrors the status.
+         - Unmapped statuses (holds, Needs Shipped, Ready to send to NEK…)
+           change nothing in BC.
+      3. Clean-up that falls out of it: drop the lifecycle keys from
+         `ALL_STEP_DEFS` / flow / backfill; existing NO/UM/RP/PU/RI/CP/CA/CI
+         completion + override rows become unused (decide: leave or delete);
+         Match Steppers + Sync to BC as they are now are NOT needed — re-plan
+         the backfill as "make BC match each job's current status". Guide +
+         tour updates.
     - ✅ BCSync_JobPlanningLines catch-up run **Succeeded** (6:38 → 6:47 AM UTC,
       9½ min vs 1.5 h before) — nightly runs should now succeed.
   - Decisions (Alex, Oct 7): one production stepper with the lifecycle; Service
