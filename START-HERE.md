@@ -242,20 +242,42 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 7, 2026, later) — Lifecycle + Service steppers: BUILT,
-  tested, NOT deployed (guide v3.30).** Decisions (Alex, Oct 7): one production
-  stepper with the lifecycle; Service jobs from BC's Job Card **Order Type**
-  (SERVICE, SIGNCONT, MNTCCONT all get the Service stepper); BC write-back only
-  for stages with a known BC step; backfill app-only.
-  - Production stepper = `NO` New Order → `UM` Upcoming Mfg → `PU` Purchasing →
-    depts → `RI` Ready for Install (install jobs) → `I` → `CP` Complete-Need
+- **📌 RESUME HERE (Oct 7, 2026, ~2 AM — paused by Alex) — Lifecycle + Service
+  steppers: DEPLOYED (commit `2ce4a28`, guide v3.31), finishing touches open.**
+  - **Where we stopped:**
+    - ✅ Live: lifecycle + Service steppers, Order Type from BC, BC job complete
+      at Complete to Admin, Ready for Planning (`RP`), pre-production stages
+      completing on status moves, Purchasing manual-only, Jobs list showing
+      departments only + two-line panel stepper.
+    - ✅ `scripts/reopen-auto-purchasing.ps1 -Apply` ran: **244** Purchasing
+      completions re-opened (all were "Alex Smith (status backfill)"; none had
+      reached BC). Commit `83d0729`.
+    - ⏸ **NOT done yet (Alex chose to wait):** Settings → Business Central →
+      **Match Steppers**, then **Sync to BC**. Until Match Steppers runs, `RP`
+      Ready for Planning is open on every job (and, wherever NO/UM are already
+      done, it's the active lifecycle stage — departments still go active
+      only after it, so the department line / step queue / BC tiles may look
+      behind for older jobs). Don't run Sync to BC before Match Steppers.
+    - ❓ **Alex has more lifecycle-step issues to resolve** — not described yet.
+      Start the next session by asking what they are (look at a few real jobs'
+      steppers together first).
+    - ✅ BCSync_JobPlanningLines catch-up run **Succeeded** (6:38 → 6:47 AM UTC,
+      9½ min vs 1.5 h before) — nightly runs should now succeed.
+  - Decisions (Alex, Oct 7): one production stepper with the lifecycle; Service
+    jobs from BC's Job Card **Order Type** (SERVICE, SIGNCONT, MNTCCONT all get
+    the Service stepper); BC write-back only for stages with a known BC step;
+    backfill app-only; Purchasing only ever completed by the purchaser.
+  - Production stepper = `NO` New Order → `UM` Upcoming Mfg → `RP` Ready for
+    Planning → `PU` Purchasing → depts → `RI` Ready for Install (install jobs)
+    → `I` → `CP` Complete-Need
     Paperwork → `CA` Complete to Admin → `CI` Complete Invoiced
     (`production-steps.ts`; lifecycle drawn as outlined squares / tiny markers).
     Service = `SU` `SE` `SA` `SI` (`services/service-steps.ts`); service-only
     jobs (service + no dept) get no lifecycle. Same completion / override
     tables. `store/job-steps.ts jobStepsFor` = production + service, used by BC
     push / Sync to BC / backfill; `store/service-jobs-store.ts isServiceJob`.
-  - BC: NO→New Order This Week, UM→Upcoming Manufacturing, PU→Job Purchasing,
+  - BC: NO→New Order This Week, UM→Upcoming Manufacturing, RP→Manufacturing
+    Ready for Planning, PU→Job Purchasing,
     RI→Product Ready for Install Scheduling, CP→Complete-Need Paperwork,
     SE→Service. CA / CI / SU app-only (names unconfirmed; two "Survey" steps).
     Main "Production" step = departments only. 🔴 **BC job "complete" now fires
@@ -277,8 +299,9 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     service jobs — 136 SERVICE, 8 MNTCCONT, 1 SIGNCONT). Test job **J38696**.
     Probe: `scripts/bc-job-fields-probe.ps1`. Details:
     `flows/BCSync_JobDescriptions.md`.
-  - ✅ Deployed Oct 7 + Match Steppers run. **Follow-up (Alex, Oct 7, built —
-    deploy pending):** (1) Jobs list + card hovers show DEPARTMENTS only; the
+  - First deploy Oct 7 (`115e96b`) + a first Match Steppers run (which
+    auto-completed Purchasing — since re-opened). **Follow-up (Alex, Oct 7 —
+    DEPLOYED `2ce4a28`):** (1) Jobs list + card hovers show DEPARTMENTS only; the
     job panel / stepper pop-up draw a "Lifecycle" line above "Departments"
     (`StepperBlock`). (2) New stage **`RP` Ready for Planning** between UM and
     PU — BC "Manufacturing Ready for Planning", status "Mfg. Ready for
@@ -292,17 +315,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     release): `MANUAL_ONLY_KEYS` — no status pick / punch / backfill ever
     completes it, and open it never holds the line (default active skips it;
     it's active alongside once RP is done; `currentStage` / `nextStatus` skip
-    it, so the status follows the departments). **After deploying, in order:**
-    (a) `scripts/reopen-auto-purchasing.ps1` (dry run, then `-Apply`) — the
-    first deploy's Match Steppers auto-completed PU on many jobs; (b) Match
-    Steppers again (RP is new — it would be active on every job); (c) Sync to
-    BC so existing jobs' pre-production stages are Complete in BC too.
+    it, so the status follows the departments). Remaining go-live: (a) ✅
+    re-open script done; (b) ⏸ Match Steppers again; (c) ⏸ then Sync to BC.
   - 🔧 **BCSync_JobPlanningLines fixed Oct 7** (`scripts/patch-planninglines-flow-upsert.ps1`;
     backup `flows/planninglines-clientdata-backup-20261007-013616.json`). It had
     "failed" every night since ≥ Sep 23 and was off since Oct 3: Update a row
     then ALWAYS Add a new row → ~7,400 duplicate-key failures a night (data was
     written anyway; frozen at Oct 2 once off). Now a Line_Exists condition
-    (update or add) + 10 jobs at a time. Turned on + catch-up run Oct 7.
+    (update or add) + 10 jobs at a time. Turned on; catch-up run Oct 7
+    Succeeded in 9½ min.
     `scripts/diagnose-flow.ps1 -FlowName <name> [-Table <logical>]` reads any
     flow's runs + failing actions (read-only; `-TokenCache` reuses a sign-in).
 - **(Oct 7, 2026) — Edit any Jobs field + Tracking in the job
