@@ -175,3 +175,37 @@ describe("editing a flow", () => {
     expect(stepForStatus(J34707, "Complete-need paperwork", "Billboards")).toBeNull();
   });
 });
+
+describe("one status spanning two departments (MFG - Assembly & Graphics)", () => {
+  const AG = "MFG - Assembly & Graphics";
+  const flow: FlowStage[] = [
+    st("P", "MFG - Paint Prep / Paint"),
+    st("V", AG),
+    st("A", AG),
+    st("I", "Install - waiting on product"),
+  ];
+  const doneStatus = "Complete-need paperwork";
+
+  it("moves onto it automatically when Paint completes", () => {
+    expect(flowStatus(flow, doneStatus, none, new Set(["P"]))).toBe(AG);
+  });
+
+  it("stays on it while either department is still open — whichever finishes first", () => {
+    // Vinyl first
+    expect(applyTick(flow, "V", [], new Set(["P"]), AG).completesStep).toBe(true);
+    expect(flowStatus(flow, doneStatus, none, new Set(["P", "V"]))).toBe(AG);
+    // Assembly first
+    expect(applyTick(flow, "A", [], new Set(["P"]), AG).completesStep).toBe(true);
+    expect(flowStatus(flow, doneStatus, none, new Set(["P", "A"]))).toBe(AG);
+  });
+
+  it("moves on once both are complete", () => {
+    expect(flowStatus(flow, doneStatus, none, new Set(["P", "V", "A"]))).toBe("Install - waiting on product");
+  });
+
+  it("can be set up in the editor (same status on two different departments is allowed)", () => {
+    const base = [st("P", "MFG - Paint Prep / Paint"), st("V", "MFG - Vinyl Cut"), st("A", "MFG - Assembly")];
+    const next = updateStage(updateStage(base, 1, st("V", AG)), 2, st("A", AG));
+    expect(next.map((s) => s.status)).toEqual(["MFG - Paint Prep / Paint", AG, AG]);
+  });
+});
