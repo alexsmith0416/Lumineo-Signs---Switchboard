@@ -13,6 +13,9 @@ export interface ViewDef {
   cols: string[];
   defaultGroup?: string;
   preset?: ViewPreset;
+  /** How many of the view's first columns stay put when scrolling sideways
+   *  (the freeze line — freeze-line.ts). Absent = 1 (Job # / Name). Shared. */
+  frozen?: number;
 }
 
 export interface ViewSection {
@@ -59,7 +62,13 @@ export function sanitizeLayout(raw: unknown, knownFields: ReadonlySet<string>): 
     if (!v || typeof v.name !== "string" || !Array.isArray(v.cols)) continue;
     // Custom field keys ("cf_…") are kept even before the fields have loaded.
     const cols = v.cols.filter((c) => knownFields.has(c) || c.startsWith("cf_"));
-    views[id] = { ...v, id, cols: cols.includes("job") ? cols : ["job", ...cols] };
+    const { frozen, ...rest } = v;
+    views[id] = {
+      ...rest,
+      id,
+      cols: cols.includes("job") ? cols : ["job", ...cols],
+      ...(typeof frozen === "number" && frozen >= 1 ? { frozen: Math.round(frozen) } : {}),
+    };
   }
   const seen = new Set<string>();
   const sections = l.sections
@@ -135,6 +144,15 @@ export function setViewCols(l: ViewLayout, viewId: string, cols: string[]): View
   if (!v) return l;
   const next = cols.includes("job") ? ["job", ...cols.filter((c) => c !== "job")] : ["job", ...cols];
   return { ...l, views: { ...l.views, [viewId]: { ...v, cols: next } } };
+}
+
+/** Freeze the view's first `n` columns (at least 1 — Job # / Name). */
+export function setViewFrozen(l: ViewLayout, viewId: string, n: number): ViewLayout {
+  const v = l.views[viewId];
+  if (!v) return l;
+  const frozen = Math.max(1, Math.round(n));
+  if ((v.frozen ?? 1) === frozen) return l;
+  return { ...l, views: { ...l.views, [viewId]: { ...v, frozen } } };
 }
 
 export function addSection(l: ViewLayout, label: string): [ViewLayout, string] {

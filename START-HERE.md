@@ -258,6 +258,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       done, it's the active lifecycle stage — departments still go active
       only after it, so the department line / step queue / BC tiles may look
       behind for older jobs). Don't run Sync to BC before Match Steppers.
+    - ✅ **Freeze line (Oct 7 afternoon, built + browser-tested):** Airtable-style
+      draggable freeze line on the Jobs grid — `ViewDef.frozen` (shared, on the
+      view; editors drag), `components/jobs/freeze-line.ts` (pure, tested),
+      `FreezeLine` in JobsGrid (sticky offsets per frozen column). Guide v3.32.
+      Same deploy: sketch viewer **Download** fixed — `downloadUrlOf` was given
+      the already-encoded link and encoded it again (Shared%2520Documents →
+      "file not found"); now takes the decoded path (`sketchFileRef`).
     - 🔴 **REDESIGN AGREED (Alex, Oct 7 ~2:30 AM) — NOT BUILT YET. This replaces
       the lifecycle-on-the-stepper approach. Build it next:**
       1. **Stepper = departments + Install only, everywhere** (Jobs list, job

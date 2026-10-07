@@ -5456,14 +5456,74 @@ input.lead-times__weeks { width: 64px; }
   cursor: col-resize;
 }
 .jobs-th__resize:hover { background: var(--border); }
-.jobs-grid th:first-child,
-.jobs-grid td.jobs-cell--primary {
-  position: sticky;
-  left: 0;
-  /* Above the stepper's nodes (z-index 2), so they scroll BEHIND the frozen column. */
-  z-index: 3;
+/* Frozen columns: position / left / z-index come inline from JobsGrid (each one
+   sticks at the widths before it; z-index 3 keeps the stepper's nodes — z 2 —
+   scrolling BEHIND them, 12 keeps frozen headers above the rest). */
+.jobs-grid .jobs-cell--frozen-last { border-right: 1px solid var(--border); }
+
+/* The freeze line (FreezeLine in JobsGrid, like Airtable's). The frame holds the
+   scroll area and the line, which sits over it and doesn't scroll. */
+.jobs-grid-frame {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
-.jobs-grid th:first-child { z-index: 11; }
+.jobs-freeze {
+  position: absolute;
+  top: 0;
+  bottom: 12px; /* clear of the horizontal scrollbar */
+  width: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+.jobs-freeze.is-draggable { pointer-events: auto; cursor: grab; }
+.jobs-freeze.is-dragging { cursor: grabbing; }
+.jobs-freeze__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: var(--border-strong, #9aa1b1);
+  transition: box-shadow 0.15s ease;
+}
+/* Once the grid scrolls sideways, a soft shadow shows columns passing underneath. */
+.jobs-freeze.is-scrolled .jobs-freeze__line { box-shadow: 3px 0 6px -1px rgba(20, 20, 100, 0.22); }
+.jobs-freeze.is-dragging .jobs-freeze__line { background: var(--status-blue, #2d7ff9); opacity: 0.5; }
+.jobs-freeze__pill {
+  position: absolute;
+  left: 2px;
+  width: 6px;
+  height: 28px;
+  border-radius: 3px;
+  background: var(--status-blue, #2d7ff9);
+  pointer-events: none;
+}
+.jobs-freeze__tip {
+  position: absolute;
+  left: 18px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+/* Where the drop lands (the nearest column edge) while dragging. */
+.jobs-freeze__snap {
+  position: absolute;
+  top: 0;
+  bottom: 12px;
+  width: 2px;
+  background: var(--status-blue, #2d7ff9);
+  z-index: 19;
+  pointer-events: none;
+}
 /* The body is its own stacking layer, so anything positioned inside a cell (the
    stepper's nodes use z-index) always scrolls BEHIND the sticky header. */
 .jobs-grid tbody { position: relative; z-index: 0; }

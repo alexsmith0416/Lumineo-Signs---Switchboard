@@ -1132,6 +1132,12 @@
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
     view and on every row. <strong>Job # / Name</strong> sizes itself to the longest name in the list until you resize
     it by hand; double-click its edge to go back to that. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
+    <li><strong>Frozen columns</strong> &mdash; the columns left of the grey <strong>freeze line</strong> stay put when
+    you scroll sideways (a soft shadow shows the rest sliding underneath). Editors hover the line &mdash; a blue handle
+    follows the pointer with <em>Drag to adjust the number of frozen columns</em> &mdash; and drag it to another
+    column edge; it snaps there when you let go. It's saved on the <strong>view</strong>, so everyone sees the same
+    frozen columns (Job # / Name always stays frozen). On a narrow screen fewer columns freeze so the rest can still
+    scroll.</li>
     <li><strong>Click a job</strong> to open it: its <strong>Tracking</strong> fields (Priority, Sales, Hold, Expeditor,
     Date to Admin, Vendor&hellip; &mdash; editable right there for anyone allowed to edit them, with the same pick-lists
     as the list), <strong>where it sits on the Production,
@@ -1415,6 +1421,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 7, 2026</td><td><strong>Jobs: drag the freeze line</strong> &mdash; like Airtable, a grey line marks where the frozen columns end. Hover it for the blue handle and drag it to another column edge to freeze more or fewer columns; it's saved on the view for everyone. See &sect;5.17.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>Cleaner steppers, Ready for Planning, and pre-production stages that finish themselves</strong> &mdash; the Jobs list and card previews show the departments only; in the job panel and stepper pop-up the lifecycle stages sit on their own <strong>Lifecycle</strong> line above the <strong>Departments</strong>. New stage <strong>Ready for Planning</strong> (BC <em>Manufacturing Ready for Planning</em>) between Upcoming Mfg and Purchasing. Moving a job off <em>New Order this week</em>, <em>Upcoming Mfg.</em> or <em>Mfg. Ready for Planning</em> completes that stage (and the ones before it) in the app and BC; a production status completes all three. <strong>Purchasing</strong> is completed only by the purchaser, and an open Purchasing never holds up the departments. See &sect;5.4 and &sect;5.17.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>The whole job lifecycle on the stepper, and a Service stepper</strong> &mdash; the production stepper now runs <strong>New Order &rarr; Upcoming Mfg &rarr; Purchasing &rarr;</strong> the departments <strong>&rarr; Ready for Install &rarr; Install &rarr; Complete-Need Paperwork &rarr; Complete to Admin &rarr; Complete Invoiced</strong> (lifecycle stages are outlined squares). Service and contract jobs (BC Order Type SERVICE, SIGNCONT, MNTCCONT) also get a <strong>Service</strong> stepper: Survey &rarr; Service &rarr; Complete to Admin &rarr; Complete Invoiced. The BC job is now flagged complete at <strong>Complete to Admin</strong>. Picking a Current Status moves the job to that stage, and <strong>Match Steppers</strong> ticks the stages existing jobs have already passed. See &sect;5.4 and &sect;5.17.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>Edit any Jobs field, and edit tracking fields in the job panel</strong> &mdash; right-click any column header &rarr; <em>Edit field…</em> to rename it for everyone (Reset brings the name back), and switch pick-lists like Priority or Vendor between <strong>Single and Multi Select</strong>. Custom fields can change type too (Single &harr; Multi Select, the text types, Number &harr; Currency) without losing values. The job panel's <strong>Tracking</strong> section now edits Expeditor, Date to Admin, Vendor, Hold and the other tracking fields in place. See &sect;5.17.</td></tr>
@@ -1532,7 +1539,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.31 · Oct 7, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.32 · Oct 7, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

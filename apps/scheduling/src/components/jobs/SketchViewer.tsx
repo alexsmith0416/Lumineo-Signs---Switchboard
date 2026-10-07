@@ -64,7 +64,7 @@ export default function SketchViewer({
       try {
         const sp = await import("../../services/sharepoint");
         const bytes = await Promise.race([
-          sp.fileBytes(sp.fileRefOf(sketch.pinned || sketch.fileUrl)),
+          sp.fileBytes(sp.sketchFileRef(sketch)),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Downloading the file took too long")), DOWNLOAD_TIMEOUT_MS)),
         ]);
         if (!alive) return;
@@ -100,7 +100,7 @@ export default function SketchViewer({
 
   const openInSharePoint = () => window.open(sketch.fileUrl, "_blank", "noopener");
   const download = () =>
-    void import("../../services/sharepoint").then((sp) => window.open(sp.downloadUrlOf(sketch.fileUrl), "_blank", "noopener"));
+    void import("../../services/sharepoint").then((sp) => window.open(sp.downloadUrlOf(sp.sketchFileRef(sketch)), "_blank", "noopener"));
 
   return createPortal(
     // Clicks are stopped here: a portal still bubbles through the React tree,

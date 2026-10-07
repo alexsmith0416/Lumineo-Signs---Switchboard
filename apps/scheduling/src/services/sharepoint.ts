@@ -121,9 +121,21 @@ export function fileRefOf(fileUrl: string): string {
   }
 }
 
-/** SharePoint's own download link for a file (opens in a new tab and downloads it). */
-export function downloadUrlOf(fileUrl: string): string {
-  return `${SP_ORIGIN}/sites/JobFiles/_layouts/15/download.aspx?SourceUrl=${encodeURIComponent(fileUrl)}`;
+/**
+ * SharePoint's own download link for a file (opens in a new tab and downloads
+ * it). Takes the DECODED server-relative path ("/sites/JobFiles/Shared
+ * Documents/…/J1 x.pdf" — a sketch's `pinned`, or `fileRefOf(fileUrl)`) and
+ * encodes it once. (Before Oct 7 it was handed the browser link, which is
+ * already encoded — "Shared%20Documents" — so it was encoded twice and
+ * SharePoint answered "file not found".)
+ */
+export function downloadUrlOf(fileRef: string): string {
+  return `${SP_ORIGIN}/sites/JobFiles/_layouts/15/download.aspx?SourceUrl=${encodeURIComponent(fileRef)}`;
+}
+
+/** A sketch's server-relative path: the pinned one (already decoded), else its link decoded. */
+export function sketchFileRef(sketch: { pinned?: string; fileUrl: string }): string {
+  return sketch.pinned || fileRefOf(sketch.fileUrl);
 }
 
 /** Every file in a job's folder and its subfolders, newest first. */

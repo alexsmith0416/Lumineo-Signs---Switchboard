@@ -28,7 +28,7 @@ import { ShopFloorHistoryPanel } from "./ShopFloorHistory";
 import { HistoryIcon } from "../HistoryIcon";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
-  renameSection, renameView, setViewCols,
+  renameSection, renameView, setViewCols, setViewFrozen,
 } from "./jobs-view-layout";
 
 /**
@@ -362,7 +362,10 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
           // Every column's name can be edited; choice columns also their options.
           canEditField={() => canEdit}
           onEditField={(c) => (c.custom ? setEditingField(c.key) : setEditingOptions({ field: c.key, label: c.label }))}
-          collapsed={prefs.collapsed ?? []} onCollapsedChange={(collapsed) => setPrefs({ collapsed })} />
+          collapsed={prefs.collapsed ?? []} onCollapsedChange={(collapsed) => setPrefs({ collapsed })}
+          // The freeze line is saved on the view, shared by everyone — editors move it.
+          frozen={view.frozen ?? 1}
+          onFrozenChange={canEdit ? (n) => setLayout(setViewFrozen(layout, view.id, n)) : undefined} />
       </section>
       {addingField && (
         <AddFieldsDialog

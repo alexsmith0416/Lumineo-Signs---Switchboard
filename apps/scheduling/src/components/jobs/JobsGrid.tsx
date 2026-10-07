@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type OptionOrder, type SortCriterion } from "./jobs-grid-state";
 import { builtinStyle, splitMulti, type OptionStyle } from "./field-options";
+import { effectiveFrozen, frozenOffsets, lineX, nearestFrozen } from "./freeze-line";
 import { useFieldOptionsStore } from "../../store/field-options-store";
 import { AutoStatusTag } from "./ShopFloorHistory";
 
@@ -92,6 +93,8 @@ export default function JobsGrid({
   orderOf,
   onEditField,
   canEditField,
+  frozen = 1,
+  onFrozenChange,
 }: {
   rows: JobRow[];
   cols: JobFieldDef[];
@@ -118,8 +121,28 @@ export default function JobsGrid({
   /** Right-click a header → "Edit field…" (name; options / type where it has them). */
   onEditField?: (col: JobFieldDef) => void;
   canEditField?: (col: JobFieldDef) => boolean;
+  /** How many of the first columns stay put when scrolling sideways (the view's). */
+  frozen?: number;
+  /** Editors: the freeze line was dragged to freeze this many columns. Absent = can't drag. */
+  onFrozenChange?: (n: number) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  // Horizontal scroll + visible width, for the freeze line.
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [visibleWidth, setVisibleWidth] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onScroll = () => setScrollLeft(el.scrollLeft);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => setVisibleWidth(el.clientWidth));
+    ro.observe(el);
+    setVisibleWidth(el.clientWidth);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, []);
   const collapsed = useMemo(() => new Set(collapsedPaths), [collapsedPaths]);
   const collapsedRef = useRef(collapsed);
   collapsedRef.current = collapsed;
@@ -219,8 +242,35 @@ export default function JobsGrid({
   const padTop = vItems[0]?.start ?? 0;
   const padBot = vItems.length ? virt.getTotalSize() - vItems[vItems.length - 1]!.end : 0;
 
+  // Frozen columns: each sticks at the sum of the widths before it.
+  const colWidths = cols.map((c) => widthOf(c.key, c.width));
+  const nFrozen = effectiveFrozen(colWidths, frozen, visibleWidth);
+  const offsets = frozenOffsets(colWidths, nFrozen);
+  const frozenKey = cols.slice(0, nFrozen).map((c) => c.key).join("|") + "@" + offsets.join(",");
+  // One object per layout, so the memoised rows only redraw when it changes.
+  const sticky = useMemo(
+    () => Object.fromEntries(cols.slice(0, nFrozen).map((c, i) => [c.key, offsets[i]!])) as Record<string, number>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [frozenKey],
+  );
+  const lastFrozen = cols[nFrozen - 1]?.key ?? "";
+  const frozenStyle = (key: string, header = false): React.CSSProperties | undefined =>
+    key in sticky ? { position: "sticky", left: sticky[key], zIndex: header ? 12 : 3 } : undefined;
+  const frozenClass = (key: string) =>
+    key in sticky ? ` jobs-cell--frozen${key === lastFrozen ? " jobs-cell--frozen-last" : ""}` : "";
+
   return (
     <SketchEditContext.Provider value={sketchEdit}>
+    <div className="jobs-grid-frame">
+    {cols.length > 1 && (
+      <FreezeLine
+        widths={colWidths}
+        frozen={nFrozen}
+        scrollLeft={scrollLeft}
+        visibleWidth={visibleWidth}
+        onChange={onFrozenChange}
+      />
+    )}
     <div className="jobs-grid-wrap" ref={wrapRef}>
       {/* An exact width (the sum of the columns) keeps table-layout: fixed in charge,
           so a column is the width it's set to on every row — not sized by the text
@@ -239,7 +289,8 @@ export default function JobsGrid({
               return (
                 <th
                   key={c.key}
-                  className={sortable ? "jobs-th--sortable" : undefined}
+                  className={((sortable ? "jobs-th--sortable" : "") + frozenClass(c.key)).trim() || undefined}
+                  style={frozenStyle(c.key, true)}
                   onClick={sortable ? () => onToggleSort(c.key) : undefined}
                   onContextMenu={
                     onEditField && canEditField?.(c)
@@ -317,6 +368,8 @@ export default function JobsGrid({
                 editing={editing}
                 onOpenStepper={editing?.canEditField("stepper") ? setStepperFor : undefined}
                 onJobMenu={openMenu}
+                sticky={sticky}
+                lastFrozen={lastFrozen}
               />
             );
           })}
@@ -369,6 +422,7 @@ export default function JobsGrid({
         />
       )}
     </div>
+    </div>
     </SketchEditContext.Provider>
   );
 }
@@ -383,9 +437,15 @@ const JobGridRow = memo(function JobGridRow({
   editing,
   onOpenStepper,
   onJobMenu,
+  sticky,
+  lastFrozen,
 }: {
   row: JobRow;
   cols: JobFieldDef[];
+  /** Frozen columns → their sticky left offset. */
+  sticky: Readonly<Record<string, number>>;
+  /** The last frozen column (it carries the freeze shadow). */
+  lastFrozen: string;
   onOpen: (row: JobRow) => void;
   /** The custom field key being edited in this row, if any. */
   openKey: string | null;
@@ -397,6 +457,10 @@ const JobGridRow = memo(function JobGridRow({
   /** Right-click on the job name. */
   onJobMenu?: (row: JobRow, x: number, y: number) => void;
 }) {
+  const frozenStyle = (key: string): React.CSSProperties | undefined =>
+    key in sticky ? { position: "sticky", left: sticky[key], zIndex: 3 } : undefined;
+  const frozenClass = (key: string) =>
+    key in sticky ? ` jobs-cell--frozen${key === lastFrozen ? " jobs-cell--frozen-last" : ""}` : "";
   return (
     <tr className={`jobs-row${row.tracked ? "" : " jobs-row--untracked"}`} onClick={() => onOpen(row)}>
       {cols.map((c) => {
@@ -405,7 +469,8 @@ const JobGridRow = memo(function JobGridRow({
           return (
             <td
               key={c.key}
-              className="jobs-cell--editable jobs-cell--stepper"
+              style={frozenStyle(c.key)}
+              className={`jobs-cell--editable jobs-cell--stepper${frozenClass(c.key)}`}
               title="Click to update the production stage"
               onClick={(e) => {
                 e.stopPropagation();
@@ -424,11 +489,12 @@ const JobGridRow = memo(function JobGridRow({
           c.key === "status" ? "jobs-cell--center" : "",
           editable ? "jobs-cell--editable" : "",
           isOpen ? "jobs-cell--editing" : "",
-        ].filter(Boolean).join(" ");
+        ].filter(Boolean).join(" ") + frozenClass(c.key);
         return (
           <td
             key={c.key}
-            className={cls || undefined}
+            style={frozenStyle(c.key)}
+            className={cls.trim() || undefined}
             onContextMenu={
               c.key === "job" && onJobMenu && row.inBc
                 ? (e) => {
@@ -542,6 +608,88 @@ function StepperCell({ jobNo }: { jobNo: string | undefined }) {
   const shown = departments.length ? departments : serviceSteps;
   if (!shown.length) return null;
   return <DepartmentStepper steps={shown} size="sm" />;
+}
+
+/**
+ * The freeze line (like Airtable's): a shadowed line after the frozen columns.
+ * Hovering it shows a grab cursor, a blue pill that follows the pointer up and
+ * down the line, and "Drag to adjust the number of frozen columns". Dragging
+ * snaps to the nearest column edge (freeze-line.ts); letting go saves it on the
+ * view for everyone. Without `onChange` (view-only users) it's just the line.
+ */
+function FreezeLine({
+  widths,
+  frozen,
+  scrollLeft,
+  visibleWidth,
+  onChange,
+}: {
+  widths: readonly number[];
+  frozen: number;
+  scrollLeft: number;
+  visibleWidth: number;
+  onChange?: (n: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hoverY, setHoverY] = useState<number | null>(null);
+  const [drag, setDrag] = useState<{ x: number; n: number } | null>(null);
+  const x = lineX(widths, frozen);
+  const canDrag = !!onChange;
+  const frameTop = () => ref.current?.parentElement?.getBoundingClientRect() ?? null;
+
+  const start = (e: React.MouseEvent) => {
+    if (!canDrag || e.button !== 0) return;
+    e.preventDefault();
+    const rect = frameTop();
+    if (!rect) return;
+    let last = { x, n: frozen };
+    const move = (m: MouseEvent) => {
+      const mx = Math.max(0, Math.min(m.clientX - rect.left, visibleWidth));
+      last = { x: mx, n: nearestFrozen(widths, frozen, scrollLeft, mx, visibleWidth) };
+      setDrag(last);
+      setHoverY(Math.max(12, Math.min(m.clientY - rect.top, rect.height - 12)));
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+      setDrag(null);
+      setHoverY(null);
+      if (last.n !== frozen) onChange!(last.n);
+    };
+    document.body.style.cursor = "grabbing";
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+    setDrag(last);
+  };
+
+  // Where a drop would land: the snapped column edge, in visible coordinates.
+  const snapX = drag ? (drag.n <= frozen ? lineX(widths, drag.n) : lineX(widths, drag.n) - scrollLeft) : null;
+  return (
+    <>
+      <div
+        ref={ref}
+        className={`jobs-freeze${scrollLeft > 0 ? " is-scrolled" : ""}${canDrag ? " is-draggable" : ""}${drag ? " is-dragging" : ""}`}
+        style={{ left: (drag ? drag.x : x) - 5 }}
+        onMouseMove={(e) => {
+          if (!canDrag || drag) return;
+          const rect = frameTop();
+          if (rect) setHoverY(Math.max(12, Math.min(e.clientY - rect.top, rect.height - 12)));
+        }}
+        onMouseLeave={() => !drag && setHoverY(null)}
+        onMouseDown={start}
+      >
+        <span className="jobs-freeze__line" />
+        {canDrag && hoverY !== null && <span className="jobs-freeze__pill" style={{ top: hoverY - 14 }} />}
+        {canDrag && hoverY !== null && !drag && (
+          <span className="jobs-freeze__tip" style={{ top: hoverY - 13 }}>
+            Drag to adjust the number of frozen columns
+          </span>
+        )}
+      </div>
+      {snapX !== null && <div className="jobs-freeze__snap" style={{ left: snapX - 1 }} />}
+    </>
+  );
 }
 
 /** Right-click menu on a job's name — the same links as a calendar card's menu. */
