@@ -217,7 +217,7 @@ export function FieldsPanel({ fields, cols, onChange, onClose, onAddField, onEdi
   onClose: () => void;
   /** Editors: open "Add fields". */
   onAddField?: () => void;
-  /** Editors: edit a custom field. */
+  /** Editors: "Edit field…" — any field's name; options / type where it has them. */
   onEditField?: (key: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -257,7 +257,7 @@ export function FieldsPanel({ fields, cols, onChange, onClose, onAddField, onEdi
           {FIELD_TYPES.find((f) => f.type === byKey.get(k)!.custom!.type)?.icon}
         </span>
       )}
-      {byKey.get(k)?.custom && onEditField && (
+      {onEditField && (
         <button
           type="button"
           className="jobs-fields__edit"

@@ -7,7 +7,9 @@
  * Values by type: text / multiline / url / email / phone → string; number /
  * currency → number; date → "YYYY-MM-DD"; bool → boolean; select → string;
  * multiselect → string[]. Formula Date fields hold no value — they're computed
- * from another date column plus an offset.
+ * from another date column plus an offset. A field can change type within its
+ * group (compatibleTypes); values are never rewritten — Single / Multi Select
+ * read either shape (choiceList) until the cell is next edited.
  */
 import { addBusinessDays, addDays, addWeeks, format } from "date-fns";
 import type { JobRow } from "./job-tracking";
@@ -74,6 +76,26 @@ export const DEFAULT_WIDTH: Record<CustomFieldType, number> = {
   select: 150, multiselect: 200, url: 180, email: 180, phone: 130, "formula-date": 120,
 };
 
+/** Types a field can switch between without touching any job's value: the
+ *  stored shapes are the same, or (Single ↔ Multi Select) read either way. */
+const TYPE_GROUPS: ReadonlyArray<readonly CustomFieldType[]> = [
+  ["select", "multiselect"],
+  ["text", "multiline", "url", "email", "phone"],
+  ["number", "currency"],
+];
+
+/** What an existing field of this type can be changed to (itself included). */
+export function compatibleTypes(type: CustomFieldType): readonly CustomFieldType[] {
+  return TYPE_GROUPS.find((g) => g.includes(type)) ?? [type];
+}
+
+/** A Single / Multi Select value as a list, whichever way it was saved
+ *  (a field switched from Single keeps "A"; from Multi keeps ["A", "B"]). */
+export function choiceList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x);
+  return typeof v === "string" && v ? [v] : [];
+}
+
 /** Built-in Jobs date columns a Formula Date can start from. */
 export const FORMULA_BASE_FIELDS: ReadonlyArray<{ key: string; label: string }> = [
   { key: "releaseDate", label: "Release Date" },
@@ -138,8 +160,9 @@ export function cellValue(def: CustomFieldDef, v: unknown): unknown {
       return typeof v === "number" && Number.isFinite(v) ? v : null;
     case "bool":
       return v === true;
+    case "select":
     case "multiselect":
-      return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x).join(", ") : "";
+      return choiceList(v).join(", ");
     default:
       return typeof v === "string" ? v : "";
   }
@@ -181,7 +204,7 @@ export function normalizeValue(def: CustomFieldDef, raw: unknown): unknown {
     case "date":
       return dayOf(raw) ? String(raw).slice(0, 10) : null;
     case "multiselect":
-      return Array.isArray(raw) ? raw.filter((x) => typeof x === "string" && x) : [];
+      return choiceList(raw);
     case "url": {
       const s = String(raw ?? "").trim();
       return s && !/^[a-z][a-z0-9+.-]*:/i.test(s) ? `https://${s}` : s || null;

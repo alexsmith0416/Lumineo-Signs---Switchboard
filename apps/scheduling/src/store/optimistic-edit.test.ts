@@ -256,3 +256,56 @@ describe("changing a job's flow when the save fails", () => {
     expect(failed[0]!.label).toBe("Change job flow");
   });
 });
+
+describe("editing a Jobs field (name / type) when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps a built-in column's new name and Multi Select on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveJobsViewConfig: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { useFieldOptionsStore } = await import("./field-options-store");
+    status.getState().clear();
+
+    useFieldOptionsStore.getState().save("vendor", { label: "Supplier", multi: true });
+    await flush();
+
+    expect(useFieldOptionsStore.getState().overrides.vendor).toEqual({ label: "Supplier", multi: true });
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Edit field options");
+  });
+
+  it("keeps a custom field's new type on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveCustomFieldDef: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { useCustomFieldStore } = await import("./custom-field-store");
+    status.getState().clear();
+    useCustomFieldStore.setState({
+      defs: [{ key: "cf_permit", label: "Permit", type: "select", width: 150, opts: ["Applied", "Approved"] }],
+    });
+
+    useCustomFieldStore.getState().updateField("cf_permit", { label: "Permits", type: "multiselect" });
+    await flush();
+
+    expect(useCustomFieldStore.getState().defs[0]).toMatchObject({ label: "Permits", type: "multiselect" });
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Edit custom field");
+  });
+});

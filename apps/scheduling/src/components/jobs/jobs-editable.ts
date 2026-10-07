@@ -104,10 +104,12 @@ export const BUILTIN_EDITS: Readonly<Record<string, EditTarget>> = Object.fromEn
   schedule("redDate", "redDate"),
 ]);
 
-/** A value from the editor, as a crfdf_jobtrack field stores it ("" = cleared). */
-export function trackValue(target: Extract<EditTarget, { kind: "track" }>, v: unknown): string | boolean {
-  if (target.field.type === "bool") return v === true;
-  if (target.field.type === "multiselect") return Array.isArray(v) ? v.filter(Boolean).join(", ") : "";
+/** A value from the editor, as a crfdf_jobtrack field stores it ("" = cleared).
+ *  `field` = the editor actually shown (a choice column may be switched to
+ *  Single / Multi Select with "Edit field…"); several values save as "A, B". */
+export function trackValue(field: Pick<CustomFieldDef, "type">, v: unknown): string | boolean {
+  if (field.type === "bool") return v === true;
+  if (Array.isArray(v)) return v.filter((x) => typeof x === "string" && x).join(", ");
   return typeof v === "string" ? v : "";
 }
 

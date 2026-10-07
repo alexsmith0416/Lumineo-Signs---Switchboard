@@ -5882,6 +5882,8 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .cf-dialog__palette { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; padding: 2px 0 4px 28px; }
 .cf-dialog__formula { display: flex; gap: 8px; }
 .cf-dialog__formula input { width: 90px; }
+.cf-dialog__name-row { display: flex; gap: 8px; }
+.cf-dialog__name-row input { flex: 1; min-width: 0; }
 .cf-dialog__hint { font-size: 11px; color: var(--text-tertiary); }
 .cf-dialog__danger {
   margin-top: 18px;
@@ -6088,7 +6090,8 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 
 .opt-picker {
   position: fixed;
-  z-index: 80;
+  /* Above the job panel slide-over (100) and the header menus (300/301). */
+  z-index: 400;
   background: var(--bg-primary);
   border: 1px solid var(--grid-line);
   border-radius: 8px;

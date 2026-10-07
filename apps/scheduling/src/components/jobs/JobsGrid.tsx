@@ -14,7 +14,7 @@ import SketchViewer, { RemoveSketchConfirm } from "./SketchViewer";
 import { createPortal } from "react-dom";
 import { bcJobUrl, sharepointJobUrl } from "../../services/job-links";
 import { allGroupPaths, buildGroupTree, flattenTree, type FlatItem, type GroupCriterion, type OptionOrder, type SortCriterion } from "./jobs-grid-state";
-import { builtinStyle, type OptionStyle } from "./field-options";
+import { builtinStyle, splitMulti, type OptionStyle } from "./field-options";
 import { useFieldOptionsStore } from "../../store/field-options-store";
 import { AutoStatusTag } from "./ShopFloorHistory";
 
@@ -115,7 +115,7 @@ export default function JobsGrid({
   editing?: GridEditing;
   /** Choice columns' option order — groups follow it. */
   orderOf?: OptionOrder;
-  /** Right-click a header → "Edit field…" (only offered for editable fields). */
+  /** Right-click a header → "Edit field…" (name; options / type where it has them). */
   onEditField?: (col: JobFieldDef) => void;
   canEditField?: (col: JobFieldDef) => boolean;
 }) {
@@ -289,7 +289,9 @@ export default function JobsGrid({
                     <div className="jobs-group__inner" style={{ paddingLeft: 8 + n.depth * 20 }}>
                       <span className={`jobs-group__chev${isCollapsed ? " jobs-group__chev--closed" : ""}`}>▾</span>
                       <span className="jobs-group__field">{def?.label ?? n.field}</span>
-                      {def?.type === "badge" ? (
+                      {def?.type === "badge" && def.multi ? (
+                        splitMulti(n.key).map((x) => <JobBadge key={x} field={n.field} value={x} />)
+                      ) : def?.type === "badge" ? (
                         <JobBadge field={n.field} value={n.key} />
                       ) : def?.custom && def.type === "select" && n.key !== "—" ? (
                         <OptionBadges def={def.custom} value={n.key} />
@@ -475,11 +477,9 @@ function Cell({ row, def, canDismissAuto = false }: { row: JobRow; def: JobField
     case "badge":
       return (
         <>
-          {/* Sales can hold several initials ("VB, NH") — one pill each. */}
-          {def.key === "sales"
-            ? String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean).map((x) => (
-                <JobBadge key={x} field={def.key} value={x} />
-              ))
+          {/* A multi column (Sales "VB, NH", or one switched to Multi Select) — one pill each. */}
+          {def.multi
+            ? splitMulti(v).map((x) => <JobBadge key={x} field={def.key} value={x} />)
             : <JobBadge field={def.key} value={String(v ?? "")} />}
           {def.key === "status" && <AutoStatusTag jobNo={row.jobNo} auto={row.statusAuto} canDismiss={canDismissAuto} />}
         </>

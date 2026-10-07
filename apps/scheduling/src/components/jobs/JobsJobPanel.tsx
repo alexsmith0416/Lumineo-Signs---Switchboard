@@ -10,7 +10,9 @@ import { JobBadge } from "./JobsGrid";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
 import { COMPLETE_STATUSES, INSTALL_STATUSES, isHoldStatus } from "../../services/job-status";
 import { useFieldOptionsStore } from "../../store/field-options-store";
-import { builtinOptions } from "./field-options";
+import { builtinColumn, builtinEditor, builtinOptions, builtinStyle, splitMulti } from "./field-options";
+import { BUILTIN_EDITS, trackValue, type EditTarget } from "./jobs-editable";
+import { JOB_FIELDS } from "./jobs-fields";
 import { useCurrentUser } from "../../services/current-user";
 import { useCustomFieldStore } from "../../store/custom-field-store";
 import { describeFormula, linkFor } from "../../services/custom-fields";
@@ -32,8 +34,8 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
  *  - Install Dates (release / scheduled install / red date) — the shared
  *    job-schedule store; the boards and the Jobs columns update at once.
  *  - Where the job sits on the Production / Installation / Shipping boards.
- * Tracking fields are shown here as a summary; editors change them in the grid
- * (jobs-editable.ts).
+ * Tracking fields (jobs-editable.ts) are edited here or in the grid — same
+ * editors, same saves.
  * The name can be edited: it defaults to BC's ship-to customer name.
  */
 export default function JobsJobPanel({
@@ -65,21 +67,13 @@ export default function JobsJobPanel({
     };
   }, [row.jobNo]);
 
+  // Calculated / BC facts; the tracking fields are in TrackingFieldsSection.
   const facts: [string, string][] = (
     [
       ["Order date", fmt(row.orderDate) && `${fmt(row.orderDate)}${row.releaseDate ? " (released)" : ""}`],
       ["DIP", row.dip != null ? `${row.dip} days${row.doh ? ` · ${row.doh} on hold · actual ${row.actualDip ?? 0}` : ""}` : ""],
       ["Mfg final date", fmt(row.mfgFinalDate)],
-      ["Expeditor", fmt(row.expeditor)],
-      ["Hold", row.holdReason ? `${row.holdReason}${row.dateToHold ? ` since ${fmt(row.dateToHold)}` : ""}${row.dateOffHold ? ` · off ${fmt(row.dateOffHold)}` : ""}` : ""],
-      ["Sales", row.sales],
       ["Location", [row.location, row.region].filter(Boolean).join(" · ")],
-      ["Vendor", [row.vendor, row.po && `PO ${row.po}`, row.vendorStatus].filter(Boolean).join(" · ")],
-      ["Storage", row.storageLocation],
-      ["Date installed", fmt(row.dateInstalled)],
-      ["Date to Admin", fmt(row.dateToAdmin)],
-      ["Date invoiced", fmt(row.dateInvoiced)],
-      ["UL sign", row.ulSign ? "Yes" : ""],
     ] as [string, string][]
   ).filter(([, v]) => v);
 
@@ -113,8 +107,7 @@ export default function JobsJobPanel({
               ))}
             </dl>
           )}
-          {row.notes && <p className="jobs-jobpanel__notes">{row.notes}</p>}
-
+          <TrackingFieldsSection row={row} edit={edit} />
           <CustomFieldsSection row={row} edit={edit} canSeeMoney={canSeeMoney} />
 
           <div className="form-field form-field--block">
@@ -160,6 +153,61 @@ export default function JobsJobPanel({
     </div>
   );
 }
+
+/** The tracking columns (crfdf_jobtrack: Priority, Sales, Hold, Expeditor, Date to
+ *  Admin, Vendor, …) — each editable here when this login may edit it, with the
+ *  same editor, option list and name ("Edit field…") as its Jobs column. A
+ *  login that can't edit any of them sees only the filled-in ones. */
+function TrackingFieldsSection({ row, edit }: { row: JobRow; edit: JobEditAccess }) {
+  const overrides = useFieldOptionsStore((s) => s.overrides);
+  const updateTrack = useJobTrackingStore((s) => s.updateTrack);
+  const keys = Object.entries(BUILTIN_EDITS)
+    .filter(([k, t]) => t.kind === "track" && JOB_FIELDS[k])
+    .map(([k]) => k);
+  const shown = row as unknown as Record<string, unknown>;
+  const visible = keys.filter((k) => canEditJobField(edit, k) || isFilled(shown[k]));
+  if (!visible.length) return null;
+  return (
+    <div className="form-field form-field--block">
+      <div className="jobcard__label">Tracking</div>
+      <div className="cf-panel">
+        {visible.map((k) => {
+          const col = builtinColumn(JOB_FIELDS[k]!, overrides[k]);
+          const editor = builtinEditor(k, overrides[k])!;
+          const target = BUILTIN_EDITS[k] as Extract<EditTarget, { kind: "track" }>;
+          const v = shown[k];
+          return (
+            <div key={k} className="cf-panel__row">
+              <div className="cf-panel__label">{col.label}</div>
+              <div className="cf-panel__value">
+                {canEditJobField(edit, k) ? (
+                  <CustomValueEditor
+                    def={editor}
+                    value={col.multi ? splitMulti(v) : v}
+                    styleOf={(o) => builtinStyle(k, o, overrides[k])}
+                    onSave={(nv) => void updateTrack(row.jobNo, { [target.trackKey]: trackValue(editor, nv) })}
+                  />
+                ) : col.multi ? (
+                  splitMulti(v).map((x) => <JobBadge key={x} field={k} value={x} />)
+                ) : col.type === "badge" ? (
+                  <JobBadge field={k} value={String(v ?? "")} />
+                ) : col.type === "bool" ? (
+                  v ? "Yes" : ""
+                ) : col.type === "date" ? (
+                  fmt(String(v ?? ""))
+                ) : (
+                  <span className="jobs-jobpanel__notes">{String(v ?? "")}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const isFilled = (v: unknown) => v === true || (typeof v === "string" && v.trim() !== "");
 
 /** The job's custom field values — each editable when this login may edit that field. */
 function CustomFieldsSection({ row, edit, canSeeMoney }: { row: JobRow; edit: JobEditAccess; canSeeMoney: boolean }) {

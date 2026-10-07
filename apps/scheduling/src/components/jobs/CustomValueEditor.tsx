@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { normalizeValue, type CustomFieldDef } from "../../services/custom-fields";
+import { choiceList, normalizeValue, type CustomFieldDef } from "../../services/custom-fields";
 import { customStyle, type OptionStyle } from "./field-options";
 import OptionPicker, { OptionPill } from "./OptionPicker";
 
@@ -161,13 +161,8 @@ function ChoiceEditor({
   styleOf: (value: string) => OptionStyle;
 }) {
   const multi = def.type === "multiselect";
-  const chosen: string[] = multi
-    ? Array.isArray(value)
-      ? (value as unknown[]).filter((x): x is string => typeof x === "string" && !!x)
-      : []
-    : typeof value === "string" && value
-      ? [value]
-      : [];
+  // Either shape: a field switched between Single and Multi keeps its old values.
+  const chosen = choiceList(value);
   const ref = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   useEffect(() => {

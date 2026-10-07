@@ -1098,7 +1098,9 @@
     <li>Drag a column edge to resize it (double-click to reset); a column keeps that width in <strong>every</strong>
     view and on every row. <strong>Job # / Name</strong> sizes itself to the longest name in the list until you resize
     it by hand; double-click its edge to go back to that. A <em>not in BC</em> tag means the job was carried over from Airtable but isn't in the BC job sync.</li>
-    <li><strong>Click a job</strong> to open it: its tracking details, <strong>where it sits on the Production,
+    <li><strong>Click a job</strong> to open it: its <strong>Tracking</strong> fields (Priority, Sales, Hold, Expeditor,
+    Date to Admin, Vendor&hellip; &mdash; editable right there for anyone allowed to edit them, with the same pick-lists
+    as the list), <strong>where it sits on the Production,
     Installation and Shipping boards</strong>, and the same <strong>production stepper</strong> and <strong>Install
     Dates</strong> as the job card on the boards. It's one system &mdash; completing a department or changing a date
     here updates the boards (and Business Central's Project Planning, &sect;5.4) exactly as it would from a card, and
@@ -1137,8 +1139,13 @@
     <li><strong>Fill them in</strong> by clicking the cell in the list (Enter or clicking away saves, Esc cancels), or in
     the job's panel under <strong>Custom fields</strong>.</li>
     <li>Custom fields sort, filter (select fields offer their options) and group like any other column.</li>
-    <li><strong>Change or remove a field</strong>: <strong>Fields</strong> &rarr; the ✎ next to it &mdash; rename it, add /
-    rename / remove options and pick their colours, change a formula, or delete the field for everyone.</li>
+    <li><strong>Change or remove a field</strong>: <strong>Fields</strong> &rarr; the ✎ next to it (or right-click its
+    column header &rarr; <em>Edit field…</em>) &mdash; rename it, add / rename / remove options and pick their colours,
+    change a formula, or delete the field for everyone.</li>
+    <li><strong>Change a field's type</strong> in the same place, between types that hold the same kind of value:
+    <strong>Single Select &harr; Multi Select</strong>, <strong>Text / Long text / URL / Email / Phone</strong>, and
+    <strong>Number &harr; Currency</strong>. Every job keeps its value. Switching Multi to Single leaves jobs that
+    already have several options as they are until someone changes that cell.</li>
   </ul>
   <h4>Editing in the list</h4>
   <p>Editors change a job right in the list: <strong>click a cell</strong> to edit it (Enter or clicking away saves,
@@ -1154,6 +1161,14 @@
     palette colours or <strong>Custom…</strong> for any colour at all (a preview pill shows how it'll look). The dropdown lists them in that
     order, and <strong>sorting and grouping</strong> by the column follow it &mdash; so Current Status groups appear in
     your order. Saved for everyone. (Renaming or removing an option doesn't change jobs that already use it.)</li>
+    <li><strong>Rename any column</strong> &mdash; right-click its header (or the ✎ beside it in <strong>Fields</strong>)
+    &rarr; <em>Edit field…</em> and type a new <strong>Field name</strong>. The new name shows in every view, the
+    Filter / Sort / Group lists, the job panel and Settings &rarr; Users, for everyone; <strong>Reset</strong> brings the
+    original name back. Only the name changes &mdash; never the jobs' data.</li>
+    <li><strong>Single or Multi Select</strong> &mdash; the same dialog switches Priority, Vendor, Vendor Status, Storage
+    Location, Graphics, Routing Type, Powerlines, MFG / Install Region and Sales between picking <em>one</em> option and
+    picking <em>several</em> (each shows as its own pill). Current Status and Hold stay single, because they drive the
+    status automation.</li>
     <li><strong>Dates</strong> &mdash; Date to Hold / off Hold, Expeditor, Date Installed, Date to Admin, Date Invoiced,
     Vendor Ship Dates and Outsourced Arrival. <strong>Order Date / Release Date</strong>, <strong>Mfg Target Mod</strong>,
     <strong>Sched. Install</strong> and <strong>RED DATE</strong> are the job's Install Dates &mdash; changing them here
@@ -1345,6 +1360,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 7, 2026</td><td><strong>Edit any Jobs field, and edit tracking fields in the job panel</strong> &mdash; right-click any column header &rarr; <em>Edit field…</em> to rename it for everyone (Reset brings the name back), and switch pick-lists like Priority or Vendor between <strong>Single and Multi Select</strong>. Custom fields can change type too (Single &harr; Multi Select, the text types, Number &harr; Currency) without losing values. The job panel's <strong>Tracking</strong> section now edits Expeditor, Date to Admin, Vendor, Hold and the other tracking fields in place. See &sect;5.17.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Job flow: edit the order and statuses jobs move through</strong> &mdash; <strong>Settings → Job flow</strong> (replacing Status rules) sets the company flow as stages &mdash; a department plus its Current Status &mdash; and a department can have more than one stage (e.g. Vinyl Cut, then Vinyl Application). Each job follows it using the departments on its stepper, and editors can change one job's flow from its panel (<strong>▸ Job flow</strong>). A shop-floor <em>Task complete</em> now moves the job to its next stage; the department completes after its last one. The flow's order is also the stepper's order. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Tour updated to today's app</strong> &mdash; the demo's <em>Full tour</em> now covers the Jobs list, Shop-floor History, Task complete on BC's Clock In Project and Multiple Projects/Nestings pages (with screenshots), My Schedule, Settings and Help. In the demo, the Jobs list is view only (it's the real list). See &sect;2.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Task complete on the Multiple Projects/Nestings pages</strong> &mdash; Clock In and Clock Out Multiple Projects/Nestings now list your open punches under <strong>Mark tasks complete</strong>, with a <strong>Task complete</strong> checkbox for each project, so crews on several jobs at once can complete each one separately. See &sect;5.4.</td></tr>
@@ -1459,7 +1475,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.28 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.29 · Oct 7, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

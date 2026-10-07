@@ -24,16 +24,18 @@ const JOB: GrantableField[] = [
   { key: "sketch", label: "Sketch", group: "Job", hint: "Choose, upload or remove the sketch" },
 ];
 
-/** Every grantable field, in checklist order. */
-export function grantableFields(customDefs: readonly CustomFieldDef[]): GrantableField[] {
+/** Every grantable field, in checklist order. `renamed` = built-in column names
+ *  edited with "Edit field…" (key → name). */
+export function grantableFields(customDefs: readonly CustomFieldDef[], renamed: Readonly<Record<string, string>> = {}): GrantableField[] {
   const taken = new Set(JOB.map((f) => f.key));
+  const job = JOB.map((f) => (renamed[f.key] ? { ...f, label: renamed[f.key]! } : f));
   const columns: GrantableField[] = Object.keys(BUILTIN_EDITS)
     .filter((k) => !taken.has(k) && JOB_FIELDS[k])
-    .map((k) => ({ key: k, label: JOB_FIELDS[k]!.label, group: "Columns" as const }))
+    .map((k) => ({ key: k, label: renamed[k] || JOB_FIELDS[k]!.label, group: "Columns" as const }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const custom: GrantableField[] = customDefs
     .filter((d) => d.type !== "formula-date")
     .map((d) => ({ key: d.key, label: d.label, group: "Custom fields" as const, money: d.type === "currency" }))
     .sort((a, b) => a.label.localeCompare(b.label));
-  return [...JOB, ...columns, ...custom];
+  return [...job, ...columns, ...custom];
 }

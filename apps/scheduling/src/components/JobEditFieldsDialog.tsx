@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCustomFieldStore } from "../store/custom-field-store";
+import { useFieldOptionsStore } from "../store/field-options-store";
 import { grantableFields, type GrantableField } from "./jobs/jobs-grantable-fields";
 
 /**
@@ -24,11 +25,18 @@ export default function JobEditFieldsDialog({
   const defs = useCustomFieldStore((s) => s.defs);
   const loadDefs = useCustomFieldStore((s) => s.load);
   const defsLoaded = useCustomFieldStore((s) => s.loaded);
+  // Built-in columns renamed with "Edit field…" show under their new names.
+  const overrides = useFieldOptionsStore((s) => s.overrides);
+  const loadOverrides = useFieldOptionsStore((s) => s.load);
   useEffect(() => {
     void loadDefs();
-  }, [loadDefs]);
+    void loadOverrides();
+  }, [loadDefs, loadOverrides]);
 
-  const fields = useMemo(() => grantableFields(defs).filter((f) => !f.money || canSeeMoney), [defs, canSeeMoney]);
+  const fields = useMemo(() => {
+    const renamed = Object.fromEntries(Object.entries(overrides).flatMap(([k, o]) => (o.label ? [[k, o.label]] : [])));
+    return grantableFields(defs, renamed).filter((f) => !f.money || canSeeMoney);
+  }, [defs, overrides, canSeeMoney]);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial));
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();

@@ -242,7 +242,22 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 6, 2026, late) — Job flow (editable step + status order).**
+- **📌 RESUME HERE (Oct 7, 2026) — Edit any Jobs field + Tracking in the job
+  panel: DEPLOYED (guide v3.29).**
+  - "Edit field…" (header right-click or ✎ in Fields) on EVERY column: rename
+    for everyone (`FieldOptionOverride.label`, stored with the option lists in
+    crfdf_jobsview `options:<key>`; `builtinColumn` applies it in `fieldsByKey`,
+    so grid / panels / job panel / Settings → Users grants follow). Single ↔
+    Multi Select for plain tracking choices (`.multi`, `canToggleMulti` — not
+    status / holdReason); multi saves "A, B" text (`trackValue`, `splitMulti`).
+  - Custom fields change type within `compatibleTypes` groups; values are never
+    rewritten — `choiceList` reads either Single/Multi shape.
+  - Job panel: `TrackingFieldsSection` edits every track field in place (grant-
+    aware). `.opt-picker` z-index 80 → 400 (was hidden behind slide-overs).
+  - Expeditor / Date to Admin were already grid-editable; the panel was the gap.
+  - Not possible by design: changing a built-in column's base type (e.g. date →
+    pick-list) — each is a fixed Dataverse column.
+- **(Oct 6, 2026, late) — Job flow (editable step + status order).**
   `services/job-flow.ts` (pure, 20 tests) + `store/job-flow-store.ts` +
   `components/JobFlowEditor.tsx`. Decisions (Alex, Oct 6): statuses are their
   own STAGES (step + status; a step can have several, e.g. Vinyl Cut → Vinyl

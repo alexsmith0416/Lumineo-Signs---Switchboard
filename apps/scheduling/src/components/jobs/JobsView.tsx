@@ -18,7 +18,9 @@ import { useCurrentUser } from "../../services/current-user";
 import { cleanPrefs, useJobsViewsStore } from "../../store/jobs-views-store";
 import { useSketchStore } from "../../store/sketch-store";
 import { useFieldOptionsStore } from "../../store/field-options-store";
-import { builtinOptions, builtinStyle, customStyle, isChoiceColumn } from "./field-options";
+import {
+  builtinColumn, builtinEditor, builtinIsMulti, builtinOptions, builtinStyle, customStyle, isChoiceColumn, splitMulti,
+} from "./field-options";
 import FieldOptionsDialog from "./FieldOptionsDialog";
 import { canEditJobField, hasAnyJobEdits, type JobEditAccess } from "../../services/job-edit-access";
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
@@ -154,12 +156,14 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
     write(WIDTHS_KEY, next);
   };
 
-  // Built-in columns + custom fields, by key.
+  // Built-in columns (with their edited names / Single-Multi) + custom fields, by key.
   const fieldsByKey = useMemo(() => {
-    const m = new Map<string, JobFieldDef>(Object.entries(JOB_FIELDS));
+    const m = new Map<string, JobFieldDef>(
+      Object.entries(JOB_FIELDS).map(([k, c]) => [k, builtinColumn(c, optionOverrides[k])]),
+    );
     for (const d of customDefs) m.set(d.key, customColumn(d));
     return m;
-  }, [customDefs]);
+  }, [customDefs, optionOverrides]);
   const cols = useMemo(
     () => view.cols.map((k) => fieldsByKey.get(k)).filter((d): d is JobFieldDef => !!d && (!d.money || canSeeMoney)),
     [view, canSeeMoney, fieldsByKey],
@@ -177,9 +181,9 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
       editorFor: (col: JobFieldDef) => {
         if (!canEditJobField(edit, col.key)) return null;
         if (col.custom) return col.custom;
-        const f = BUILTIN_EDITS[col.key]?.field;
-        // A choice column's dropdown lists the options in their edited order.
-        return f && f.opts ? { ...f, opts: builtinOptions(col.key, optionOverrides[col.key]) } : f ?? null;
+        // A choice column's dropdown lists the options in their edited order,
+        // as Single or Multi Select per "Edit field…".
+        return builtinEditor(col.key, optionOverrides[col.key]);
       },
       styleOf: (col: JobFieldDef, v: string) =>
         col.custom ? customStyle(col.custom, v) : builtinStyle(col.key, v, optionOverrides[col.key]),
@@ -187,9 +191,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
         if (col.custom) return tracksByJob.get(row.jobNo)?.customValues?.[col.key];
         const v = (row as unknown as Record<string, unknown>)[col.key];
         // A built-in multi-choice column ("VB, NH") edits as a list.
-        return BUILTIN_EDITS[col.key]?.field.type === "multiselect"
-          ? String(v ?? "").split(",").map((x) => x.trim()).filter(Boolean)
-          : v;
+        return builtinIsMulti(col.key, optionOverrides[col.key]) ? splitMulti(v) : v;
       },
       onSave: (row: JobRow, col: JobFieldDef, value: unknown) => {
         if (col.custom) return void setCustomValue(row.jobNo, col.key, value);
@@ -200,7 +202,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
         } else if (target.kind === "schedule") {
           void updateSchedule(row.jobNo, { [target.schedKey]: localDate(value) });
         } else {
-          void updateTrack(row.jobNo, { [target.trackKey]: trackValue(target, value) });
+          void updateTrack(row.jobNo, { [target.trackKey]: trackValue(builtinEditor(col.key, optionOverrides[col.key]) ?? target.field, value) });
         }
       },
     }),
@@ -299,7 +301,12 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
                 <FieldsPanel fields={allFields} cols={view.cols}
                   onChange={(next) => setLayout(setViewCols(layout, view.id, next))} onClose={() => setPanel(null)}
                   onAddField={canEdit ? () => { setPanel(null); setAddingField(true); } : undefined}
-                  onEditField={canEdit ? (key) => { setPanel(null); setEditingField(key); } : undefined} />
+                  onEditField={canEdit ? (key) => {
+                    setPanel(null);
+                    const c = fieldsByKey.get(key);
+                    if (c?.custom) setEditingField(key);
+                    else if (c) setEditingOptions({ field: key, label: c.label });
+                  } : undefined} />
               )}
               {panel === "filter" && p === "filter" && (
                 <FilterPanel fields={allFields} filters={prefs.filters} rows={inView}
@@ -352,7 +359,8 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} autoWidths={autoWidths}
           fieldsByKey={fieldsByKey} editing={gridEditing} orderOf={orderOf}
-          canEditField={(c) => canEdit && isChoiceColumn(c)}
+          // Every column's name can be edited; choice columns also their options.
+          canEditField={() => canEdit}
           onEditField={(c) => (c.custom ? setEditingField(c.key) : setEditingOptions({ field: c.key, label: c.label }))}
           collapsed={prefs.collapsed ?? []} onCollapsedChange={(collapsed) => setPrefs({ collapsed })} />
       </section>
@@ -368,7 +376,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
           field={editingOptions.field}
           label={editingOptions.label}
           // Columns with no fixed list (Sales, Region…) start from the values in use.
-          seed={[...new Set(rows.map((r) => String((r as unknown as Record<string, unknown>)[editingOptions.field] ?? "")).filter(Boolean))].sort()}
+          seed={[...new Set(rows.flatMap((r) => splitMulti((r as unknown as Record<string, unknown>)[editingOptions.field])))].sort()}
           onClose={() => setEditingOptions(null)}
         />
       )}

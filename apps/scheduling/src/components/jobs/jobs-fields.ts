@@ -20,6 +20,8 @@ export interface JobFieldDef {
   money?: boolean;
   /** Set on custom fields. */
   custom?: CustomFieldDef;
+  /** A choice column that holds several values ("VB, NH") — one pill each. */
+  multi?: boolean;
 }
 
 /** A custom field as a Jobs column. */
@@ -33,7 +35,10 @@ export function customColumn(def: CustomFieldDef): JobFieldDef {
           ? "date"
           : def.type;
   // A Currency field is a $ figure — hidden from users without $ access, like Value.
-  return { key: def.key, label: def.label, type, width: def.width, custom: def, money: def.type === "currency" };
+  return {
+    key: def.key, label: def.label, type, width: def.width, custom: def, money: def.type === "currency",
+    multi: def.type === "multiselect",
+  };
 }
 
 const F = (key: JobFieldDef["key"], label: string, type: JobFieldType, width: number, money = false): JobFieldDef => ({
@@ -47,7 +52,7 @@ export const JOB_FIELDS: Record<string, JobFieldDef> = Object.fromEntries(
     F("stepper", "Stepper", "stepper", 190),
     F("sketch", "Sketch", "sketch", 90),
     F("description", "Description", "multiline", 240),
-    F("sales", "Sales", "badge", 80),
+    { ...F("sales", "Sales", "badge", 80), multi: true },
     F("location", "Location", "text", 120),
     F("region", "Region", "badge", 70),
     F("priority", "Priority", "badge", 95),

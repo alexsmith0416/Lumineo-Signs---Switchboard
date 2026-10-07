@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  compatibleTypes,
   contrastText,
   DEFAULT_WIDTH,
   describeFormula,
@@ -131,7 +132,11 @@ export function AddFieldsDialog({ onAdded, onClose }: { onAdded: (keys: string[]
   );
 }
 
-/** Edit a custom field: name, options + colours, formula; or delete it. The type is fixed. */
+/**
+ * Edit a custom field: name, type (within its group — Single ↔ Multi Select,
+ * the text types, Number ↔ Currency; values are kept as they are), options +
+ * colours, formula; or delete it.
+ */
 export function EditFieldDialog({ fieldKey, onClose }: { fieldKey: string; onClose: () => void }) {
   const defs = useCustomFieldStore((s) => s.defs);
   const updateField = useCustomFieldStore((s) => s.updateField);
@@ -141,13 +146,14 @@ export function EditFieldDialog({ fieldKey, onClose }: { fieldKey: string; onClo
   const [confirmDelete, setConfirmDelete] = useState(false);
   if (!def || !draft) return null;
 
-  const isSelect = def.type === "select" || def.type === "multiselect";
+  const isSelect = draft.type === "select" || draft.type === "multiselect";
+  const types = compatibleTypes(def.type);
   const save = () => {
     const opts = draft.opts ? [...new Set(draft.opts.map((o) => o.trim()).filter(Boolean))] : undefined;
     const optColors = opts && draft.optColors
       ? Object.fromEntries(Object.entries(draft.optColors).filter(([o]) => opts.includes(o)))
       : draft.optColors;
-    updateField(def.key, { label: draft.label.trim() || def.label, opts, optColors, formula: draft.formula });
+    updateField(def.key, { label: draft.label.trim() || def.label, type: draft.type, opts, optColors, formula: draft.formula });
     onClose();
   };
 
@@ -155,11 +161,32 @@ export function EditFieldDialog({ fieldKey, onClose }: { fieldKey: string; onClo
     <div className="slide-over" onClick={onClose}>
       <div className="slide-over__panel cf-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="section-title">
-          Edit field <span className="cf-dialog__type">{iconOf(def.type)} {labelOf(def.type)}</span>
+          Edit field <span className="cf-dialog__type">{iconOf(draft.type)} {labelOf(draft.type)}</span>
         </div>
         <div className="slide-over__body cf-dialog__body">
           <div className="cf-dialog__label">Field name</div>
           <input className="form-field__input" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+          {types.length > 1 && (
+            <>
+              <div className="cf-dialog__label">Field type</div>
+              <div className="cf-dialog__types">
+                {types.map((t) => (
+                  <button key={t} type="button" className={`cf-dialog__type-btn${draft.type === t ? " cf-dialog__type-btn--on" : ""}`}
+                    onClick={() => setDraft({ ...draft, type: t })}>
+                    <span className="cf-dialog__type-icon">{iconOf(t)}</span>
+                    {labelOf(t)}
+                  </button>
+                ))}
+              </div>
+              {draft.type !== def.type && (
+                <div className="cf-dialog__hint">
+                  {draft.type === "select" && def.type === "multiselect"
+                    ? "Each job picks one option. Jobs that already have several keep them until someone changes the cell."
+                    : "Every job keeps its value; only how it's shown and edited changes."}
+                </div>
+              )}
+            </>
+          )}
           {isSelect && <OptionsEditor def={draft} colors onChange={(p) => setDraft({ ...draft, ...p })} />}
           {def.type === "formula-date" && (
             <FormulaEditor

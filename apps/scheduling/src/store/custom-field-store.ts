@@ -20,7 +20,8 @@ interface CustomFieldState {
   load: (force?: boolean) => Promise<void>;
   /** Add fields at the end; returns their keys. */
   addFields: (fields: Array<Omit<CustomFieldDef, "key">>) => string[];
-  updateField: (key: string, patch: Partial<Omit<CustomFieldDef, "key" | "type">>) => void;
+  /** `type` only within compatibleTypes (values aren't rewritten). */
+  updateField: (key: string, patch: Partial<Omit<CustomFieldDef, "key">>) => void;
   deleteField: (key: string) => void;
 }
 

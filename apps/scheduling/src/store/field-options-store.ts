@@ -3,8 +3,9 @@ import { persistOrReport } from "./write-status-store";
 import type { FieldOptionOverride } from "../components/jobs/field-options";
 
 /**
- * Edited option lists / colours for the Jobs list's built-in choice columns
- * (Current Status, Priority, Hold, Vendor, …), SHARED by everyone. Stored in the
+ * "Edit field…" edits to the Jobs list's built-in columns — names, and for
+ * choice columns (Current Status, Priority, Hold, Vendor, …) option lists,
+ * colours and Single / Multi Select — SHARED by everyone. Stored in the
  * Jobs views table (crfdf_jobsview) under the key "options:<column key>".
  * Columns nobody has edited use their defaults (components/jobs/field-options.ts).
  */
@@ -37,6 +38,8 @@ export const useFieldOptionsStore = create<FieldOptionsState>((set, get) => ({
         overrides[k.slice("options:".length)] = {
           ...(Array.isArray(o.opts) ? { opts: o.opts.filter((x) => typeof x === "string") } : {}),
           ...(o.colors && typeof o.colors === "object" ? { colors: o.colors } : {}),
+          ...(typeof o.label === "string" && o.label.trim() ? { label: o.label.trim() } : {}),
+          ...(typeof o.multi === "boolean" ? { multi: o.multi } : {}),
         };
       }
       set({ overrides, loaded: true });
