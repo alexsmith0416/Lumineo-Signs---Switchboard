@@ -302,11 +302,18 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     records it in crfdf_jobsview key `appLatestBuild` when newer; a session
     whose build is older skips ticks (console warning) — `services/app-build.ts`
     (pure, tested). Old tabs from BEFORE this deploy don't have the check.
-  - **Next:** Security roles:
-    view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
-    `crfdf_jobdesc`; Admin/Ops/Dev need Write on `crfdf_taskcompletion` (their
-    sessions apply ticks). BC entry no 1 never reached Dataverse (only entry 2)
-    — check BC if it matters.
+  - ✅ **Security roles checked (Oct 6): nothing to grant.**
+    `scripts/grant-newtable-privileges.ps1` (dry run default, `-Apply` adds)
+    mirrors each role's `crfdf_jobtrack` access onto `crfdf_jobpo` /
+    `crfdf_jobdesc` / `crfdf_taskcompletion` (Read) + `crfdf_taskcompletion`
+    (Write). Only 5 roles can read jobtrack — all built-in managed ones
+    (System Administrator, System Customizer, Service Reader/Writer, Support
+    User) — and every one already has matching access on the new tables. No
+    custom role grants the app's tables, so only System Administrators (13 users
+    incl. Alex + Bill Weesner, the rest mostly `#` service accounts) can use it. ⚠️ Before a non-admin uses the app, they
+    need a custom role covering ALL crfdf_ tables, not just these three — re-run
+    the script after creating it. BC entry no 1 never reached Dataverse (only
+    entry 2) — check BC if it matters.
 - **(Oct 4, 2026) — Job panel by role, phase 1 DEPLOYED.**
   Clicking a card: below the stepper, `components/JobInfoSections.tsx` shows the
   ship-to address (Google Maps / Copy; `services/ship-to.ts`), install crews get
