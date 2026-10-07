@@ -18,5 +18,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    // The tour's screenshots are embedded as data URLs: the Power Apps host
+    // doesn't serve loose image files next to the app (src/assets/tour).
+    assetsInlineLimit: (file) => (/[\\/]assets[\\/]tour[\\/]/.test(file) ? true : undefined),
   },
 });

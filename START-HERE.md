@@ -197,8 +197,11 @@ in the same change, next to the steps for the screen it lives on:
    the step's `target` at it (`view` = the screen to open first). Use
    `placement` so the card doesn't cover what it describes.
 2. For something that lives outside the app (Business Central), use an
-   `image` step: put a screenshot in **`public/tour/`** (crop away empty space)
-   and set `image: { src: "./tour/<file>.png", alt: "…" }`.
+   `image` step: put a screenshot in **`src/assets/tour/`** (crop away empty
+   space), add it to `TOUR_IMAGES` in `src/assets/tour/index.ts` (embedded as a data
+   URL by `assetsInlineLimit` in vite.config.ts — the Power Apps host does NOT
+   serve loose image files; `?inline` doesn't work for images in this Vite)
+   and set `image: { key: "<name>", alt: "…" }`.
 3. Keep the body to 2–3 sentences in the guide's plain voice, then check it:
    `npm run dev` → Help → Launch demo → Full tour → step through to it.
 4. If the step points at something the demo can't safely edit (the Jobs list

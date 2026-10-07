@@ -9,7 +9,7 @@
  *
  * Targets are matched by CSS selector (mostly `data-tour="…"` attributes added
  * to the sidebar, Add-Job button, toolbar, and job cards). A step can instead
- * show a screenshot (`image`, from public/tour/) — used for the Business
+ * show a screenshot (`image`, from src/assets/tour/) — used for the Business
  * Central punch screens, which live outside the app.
  *
  * Keep this in step with the app: a significant new feature gets a step in the
@@ -18,6 +18,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDemoStore, type TutorialTrack } from "../store/demo-store";
+import type { TourImageKey } from "../assets/tour";
 
 interface TourStep {
   /** Navigate to this app view before showing the step. */
@@ -27,8 +28,8 @@ interface TourStep {
   title: string;
   body: string;
   placement?: "top" | "bottom" | "left" | "right" | "center";
-  /** A screenshot shown in a wider, centered card (path under public/). */
-  image?: { src: string; alt: string };
+  /** A screenshot shown in a wider, centered card (a key in src/assets/tour/index.ts). */
+  image?: { key: TourImageKey; alt: string };
 }
 
 const SCHEDULING_STEPS: TourStep[] = [
@@ -137,14 +138,14 @@ const FULL_STEPS: TourStep[] = [
     title: "Task complete — in Business Central",
     body: "On BC's Clock In Project page, Currently on shows the job you're punched into. Turn on Complete current task before you punch into the next job if you finished it (it's greyed out when you aren't punched in). Clock Out Project has a Task complete toggle for lunch and the end of the day.",
     placement: "center",
-    image: { src: "./tour/bc-clock-in-project.png", alt: "Business Central Clock In Project page with the Currently on field and the Complete current task toggle" },
+    image: { key: "clockInProject", alt: "Business Central Clock In Project page with the Currently on field and the Complete current task toggle" },
   },
   {
     view: "jobs",
     title: "On several projects at once",
     body: "Clock In / Clock Out Multiple Projects/Nestings list your open punches under Mark tasks complete. Tick each project you finished, then Submit. Each one is completed on its own job within a few minutes.",
     placement: "center",
-    image: { src: "./tour/bc-clock-in-multiple.png", alt: "Business Central Clock In Multiple Projects/Nestings page with the Mark tasks complete list" },
+    image: { key: "clockInMultiple", alt: "Business Central Clock In Multiple Projects/Nestings page with the Mark tasks complete list" },
   },
   {
     view: "my-schedule",
@@ -240,6 +241,19 @@ export default function DemoTutorial({ onNavigate }: Props) {
   const step = phase === "running" ? steps[stepIndex] : undefined;
 
   const [rect, setRect] = useState<DOMRect | null>(null);
+
+  // Screenshot steps: the images are embedded in their own chunk, loaded on first use.
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const imageKey = step?.image?.key;
+  useEffect(() => {
+    setImageSrc(null);
+    if (!imageKey) return;
+    let alive = true;
+    void import("../assets/tour").then((m) => alive && setImageSrc(m.TOUR_IMAGES[imageKey]));
+    return () => {
+      alive = false;
+    };
+  }, [imageKey]);
 
   // Navigate to the step's screen first (idempotent).
   useEffect(() => {
@@ -350,7 +364,12 @@ export default function DemoTutorial({ onNavigate }: Props) {
         </div>
         <h3 className="tour-pop__title">{step.title}</h3>
         <p className="tour-pop__body">{step.body}</p>
-        {step.image && <img className="tour-pop__img" src={step.image.src} alt={step.image.alt} />}
+        {step.image &&
+          (imageSrc ? (
+            <img className="tour-pop__img" src={imageSrc} alt={step.image.alt} />
+          ) : (
+            <div className="tour-pop__img tour-pop__img--loading">Loading screenshot…</div>
+          ))}
         <div className="tour-pop__nav">
           <button type="button" className="tour-pop__skip" onClick={endTutorial}>
             Skip tour
