@@ -109,12 +109,12 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
     // job push would be pushing a state the board doesn't actually hold.
     if (!allStepKeys?.length) return;
     const after = new Set(Object.keys(get().byJob[jobNo] ?? {}));
-    const [{ allStepsComplete, buildJobPush }, m] = await Promise.all([
+    const [{ jobCompleteForBc, buildJobPush }, m] = await Promise.all([
       import("../services/bc-planning-sync"),
       import("../services/dataverse-live"),
     ]);
-    const wasComplete = allStepsComplete(allStepKeys, before);
-    const isComplete = allStepsComplete(allStepKeys, after);
+    const wasComplete = jobCompleteForBc(allStepKeys, before);
+    const isComplete = jobCompleteForBc(allStepKeys, after);
     if (wasComplete === isComplete) return;
     void m.enqueueBcPush(
       buildJobPush({ jobNo, complete: isComplete, completedBy: by, completedDate: new Date() }),
@@ -139,11 +139,11 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
     if (opts.pushBc === false) return;
     void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by));
     const after = new Set(Object.keys(get().byJob[jobNo] ?? {}));
-    const [{ allStepsComplete, buildJobPush }, m] = await Promise.all([
+    const [{ jobCompleteForBc, buildJobPush }, m] = await Promise.all([
       import("../services/bc-planning-sync"),
       import("../services/dataverse-live"),
     ]);
-    if (!allStepsComplete(allStepKeys, before) && allStepsComplete(allStepKeys, after)) {
+    if (!jobCompleteForBc(allStepKeys, before) && jobCompleteForBc(allStepKeys, after)) {
       void m.enqueueBcPush(buildJobPush({ jobNo, complete: true, completedBy: by, completedDate: new Date() }));
     }
   },

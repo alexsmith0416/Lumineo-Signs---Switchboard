@@ -23,6 +23,7 @@ import {
 } from "../services/gameplan";
 import { cardMoneyValue } from "./JobCard";
 import { stepOrderFor, useJobFlowStore } from "../store/job-flow-store";
+import { isServiceJob, useServiceJobsStore } from "../store/service-jobs-store";
 
 /**
  * Monthly Gameplanning — install billing for the current billing month.
@@ -125,6 +126,12 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
   // ── The pools: Jobs list rows + steppers + BC install planning lines.
   const rows = useJobRows();
   const stepInfo = useJobTrackingStore((s) => s.stepInfo);
+  // Service-only jobs have no lifecycle stages (store/service-jobs-store).
+  const orderTypes = useServiceJobsStore((s) => s.orderTypes);
+  const loadOrderTypes = useServiceJobsStore((s) => s.load);
+  useEffect(() => {
+    void loadOrderTypes();
+  }, [loadOrderTypes]);
   const completions = useJobDeptCompletionStore((s) => s.byJob);
   const loadCompletions = useJobDeptCompletionStore((s) => s.load);
   const overrides = useJobDeptOverrideStore((s) => s.byJob);
@@ -166,6 +173,7 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
           info.hasInstall,
           overrides[jobNo] ?? {},
           stepOrderFor(jobNo),
+          isServiceJob(jobNo),
         );
       },
       installLinesFor: (jobNo) => (planLines.get(jobNo) ?? []).filter((l) => l.isInstall),
@@ -173,7 +181,7 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
       today: new Date(),
     });
     // flowCompany: a changed company flow re-orders every job's steps.
-  }, [rows, stepInfo, completions, overrides, planLines, scheduled, booked, flowCompany]);
+  }, [rows, stepInfo, completions, overrides, planLines, scheduled, booked, flowCompany, orderTypes]);
 
   const runAutofill = () => {
     setProposal(

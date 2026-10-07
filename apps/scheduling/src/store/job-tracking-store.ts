@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { currentStatus, emptyJobTrack, type BcJobSummary, type JobTrack } from "../services/job-tracking";
 import { holdTransition, stepsToComplete } from "../services/job-status";
 import { buildDepartmentSteps } from "../services/production-steps";
+import { buildServiceSteps, isServiceKey } from "../services/service-steps";
 import { persistOrReport } from "./write-status-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
@@ -148,9 +149,12 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     );
     const saving = saveTrack(jobNo, { statusOverride: status, statusAuto, ...hold }, "Change job status");
 
-    // Stepper automation: complete what the status implies.
+    // Stepper automation: complete what the status implies — through the job's
+    // flow (lifecycle stages before it; departments too once it's past production).
     const steps = await jobSteps(jobNo);
-    const keys = stepsToComplete(status, steps);
+    const { jobFlowConfigFor } = await import("./job-flow-store");
+    const production = steps.filter((s) => !isServiceKey(s.key)).map((s) => s.key);
+    const keys = stepsToComplete(status, steps, jobFlowConfigFor(jobNo, production));
     if (keys.length) {
       await useJobDeptCompletionStore.getState().completeMany(jobNo, keys, by, steps.map((s) => s.key));
     }
@@ -192,7 +196,8 @@ async function saveTrack(jobNo: string, patch: TrackPatch, label: string): Promi
   });
 }
 
-/** A job's current stepper steps (live: its BC planning lines + completions + overrides). */
+/** A job's current stepper steps (live: its BC planning lines + completions +
+ *  overrides) — production, then its service steps when it's a service job. */
 async function jobSteps(jobNo: string) {
   if (!LIVE) return [];
   const dv = await import("../services/dataverse-live");
@@ -200,14 +205,15 @@ async function jobSteps(jobNo: string) {
   const completions = useJobDeptCompletionStore.getState();
   const overrides = useJobDeptOverrideStore.getState();
   const { useJobFlowStore, stepOrderFor } = await import("./job-flow-store");
-  await Promise.all([completions.load(), overrides.load(), useJobFlowStore.getState().load()]);
-  return buildDepartmentSteps(
-    info.production,
-    new Set(Object.keys(useJobDeptCompletionStore.getState().byJob[jobNo] ?? {})),
-    info.hasInstall,
-    useJobDeptOverrideStore.getState().byJob[jobNo] ?? {},
-    stepOrderFor(jobNo),
-  );
+  const { useServiceJobsStore, isServiceJob } = await import("./service-jobs-store");
+  await Promise.all([completions.load(), overrides.load(), useJobFlowStore.getState().load(), useServiceJobsStore.getState().load()]);
+  const completed = new Set(Object.keys(useJobDeptCompletionStore.getState().byJob[jobNo] ?? {}));
+  const ov = useJobDeptOverrideStore.getState().byJob[jobNo] ?? {};
+  const service = isServiceJob(jobNo);
+  return [
+    ...buildDepartmentSteps(info.production, completed, info.hasInstall, ov, stepOrderFor(jobNo), service),
+    ...(service ? buildServiceSteps(completed, ov) : []),
+  ];
 }
 
 /** Load the jobs if needed and wait until they're in (also when a load is

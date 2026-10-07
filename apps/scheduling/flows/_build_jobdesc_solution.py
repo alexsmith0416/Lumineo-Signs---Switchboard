@@ -24,7 +24,7 @@ import zipfile
 
 FLOWS   = os.path.dirname(os.path.abspath(__file__))
 STAGE   = r"C:\Users\Alex\Downloads\bcjobdesc_build"
-OUT_ZIP = r"C:\Users\Alex\Downloads\BCJobDescriptions_1_0_0_1.zip"
+OUT_ZIP = r"C:\Users\Alex\Downloads\BCJobDescriptions_1_0_0_2.zip"
 
 FLOW_NAME    = "BCSync_JobDescriptions"
 FLOW_GUID    = "d8b49661-ae47-4d70-ab6a-b585509d97ba"
@@ -104,7 +104,7 @@ solution = f'''<?xml version="1.0" encoding="utf-8"?>
       <LocalizedName description="BC Job Descriptions" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.1</Version>
+    <Version>1.0.0.2</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>LumineoSigns</UniqueName>

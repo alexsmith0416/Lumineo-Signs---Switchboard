@@ -12,6 +12,15 @@
 //       ?$filter=status eq 'Open'&$select=jobNo,fieldDescription,...
 // lastModified (the Job's SystemModifiedAt) moves when a description is saved,
 // so a sync can ask only for what changed.
+//
+// v1.0.0.15 adds orderType — the Job Card's "Order Type" (SERVICE, SIGNCONT,
+// MNTCCONT, SALES…; the app gives SERVICE / SIGNCONT / MNTCCONT jobs the
+// Service stepper). It isn't in any BC API and its field number isn't in the
+// Infotech symbols we have, so the page finds the Job field CAPTIONED "Order
+// Type" (falling back to Sign365's 95294 "Service Order") and says which one
+// it read in orderTypeField. When that's blank (it is in UAT — v1.0.0.16), the
+// code comes from Description 2, which BC fills with the order type's NAME:
+// the Service-type Resource with that Name (e.g. "Service Order" → SERVICE).
 page 58403 "Lumineo Job Descriptions API"
 {
     Caption = 'Lumineo Job Descriptions';
@@ -43,6 +52,9 @@ page 58403 "Lumineo Job Descriptions API"
                 field(fieldDescription; FieldDescription) { }
                 field(productionDescription; ProductionDescription) { }
                 field(extendedDescription; ExtendedDescription) { }
+                field(orderType; OrderType) { }
+                field(orderTypeField; OrderTypeFieldNo) { }
+                field(description2; Rec."Description 2") { }
             }
         }
     }
@@ -51,6 +63,13 @@ page 58403 "Lumineo Job Descriptions API"
         FieldDescription: Text;
         ProductionDescription: Text;
         ExtendedDescription: Text;
+        OrderType: Text;
+        OrderTypeFieldNo: Integer;
+
+    trigger OnOpenPage()
+    begin
+        OrderTypeFieldNo := FindOrderTypeField();
+    end;
 
     trigger OnAfterGetRecord()
     var
@@ -60,6 +79,50 @@ page 58403 "Lumineo Job Descriptions API"
         FieldDescription := BlobText(RecRef, 60215);
         ProductionDescription := BlobText(RecRef, 60214);
         ExtendedDescription := BlobText(RecRef, 60202);
+        OrderType := '';
+        if OrderTypeFieldNo <> 0 then
+            OrderType := Format(RecRef.Field(OrderTypeFieldNo).Value);
+        // v1.0.0.16: UAT has no Job field captioned "Order Type" (the caption is
+        // the page's), and 95294 is blank on every job. But BC copies the Order
+        // Type resource's NAME into Description 2 ("Service Order" on 136 of 707
+        // open jobs, Oct 7) — so the code is the Service-type resource with that
+        // name (SERVICE, SIGNCONT, MNTCCONT, SALES…).
+        if OrderType = '' then
+            OrderType := OrderTypeFromDescription2(Rec."Description 2");
+    end;
+
+    // The resource whose Name is this Description 2 ("" when none). The order
+    // types are Resources of Infotech's "Service" type — an enum value from
+    // their extension we don't depend on — so the match is on the (unique)
+    // name alone: "Service Order" → SERVICE.
+    local procedure OrderTypeFromDescription2(Desc2: Text[100]): Code[20]
+    var
+        Res: Record Resource;
+    begin
+        if Desc2 = '' then
+            exit('');
+        Res.SetRange(Name, Desc2);
+        if Res.FindFirst() then
+            exit(Res."No.");
+        exit('');
+    end;
+
+    // The Job field captioned "Order Type", else Sign365's "Service Order" (95294), else 0.
+    local procedure FindOrderTypeField(): Integer
+    var
+        RecRef: RecordRef;
+        FRef: FieldRef;
+        i: Integer;
+    begin
+        RecRef.Open(Database::Job);
+        for i := 1 to RecRef.FieldCount do begin
+            FRef := RecRef.FieldIndex(i);
+            if (FRef.Caption = 'Order Type') and (FRef.Class = FieldClass::Normal) then
+                exit(FRef.Number);
+        end;
+        if RecRef.FieldExist(95294) then
+            exit(95294);
+        exit(0);
     end;
 
     // BC writes a Blob in its default MSDos encoding unless told otherwise —

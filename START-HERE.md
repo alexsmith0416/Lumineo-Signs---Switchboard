@@ -242,7 +242,53 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 7, 2026) — Edit any Jobs field + Tracking in the job
+- **📌 RESUME HERE (Oct 7, 2026, later) — Lifecycle + Service steppers: BUILT,
+  tested, NOT deployed (guide v3.30).** Decisions (Alex, Oct 7): one production
+  stepper with the lifecycle; Service jobs from BC's Job Card **Order Type**
+  (SERVICE, SIGNCONT, MNTCCONT all get the Service stepper); BC write-back only
+  for stages with a known BC step; backfill app-only.
+  - Production stepper = `NO` New Order → `UM` Upcoming Mfg → `PU` Purchasing →
+    depts → `RI` Ready for Install (install jobs) → `I` → `CP` Complete-Need
+    Paperwork → `CA` Complete to Admin → `CI` Complete Invoiced
+    (`production-steps.ts`; lifecycle drawn as outlined squares / tiny markers).
+    Service = `SU` `SE` `SA` `SI` (`services/service-steps.ts`); service-only
+    jobs (service + no dept) get no lifecycle. Same completion / override
+    tables. `store/job-steps.ts jobStepsFor` = production + service, used by BC
+    push / Sync to BC / backfill; `store/service-jobs-store.ts isServiceJob`.
+  - BC: NO→New Order This Week, UM→Upcoming Manufacturing, PU→Job Purchasing,
+    RI→Product Ready for Install Scheduling, CP→Complete-Need Paperwork,
+    SE→Service. CA / CI / SU app-only (names unconfirmed; two "Survey" steps).
+    Main "Production" step = departments only. 🔴 **BC job "complete" now fires
+    at Complete to Admin** (`jobCompleteForBc`: every CA/SA on the steppers).
+  - Status picks go through the flow (`stepsToComplete`): lifecycle stages
+    before the picked stage complete; departments only when the stage is past
+    production. Default flow statuses: NO New Order this week, UM Upcoming Mfg.,
+    PU Purchasing (new status), RI Ready for Install (new), CP + CA
+    Complete-need paperwork, CI Complete to Admin, done = Complete Invoiced (a
+    saved flow with the old done status is migrated in `companyFlow`;
+    `effectiveFlow` now places unnamed steps by the default order). Complete
+    Invoiced is never auto-moved. A punch also ticks open lifecycle stages
+    before its department.
+  - Order Type pipeline — ✅ LIVE in UAT Oct 7: BC ext **v1.0.0.16** (page
+    58403 `orderType`: a field captioned "Order Type" / 95294 are both empty in
+    UAT, so it's the Resource whose Name = the job's **Description 2** —
+    "Service Order" → SERVICE) → `crfdf_jobdesc.crfdf_ordertype` (column
+    created) → **BCJobDescriptions 1.0.0.2** (imported, ran: 707 rows, 145
+    service jobs — 136 SERVICE, 8 MNTCCONT, 1 SIGNCONT). Test job **J38696**.
+    Probe: `scripts/bc-job-fields-probe.ps1`. Details:
+    `flows/BCSync_JobDescriptions.md`.
+  - **Remaining go-live:** deploy the app, then Settings → Business Central →
+    **Match Steppers** right away (otherwise every job shows New Order active
+    and a stepper click would push New Order This Week Started).
+  - 🔧 **BCSync_JobPlanningLines fixed Oct 7** (`scripts/patch-planninglines-flow-upsert.ps1`;
+    backup `flows/planninglines-clientdata-backup-20261007-013616.json`). It had
+    "failed" every night since ≥ Sep 23 and was off since Oct 3: Update a row
+    then ALWAYS Add a new row → ~7,400 duplicate-key failures a night (data was
+    written anyway; frozen at Oct 2 once off). Now a Line_Exists condition
+    (update or add) + 10 jobs at a time. Turned on + catch-up run Oct 7.
+    `scripts/diagnose-flow.ps1 -FlowName <name> [-Table <logical>]` reads any
+    flow's runs + failing actions (read-only; `-TokenCache` reuses a sign-in).
+- **(Oct 7, 2026) — Edit any Jobs field + Tracking in the job
   panel: DEPLOYED (guide v3.29).**
   - "Edit field…" (header right-click or ✎ in Fields) on EVERY column: rename
     for everyone (`FieldOptionOverride.label`, stored with the option lists in

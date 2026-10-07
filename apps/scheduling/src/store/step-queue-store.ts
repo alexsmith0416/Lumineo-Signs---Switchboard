@@ -10,6 +10,7 @@ import { useJobTrackingStore } from "./job-tracking-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import { stepOrderFor, useJobFlowStore } from "./job-flow-store";
+import { isServiceJob, useServiceJobsStore } from "./service-jobs-store";
 
 /**
  * Data for the Job Queue's BC step groups (services/step-queue.ts): BC planning
@@ -75,9 +76,11 @@ export function useStepQueue(
   const overrides = useJobDeptOverrideStore((s) => s.byJob);
   const loadCompletions = useJobDeptCompletionStore((s) => s.load);
   const loadOverrides = useJobDeptOverrideStore((s) => s.load);
+  const orderTypes = useServiceJobsStore((s) => s.orderTypes);
 
   useEffect(() => {
     if (!open) return;
+    void useServiceJobsStore.getState().load();
     void loadJobs();
     void loadCompletions();
     void loadOverrides();
@@ -103,7 +106,7 @@ export function useStepQueue(
         const info = stepInfo.get(j.jobNo) ?? { production: [], hasInstall: false };
         return [
           j.jobNo,
-          buildDepartmentSteps(info.production, new Set(Object.keys(completions[j.jobNo] ?? {})), info.hasInstall, overrides[j.jobNo] ?? {}, stepOrderFor(j.jobNo)),
+          buildDepartmentSteps(info.production, new Set(Object.keys(completions[j.jobNo] ?? {})), info.hasInstall, overrides[j.jobNo] ?? {}, stepOrderFor(j.jobNo), isServiceJob(j.jobNo)),
         ] as const;
       }),
     );
@@ -131,7 +134,7 @@ export function useStepQueue(
     });
     for (const g of out) for (const it of g.items) stepItemsById.set(it.id, it);
     return out;
-  }, [kind, bcJobs, tracks, stepInfo, completions, overrides, lines, scheduled, departments, boardSchedule]);
+  }, [kind, bcJobs, tracks, stepInfo, completions, overrides, lines, scheduled, departments, boardSchedule, orderTypes]);
 
   return { groups, loading };
 }

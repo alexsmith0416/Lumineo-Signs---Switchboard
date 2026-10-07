@@ -64,7 +64,7 @@
           "runAfter": {},
           "inputs": {
             "method": "GET",
-            "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/jobDescriptions?$filter=@{encodeUriComponent('status eq ''Open''')}&$select=jobNo,lastModified,fieldDescription,productionDescription,extendedDescription",
+            "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/jobDescriptions?$filter=@{encodeUriComponent('status eq ''Open''')}&$select=jobNo,lastModified,fieldDescription,productionDescription,extendedDescription,orderType",
             "headers": {
               "Accept": "application/json"
             },
@@ -84,7 +84,7 @@
           "inputs": {
             "parameters": {
               "entityName": "crfdf_jobdescs",
-              "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified"
+              "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified,crfdf_ordertype"
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -151,7 +151,7 @@
           },
           "inputs": {
             "from": "@body('List_Existing')?['value']",
-            "select": "@concat(trim(coalesce(item()?['crfdf_jobno'], '')), '~', coalesce(item()?['crfdf_bcmodified'], ''))"
+            "select": "@concat(trim(coalesce(item()?['crfdf_jobno'], '')), '~', coalesce(item()?['crfdf_bcmodified'], ''), '~', trim(coalesce(item()?['crfdf_ordertype'], '')))"
           }
         },
         "Existing_Stamp_Text": {
@@ -175,7 +175,7 @@
           },
           "inputs": {
             "from": "@body('Jobs')",
-            "where": "@not(contains(outputs('Existing_Stamp_Text'), concat('^', concat(trim(coalesce(item()?['jobNo'], '')), '~', coalesce(item()?['lastModified'], '')), '^')))"
+            "where": "@not(contains(outputs('Existing_Stamp_Text'), concat('^', concat(trim(coalesce(item()?['jobNo'], '')), '~', coalesce(item()?['lastModified'], ''), '~', trim(coalesce(item()?['orderType'], ''))), '^')))"
           }
         },
         "For_each_changed_job": {
@@ -226,7 +226,8 @@
                       "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
                       "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
                       "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
-                      "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')"
+                      "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
+                      "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
                     },
                     "host": {
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -249,7 +250,8 @@
                         "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
                         "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
                         "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
-                        "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')"
+                        "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
+                        "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
                       },
                       "host": {
                         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",

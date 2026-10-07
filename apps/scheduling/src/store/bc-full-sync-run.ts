@@ -1,7 +1,7 @@
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import type { FullSyncPlan } from "../services/bc-full-sync";
-import { ensureFlowsLoaded, stepOrderFor } from "./job-flow-store";
+import { ensureFlowsLoaded } from "./job-flow-store";
 
 /**
  * Plan a "Sync to BC" for the given (tracked) jobs: their current stepper from
@@ -9,10 +9,10 @@ import { ensureFlowsLoaded, stepOrderFor } from "./job-flow-store";
  * history — then the diff (services/bc-full-sync.ts). Nothing is sent here.
  */
 export async function planBcSync(jobNos: readonly string[]): Promise<FullSyncPlan> {
-  const [dv, sync, { buildDepartmentSteps }] = await Promise.all([
+  const [dv, sync, { jobStepsFor }] = await Promise.all([
     import("../services/dataverse-live"),
     import("../services/bc-full-sync"),
-    import("../services/production-steps"),
+    import("./job-steps"),
   ]);
   await Promise.all([useJobDeptCompletionStore.getState().load(), useJobDeptOverrideStore.getState().load(), ensureFlowsLoaded()]);
   const [stepInfo, snapshot, lastPushes] = await Promise.all([
@@ -27,7 +27,7 @@ export async function planBcSync(jobNos: readonly string[]): Promise<FullSyncPla
       const info = stepInfo.get(jobNo) ?? { production: [], hasInstall: false };
       return [
         jobNo,
-        buildDepartmentSteps(info.production, new Set(Object.keys(completions[jobNo] ?? {})), info.hasInstall, overrides[jobNo] ?? {}, stepOrderFor(jobNo)),
+        jobStepsFor(jobNo, info, new Set(Object.keys(completions[jobNo] ?? {})), overrides[jobNo] ?? {}),
       ] as const;
     }),
   );

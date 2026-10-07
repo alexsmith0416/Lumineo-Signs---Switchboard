@@ -72,15 +72,23 @@ export function jobFlowFor(jobNo: string, stepKeys: readonly string[]): FlowStag
   return effectiveFlow(useJobFlowStore.getState().company, jobOwnStages(jobNo), stepKeys);
 }
 
+/** The job's flow stages + the company's done status — what a status pick
+ *  needs to know which steps it completes (job-status `stepsToComplete`). */
+export function jobFlowConfigFor(jobNo: string, stepKeys: readonly string[]): { stages: FlowStage[]; doneStatus: string } {
+  return { stages: jobFlowFor(jobNo, stepKeys), doneStatus: useJobFlowStore.getState().company.doneStatus };
+}
+
 /** The job's stepper order (its own flow's, else the company's). */
 export function stepOrderFor(jobNo: string): string[] {
   return stepOrder(jobOwnStages(jobNo) ?? useJobFlowStore.getState().company.stages);
 }
 
-/** Wait for the company flow and the jobs' own flows — before anything that
- *  acts on a job's step order (BC pushes, shop-floor ticks, bulk plans). */
+/** Wait for the company flow, the jobs' own flows and the jobs' BC Order Types
+ *  (which give a job its Service stepper) — before anything that acts on a
+ *  job's steps (BC pushes, shop-floor ticks, bulk plans). */
 export async function ensureFlowsLoaded(): Promise<void> {
-  await Promise.all([useJobFlowStore.getState().load(), ensureJobsLoaded()]);
+  const { useServiceJobsStore } = await import("./service-jobs-store");
+  await Promise.all([useJobFlowStore.getState().load(), ensureJobsLoaded(), useServiceJobsStore.getState().load()]);
 }
 
 /** React: the job's stepper order, re-rendering when either flow changes. */

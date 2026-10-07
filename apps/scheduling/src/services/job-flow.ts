@@ -20,7 +20,7 @@
  * follows the first open stage of the whole flow.
  */
 import { ALL_STEP_DEFS } from "./production-steps";
-import { ALL_DONE, DEFAULT_STATUS_RULES, isAutoMovableStatus, type StatusRules } from "./status-rules";
+import { ALL_DONE, DEFAULT_STATUS_RULES, OLD_DONE_STATUS, isAutoMovableStatus, type StatusRules } from "./status-rules";
 
 export interface FlowStage {
   /** Stepper step key (S, R, MF, P, V, A, CR, MC, I). */
@@ -74,15 +74,20 @@ export function parseStages(raw: unknown): FlowStage[] | null {
   return out.length ? out : null;
 }
 
-/** The company flow from its stored config value, else built from the old rules. */
+/** The company flow from its stored config value, else built from the old rules.
+ *  A flow saved before the lifecycle stages (no Complete Invoiced stage, done
+ *  status still the old "Complete-need paperwork") gets the new done status —
+ *  "Complete-need paperwork" is now the Complete-Need Paperwork stage's. */
 export function companyFlow(stored: unknown, rules: StatusRules = DEFAULT_STATUS_RULES): FlowConfig {
   const fallback = flowFromRules(rules);
   if (!stored || typeof stored !== "object") return fallback;
   const stages = parseStages((stored as { stages?: unknown }).stages);
   const done = (stored as { doneStatus?: unknown }).doneStatus;
+  const doneStatus = typeof done === "string" && done.trim() ? done.trim() : fallback.doneStatus;
+  const legacyDone = doneStatus === OLD_DONE_STATUS && !(stages ?? []).some((s) => s.step === "CI");
   return {
     stages: stages ?? fallback.stages,
-    doneStatus: typeof done === "string" && done.trim() ? done.trim() : fallback.doneStatus,
+    doneStatus: legacyDone ? DEFAULT_STATUS_RULES[ALL_DONE]! : doneStatus,
   };
 }
 
@@ -122,10 +127,17 @@ export function effectiveFlow(company: FlowConfig, jobStages: FlowStage[] | null
     if (have.has(k)) continue;
     const stage = company.stages.find((s) => s.step === k) ?? { step: k, status: DEFAULT_STATUS_RULES[k] ?? "" };
     if (!stage.status) continue;
-    // After the last stage of the nearest step that comes before k in the company order.
+    // A step the company flow names: after the last stage of the nearest step
+    // before it in the company order. One it doesn't name (e.g. the lifecycle
+    // stages in a flow saved before they existed): after the nearest step that
+    // precedes it in the DEFAULT order — so New Order lands first and Complete
+    // Invoiced last, not at the end.
+    const before = companyOrder.includes(k)
+      ? (step: string) => rank(step) < rank(k)
+      : (step: string) => defaultOrder.indexOf(step) < defaultOrder.indexOf(k);
     let at = 0;
     for (let i = out.length - 1; i >= 0; i--) {
-      if (rank(out[i]!.step) < rank(k)) {
+      if (before(out[i]!.step)) {
         at = i + 1;
         break;
       }

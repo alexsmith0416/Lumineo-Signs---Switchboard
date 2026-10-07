@@ -24,11 +24,46 @@ export const DEPT_FLOW: ReadonlyArray<{ match: RegExp; key: string; label: strin
 /** The final "Install" step, appended when a job has installation labor. */
 export const INSTALL_STEP = { key: "I", label: "Install" } as const;
 
-/** Every candidate step in flow order (production departments + Install last) —
- *  the pool an editor can add a missing department from. */
+/**
+ * The job LIFECYCLE stages around the departments (decided Sep 29, 2026): the
+ * production stepper runs New Order → Upcoming Mfg → Purchasing → the
+ * departments → Ready for Install → Install → Complete-Need Paperwork →
+ * Complete to Admin (the production team's last step — BC's job "complete"
+ * fires here) → Complete Invoiced (Admin's step, the true end).
+ * Every production job has them; Ready for Install only with install work.
+ * A service-only job (BC Order Type SERVICE / SIGNCONT / MNTCCONT and no
+ * production department) has none — it gets the Service stepper instead
+ * (services/service-steps.ts).
+ */
+export const LIFECYCLE_BEFORE: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "NO", label: "New Order" },
+  { key: "UM", label: "Upcoming Mfg" },
+  { key: "PU", label: "Purchasing" },
+];
+export const READY_FOR_INSTALL = { key: "RI", label: "Ready for Install" } as const;
+export const LIFECYCLE_AFTER: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "CP", label: "Complete-Need Paperwork" },
+  { key: "CA", label: "Complete to Admin" },
+  { key: "CI", label: "Complete Invoiced" },
+];
+const LIFECYCLE_KEYS: ReadonlySet<string> = new Set(
+  [...LIFECYCLE_BEFORE, READY_FOR_INSTALL, ...LIFECYCLE_AFTER].map((d) => d.key),
+);
+/** A lifecycle stage (not a department, not Install)? */
+export const isLifecycleKey = (key: string): boolean => LIFECYCLE_KEYS.has(key);
+/** A production department (MC, S, R, MF, P, V, A, CR)? */
+export const isDeptKey = (key: string): boolean => DEPT_FLOW.some((d) => d.key === key);
+/** Complete to Admin — completing it completes the job in BC. */
+export const COMPLETE_TO_ADMIN = "CA";
+
+/** Every candidate production-stepper step in flow order — the pool an editor
+ *  can add a missing step from. */
 export const ALL_STEP_DEFS: ReadonlyArray<{ key: string; label: string }> = [
+  ...LIFECYCLE_BEFORE,
   ...DEPT_FLOW.map((d) => ({ key: d.key, label: d.label })),
+  READY_FOR_INSTALL,
   { key: INSTALL_STEP.key, label: INSTALL_STEP.label },
+  ...LIFECYCLE_AFTER,
 ];
 
 /** An editor's override for one department on one job (from crfdf_jobdeptoverride). */
@@ -39,9 +74,16 @@ export interface DeptOverride {
   active: boolean;
 }
 
-/** True when the BC planning lines put this step in the job by default. */
-export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean): boolean {
+/** True when a job has this step by default: departments from its BC planning
+ *  lines, Install from install labor, lifecycle stages on every production job
+ *  (`service` = a service / contract order — with no department it's a
+ *  service-only job and gets no lifecycle stages). */
+export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean, service = false): boolean {
   if (key === INSTALL_STEP.key) return hasInstall;
+  if (isLifecycleKey(key)) {
+    const productionJob = !service || deptNames.some((n) => DEPT_FLOW.some((d) => d.match.test(n)));
+    return productionJob && (key !== READY_FOR_INSTALL.key || hasInstall);
+  }
   const def = DEPT_FLOW.find((d) => d.key === key);
   return !!def && deptNames.some((n) => def.match.test(n));
 }
@@ -55,10 +97,11 @@ export function includedStepDefs(
   hasInstall: boolean,
   overrides: Record<string, DeptOverride> = {},
   order?: readonly string[],
+  service = false,
 ): Array<{ key: string; label: string }> {
   const defs = ALL_STEP_DEFS.filter((def) => {
     const ov = overrides[def.key];
-    return ov ? ov.included : bcHasStep(def.key, deptNames, hasInstall);
+    return ov ? ov.included : bcHasStep(def.key, deptNames, hasInstall, service);
   });
   return order?.length ? orderSteps(defs, order) : defs;
 }
@@ -89,8 +132,9 @@ export function missingStepDefs(
   deptNames: string[],
   hasInstall: boolean,
   overrides: Record<string, DeptOverride> = {},
+  service = false,
 ): Array<{ key: string; label: string }> {
-  const included = new Set(includedStepDefs(deptNames, hasInstall, overrides).map((d) => d.key));
+  const included = new Set(includedStepDefs(deptNames, hasInstall, overrides, undefined, service).map((d) => d.key));
   return ALL_STEP_DEFS.filter((d) => !included.has(d.key));
 }
 
@@ -105,15 +149,16 @@ export function buildDepartmentSteps(
   hasInstall = false,
   overrides: Record<string, DeptOverride> = {},
   order?: readonly string[],
+  service = false,
 ): DepartmentStep[] {
-  const defs = includedStepDefs(deptNames, hasInstall, overrides, order);
+  const defs = includedStepDefs(deptNames, hasInstall, overrides, order, service);
   // Default active = the first step in flow order that isn't completed.
   const firstActiveKey = defs.find((d) => !completed.has(d.key))?.key;
   return defs.map((d) => {
     let state: DepartmentStep["state"] = "included";
     if (completed.has(d.key)) state = "completed";
     else if (d.key === firstActiveKey || overrides[d.key]?.active) state = "active";
-    return { key: d.key, label: d.label, state };
+    return { key: d.key, label: d.label, state, ...(isLifecycleKey(d.key) ? { lifecycle: true } : {}) };
   });
 }
 
@@ -135,6 +180,14 @@ export function cardStepKey(
 
 /** Label for a step key (for the card "Completed" button + who/when line). */
 export function stepLabel(key: string): string {
-  if (key === INSTALL_STEP.key) return INSTALL_STEP.label;
-  return DEPT_FLOW.find((d) => d.key === key)?.label ?? key;
+  return ALL_STEP_DEFS.find((d) => d.key === key)?.label ?? SERVICE_LABELS[key] ?? key;
 }
+
+// Service stepper labels (services/service-steps.ts owns the steps; kept here
+// so stepLabel — History, completion stamps — names them too without a cycle).
+const SERVICE_LABELS: Readonly<Record<string, string>> = {
+  SU: "Survey",
+  SE: "Service",
+  SA: "Complete to Admin (service)",
+  SI: "Complete Invoiced (service)",
+};

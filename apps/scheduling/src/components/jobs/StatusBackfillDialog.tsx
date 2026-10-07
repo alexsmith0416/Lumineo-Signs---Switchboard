@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { currentStatus } from "../../services/job-tracking";
 import { ensureJobsLoaded, useJobTrackingStore } from "../../store/job-tracking-store";
 import { planStatusBackfill, type StatusBackfillItem } from "../../services/job-status";
-import { buildDepartmentSteps } from "../../services/production-steps";
+import { jobStepsFor } from "../../store/job-steps";
 import { useJobDeptCompletionStore } from "../../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../../store/job-dept-override-store";
 import { useCurrentUser } from "../../services/current-user";
-import { ensureFlowsLoaded, stepOrderFor } from "../../store/job-flow-store";
+import { ensureFlowsLoaded, jobFlowConfigFor } from "../../store/job-flow-store";
+import { isServiceKey } from "../../services/service-steps";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -20,8 +21,11 @@ type Phase =
 /**
  * One-time catch-up for the status automation: jobs already in a complete
  * status get every stepper step completed, jobs in an Installation status get
- * their production steps completed. Shows the counts first. Writes the
- * completions only — BC is brought in line afterwards with "Sync to BC".
+ * their production steps completed, and every job gets the lifecycle stages
+ * (New Order, Upcoming Mfg, Purchasing…) its status or completed steps show it
+ * has passed — run once after the lifecycle stages arrived (Oct 7, 2026).
+ * Shows the counts first. Writes the completions only — BC is brought in line
+ * afterwards with "Sync to BC" (Alex chose app-only for the lifecycle backfill).
  * Opened from Settings → Business Central; it loads the jobs itself.
  */
 export default function StatusBackfillDialog({ onClose }: { onClose: () => void }) {
@@ -54,8 +58,9 @@ export default function StatusBackfillDialog({ onClose }: { onClose: () => void 
         jobs,
         (jobNo) => {
           const i = info.get(jobNo) ?? { production: [], hasInstall: false };
-          return buildDepartmentSteps(i.production, new Set(Object.keys(completions[jobNo] ?? {})), i.hasInstall, overrides[jobNo] ?? {}, stepOrderFor(jobNo));
+          return jobStepsFor(jobNo, i, new Set(Object.keys(completions[jobNo] ?? {})), overrides[jobNo] ?? {});
         },
+        (jobNo, steps) => jobFlowConfigFor(jobNo, steps.filter((s) => !isServiceKey(s.key)).map((s) => s.key)),
       );
       if (alive) setPhase({ kind: "ready", plan });
     })().catch((e) => alive && setPhase({ kind: "error", message: e instanceof Error ? e.message : String(e) }));
@@ -103,6 +108,11 @@ export default function StatusBackfillDialog({ onClose }: { onClose: () => void 
                   <li>
                     <strong>{sum(phase.plan, "install").jobs.toLocaleString()}</strong> jobs in an Installation status —{" "}
                     {sum(phase.plan, "install").steps.toLocaleString()} production steps
+                  </li>
+                  <li>
+                    <strong>{sum(phase.plan, "lifecycle").jobs.toLocaleString()}</strong> jobs further along their flow —{" "}
+                    {sum(phase.plan, "lifecycle").steps.toLocaleString()} earlier stages they've passed (New Order, Upcoming
+                    Mfg, Purchasing…)
                   </li>
                 </ul>
                 <p className="jobs-sync__muted">

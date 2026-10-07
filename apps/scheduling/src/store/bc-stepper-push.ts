@@ -1,6 +1,6 @@
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
-import { ensureFlowsLoaded, stepOrderFor } from "./job-flow-store";
+import { ensureFlowsLoaded } from "./job-flow-store";
 
 /**
  * Mirror a job's production stepper into BC's Project Planning Started /
@@ -22,17 +22,18 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
 export async function pushStepperState(jobNo: string, by = ""): Promise<void> {
   if (!LIVE || !jobNo) return;
   try {
-    const [m, sync, { buildDepartmentSteps }] = await Promise.all([
+    const [m, sync, { jobStepsFor }] = await Promise.all([
       import("../services/dataverse-live"),
       import("../services/bc-planning-sync"),
-      import("../services/production-steps"),
+      import("./job-steps"),
     ]);
     const info = await m.jobStepInfo(jobNo);
     // The job's flow sets which step is active — BC must be told the same.
     await ensureFlowsLoaded();
     const completed = new Set(Object.keys(useJobDeptCompletionStore.getState().byJob[jobNo] ?? {}));
     const overrides = useJobDeptOverrideStore.getState().byJob[jobNo] ?? {};
-    const steps = buildDepartmentSteps(info.production, completed, info.hasInstall, overrides, stepOrderFor(jobNo));
+    // Production (lifecycle + departments + Install) and, on a service job, the Service stepper.
+    const steps = jobStepsFor(jobNo, info, completed, overrides);
     await Promise.all(
       sync.bcStepStates(steps).map((state) => m.enqueueBcPush(sync.buildStepStatePush({ jobNo, state, by }))),
     );

@@ -49,7 +49,7 @@ export const JOB_FIELDS: Record<string, JobFieldDef> = Object.fromEntries(
   [
     F("job", "Job # / Name", "text", 260),
     F("status", "Current Status", "badge", 190),
-    F("stepper", "Stepper", "stepper", 190),
+    F("stepper", "Stepper", "stepper", 300),
     F("sketch", "Sketch", "sketch", 90),
     F("description", "Description", "multiline", 240),
     { ...F("sales", "Sales", "badge", 80), multi: true },

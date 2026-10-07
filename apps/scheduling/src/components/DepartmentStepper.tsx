@@ -18,6 +18,8 @@ export interface DepartmentStep {
   /** Full department name for tooltips / screen readers. */
   label: string;
   state: DepartmentState;
+  /** A lifecycle stage (New Order … Complete Invoiced) — drawn smaller / outlined. */
+  lifecycle?: boolean;
 }
 
 const STATE_VERB: Record<DepartmentState, string> = {
@@ -52,16 +54,19 @@ export default function DepartmentStepper({
         const barFilled = i > 0 && steps[i - 1].state !== "completed";
         const title = `${step.label} — ${STATE_VERB[step.state]}`;
         const sel = selectedKey === step.key ? " is-selected" : "";
+        const lc = step.lifecycle ? " is-lifecycle" : "";
+        // The bar into or out of a lifecycle stage is short in the compact stepper.
+        const barLc = step.lifecycle || steps[i - 1]?.lifecycle ? " is-lifecycle" : "";
         return (
           <React.Fragment key={step.key}>
             {i > 0 && (
-              <span className={`lum-stepper__bar${barFilled ? " is-filled" : ""}`} aria-hidden="true" />
+              <span className={`lum-stepper__bar${barFilled ? " is-filled" : ""}${barLc}`} aria-hidden="true" />
             )}
             {onNodeClick ? (
               <button
                 type="button"
                 role="listitem"
-                className={`lum-stepper__node lum-stepper__node--btn is-${step.state}${sel}`}
+                className={`lum-stepper__node lum-stepper__node--btn is-${step.state}${lc}${sel}`}
                 title={title}
                 aria-label={title}
                 aria-pressed={selectedKey === step.key}
@@ -72,7 +77,7 @@ export default function DepartmentStepper({
             ) : (
               <span
                 role="listitem"
-                className={`lum-stepper__node is-${step.state}${sel}`}
+                className={`lum-stepper__node is-${step.state}${lc}${sel}`}
                 title={title}
                 aria-label={title}
               >

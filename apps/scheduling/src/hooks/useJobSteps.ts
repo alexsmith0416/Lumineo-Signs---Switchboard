@@ -4,6 +4,8 @@ import { buildDepartmentSteps } from "../services/production-steps";
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../store/job-dept-override-store";
 import { useStepOrder } from "../store/job-flow-store";
+import { useIsServiceJob } from "../store/service-jobs-store";
+import { buildServiceSteps } from "../services/service-steps";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -40,6 +42,8 @@ export function primeJobStepInfo(all: ReadonlyMap<string, JobStepInfo>): void {
 export function useJobSteps(jobNo: string | undefined): {
   info: JobStepInfo | null;
   steps: DepartmentStep[];
+  /** The Service stepper — empty unless it's a service / contract job. */
+  serviceSteps: DepartmentStep[];
 } {
   const [info, setInfo] = useState<JobStepInfo | null>(() =>
     jobNo ? infoCache.get(jobNo) ?? null : null,
@@ -91,11 +95,17 @@ export function useJobSteps(jobNo: string | undefined): {
   }, [loadCompletions, loadOverrides]);
 
   const order = useStepOrder(jobNo);
+  const service = useIsServiceJob(jobNo);
   const steps = useMemo(() => {
     if (!info) return [];
     const completed = new Set(Object.keys(completions ?? {}));
-    return buildDepartmentSteps(info.production, completed, info.hasInstall, overrides ?? {}, order);
-  }, [info, completions, overrides, order]);
+    return buildDepartmentSteps(info.production, completed, info.hasInstall, overrides ?? {}, order, service);
+  }, [info, completions, overrides, order, service]);
+  // The Service stepper (service / contract jobs only — services/service-steps.ts).
+  const serviceSteps = useMemo(
+    () => (service ? buildServiceSteps(new Set(Object.keys(completions ?? {})), overrides ?? {}) : []),
+    [service, completions, overrides],
+  );
 
-  return { info, steps };
+  return { info, steps, serviceSteps };
 }

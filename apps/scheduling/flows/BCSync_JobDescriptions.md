@@ -15,6 +15,31 @@ packaged by `_build_jobdesc_solution.py` → `Downloads\BCJobDescriptions_1_0_0_
 `scripts/create-jobdesc-table.ps1`. App: `services/job-descriptions.ts`,
 `hooks/useJobDescriptions.ts`, `Description` in `components/JobInfoSections.tsx`.
 
+## Order Type (v1.0.0.2 of the flow, BC ext v1.0.0.15) — the Service stepper
+
+The same page and flow also carry each job's **Order Type** (Job Card "Order
+Type": SERVICE, SIGNCONT, MNTCCONT, SALES, GRAPHICS…) into
+`crfdf_jobdesc.crfdf_ordertype` — SERVICE / SIGNCONT / MNTCCONT jobs get the
+app's Service stepper (`src/services/service-steps.ts`).
+
+- The field isn't in any BC API and its number isn't in the Infotech symbols
+  we have (Sign365, Lumineo Signs - Projects, Shop Floor). Page 58403 looks
+  for a Job field **captioned "Order Type"**, else reads Sign365's 95294
+  "Service Order" (`orderTypeField` says which). In UAT neither works — the
+  caption is the Card PAGE's, and 95294 is blank everywhere — so **v1.0.0.16**
+  derives the code from **Description 2**, which BC fills with the order
+  type's NAME: the Resource with that Name ("Service Order" → SERVICE). UAT,
+  Oct 7: 698 of 707 open jobs resolve — 225 SALES, 185 OUTSOURCE, 136
+  SERVICE, 65 GRAPHICS, 58 OUTDOORADV, 17 NATIONAL SALE, 8 MNTCCONT, 3
+  LUMINOUS, 1 SIGNCONT; 9 blank (Description 2 typed over by hand). Test job:
+  **J38696** (SERVICE).
+- The order type is part of the flow's change stamp, so the first run after
+  this version writes every job that has one (their lastModified didn't move).
+- **Order matters:** publish BC ext v1.0.0.15 → run
+  `scripts/add-jobdesc-ordertype-column.ps1` → import
+  `BCJobDescriptions_1_0_0_2.zip` (over 1.0.0.1) → Run. With the old page the
+  flow fails on `$select=orderType`; without the column the writes fail.
+
 ## Where the text comes from (BC)
 
 The three fields are **Blobs** that Infotech's **"Lumineo Signs - Projects"**

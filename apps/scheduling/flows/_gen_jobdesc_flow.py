@@ -10,8 +10,9 @@ Every hour it:
   1. reads the open jobs' descriptions from BC (one call, ~6 s for ~700 jobs)
      and the rows already in crfdf_jobdesc;
   2. a job is CHANGED when its BC lastModified (the Job's SystemModifiedAt,
-     which moves when a description is saved) differs from the row's
-     crfdf_bcmodified — only those are written (create or update);
+     which moves when a description is saved) or its Order Type differs from
+     the row's crfdf_bcmodified / crfdf_ordertype — only those are written
+     (create or update). Order Type (v1.0.0.2) marks service / contract jobs;
   3. rows for jobs that are no longer open are deleted. Skipped if BC returned
      no jobs at all (a bad read, not "every job closed").
 
@@ -37,7 +38,7 @@ AUTH = {"type": "ActiveDirectoryOAuth", "authority": "https://login.microsoftonl
         "clientId": "@parameters('Bc_ClientId')", "secret": "@parameters('Bc_ClientSecret')"}
 API = "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})"
 SEP = "^"  # between list entries; never in BC job numbers
-SELECT = "jobNo,lastModified,fieldDescription,productionDescription,extendedDescription"
+SELECT = "jobNo,lastModified,fieldDescription,productionDescription,extendedDescription,orderType"
 SET = "crfdf_jobdescs"
 
 
@@ -70,8 +71,10 @@ def wrapped(v):
     return f"concat('{SEP}', {v}, '{SEP}')"
 
 
-JOB_STAMP = f"concat(trim({c(it('jobNo'))}), '~', {c(it('lastModified'))})"
-ROW_STAMP = f"concat(trim({c(it('crfdf_jobno'))}), '~', {c(it('crfdf_bcmodified'))})"
+# The order type is in the stamp too, so the first run after adding it (v1.0.0.2)
+# writes every job that has one — their lastModified didn't move.
+JOB_STAMP = f"concat(trim({c(it('jobNo'))}), '~', {c(it('lastModified'))}, '~', trim({c(it('orderType'))}))"
+ROW_STAMP = f"concat(trim({c(it('crfdf_jobno'))}), '~', {c(it('crfdf_bcmodified'))}, '~', trim({c(it('crfdf_ordertype'))}))"
 W_STAMP = wrapped(JOB_STAMP)
 W_JOB = wrapped(f"trim({c(it('crfdf_jobno'))})")
 
@@ -84,6 +87,7 @@ FIELDS = {
     "item/crfdf_proddesc": "@" + c(ROW + "?['productionDescription']"),
     "item/crfdf_extdesc": "@" + c(ROW + "?['extendedDescription']"),
     "item/crfdf_bcmodified": "@" + c(ROW + "?['lastModified']"),
+    "item/crfdf_ordertype": "@trim(" + c(ROW + "?['orderType']") + ")",
 }
 
 per_job = {
@@ -108,7 +112,7 @@ actions = {
                            f"&$select={SELECT}"),
                    "headers": {"Accept": "application/json"}, "authentication": AUTH}},
     "List_Existing": dv("ListRecords", {"entityName": SET,
-                                        "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified"}, paginate=True),
+                                        "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified,crfdf_ordertype"}, paginate=True),
     # One page today (~700 open jobs). Fail loudly rather than treat the jobs on
     # a missing page as closed and delete them.
     "Check_Single_Page": {

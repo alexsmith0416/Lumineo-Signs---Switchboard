@@ -534,9 +534,11 @@ function Cell({ row, def, canDismissAuto = false }: { row: JobRow; def: JobField
 
 /** The job's production stepper — its steps load lazily per visible row. */
 function StepperCell({ jobNo }: { jobNo: string | undefined }) {
-  const { steps } = useJobSteps(jobNo);
-  if (!steps.length) return null;
-  return <DepartmentStepper steps={steps} size="sm" />;
+  const { steps, serviceSteps } = useJobSteps(jobNo);
+  // A service-only job has no production stages — show its Service stepper.
+  const shown = steps.length ? steps : serviceSteps;
+  if (!shown.length) return null;
+  return <DepartmentStepper steps={shown} size="sm" />;
 }
 
 /** Right-click menu on a job's name — the same links as a calendar card's menu. */

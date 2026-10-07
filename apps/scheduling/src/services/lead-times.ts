@@ -12,7 +12,7 @@
  * differs from the target, else Mfg Target.
  */
 import { addWeeks, format, isWeekend, nextMonday } from "date-fns";
-import { ALL_STEP_DEFS, INSTALL_STEP } from "./production-steps";
+import { ALL_STEP_DEFS, isDeptKey } from "./production-steps";
 
 export interface LeadTime {
   productionWeeks: number;
@@ -39,9 +39,10 @@ export interface LeadTimeRule extends LeadTime {
   match: LeadTimeMatch;
 }
 
-/** Steps a rule can name: the stepper's production steps. */
-export const LEAD_TIME_STEP_OPTIONS: ReadonlyArray<{ key: string; label: string }> = ALL_STEP_DEFS.filter(
-  (d) => d.key !== INSTALL_STEP.key,
+/** Steps a rule can name: the stepper's production DEPARTMENTS (not Install,
+ *  not the lifecycle stages every job has). */
+export const LEAD_TIME_STEP_OPTIONS: ReadonlyArray<{ key: string; label: string }> = ALL_STEP_DEFS.filter((d) =>
+  isDeptKey(d.key),
 );
 
 /** Used until the rules list has been saved once (matches the old built-in rule). */
@@ -50,7 +51,8 @@ export const DEFAULT_RULES: LeadTimeRule[] = [
 ];
 
 export function ruleMatches(rule: LeadTimeRule, jobSteps: readonly string[]): boolean {
-  const job = new Set(jobSteps.filter((k) => k !== INSTALL_STEP.key));
+  // Departments only — Install and the lifecycle stages are on (nearly) every job.
+  const job = new Set(jobSteps.filter((k) => isDeptKey(k)));
   if (job.size === 0 || rule.steps.length === 0) return false;
   const ruleSteps = new Set(rule.steps);
   return rule.match === "only"

@@ -3094,6 +3094,24 @@ export async function fetchJobDescriptions(jobNo: string): Promise<JobDescriptio
   };
 }
 
+/** Every open job's BC Order Type (crfdf_jobdesc.crfdf_ordertype, BC ext
+ *  v1.0.0.15+): job no → "SERVICE" / "SIGNCONT" / "SALES" … Jobs without one
+ *  are left out. Throws when the column doesn't exist yet
+ *  (scripts/add-jobdesc-ordertype-column.ps1). */
+export async function fetchJobOrderTypes(): Promise<Map<string, string>> {
+  const rows = await listAll(JOBDESC_SET, {
+    select: "crfdf_jobno,crfdf_ordertype",
+    filter: "crfdf_ordertype ne null and crfdf_ordertype ne ''",
+  });
+  const out = new Map<string, string>();
+  for (const r of rows) {
+    const job = s(r.crfdf_jobno).trim();
+    const type = s(r.crfdf_ordertype).trim().toUpperCase();
+    if (job && type) out.set(job, type);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Shop-floor task completions (crfdf_taskcompletion) — "Task complete" ticks on
 // BC job punches, copied in by the BCSync_TaskCompletions flow as "pending";

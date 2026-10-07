@@ -22,7 +22,8 @@
  * Dataverse (not the loaded week), which also makes each push idempotent.
  */
 import type { ScheduleLine } from "../engine/types";
-import { DEPT_FLOW, INSTALL_STEP } from "./production-steps";
+import { COMPLETE_TO_ADMIN, DEPT_FLOW, INSTALL_STEP, isDeptKey } from "./production-steps";
+import { SERVICE_COMPLETE_TO_ADMIN } from "./service-steps";
 
 /** `"schedule"` = a step's dates/assignee; `"state"` = a step's Started /
  *  Complete from the production stepper; `"job"` = the BC job's own complete
@@ -78,6 +79,15 @@ export const BC_STEP_FOR_KEY: Readonly<Record<string, string>> = {
   A: "Final Assembly",
   CR: "Crating",
   [INSTALL_STEP.key]: "Install",
+  // Lifecycle + Service stages with a known BC step (Alex, Oct 7). Complete to
+  // Admin / Complete Invoiced and Survey stay in the app until their BC step
+  // names are confirmed (BC has two "Survey" steps — a write by name is refused).
+  NO: "New Order This Week",
+  UM: "Upcoming Manufacturing",
+  PU: "Job Purchasing",
+  RI: "Product Ready for Install Scheduling",
+  CP: "Complete-Need Paperwork",
+  SE: "Service",
 };
 
 /** BC step for a stepper key, or null when that key has no BC step. */
@@ -250,7 +260,8 @@ export function bcStepStates(
       keys: of.map((d) => d.key),
     };
   };
-  const production = main(BC_PRODUCTION_STEP, steps.filter((d) => d.key !== INSTALL_STEP.key && bcStepForKey(d.key)));
+  // The main Production step heads the DEPARTMENTS only — not the lifecycle stages.
+  const production = main(BC_PRODUCTION_STEP, steps.filter((d) => isDeptKey(d.key) && bcStepForKey(d.key)));
   const install = main(BC_INSTALLATION_STEP, steps.filter((d) => d.key === INSTALL_STEP.key));
   return [...(production ? [production] : []), ...byStep.values(), ...(install ? [install] : [])];
 }
@@ -293,6 +304,20 @@ export function allStepsComplete(
 ): boolean {
   if (allStepKeys.length === 0) return false;
   return allStepKeys.every((k) => completedKeys.has(k));
+}
+
+/**
+ * Is the job complete as far as BC's job "complete" flag goes? Since Oct 7,
+ * 2026 that's COMPLETE TO ADMIN (decided Sep 29): the production team's last
+ * step — Complete Invoiced, Admin's step, comes after and doesn't hold it.
+ * `allStepKeys` = every step the job's steppers show (production + service):
+ * each Complete to Admin among them (production CA, service SA) must be done.
+ * A job whose steppers have no Complete to Admin (an editor removed it) falls
+ * back to every step complete, as before.
+ */
+export function jobCompleteForBc(allStepKeys: readonly string[], completedKeys: ReadonlySet<string>): boolean {
+  const admin = allStepKeys.filter((k) => k === COMPLETE_TO_ADMIN || k === SERVICE_COMPLETE_TO_ADMIN);
+  return admin.length ? admin.every((k) => completedKeys.has(k)) : allStepsComplete(allStepKeys, completedKeys);
 }
 
 /**

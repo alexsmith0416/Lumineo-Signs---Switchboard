@@ -20,6 +20,13 @@ export const ALL_DONE = "done";
 export type StatusRules = Readonly<Record<string, string>>;
 
 export const DEFAULT_STATUS_RULES: StatusRules = {
+  // Lifecycle stages (Oct 7, 2026). Complete to Admin is the production team
+  // handing the paperwork over, so while it's open the job still reads
+  // "Complete-need paperwork"; once it's done the job is with Admin
+  // ("Complete to Admin") until invoiced ("Complete Invoiced" = every step done).
+  NO: "New Order this week",
+  UM: "Upcoming Mfg.",
+  PU: "Purchasing",
   MC: "MFG - Need Material Cut",
   S: "Steel MFG",
   R: "MFG - Routing",
@@ -28,9 +35,16 @@ export const DEFAULT_STATUS_RULES: StatusRules = {
   V: "MFG - Vinyl Cut",
   A: "MFG - Assembly",
   CR: "Needs Shipped",
+  RI: "Ready for Install",
   [INSTALL_STEP.key]: "Install - waiting on product",
-  [ALL_DONE]: "Complete-need paperwork",
+  CP: "Complete-need paperwork",
+  CA: "Complete-need paperwork",
+  CI: "Complete to Admin",
+  [ALL_DONE]: "Complete Invoiced",
 };
+
+/** The "every step done" status before the lifecycle stages existed. */
+export const OLD_DONE_STATUS = "Complete-need paperwork";
 
 /** Production statuses besides the rule targets that may also be moved on. */
 const ALSO_MOVABLE = [
@@ -38,6 +52,9 @@ const ALSO_MOVABLE = [
   "MFG - Terry Metal Fab", "MFG - Chris Metal Fab", "MFG - Vinyl Application", "MFG - Vinyl Install",
   "MFG - Assembly & Graphics", "NEK - Production", "Installation",
 ];
+
+/** Statuses the automation never moves a job off. */
+const NEVER_MOVED: ReadonlySet<string> = new Set(["Complete Invoiced"]);
 
 /** The rules, with any missing key filled from the defaults. */
 export function withDefaults(rules: Partial<Record<string, string>> | null | undefined): StatusRules {
@@ -54,7 +71,8 @@ export function isAutoMovable(status: string, rules: StatusRules): boolean {
 /** May a job on this status be moved automatically, given the statuses a flow uses?
  *  Holds never are; nor are statuses outside the flow and the usual production ones. */
 export function isAutoMovableStatus(status: string, flowStatuses: readonly string[]): boolean {
-  if (!status || isHoldStatus(status)) return false;
+  // A finished job (invoiced) is never moved by a punch, even though it's the flow's done status.
+  if (!status || isHoldStatus(status) || NEVER_MOVED.has(status)) return false;
   return flowStatuses.includes(status) || ALSO_MOVABLE.includes(status);
 }
 

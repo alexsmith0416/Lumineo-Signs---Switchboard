@@ -2,21 +2,28 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import DepartmentStepper, { type DepartmentStep } from "./DepartmentStepper";
 import { bcHasStep, buildDepartmentSteps, missingStepDefs } from "../services/production-steps";
-import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
+import { buildServiceSteps, missingServiceStepDefs } from "../services/service-steps";
+import { useJobDeptCompletionStore, type CompletionStamp } from "../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../store/job-dept-override-store";
 import { isAdminLevel, useCurrentUser } from "../services/current-user";
 import { cachedJobStepInfo } from "../hooks/useJobSteps";
 import { useStepOrder } from "../store/job-flow-store";
+import { useIsServiceJob } from "../store/service-jobs-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
 /**
- * Production stepper for a job — the departments its planning lines need (plus a
- * final Install step), in flow order, with standing (included / active /
- * completed). Anyone can complete a step: click a department (it glows), then a
- * blue Complete button appears. Editors (Admin / Ops / Developer) also get an
- * Edit button to add a missing department, a red Delete under a selected node,
- * and can mark extra departments active. Each completion is stamped who + when.
+ * A job's steppers. PRODUCTION: the lifecycle stages (New Order → Upcoming Mfg
+ * → Purchasing … Ready for Install → Install → Complete-Need Paperwork →
+ * Complete to Admin → Complete Invoiced) around the departments its planning
+ * lines need, in its flow order, each included / active / completed. SERVICE
+ * (service / contract jobs — BC Order Type SERVICE, SIGNCONT, MNTCCONT):
+ * Survey → Service → Complete to Admin → Complete Invoiced, below it.
+ *
+ * Anyone can complete a step: click it (it glows), then Complete. Editors
+ * (Admin / Ops / Developer) also get Edit to add a missing step, Delete under
+ * a selected one, Reopen, and Set active. Each completion is stamped who +
+ * when. Completing Complete to Admin completes the job in BC.
  */
 export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const { fullName, upn, realType } = useCurrentUser();
@@ -60,102 +67,173 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
     void loadOverrides();
   }, [loadCompletions, loadOverrides]);
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-
   const prod = info?.production ?? [];
   const hasInstall = info?.hasInstall ?? false;
+  const service = useIsServiceJob(jobNo);
 
   const order = useStepOrder(jobNo);
-  const steps = useMemo(() => {
-    const completed = new Set(Object.keys(jobCompletions ?? {}));
-    return buildDepartmentSteps(prod, completed, hasInstall, overrides, order);
-  }, [prod, hasInstall, jobCompletions, overrides, order]);
+  const completed = useMemo(() => new Set(Object.keys(jobCompletions ?? {})), [jobCompletions]);
+  const steps = useMemo(
+    () => buildDepartmentSteps(prod, completed, hasInstall, overrides, order, service),
+    [prod, completed, hasInstall, overrides, order, service],
+  );
+  const serviceSteps = useMemo(() => (service ? buildServiceSteps(completed, overrides) : []), [service, completed, overrides]);
 
   const missing = useMemo(
-    () => (canEdit ? missingStepDefs(prod, hasInstall, overrides) : []),
-    [canEdit, prod, hasInstall, overrides],
+    () => (canEdit ? missingStepDefs(prod, hasInstall, overrides, service) : []),
+    [canEdit, prod, hasInstall, overrides, service],
+  );
+  const missingService = useMemo(
+    () => (canEdit && service ? missingServiceStepDefs(overrides) : []),
+    [canEdit, service, overrides],
   );
 
-  // The job's full included step set — passed to setComplete so the store can
-  // tell when the last department closes and push job completion to BC.
-  const stepKeys = useMemo(() => steps.map((s) => s.key), [steps]);
+  // Every step on both steppers — passed to setComplete so the store can tell
+  // when Complete to Admin closes the job and push job completion to BC.
+  const stepKeys = useMemo(() => [...steps, ...serviceSteps].map((s) => s.key), [steps, serviceSteps]);
 
   if (!info) return null;
-  // Nothing to show unless there are steps or an editor can add some.
-  if (steps.length === 0 && !canEdit) return null;
-
-  const selected = steps.find((s) => s.key === selectedKey) ?? null;
-
-  const onNodeClick = (step: DepartmentStep) => {
-    setSelectedKey((k) => (k === step.key ? null : step.key));
-  };
 
   // --- Editor edits (map UI actions onto override rows) ---------------------
-  const removeDept = (key: string) => {
-    if (bcHasStep(key, prod, hasInstall)) void setOverride(jobNo, key, { included: false, active: false });
-    else void clearOverride(jobNo, key); // an added dept — just drop its row
-    setSelectedKey(null);
+  // A step the job has by default is removed / restored with an "included:
+  // false" row; one it doesn't (an added department) gets an "included: true"
+  // row. Service steps are all there by default.
+  const hasByDefault = (key: string) =>
+    serviceSteps.some((s) => s.key === key) || missingService.some((s) => s.key === key)
+      ? true
+      : bcHasStep(key, prod, hasInstall, service);
+  const remove = (key: string) => {
+    if (hasByDefault(key)) void setOverride(jobNo, key, { included: false, active: false });
+    else void clearOverride(jobNo, key); // an added step — just drop its row
   };
-  const addDept = (key: string) => {
-    if (bcHasStep(key, prod, hasInstall)) void clearOverride(jobNo, key); // restore a removed BC dept
+  const add = (key: string) => {
+    if (hasByDefault(key)) void clearOverride(jobNo, key); // restore a removed default step
     else void setOverride(jobNo, key, { included: true, active: false });
   };
   const setActive = (key: string, active: boolean) => {
     const ov = overrides[key];
     const included = ov ? ov.included : true; // it's shown, so it's included
-    if (bcHasStep(key, prod, hasInstall) && included && !active) {
-      void clearOverride(jobNo, key); // plain BC dept, no other override → drop row
-    } else {
-      void setOverride(jobNo, key, { included, active });
-    }
+    if (hasByDefault(key) && included && !active) void clearOverride(jobNo, key);
+    else void setOverride(jobNo, key, { included, active });
   };
+  const actions = {
+    canEdit,
+    stamps: jobCompletions,
+    complete: (key: string) => void setComplete(jobNo, key, me, true, stepKeys),
+    reopen: (key: string) => void setComplete(jobNo, key, me, false, stepKeys),
+    toggleActive: (key: string) => setActive(key, !overrides[key]?.active),
+    isMarkedActive: (key: string) => !!overrides[key]?.active,
+    remove,
+    add,
+  };
+
+  // Nothing to show unless there are steps or an editor can add some.
+  const showProduction = steps.length > 0 || (canEdit && !service);
+  if (!showProduction && !service) return null;
+
+  return (
+    <>
+      {showProduction && (
+        <StepperBlock
+          title="Production stage"
+          hint="click a stage, then Complete"
+          emptyNote="No production stages yet — add one below."
+          addLabel="Add stage:"
+          steps={steps}
+          missing={missing}
+          {...actions}
+        />
+      )}
+      {service && (
+        <StepperBlock
+          title="Service"
+          hint="service / contract order"
+          emptyNote="No service steps — add one below."
+          addLabel="Add step:"
+          steps={serviceSteps}
+          missing={missingService}
+          {...actions}
+        />
+      )}
+    </>
+  );
+}
+
+/** One stepper with its click-to-act panel, editor Add, and the Completed log. */
+function StepperBlock({
+  title,
+  hint,
+  emptyNote,
+  addLabel,
+  steps,
+  missing,
+  canEdit,
+  stamps,
+  complete,
+  reopen,
+  toggleActive,
+  isMarkedActive,
+  remove,
+  add,
+}: {
+  title: string;
+  hint: string;
+  emptyNote: string;
+  addLabel: string;
+  steps: DepartmentStep[];
+  missing: Array<{ key: string; label: string }>;
+  canEdit: boolean;
+  stamps: Record<string, CompletionStamp> | undefined;
+  complete: (key: string) => void;
+  reopen: (key: string) => void;
+  toggleActive: (key: string) => void;
+  isMarkedActive: (key: string) => boolean;
+  remove: (key: string) => void;
+  add: (key: string) => void;
+}) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const selected = steps.find((s) => s.key === selectedKey) ?? null;
 
   // Completed steps, with who/when, in flow order.
   const doneStamps = steps
     .filter((s) => s.state === "completed")
-    .map((s) => ({ key: s.key, label: s.label, stamp: jobCompletions?.[s.key] }));
+    .map((s) => ({ key: s.key, label: s.label, stamp: stamps?.[s.key] }));
 
   return (
     <div className="job-stepper">
       <div className="job-stepper__label">
-        Production stage
-        <span className="job-stepper__hint"> · click a department, then Complete</span>
+        {title}
+        <span className="job-stepper__hint"> · {hint}</span>
         {canEdit && (
-          <button
-            type="button"
-            className={`job-stepper__edit${editing ? " is-on" : ""}`}
-            onClick={() => setEditing((e) => !e)}
-          >
+          <button type="button" className={`job-stepper__edit${editing ? " is-on" : ""}`} onClick={() => setEditing((e) => !e)}>
             {editing ? "Done" : "Edit"}
           </button>
         )}
       </div>
 
       {steps.length > 0 ? (
-        <DepartmentStepper steps={steps} onNodeClick={onNodeClick} selectedKey={selectedKey} />
+        <DepartmentStepper
+          steps={steps}
+          onNodeClick={(step) => setSelectedKey((k) => (k === step.key ? null : step.key))}
+          selectedKey={selectedKey}
+        />
       ) : (
-        <div className="job-stepper__empty-note">No production stages yet — add one below.</div>
+        <div className="job-stepper__empty-note">{emptyNote}</div>
       )}
 
-      {/* Action panel for the selected department. */}
+      {/* Action panel for the selected step. */}
       {selected && (
         <div className="job-stepper__actions">
           <span className="job-stepper__actions-label">{selected.label}</span>
           {selected.state === "completed" ? (
             <>
               <span className="job-stepper__done-tag">
-                ✓ {jobCompletions?.[selected.key]?.by || "done"}
-                {jobCompletions?.[selected.key]?.date
-                  ? ` · ${format(jobCompletions[selected.key]!.date!, "MMM d")}`
-                  : ""}
+                ✓ {stamps?.[selected.key]?.by || "done"}
+                {stamps?.[selected.key]?.date ? ` · ${format(stamps[selected.key]!.date!, "MMM d")}` : ""}
               </span>
               {canEdit && (
-                <button
-                  type="button"
-                  className="btn-secondary job-stepper__btn"
-                  onClick={() => void setComplete(jobNo, selected.key, me, false, stepKeys)}
-                >
+                <button type="button" className="btn-secondary job-stepper__btn" onClick={() => reopen(selected.key)}>
                   Reopen
                 </button>
               )}
@@ -165,7 +243,7 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
               type="button"
               className="job-stepper__complete"
               onClick={() => {
-                void setComplete(jobNo, selected.key, me, true, stepKeys);
+                complete(selected.key);
                 setSelectedKey(null);
               }}
             >
@@ -176,18 +254,21 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
             <button
               type="button"
               className="btn-secondary job-stepper__btn"
-              onClick={() => setActive(selected.key, !overrides[selected.key]?.active)}
-              title="Mark this department as an additional active step"
+              onClick={() => toggleActive(selected.key)}
+              title="Mark this step as an additional active step"
             >
-              {overrides[selected.key]?.active ? "Unset active" : "Set active"}
+              {isMarkedActive(selected.key) ? "Unset active" : "Set active"}
             </button>
           )}
           {canEdit && (
             <button
               type="button"
               className="job-stepper__delete"
-              onClick={() => removeDept(selected.key)}
-              title="Remove this department from the stepper"
+              onClick={() => {
+                remove(selected.key);
+                setSelectedKey(null);
+              }}
+              title="Remove this step from the stepper"
             >
               Delete
             </button>
@@ -195,17 +276,12 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
         </div>
       )}
 
-      {/* Editor: add a missing department. */}
+      {/* Editor: add a missing step. */}
       {canEdit && editing && missing.length > 0 && (
         <div className="job-stepper__add">
-          <span className="job-stepper__actions-label">Add department:</span>
+          <span className="job-stepper__actions-label">{addLabel}</span>
           {missing.map((d) => (
-            <button
-              key={d.key}
-              type="button"
-              className="btn-secondary job-stepper__btn"
-              onClick={() => addDept(d.key)}
-            >
+            <button key={d.key} type="button" className="btn-secondary job-stepper__btn" onClick={() => add(d.key)}>
               + {d.label}
             </button>
           ))}

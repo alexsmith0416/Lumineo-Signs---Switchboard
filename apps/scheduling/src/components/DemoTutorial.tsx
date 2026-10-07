@@ -123,7 +123,7 @@ const FULL_STEPS: TourStep[] = [
     view: "jobs",
     target: '[data-tour="nav-jobs"]',
     title: "Jobs — every open job in one list",
-    body: "The Jobs list tracks each job from order to invoice: its stepper, Current Status, targets, vendor and install dates. Pick a view on the left, then search, filter, sort and group. Click a job to open everything about it, including its Job flow. (In the demo this is the real list, so it's view only.)",
+    body: "The Jobs list tracks each job from order to invoice: its stepper (New Order through Complete Invoiced, with a Service stepper on service and contract jobs), Current Status, targets, vendor and install dates. Pick a view on the left, then search, filter, sort and group. Click a job to open everything about it, including its Job flow. (In the demo this is the real list, so it's view only.)",
     placement: "right",
   },
   {
