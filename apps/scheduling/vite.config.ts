@@ -6,6 +6,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "./",
   plugins: [react()],
+  // When this bundle was built (ms) — services/app-build.ts uses it so a tab
+  // left open on an older deploy stops applying shop-floor ticks.
+  define: {
+    __APP_BUILD__: JSON.stringify(Date.now()),
+  },
   server: {
     port: 5174,
     host: "127.0.0.1",

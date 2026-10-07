@@ -5,6 +5,9 @@ interface ImportMetaEnv {
   readonly VITE_DATA_SOURCE?: string;
 }
 
+/** Build time of this bundle (ms since epoch), set by vite.config.ts. */
+declare const __APP_BUILD__: number;
+
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

@@ -249,8 +249,12 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     → J34707 / J32765 / J36571, one row each, "Multi Clock Out", all applied.
     ⚠️ They were applied by an Admin/Ops session still on pre-deploy code (no
     History details, no AUTO tag) — left as is (Alex: done in real life). Open
-    sessions keep old code until reloaded; there's no "new version" check yet
-    (offered: skip tick processing on an outdated build).
+    sessions keep old code until reloaded.
+  - ✅ **Outdated-build check (Oct 6, deployed):** each bundle carries its build
+    time (`__APP_BUILD__`, vite.config.ts). A deployed tick-processing session
+    records it in crfdf_jobsview key `appLatestBuild` when newer; a session
+    whose build is older skips ticks (console warning) — `services/app-build.ts`
+    (pure, tested). Old tabs from BEFORE this deploy don't have the check.
   - **Next:** Security roles:
     view-only users may need Read on `crfdf_taskcompletion`, `crfdf_jobpo`,
     `crfdf_jobdesc`; Admin/Ops/Dev need Write on `crfdf_taskcompletion` (their

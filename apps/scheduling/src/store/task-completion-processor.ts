@@ -16,6 +16,10 @@
  * office's open sessions keep up through the day. Everything here is
  * idempotent — a department already complete is left, a status already right
  * isn't re-set — so two open sessions handling the same tick do no harm.
+ *
+ * A tab left open on an older deploy stops applying ticks once a newer build
+ * has started anywhere (services/app-build.ts), so ticks are always applied
+ * by current code.
  */
 import { format } from "date-fns";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
@@ -27,12 +31,34 @@ import { currentStatus } from "../services/job-tracking";
 import { deptForCompletion } from "../services/task-completion";
 import { nextStatus } from "../services/status-rules";
 import type { TaskCompletionDetail, TaskCompletionRow } from "../services/dataverse-live";
+import { APP_BUILD, LATEST_BUILD_KEY, isOutdatedBuild, shouldRecordBuild } from "../services/app-build";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const EVERY_MS = 2 * 60_000;
 const FIRST_AFTER_MS = 20_000;
 
 let running = false;
+let warnedOutdated = false;
+
+type Dv = typeof import("../services/dataverse-live");
+
+/** A deployed tab records its build as the latest when it's newer (once, at start). */
+async function recordBuild(dv: Dv): Promise<void> {
+  if (!import.meta.env.PROD) return; // a local build never claims to be the deployed one
+  const recorded = (await dv.fetchJobsViewConfig()).get(LATEST_BUILD_KEY);
+  if (shouldRecordBuild(APP_BUILD, recorded)) await dv.saveJobsViewConfig(LATEST_BUILD_KEY, APP_BUILD);
+}
+
+/** False when a newer build has started elsewhere — this tab then leaves the ticks to it. */
+async function buildIsCurrent(dv: Dv): Promise<boolean> {
+  const recorded = (await dv.fetchJobsViewConfig()).get(LATEST_BUILD_KEY);
+  if (!isOutdatedBuild(APP_BUILD, recorded)) return true;
+  if (!warnedOutdated) {
+    warnedOutdated = true;
+    console.warn("[task-completions] a newer version of the app is deployed — reload to keep applying shop-floor ticks here");
+  }
+  return false;
+}
 
 async function stepsFor(jobNo: string) {
   const dv = await import("../services/dataverse-live");
@@ -113,6 +139,7 @@ export async function processTaskCompletions(): Promise<void> {
     const dv = await import("../services/dataverse-live");
     const pending = await dv.fetchPendingTaskCompletions();
     if (!pending.length) return;
+    if (!(await buildIsCurrent(dv))) return;
     // Fresh stepper + rules state, so another session's clicks are seen.
     await Promise.all([
       useJobDeptCompletionStore.getState().load(true),
@@ -138,6 +165,9 @@ export async function processTaskCompletions(): Promise<void> {
 /** Start the background loop (once per session). Returns a stop function. */
 export function startTaskCompletionProcessor(): () => void {
   if (!LIVE) return () => {};
+  void import("../services/dataverse-live")
+    .then(recordBuild)
+    .catch((e) => console.warn("[task-completions] couldn't record this build", e));
   const first = setTimeout(() => void processTaskCompletions(), FIRST_AFTER_MS);
   const every = setInterval(() => void processTaskCompletions(), EVERY_MS);
   return () => {
