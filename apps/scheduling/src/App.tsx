@@ -1,3 +1,4 @@
+import { NO_JOB_EDITS } from "./services/job-edit-access";
 import { useEffect, useRef, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -215,7 +216,8 @@ export default function App() {
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
-          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={jobEdit} />}
+          {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
+          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} />}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen

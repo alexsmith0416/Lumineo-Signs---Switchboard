@@ -183,6 +183,30 @@ guide **body** reflects it. (Pure internal/refactor changes with no user impact
 don't need a guide edit.) Open the file in a browser to preview; it prints
 cleanly to PDF for distribution.
 
+### Keep the interactive tour current (significant features)
+
+The demo sandbox (Help → **▶ Launch demo & tutorial**, and every Demo-type
+login) runs a guided tour: **`src/components/DemoTutorial.tsx`**. The
+*Scheduling* track covers the core board; the *Full* track walks every screen.
+
+🔴 **When a change adds a significant user-facing feature** — a new screen,
+a new toolbar button or panel, a new workflow (including ones that start
+outside the app, like the BC punch screens) — **add a step to `FULL_STEPS`**
+in the same change, next to the steps for the screen it lives on:
+1. Spotlight the real control: give it a `data-tour="…"` attribute and point
+   the step's `target` at it (`view` = the screen to open first). Use
+   `placement` so the card doesn't cover what it describes.
+2. For something that lives outside the app (Business Central), use an
+   `image` step: put a screenshot in **`public/tour/`** (crop away empty space)
+   and set `image: { src: "./tour/<file>.png", alt: "…" }`.
+3. Keep the body to 2–3 sentences in the guide's plain voice, then check it:
+   `npm run dev` → Help → Launch demo → Full tour → step through to it.
+4. If the step points at something the demo can't safely edit (the Jobs list
+   is the REAL list — it's view only in the demo), say so in the step.
+5. Mention the new tour coverage in the guide's "What's New" row.
+
+Small tweaks to an existing screen don't need a step; when unsure, ask Alex.
+
 ## 5. User roles & access (code, not data)
 
 Access is defined in **`src/services/current-user.ts`**, not in Dataverse:

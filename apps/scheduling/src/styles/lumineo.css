@@ -6575,3 +6575,21 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   cursor: pointer;
 }
 .sfh__reviewed:hover { background: var(--bg-tertiary); }
+
+/* Tour: a step that shows a screenshot (the Business Central punch screens). */
+.tour-pop--image {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+.tour-pop__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 260px);
+  object-fit: contain;
+  object-position: top;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0 0 14px;
+  background: #fff;
+}

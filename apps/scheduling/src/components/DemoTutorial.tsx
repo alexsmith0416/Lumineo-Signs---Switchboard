@@ -8,7 +8,12 @@
  *    it lives on (via onNavigate).
  *
  * Targets are matched by CSS selector (mostly `data-tour="…"` attributes added
- * to the sidebar, Add-Job button, toolbar, and job cards).
+ * to the sidebar, Add-Job button, toolbar, and job cards). A step can instead
+ * show a screenshot (`image`, from public/tour/) — used for the Business
+ * Central punch screens, which live outside the app.
+ *
+ * Keep this in step with the app: a significant new feature gets a step in the
+ * Full tour (START-HERE §4 "Keep the interactive tour current").
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -22,6 +27,8 @@ interface TourStep {
   title: string;
   body: string;
   placement?: "top" | "bottom" | "left" | "right" | "center";
+  /** A screenshot shown in a wider, centered card (path under public/). */
+  image?: { src: string; alt: string };
 }
 
 const SCHEDULING_STEPS: TourStep[] = [
@@ -112,10 +119,52 @@ const FULL_STEPS: TourStep[] = [
     placement: "right",
   },
   {
+    view: "jobs",
+    target: '[data-tour="nav-jobs"]',
+    title: "Jobs — every open job in one list",
+    body: "The Jobs list tracks each job from order to invoice: its stepper, Current Status, targets, vendor and install dates. Pick a view on the left, then search, filter, sort and group. Click a job to open everything about it. (In the demo this is the real list, so it's view only.)",
+    placement: "right",
+  },
+  {
+    view: "jobs",
+    target: '[data-tour="jobs-history"]',
+    title: "Shop-floor History",
+    body: "When someone ticks Task complete on a Business Central punch, the app completes that department and moves the job's status on its own. History lists every one: date, job, who, task, what was completed and where the job moved. Statuses moved this way get an AUTO tag until someone reviews them.",
+    placement: "left",
+  },
+  {
+    view: "jobs",
+    title: "Task complete — in Business Central",
+    body: "On BC's Clock In Project page, Currently on shows the job you're punched into. Turn on Complete current task before you punch into the next job if you finished it (it's greyed out when you aren't punched in). Clock Out Project has a Task complete toggle for lunch and the end of the day.",
+    placement: "center",
+    image: { src: "./tour/bc-clock-in-project.png", alt: "Business Central Clock In Project page with the Currently on field and the Complete current task toggle" },
+  },
+  {
+    view: "jobs",
+    title: "On several projects at once",
+    body: "Clock In / Clock Out Multiple Projects/Nestings list your open punches under Mark tasks complete. Tick each project you finished, then Submit. Each one is completed on its own job within a few minutes.",
+    placement: "center",
+    image: { src: "./tour/bc-clock-in-multiple.png", alt: "Business Central Clock In Multiple Projects/Nestings page with the Mark tasks complete list" },
+  },
+  {
+    view: "my-schedule",
+    target: '[data-tour="nav-my-schedule"]',
+    title: "Your own schedule",
+    body: "The top of the sidebar is your personal view: your own work for the week. Admins see every employee's schedule here; Sales and PMs see their active jobs.",
+    placement: "right",
+  },
+  {
     view: "settings",
     target: '[data-tour="nav-settings"]',
     title: "Settings",
-    body: "Toggle auto-cascade, the current-time line, presentation mode, and more. Your preferences are remembered per device.",
+    body: "Display options (compact sidebar, hide the weekend, day values on hover), auto-cascade, presentation mode and more. Admins also manage users, lead times, billing periods and the step-to-status rules here.",
+    placement: "right",
+  },
+  {
+    view: "help",
+    target: '[data-tour="nav-help"]',
+    title: "Help & the user guide",
+    body: "Help has the full user guide, with a What's New list and a Download PDF button. You can relaunch this demo and tour from here anytime.",
     placement: "right",
   },
   {
@@ -133,6 +182,9 @@ const TRACKS: Record<TutorialTrack, TourStep[]> = {
 
 const POP_W = 340;
 const POP_H = 210;
+
+/** A screenshot step's card: as wide as fits, up to 600px. */
+const imagePopW = () => Math.min(600, window.innerWidth - 24);
 
 function computePop(
   rect: DOMRect | null,
@@ -267,7 +319,11 @@ export default function DemoTutorial({ onNavigate }: Props) {
   const total = steps.length;
   const isLast = stepIndex >= total - 1;
   const hasSpot = !!step.target && !!rect && step.placement !== "center";
-  const pop = computePop(hasSpot ? rect : null, step.placement);
+  const popW = step.image ? imagePopW() : POP_W;
+  // A screenshot card sits near the top, centered; it scrolls inside if the window is short.
+  const pop = step.image
+    ? { top: 12, left: Math.max(12, window.innerWidth / 2 - popW / 2) }
+    : computePop(hasSpot ? rect : null, step.placement);
 
   return createPortal(
     <>
@@ -284,12 +340,17 @@ export default function DemoTutorial({ onNavigate }: Props) {
       ) : (
         <div className="tour-scrim" />
       )}
-      <div className="tour-pop" style={{ top: pop.top, left: pop.left, width: POP_W }} role="dialog">
+      <div
+        className={`tour-pop${step.image ? " tour-pop--image" : ""}`}
+        style={{ top: pop.top, left: pop.left, width: popW }}
+        role="dialog"
+      >
         <div className="tour-pop__step">
           Step {stepIndex + 1} of {total}
         </div>
         <h3 className="tour-pop__title">{step.title}</h3>
         <p className="tour-pop__body">{step.body}</p>
+        {step.image && <img className="tour-pop__img" src={step.image.src} alt={step.image.alt} />}
         <div className="tour-pop__nav">
           <button type="button" className="tour-pop__skip" onClick={endTutorial}>
             Skip tour

@@ -332,6 +332,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
               type="button"
               className={`jobs-toolbar__btn${panel === "history" ? " jobs-toolbar__btn--on" : ""}`}
               onClick={() => setPanel(panel === "history" ? null : "history")}
+              data-tour="jobs-history"
               title="Shop-floor history: what the BC punch “Task complete” ticks moved automatically"
             >
               <HistoryIcon />
