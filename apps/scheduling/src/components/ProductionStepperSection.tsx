@@ -6,6 +6,7 @@ import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../store/job-dept-override-store";
 import { isAdminLevel, useCurrentUser } from "../services/current-user";
 import { cachedJobStepInfo } from "../hooks/useJobSteps";
+import { useStepOrder } from "../store/job-flow-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -65,10 +66,11 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const prod = info?.production ?? [];
   const hasInstall = info?.hasInstall ?? false;
 
+  const order = useStepOrder(jobNo);
   const steps = useMemo(() => {
     const completed = new Set(Object.keys(jobCompletions ?? {}));
-    return buildDepartmentSteps(prod, completed, hasInstall, overrides);
-  }, [prod, hasInstall, jobCompletions, overrides]);
+    return buildDepartmentSteps(prod, completed, hasInstall, overrides, order);
+  }, [prod, hasInstall, jobCompletions, overrides, order]);
 
   const missing = useMemo(
     () => (canEdit ? missingStepDefs(prod, hasInstall, overrides) : []),

@@ -600,14 +600,37 @@
     Each ticked project is completed separately. A tick also counts if the punch is closed some other way later in
     the day. History shows these as <em>Multi Clock Out</em> / <em>Multi Clock In</em>.</li>
   </ul>
-  <p>Within a few minutes, that <strong>department completes on the job's stepper</strong> (stamped <em>Punch ·
-  employee name</em>), the next department becomes active and BC Project Planning follows, and the job's
-  <strong>Current Status</strong> moves to the status for the new active step &mdash; e.g. completing Metal Fab moves
-  a job from <em>MFG - Len Metal Fab</em> to <em>MFG - Paint Prep / Paint</em>. Jobs on a <strong>hold</strong> or a
-  special status (Service, Morton, Billboards, Refurb, Complete to Admin&hellip;) keep their status &mdash; only the
-  stepper moves. Which status each step means is set in <strong>Settings → Status rules</strong>; editors can always
-  change a job's status by hand afterwards. Each job's ticks, and what the app did with them, are listed in the Jobs
-  list's job panel under <strong>Shop floor · Task complete</strong>.</p>
+  <p>Within a few minutes the job moves on to the <strong>next stage of its job flow</strong> (below). When that was
+  the department's last stage, the <strong>department completes on the job's stepper</strong> (stamped <em>Punch ·
+  employee name</em>), the next department becomes active and BC Project Planning follows. Either way the job's
+  <strong>Current Status</strong> moves to the status of its next stage &mdash; e.g. completing Metal Fab moves a job
+  from <em>MFG - Len Metal Fab</em> to <em>MFG - Paint Prep / Paint</em>. Jobs on a <strong>hold</strong> or a special
+  status (Service, Morton, Billboards, Refurb, Complete to Admin&hellip;) keep their status &mdash; only the stepper
+  moves. Editors can always change a job's status by hand afterwards. Each job's ticks, and what the app did with
+  them, are listed in the Jobs list's job panel under <strong>Shop floor · Task complete</strong>.</p>
+
+  <h4>Job flow: the order and statuses a job moves through</h4>
+  <p>A job's <strong>flow</strong> is its list of <strong>stages</strong>, top to bottom &mdash; each a stepper
+  department plus the Current Status it means. A department can have <strong>more than one stage</strong> when it has
+  several statuses, e.g. Vinyl / Graphics &rarr; <em>MFG - Vinyl Cut</em>, then <em>MFG - Vinyl Application</em>:</p>
+  <ul>
+    <li>A shop-floor <strong>Task complete</strong> completes the job's <strong>next stage</strong> of that department.
+    On the first Vinyl tick the status moves to <em>MFG - Vinyl Application</em> and Vinyl stays open on the stepper;
+    the second tick completes Vinyl and moves the job on to Assembly.</li>
+    <li>If someone already set the status to a later stage by hand, the next tick counts from there.</li>
+    <li>A tick for a department the job hasn't reached yet (working ahead) is recorded but doesn't change the status.</li>
+    <li>The flow's order is also the <strong>stepper's order</strong>: put Paint before Metal Fab and Paint goes
+    active first, and BC is told the same.</li>
+  </ul>
+  <p><strong>Settings &rarr; Job flow</strong> (Admin / Ops / Developer) sets the <strong>company flow</strong> every
+  job starts from: reorder stages with <strong>↑ / ↓</strong>, change a stage's status, remove one with
+  <strong>✕</strong>, or <strong>Add a stage</strong> (pick the department and status &mdash; it goes right after that
+  department's other stages), plus the status once every stage is done. Each job uses only the departments on its own
+  stepper, in this order.</p>
+  <p>To change <strong>one job</strong>, open it from the Jobs list and click <strong>▸ Job flow</strong> under the
+  stepper. It shows where the job is now (<strong>●</strong>) and which stages are done (<strong>✓</strong>); editors
+  can reorder and change the stages there for that job only, and <strong>Back to the company flow</strong> undoes it.
+  Everyone else can see the job's flow but not change it.</p>
   <p><strong>Keeping on top of the automatic moves:</strong></p>
   <ul>
     <li>A status a punch moved gets an <strong>AUTO</strong> tag beside it in the Jobs list and the job panel (hover it
@@ -863,7 +886,7 @@
     <tr><td>Day value on hover</td><td>Hover a <strong>day header</strong> on the Production or Installation calendar to pop up the total value scheduled that day. On Installation it shows this board's region (bold), the other region, and <strong>WK + NEK combined</strong>. On Production it shows WK, NEK and the total, split by each job's region on the Jobs list (Mfg Region, else Region). Each job counts once per day it has a card on, at the value its cards show (BC remaining balance, else the invoice amount); a job on both regions' boards the same day counts once in the combined figure. Only for people who can see $. Off by default; saved on this device.</td></tr>
     <tr><td>Billing periods <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Periods</strong> to open the month list. Each month has a <strong>billing cut-off date</strong> and <strong>goal</strong>. Pick the cut-off and the <em>Installs ending</em> column shows which install end dates count toward that month — from the previous month's cut-off day through the day <em>before</em> this one. A month with no cut-off runs 1st to last day; a blank goal means $1,100,000. Dates that would overlap a neighbouring month are refused. Everyone sees the same periods; only these roles can see or change them.</td></tr>
     <tr><td>Lead times <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Lead Times</strong>. Sets how many weeks after release a job's <strong>Mfg Target</strong> and <strong>Install Target</strong> fall (default <strong>7</strong> and <strong>10</strong> weeks). Add a rule per combination of steps: name it, pick <em>Only these steps</em> (the job's production steps are all in the rule &mdash; e.g. only Material Cut + Vinyl) or <em>Includes these steps</em> (the job has every one of them, plus maybe others), click the steps, and enter the Mfg and Install weeks. Rules are checked top to bottom (&uarr; &darr; to reorder); the first match wins. Click <strong>Save</strong>. The rules drive the Jobs list and the target dates on every job card.</td></tr>
-    <tr><td>Status rules <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Status Rules</strong>. For each stepper step, the <strong>Current Status</strong> a job moves to when that step becomes active after a shop-floor completion (&sect;5.4) &mdash; e.g. Paint &rarr; <em>MFG - Paint Prep / Paint</em>; plus the status once every step is complete. Saved for everyone as soon as you pick one; <strong>Reset</strong> goes back to the default.</td></tr>
+    <tr><td>Job flow <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Job Flow</strong>. The company flow: the order jobs move through the shop as <strong>stages</strong> (a department + the Current Status it means), top to bottom &mdash; a department can have several stages, e.g. Vinyl Cut then Vinyl Application. Reorder with ↑ / ↓, change a status, ✕ to remove, <strong>Add a stage</strong>, and set the status once every stage is done. This also sets every job's stepper order. Saved for everyone straight away; <strong>Reset to the original flow</strong> puts it back. Jobs given their own flow (job panel &rarr; ▸ Job flow) keep theirs. See &sect;5.4.</td></tr>
     <tr><td>Business Central <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Catch-up tools &mdash; everyday changes (completing a department, a status change, moving a card) already reach BC as you make them. <strong>Match Steppers</strong> completes the stepper steps each job's Current Status says are done (every step for the Complete statuses, the production steps for the Installation statuses); it shows the counts first and changes nothing until you click <strong>Update</strong>. <strong>Sync to BC</strong> brings BC's Project Planning in line with the steppers for every tracked job: <strong>active</strong> departments are marked <strong>Started</strong> (which lists the job in BC's step tiles), finished ones <strong>Complete</strong>, and dates / Assigned To go only to steps on the calendar. It shows how many updates it would send first; only what changed since BC was last updated is sent, and BC receives them over the next while. Run Match Steppers first, then Sync to BC.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below). Each user's
     <strong>Jobs</strong> button chooses which Jobs-list fields they may edit (&sect;5.17).</td></tr>
@@ -1322,6 +1345,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 6, 2026</td><td><strong>Job flow: edit the order and statuses jobs move through</strong> &mdash; <strong>Settings → Job flow</strong> (replacing Status rules) sets the company flow as stages &mdash; a department plus its Current Status &mdash; and a department can have more than one stage (e.g. Vinyl Cut, then Vinyl Application). Each job follows it using the departments on its stepper, and editors can change one job's flow from its panel (<strong>▸ Job flow</strong>). A shop-floor <em>Task complete</em> now moves the job to its next stage; the department completes after its last one. The flow's order is also the stepper's order. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Tour updated to today's app</strong> &mdash; the demo's <em>Full tour</em> now covers the Jobs list, Shop-floor History, Task complete on BC's Clock In Project and Multiple Projects/Nestings pages (with screenshots), My Schedule, Settings and Help. In the demo, the Jobs list is view only (it's the real list). See &sect;2.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Task complete on the Multiple Projects/Nestings pages</strong> &mdash; Clock In and Clock Out Multiple Projects/Nestings now list your open punches under <strong>Mark tasks complete</strong>, with a <strong>Task complete</strong> checkbox for each project, so crews on several jobs at once can complete each one separately. See &sect;5.4.</td></tr>
       <tr><td>Oct 6, 2026</td><td><strong>Jobs → History, and a dismissable AUTO tag</strong> &mdash; a <strong>History</strong> button (left of Refresh) lists every shop-floor <em>Task complete</em> from the last 30 days: date, job, resource, task, the department completed, the step it moved to and the Current Status change. A status a punch moved now shows an <strong>AUTO</strong> tag you can clear with × once reviewed (or ✓ Reviewed in History); the old, permanent <em>override</em> tag is gone. See &sect;5.4.</td></tr>
@@ -1435,7 +1459,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.27 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.28 · Oct 6, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

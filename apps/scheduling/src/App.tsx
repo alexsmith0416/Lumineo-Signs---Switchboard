@@ -1,4 +1,5 @@
 import { NO_JOB_EDITS } from "./services/job-edit-access";
+import { useJobFlowStore } from "./store/job-flow-store";
 import { useEffect, useRef, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -133,6 +134,7 @@ export default function App() {
   useEffect(() => {
     void useJobScheduleStore.getState().load();
     void useJobDeptCompletionStore.getState().load();
+    void useJobFlowStore.getState().load();
   }, []);
 
   // Warm the Jobs list in the background a few seconds after start (once the

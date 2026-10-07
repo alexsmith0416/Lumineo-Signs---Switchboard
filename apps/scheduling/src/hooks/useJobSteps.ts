@@ -3,6 +3,7 @@ import type { DepartmentStep } from "../components/DepartmentStepper";
 import { buildDepartmentSteps } from "../services/production-steps";
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../store/job-dept-override-store";
+import { useStepOrder } from "../store/job-flow-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -89,11 +90,12 @@ export function useJobSteps(jobNo: string | undefined): {
     void loadOverrides();
   }, [loadCompletions, loadOverrides]);
 
+  const order = useStepOrder(jobNo);
   const steps = useMemo(() => {
     if (!info) return [];
     const completed = new Set(Object.keys(completions ?? {}));
-    return buildDepartmentSteps(info.production, completed, info.hasInstall, overrides ?? {});
-  }, [info, completions, overrides]);
+    return buildDepartmentSteps(info.production, completed, info.hasInstall, overrides ?? {}, order);
+  }, [info, completions, overrides, order]);
 
   return { info, steps };
 }

@@ -6601,3 +6601,58 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   color: var(--text-dim);
   font-size: 12.5px;
 }
+
+/* Job flow editor (Settings → Job flow, and the job panel's ▸ Job flow). */
+.flow-editor { font-size: 13px; }
+.flow-editor__intro { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.flow-editor__table { width: 100%; border-collapse: collapse; }
+.flow-editor__table th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.flow-editor__table td { padding: 5px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.flow-editor__table .form-field__select { width: 100%; min-width: 0; }
+.flow-editor__num { width: 28px; text-align: center; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.flow-editor__row--done td { color: var(--text-tertiary); }
+.flow-editor__row--done .flow-editor__num { color: var(--status-green, #2e7d32); font-weight: 700; }
+.flow-editor__row--current td { background: color-mix(in srgb, var(--lumineo-navy) 7%, transparent); }
+.flow-editor__row--current .flow-editor__num { color: var(--lumineo-navy); font-weight: 700; }
+.flow-editor__now { color: var(--lumineo-navy); font-weight: 600; }
+.flow-editor__tag {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lumineo-navy);
+  border: 1px solid var(--lumineo-navy);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.flow-editor__actions { white-space: nowrap; width: 1%; }
+.flow-editor__btn {
+  font: inherit;
+  font-size: 12px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-left: 3px;
+}
+.flow-editor__btn:hover:not(:disabled) { background: var(--bg-tertiary); }
+.flow-editor__btn:disabled { opacity: 0.35; cursor: default; }
+.flow-editor__btn--x:hover:not(:disabled) { color: var(--lumineo-red); border-color: var(--lumineo-red); }
+.flow-editor__add { display: flex; gap: 6px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.flow-editor__add .form-field__select { flex: 1; min-width: 140px; }
+.flow-editor__add-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.flow-editor__add-btn { padding: 5px 14px; }
+.flow-editor__note { margin-top: 6px; font-size: 12px; color: var(--status-amber, #8a5300); }
+.flow-editor__done { display: flex; gap: 8px; align-items: center; margin: 14px 0 8px; font-size: 13px; flex-wrap: wrap; }
+.flow-editor__done .form-field__select { flex: 1; min-width: 200px; }

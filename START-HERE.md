@@ -242,7 +242,25 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
-- **📌 RESUME HERE (Oct 6, 2026) — Shop-floor "Task complete" is LIVE in UAT
+- **📌 RESUME HERE (Oct 6, 2026, late) — Job flow (editable step + status order).**
+  `services/job-flow.ts` (pure, 20 tests) + `store/job-flow-store.ts` +
+  `components/JobFlowEditor.tsx`. Decisions (Alex, Oct 6): statuses are their
+  own STAGES (step + status; a step can have several, e.g. Vinyl Cut → Vinyl
+  Application); company default in Settings → **Job flow** (replaced Status
+  rules — crfdf_jobsview `jobFlow`, built from `statusRules` until first saved)
+  + per-job flow in the job panel (▸ Job flow; `crfdf_jobtrack.crfdf_flow`).
+  - A tick completes the step's next open stage (`applyTick`); the stepper step
+    completes after its last stage; progress inside a step =
+    `crfdf_stagesdone`; status = first open stage. A hand-set status on a later
+    stage counts the earlier ones done. The processor re-reads the job's
+    tracking row first (`fetchJobTrack`).
+  - 🔴 **The flow's step order IS the stepper order** — `buildDepartmentSteps`
+    takes `order` (`stepOrderFor(jobNo)` / `useStepOrder`); every call site
+    passes it, and async paths (`pushStepperState`, bulk sync, ticks)
+    `await ensureFlowsLoaded()` first so BC's Started follows the same order.
+  - Columns: `scripts/add-jobflow-columns.ps1` (crfdf_flow, crfdf_stagesdone).
+  - Status rules store/section deleted; History's "moved to" uses the flow.
+- **(Oct 6, 2026) — Shop-floor "Task complete" is LIVE in UAT
   + Jobs → History DEPLOYED (guide v3.25).** Full write-up:
   `apps/scheduling/flows/BCSync_TaskCompletions.md`.
   - ✅ `crfdf_taskcompletion` created (`scripts/create-taskcompletion-table.ps1`,

@@ -77,16 +77,20 @@ export interface TickOutcome {
  * A tick's outcome by column. Ticks applied before Oct 6 only carry the
  * sentence in `result` ("Completed Routing (why) · status A → B"), so the
  * department and status are read back out of it; a missing "moved to" step is
- * the step whose Status rule is the status the job moved to.
+ * the step whose flow stage is the status the job moved to (`stepFor`, from the
+ * company flow — job-flow.ts stepForStatus).
  */
 export function tickOutcome(
   t: TickOutcome & { result: string },
-  rules: Readonly<Record<string, string>>,
+  stepFor: (status: string) => string | null,
 ): TickOutcome {
   let { department, nextDept, statusFrom, statusTo } = t;
   const result = t.result ?? "";
   if (!department) {
-    const m = /^Completed (.+?)(?: \(| · |$)/.exec(result) ?? /^(.+?) was already complete/.exec(result);
+    const m =
+      /^Completed the .+? stage of (.+?) — /.exec(result) ??
+      /^Completed (.+?)(?: \(| · |$)/.exec(result) ??
+      /^(.+?) was already complete/.exec(result);
     department = m?.[1]?.trim() ?? "";
   }
   if (!statusFrom) {
@@ -101,7 +105,7 @@ export function tickOutcome(
     }
   }
   if (!nextDept && statusTo) {
-    const key = Object.keys(rules).find((k) => rules[k] === statusTo);
+    const key = stepFor(statusTo);
     if (key) nextDept = key === ALL_DONE ? "All steps complete" : stepLabel(key);
   }
   return { department, nextDept, statusFrom, statusTo };

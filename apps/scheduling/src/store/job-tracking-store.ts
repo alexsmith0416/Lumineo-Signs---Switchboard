@@ -1,3 +1,4 @@
+import type { FlowStage } from "../services/job-flow";
 import { create } from "zustand";
 import { format } from "date-fns";
 import { currentStatus, emptyJobTrack, type BcJobSummary, type JobTrack } from "../services/job-tracking";
@@ -39,6 +40,10 @@ interface JobTrackingState {
   setStatus: (jobNo: string, status: string, by: string, auto?: string) => Promise<void>;
   /** Dismiss a job's Auto tag (the status stays as it is). */
   dismissAuto: (jobNo: string) => Promise<void>;
+  /** Give a job its own flow stages (null = back to the company flow). */
+  setJobFlow: (jobNo: string, stages: FlowStage[] | null) => Promise<void>;
+  /** Record a job's stage progress (services/job-flow.ts applyTick). */
+  setStagesDone: (jobNo: string, ids: string[]) => Promise<void>;
   /** Change tracking fields on a job (the Jobs grid's editable columns). */
   updateTrack: (jobNo: string, patch: TrackPatch) => Promise<void>;
   /** Set (or clear, with null) one custom field value on a job. */
@@ -152,6 +157,11 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     await saving;
   },
 
+  setJobFlow: (jobNo, stages) =>
+    saveTrack(jobNo, { flow: stages && stages.length ? JSON.stringify(stages) : "" }, "Change job flow"),
+
+  setStagesDone: (jobNo, ids) => saveTrack(jobNo, { stagesDone: ids.length ? JSON.stringify(ids) : "" }, "Record job flow progress"),
+
   dismissAuto: async (jobNo) => {
     if (!get().tracks.find((t) => t.jobNo === jobNo)?.statusAuto) return;
     await saveTrack(jobNo, { statusAuto: "" }, "Dismiss auto status tag");
@@ -189,12 +199,14 @@ async function jobSteps(jobNo: string) {
   const info = await dv.jobStepInfo(jobNo).catch(() => ({ production: [] as string[], hasInstall: false }));
   const completions = useJobDeptCompletionStore.getState();
   const overrides = useJobDeptOverrideStore.getState();
-  await Promise.all([completions.load(), overrides.load()]);
+  const { useJobFlowStore, stepOrderFor } = await import("./job-flow-store");
+  await Promise.all([completions.load(), overrides.load(), useJobFlowStore.getState().load()]);
   return buildDepartmentSteps(
     info.production,
     new Set(Object.keys(useJobDeptCompletionStore.getState().byJob[jobNo] ?? {})),
     info.hasInstall,
     useJobDeptOverrideStore.getState().byJob[jobNo] ?? {},
+    stepOrderFor(jobNo),
   );
 }
 

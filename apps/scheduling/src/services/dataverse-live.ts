@@ -1942,47 +1942,58 @@ const JOBTRACK_SET = "crfdf_jobtracks";
 
 export async function fetchJobTracks(): Promise<JobTrack[]> {
   const rows = await list(JOBTRACK_SET, {});
-  return rows
-    .map((r) => ({
-      id: s(r.crfdf_jobtrackid),
-      jobNo: s(r.crfdf_jobno).trim(),
-      jobName: s(r.crfdf_jobname),
-      statusOverride: s(r.crfdf_statusoverride),
-      statusAuto: s(r.crfdf_statusauto),
-      priority: s(r.crfdf_priority),
-      holdReason: s(r.crfdf_holdreason),
-      dateToHold: s(r.crfdf_datetohold),
-      dateOffHold: s(r.crfdf_dateoffhold),
-      priorHoldDays: n(r.crfdf_priorholddays),
-      orderDate: s(r.crfdf_orderdate),
-      mfgFinalDate: s(r.crfdf_mfgfinaldate),
-      expeditorDate: s(r.crfdf_expeditordate),
-      dateInstalled: s(r.crfdf_dateinstalled),
-      dateToAdmin: s(r.crfdf_datetoadmin),
-      dateInvoiced: s(r.crfdf_dateinvoiced),
-      vendor: s(r.crfdf_vendor),
-      poNumber: s(r.crfdf_ponumber),
-      vendorStatus: s(r.crfdf_vendorstatus),
-      storageLocation: s(r.crfdf_storagelocation),
-      vendorShipDate: s(r.crfdf_vendorshipdate),
-      vendorShipDate2: s(r.crfdf_vendorshipdate2),
-      outsourcedArrival: s(r.crfdf_outsourcedarrival),
-      graphics: s(r.crfdf_graphics),
-      routingType: s(r.crfdf_routingtype),
-      powerlines: s(r.crfdf_powerlines),
-      sales: s(r.crfdf_sales),
-      salesOverride: s(r.crfdf_salesoverride),
-      location: s(r.crfdf_location),
-      region: s(r.crfdf_region),
-      mfgRegion: s(r.crfdf_mfgregion),
-      installRegion: s(r.crfdf_installregion),
-      ulSign: Boolean(r.crfdf_ulsign),
-      notes: s(r.crfdf_notes),
-      legacyStatus: s(r.crfdf_legacystatus),
-      legacyProcess: s(r.crfdf_legacyprocess),
-      customValues: parseJsonObject(r.crfdf_customvalues),
-    }))
-    .filter((t) => t.jobNo);
+  return rows.map(mapJobTrack).filter((t) => t.jobNo);
+}
+
+/** One job's tracking row, read fresh (null = not tracked) — e.g. before a
+ *  shop-floor tick changes its flow progress / status. */
+export async function fetchJobTrack(jobNo: string): Promise<JobTrack | null> {
+  const rows = await list(JOBTRACK_SET, { filter: `crfdf_jobno eq '${odataLit(jobNo)}'` });
+  return rows[0] ? mapJobTrack(rows[0]) : null;
+}
+
+function mapJobTrack(r: Row): JobTrack {
+  return {
+    id: s(r.crfdf_jobtrackid),
+    jobNo: s(r.crfdf_jobno).trim(),
+    jobName: s(r.crfdf_jobname),
+    statusOverride: s(r.crfdf_statusoverride),
+    statusAuto: s(r.crfdf_statusauto),
+    priority: s(r.crfdf_priority),
+    holdReason: s(r.crfdf_holdreason),
+    dateToHold: s(r.crfdf_datetohold),
+    dateOffHold: s(r.crfdf_dateoffhold),
+    priorHoldDays: n(r.crfdf_priorholddays),
+    orderDate: s(r.crfdf_orderdate),
+    mfgFinalDate: s(r.crfdf_mfgfinaldate),
+    expeditorDate: s(r.crfdf_expeditordate),
+    dateInstalled: s(r.crfdf_dateinstalled),
+    dateToAdmin: s(r.crfdf_datetoadmin),
+    dateInvoiced: s(r.crfdf_dateinvoiced),
+    vendor: s(r.crfdf_vendor),
+    poNumber: s(r.crfdf_ponumber),
+    vendorStatus: s(r.crfdf_vendorstatus),
+    storageLocation: s(r.crfdf_storagelocation),
+    vendorShipDate: s(r.crfdf_vendorshipdate),
+    vendorShipDate2: s(r.crfdf_vendorshipdate2),
+    outsourcedArrival: s(r.crfdf_outsourcedarrival),
+    graphics: s(r.crfdf_graphics),
+    routingType: s(r.crfdf_routingtype),
+    powerlines: s(r.crfdf_powerlines),
+    sales: s(r.crfdf_sales),
+    salesOverride: s(r.crfdf_salesoverride),
+    flow: s(r.crfdf_flow),
+    stagesDone: s(r.crfdf_stagesdone),
+    location: s(r.crfdf_location),
+    region: s(r.crfdf_region),
+    mfgRegion: s(r.crfdf_mfgregion),
+    installRegion: s(r.crfdf_installregion),
+    ulSign: Boolean(r.crfdf_ulsign),
+    notes: s(r.crfdf_notes),
+    legacyStatus: s(r.crfdf_legacystatus),
+    legacyProcess: s(r.crfdf_legacyprocess),
+    customValues: parseJsonObject(r.crfdf_customvalues),
+  };
 }
 
 /** A JSON object column, or {} when blank / not JSON / not an object. */
@@ -2061,6 +2072,8 @@ const JOBTRACK_COLS = {
   ulSign: "crfdf_ulsign",
   notes: "crfdf_notes",
   salesOverride: "crfdf_salesoverride",
+  flow: "crfdf_flow",
+  stagesDone: "crfdf_stagesdone",
 } as const;
 export type JobTrackPatch = Partial<Pick<JobTrack, keyof typeof JOBTRACK_COLS>>;
 

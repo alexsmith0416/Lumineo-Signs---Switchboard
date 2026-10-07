@@ -22,6 +22,7 @@ import {
   type Region,
 } from "../services/gameplan";
 import { cardMoneyValue } from "./JobCard";
+import { stepOrderFor, useJobFlowStore } from "../store/job-flow-store";
 
 /**
  * Monthly Gameplanning — install billing for the current billing month.
@@ -127,6 +128,7 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
   const completions = useJobDeptCompletionStore((s) => s.byJob);
   const loadCompletions = useJobDeptCompletionStore((s) => s.load);
   const overrides = useJobDeptOverrideStore((s) => s.byJob);
+  const flowCompany = useJobFlowStore((s) => s.company);
   const planLines = useStepQueueData((s) => s.lines);
   const scheduled = useStepQueueData((s) => s.scheduled);
   const loadPlanLines = useStepQueueData((s) => s.load);
@@ -163,13 +165,15 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
           new Set(Object.keys(completions[jobNo] ?? {})),
           info.hasInstall,
           overrides[jobNo] ?? {},
+          stepOrderFor(jobNo),
         );
       },
       installLinesFor: (jobNo) => (planLines.get(jobNo) ?? []).filter((l) => l.isInstall),
       onBoard,
       today: new Date(),
     });
-  }, [rows, stepInfo, completions, overrides, planLines, scheduled, booked]);
+    // flowCompany: a changed company flow re-orders every job's steps.
+  }, [rows, stepInfo, completions, overrides, planLines, scheduled, booked, flowCompany]);
 
   const runAutofill = () => {
     setProposal(

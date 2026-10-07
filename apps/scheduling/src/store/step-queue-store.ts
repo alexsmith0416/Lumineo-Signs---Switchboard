@@ -9,6 +9,7 @@ import { defaultJobName } from "../services/job-tracking";
 import { useJobTrackingStore } from "./job-tracking-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
+import { stepOrderFor, useJobFlowStore } from "./job-flow-store";
 
 /**
  * Data for the Job Queue's BC step groups (services/step-queue.ts): BC planning
@@ -42,6 +43,7 @@ export const useStepQueueData = create<StepQueueDataState>((set, get) => ({
         dv.queuePlanningLines(),
         dv.allJobStepInfo(),
         dv.scheduledSteps(),
+        useJobFlowStore.getState().load(),
       ]);
       set({ lines, stepInfo, scheduled, loaded: true, loading: false });
     } catch (e) {
@@ -101,7 +103,7 @@ export function useStepQueue(
         const info = stepInfo.get(j.jobNo) ?? { production: [], hasInstall: false };
         return [
           j.jobNo,
-          buildDepartmentSteps(info.production, new Set(Object.keys(completions[j.jobNo] ?? {})), info.hasInstall, overrides[j.jobNo] ?? {}),
+          buildDepartmentSteps(info.production, new Set(Object.keys(completions[j.jobNo] ?? {})), info.hasInstall, overrides[j.jobNo] ?? {}, stepOrderFor(j.jobNo)),
         ] as const;
       }),
     );

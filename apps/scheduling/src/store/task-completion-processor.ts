@@ -6,8 +6,10 @@
  *  2. completes it on the job's stepper — the same store call as an editor's
  *     click, so the next department becomes active and BC Project Planning
  *     follows (stepper state push + job-level completion);
- *  3. moves Current Status to the new active step's status
- *     (services/status-rules.ts) — only from normal production statuses;
+ *  3. walks the job's FLOW (services/job-flow.ts): the tick completes the
+ *     step's next open stage — the stepper department completes only after
+ *     its last stage — and Current Status moves to the flow's first open
+ *     stage (only from normal production statuses);
  *  4. records what it did on the row ("done" / "skipped" + why), shown in the
  *     Jobs panel's Shop floor list.
  *
@@ -25,11 +27,11 @@ import { format } from "date-fns";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import { ensureJobsLoaded, useJobTrackingStore } from "./job-tracking-store";
-import { useStatusRulesStore } from "./status-rules-store";
+import { ensureFlowsLoaded, jobFlowFor, stepOrderFor, useJobFlowStore } from "./job-flow-store";
 import { buildDepartmentSteps, stepLabel } from "../services/production-steps";
 import { currentStatus } from "../services/job-tracking";
 import { deptForCompletion } from "../services/task-completion";
-import { nextStatus } from "../services/status-rules";
+import { applyTick, currentStage, flowStatus, isFlowMovable, parseStagesDone } from "../services/job-flow";
 import type { TaskCompletionDetail, TaskCompletionRow } from "../services/dataverse-live";
 import { APP_BUILD, LATEST_BUILD_KEY, isOutdatedBuild, shouldRecordBuild } from "../services/app-build";
 
@@ -69,17 +71,22 @@ async function stepsFor(jobNo: string) {
       new Set(Object.keys(useJobDeptCompletionStore.getState().byJob[jobNo] ?? {})),
       info.hasInstall,
       useJobDeptOverrideStore.getState().byJob[jobNo] ?? {},
+      stepOrderFor(jobNo),
     );
   return steps;
 }
 
 type Outcome = { state: "done" | "skipped"; result: string; detail?: Partial<TaskCompletionDetail> };
 
-/** The job's active step after the completion, for History ("All steps complete" when none is left). */
-function nextDeptLabel(steps: ReadonlyArray<{ key: string; state: string }>): string {
-  const active = steps.find((s) => s.state === "active");
-  if (active) return stepLabel(active.key);
-  return steps.length && steps.every((s) => s.state === "completed") ? "All steps complete" : "";
+/** Pull one job's tracking row fresh into the store (another tab may have moved it on). */
+async function refreshTrack(dv: Dv, jobNo: string): Promise<void> {
+  const fresh = await dv.fetchJobTrack(jobNo);
+  if (!fresh) return;
+  useJobTrackingStore.setState((s) => ({
+    tracks: s.tracks.some((t) => t.jobNo === jobNo)
+      ? s.tracks.map((t) => (t.jobNo === jobNo ? fresh : t))
+      : [...s.tracks, fresh],
+  }));
 }
 
 /** Apply one tick; returns the row's outcome. */
@@ -108,21 +115,44 @@ async function applyOne(t: TaskCompletionRow): Promise<Outcome> {
 
   const who = t.resourceName || t.resourceNo || "shop floor";
   const by = `Punch · ${who}`;
+
+  // Where the job is in its flow, from a fresh read of its tracking row.
+  await ensureFlowsLoaded();
+  await refreshTrack(dv, t.jobNo);
+  const track = useJobTrackingStore.getState().tracks.find((x) => x.jobNo === t.jobNo);
+  const current = currentStatus(track).status;
+  const stepKeys = before.map((s) => s.key);
+  const flow = jobFlowFor(t.jobNo, stepKeys);
+  const doneStatus = useJobFlowStore.getState().company.doneStatus;
+  const doneBefore = parseStagesDone(track?.stagesDone ?? "");
+
   let what: string;
+  let stagesDone = doneBefore;
   if (completed.has(pick.key)) {
     what = `${label} was already complete`;
   } else {
-    await useJobDeptCompletionStore.getState().completeMany(t.jobNo, [pick.key], by, before.map((s) => s.key));
-    what = `Completed ${label} (${pick.why})`;
+    const tick = applyTick(flow, pick.key, doneBefore, completed, current);
+    stagesDone = tick.stagesDone;
+    if (tick.completesStep) {
+      await useJobDeptCompletionStore.getState().completeMany(t.jobNo, [pick.key], by, stepKeys);
+      what = `Completed ${label}${tick.stage && flow.filter((s) => s.step === pick.key).length > 1 ? ` (last stage: ${tick.stage.status})` : ""} (${pick.why})`;
+    } else {
+      what = `Completed the ${tick.stage!.status} stage of ${label} — ${label} stays open (${pick.why})`;
+    }
+    if (JSON.stringify(stagesDone) !== JSON.stringify(doneBefore)) {
+      await useJobTrackingStore.getState().setStagesDone(t.jobNo, stagesDone);
+    }
   }
 
-  // Current Status follows the new active step — normal production statuses only.
-  await ensureJobsLoaded();
-  const track = useJobTrackingStore.getState().tracks.find((x) => x.jobNo === t.jobNo);
-  const current = currentStatus(track).status;
+  // Current Status follows the flow's first open stage — normal production statuses only.
   const after = steps();
-  const target = nextStatus(after, current, useStatusRulesStore.getState().rules);
-  const detail = { department: label, nextDept: nextDeptLabel(after), statusFrom: current, statusTo: target ?? "" };
+  const completedAfter = new Set(after.filter((s) => s.state === "completed").map((s) => s.key));
+  const doneSet = new Set(stagesDone);
+  const at = currentStage(flow, doneSet, completedAfter);
+  const nextDept = at ? stepLabel(at.step) : flow.length ? "All steps complete" : "";
+  const wanted = flowStatus(flow, doneStatus, doneSet, completedAfter);
+  const target = flow.length && isFlowMovable(current, flow, doneStatus) && wanted !== current ? wanted : null;
+  const detail = { department: label, nextDept, statusFrom: current, statusTo: target ?? "" };
   if (target) {
     const stamp = `${by} · ${format(new Date(), "M/d/yyyy")}`;
     await useJobTrackingStore.getState().setStatus(t.jobNo, target, stamp, stamp);
@@ -144,7 +174,7 @@ export async function processTaskCompletions(): Promise<void> {
     await Promise.all([
       useJobDeptCompletionStore.getState().load(true),
       useJobDeptOverrideStore.getState().load(true),
-      useStatusRulesStore.getState().load(true),
+      useJobFlowStore.getState().load(true),
     ]);
     for (const t of pending) {
       try {

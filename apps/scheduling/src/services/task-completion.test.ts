@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deptForCompletion, tickOutcome } from "./task-completion";
+import { flowFromRules, stepForStatus } from "./job-flow";
 import { DEFAULT_STATUS_RULES, isAutoMovable, nextStatus } from "./status-rules";
 
 const none = new Set<string>();
@@ -65,28 +66,39 @@ describe("the status a job moves to", () => {
 
 describe("a tick's History columns", () => {
   const blank = { department: "", nextDept: "", statusFrom: "", statusTo: "" };
+  const flow = flowFromRules(DEFAULT_STATUS_RULES);
+  const stepFor = (status: string) => stepForStatus(flow.stages, flow.doneStatus, status);
 
   it("reads an older tick's sentence into department + status, and the step from the rules", () => {
     const r = tickOutcome(
       { ...blank, result: "Completed Routing (the task's description) · status NEK - Production → MFG - Len Metal Fab" },
-      DEFAULT_STATUS_RULES,
+      stepFor,
     );
     expect(r).toEqual({ department: "Routing", nextDept: "Metal Fab", statusFrom: "NEK - Production", statusTo: "MFG - Len Metal Fab" });
   });
 
   it("handles a department name with a slash and an unchanged status", () => {
-    const r = tickOutcome({ ...blank, result: "Completed Vinyl / Graphics (the task's planning lines) · status left as Hold - Customer" }, DEFAULT_STATUS_RULES);
+    const r = tickOutcome({ ...blank, result: "Completed Vinyl / Graphics (the task's planning lines) · status left as Hold - Customer" }, stepFor);
     expect(r).toEqual({ department: "Vinyl / Graphics", nextDept: "", statusFrom: "Hold - Customer", statusTo: "" });
   });
 
   it("reads 'already complete' and the all-done rule", () => {
-    const r = tickOutcome({ ...blank, result: "Assembly was already complete · status MFG - Assembly → Complete-need paperwork" }, DEFAULT_STATUS_RULES);
+    const r = tickOutcome({ ...blank, result: "Assembly was already complete · status MFG - Assembly → Complete-need paperwork" }, stepFor);
     expect(r.department).toBe("Assembly");
     expect(r.nextDept).toBe("All steps complete");
   });
 
   it("keeps the columns a newer tick already has", () => {
     const t = { department: "Paint", nextDept: "Vinyl / Graphics", statusFrom: "A", statusTo: "B", result: "Completed Routing · status X → Y" };
-    expect(tickOutcome(t, DEFAULT_STATUS_RULES)).toEqual({ department: "Paint", nextDept: "Vinyl / Graphics", statusFrom: "A", statusTo: "B" });
+    expect(tickOutcome(t, stepFor)).toEqual({ department: "Paint", nextDept: "Vinyl / Graphics", statusFrom: "A", statusTo: "B" });
   });
+});
+
+it("reads a stage-only tick's department (History)", () => {
+  const r = tickOutcome(
+    { department: "", nextDept: "", statusFrom: "", statusTo: "", result: "Completed the MFG - Vinyl Cut stage of Vinyl / Graphics — Vinyl / Graphics stays open (the task's planning lines) · status MFG - Vinyl Cut → MFG - Vinyl Application" },
+    () => "V",
+  );
+  expect(r.department).toBe("Vinyl / Graphics");
+  expect(r.statusTo).toBe("MFG - Vinyl Application");
 });

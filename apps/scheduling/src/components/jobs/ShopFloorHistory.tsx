@@ -7,7 +7,8 @@ import { format } from "date-fns";
 import type { JobRow } from "../../services/job-tracking";
 import type { TaskCompletionRow } from "../../services/dataverse-live";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
-import { useStatusRulesStore } from "../../store/status-rules-store";
+import { useJobFlowStore } from "../../store/job-flow-store";
+import { stepForStatus } from "../../services/job-flow";
 import { tickOutcome } from "../../services/task-completion";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
@@ -73,10 +74,11 @@ export function ShopFloorHistoryPanel({ rows, canDismiss, onOpenJob, onClose }: 
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
   useEffect(load, [load]);
-  const rules = useStatusRulesStore((s) => s.rules);
+  const flow = useJobFlowStore((s) => s.company);
   useEffect(() => {
-    void useStatusRulesStore.getState().load();
+    void useJobFlowStore.getState().load();
   }, []);
+  const stepFor = useCallback((status: string) => stepForStatus(flow.stages, flow.doneStatus, status), [flow]);
 
   const byJob = useMemo(() => new Map(rows.map((r) => [r.jobNo, r])), [rows]);
   // A job's Auto tag belongs to its newest tick that moved the status.
@@ -143,7 +145,7 @@ export function ShopFloorHistoryPanel({ rows, canDismiss, onOpenJob, onClose }: 
             <tbody>
               {shown.map((t) => {
                 const row = byJob.get(t.jobNo);
-                const o = tickOutcome(t, rules);
+                const o = tickOutcome(t, stepFor);
                 return (
                   <tr key={t.id} className={t.state === "skipped" ? "sfh__row--skipped" : ""}>
                     <td className="sfh__when">

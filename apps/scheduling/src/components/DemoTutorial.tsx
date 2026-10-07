@@ -123,7 +123,7 @@ const FULL_STEPS: TourStep[] = [
     view: "jobs",
     target: '[data-tour="nav-jobs"]',
     title: "Jobs — every open job in one list",
-    body: "The Jobs list tracks each job from order to invoice: its stepper, Current Status, targets, vendor and install dates. Pick a view on the left, then search, filter, sort and group. Click a job to open everything about it. (In the demo this is the real list, so it's view only.)",
+    body: "The Jobs list tracks each job from order to invoice: its stepper, Current Status, targets, vendor and install dates. Pick a view on the left, then search, filter, sort and group. Click a job to open everything about it, including its Job flow. (In the demo this is the real list, so it's view only.)",
     placement: "right",
   },
   {
@@ -158,7 +158,7 @@ const FULL_STEPS: TourStep[] = [
     view: "settings",
     target: '[data-tour="nav-settings"]',
     title: "Settings",
-    body: "Display options (compact sidebar, hide the weekend, day values on hover), auto-cascade, presentation mode and more. Admins also manage users, lead times, billing periods and the step-to-status rules here.",
+    body: "Display options (compact sidebar, hide the weekend, day values on hover), auto-cascade, presentation mode and more. Admins also manage users, lead times, billing periods and the Job flow here: the order jobs move through the shop, and the status at each stage.",
     placement: "right",
   },
   {

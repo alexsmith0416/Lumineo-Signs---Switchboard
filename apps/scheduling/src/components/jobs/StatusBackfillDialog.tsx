@@ -6,6 +6,7 @@ import { buildDepartmentSteps } from "../../services/production-steps";
 import { useJobDeptCompletionStore } from "../../store/job-dept-completion-store";
 import { useJobDeptOverrideStore } from "../../store/job-dept-override-store";
 import { useCurrentUser } from "../../services/current-user";
+import { ensureFlowsLoaded, stepOrderFor } from "../../store/job-flow-store";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -46,13 +47,14 @@ export default function StatusBackfillDialog({ onClose }: { onClose: () => void 
       const trackBy = new Map(tracks.map((t) => [t.jobNo, t]));
       const jobs = bcJobs.map((j) => ({ jobNo: j.jobNo, status: currentStatus(trackBy.get(j.jobNo)).status }));
       const info = await dv.allJobStepInfo();
+      await ensureFlowsLoaded();
       const completions = useJobDeptCompletionStore.getState().byJob;
       const overrides = useJobDeptOverrideStore.getState().byJob;
       const plan = planStatusBackfill(
         jobs,
         (jobNo) => {
           const i = info.get(jobNo) ?? { production: [], hasInstall: false };
-          return buildDepartmentSteps(i.production, new Set(Object.keys(completions[jobNo] ?? {})), i.hasInstall, overrides[jobNo] ?? {});
+          return buildDepartmentSteps(i.production, new Set(Object.keys(completions[jobNo] ?? {})), i.hasInstall, overrides[jobNo] ?? {}, stepOrderFor(jobNo));
         },
       );
       if (alive) setPhase({ kind: "ready", plan });

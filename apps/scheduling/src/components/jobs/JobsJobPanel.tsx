@@ -18,6 +18,8 @@ import CustomValueEditor from "./CustomValueEditor";
 import { OptionBadges } from "./JobsGrid";
 import { canEditJobField, type JobEditAccess } from "../../services/job-edit-access";
 import { AutoStatusTag } from "./ShopFloorHistory";
+import { JobFlowJobSection } from "../JobFlowEditor";
+import { useJobSteps } from "../../hooks/useJobSteps";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -137,6 +139,7 @@ export default function JobsJobPanel({
           {row.inBc && (
             <>
               <ProductionStepperSection jobNo={row.jobNo} />
+              <JobFlowForJob jobNo={row.jobNo} canEdit={canEditJobField(edit, "stepper") || canEditJobField(edit, "status")} />
               <JobTargetsSection jobNo={row.jobNo} />
               {/* Edits four dates at once, so full editors only — a login granted
                   one of those dates changes it in the list's own column. */}
@@ -285,6 +288,12 @@ function JobNameField({ row, canEdit }: { row: JobRow; canEdit: boolean }) {
 function fmt(ymd: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
   return m ? format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), "MMM d, yyyy") : "";
+}
+
+/** ▸ Job flow for a job: its stepper steps feed the flow (services/job-flow.ts). */
+function JobFlowForJob({ jobNo, canEdit }: { jobNo: string; canEdit: boolean }) {
+  const { steps } = useJobSteps(jobNo);
+  return <JobFlowJobSection jobNo={jobNo} steps={steps} canEdit={canEdit} />;
 }
 
 /** "Task complete" ticks from BC job punches for this job, newest first, with

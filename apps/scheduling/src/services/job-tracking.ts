@@ -67,6 +67,10 @@ export interface JobTrack {
   legacyProcess: string;
   /** Custom field values, keyed by field key (services/custom-fields.ts). */
   customValues?: Record<string, unknown>;
+  /** This job's own flow stages (JSON, services/job-flow.ts); "" = the company flow. */
+  flow?: string;
+  /** Stages done on steps not complete yet (JSON array of stage ids). */
+  stagesDone?: string;
 }
 
 /** A tracking row with nothing filled in yet. */
@@ -76,7 +80,7 @@ export function emptyJobTrack(jobNo: string): JobTrack {
     orderDate: "", mfgFinalDate: "", expeditorDate: "", dateInstalled: "", dateToAdmin: "", dateInvoiced: "",
     vendor: "", poNumber: "", vendorStatus: "", storageLocation: "", vendorShipDate: "", vendorShipDate2: "",
     outsourcedArrival: "", graphics: "", routingType: "", powerlines: "", sales: "", salesOverride: "", location: "", region: "",
-    mfgRegion: "", installRegion: "", ulSign: false, notes: "", legacyStatus: "", legacyProcess: "",
+    mfgRegion: "", installRegion: "", ulSign: false, notes: "", legacyStatus: "", legacyProcess: "", flow: "", stagesDone: "",
   };
 }
 

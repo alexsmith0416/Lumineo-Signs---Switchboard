@@ -221,3 +221,38 @@ describe("dismissing a job's Auto status tag when the save fails", () => {
     expect(failed[0]!.label).toBe("Dismiss auto status tag");
   });
 });
+
+describe("changing a job's flow when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the job's new flow on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveJobTrack: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { useJobTrackingStore } = await import("./job-tracking-store");
+    const { emptyJobTrack } = await import("../services/job-tracking");
+    status.getState().clear();
+    useJobTrackingStore.setState({ tracks: [{ ...emptyJobTrack("J34707"), id: "t1" }] });
+    const stages = [
+      { step: "V", status: "MFG - Vinyl Cut" },
+      { step: "V", status: "MFG - Vinyl Application" },
+    ];
+
+    await useJobTrackingStore.getState().setJobFlow("J34707", stages);
+    await flush();
+
+    expect(JSON.parse(useJobTrackingStore.getState().tracks[0]!.flow!)).toEqual(stages);
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Change job flow");
+  });
+});

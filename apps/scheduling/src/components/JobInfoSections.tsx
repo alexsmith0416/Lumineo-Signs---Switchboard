@@ -83,7 +83,7 @@ function AddressLink({ address }: { address: string }) {
 }
 
 /** A section with a ▸ header that starts collapsed. */
-function Collapsible({ title, children }: { title: string; children: ReactNode }) {
+export function Collapsible({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="job-info__section">

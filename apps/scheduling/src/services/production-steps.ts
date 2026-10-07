@@ -47,16 +47,41 @@ export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean)
 }
 
 /** The step defs actually shown for a job, in flow order: the BC-derived set with
- *  editor overrides layered on (added / removed). */
+ *  editor overrides layered on (added / removed). `order` (the job's flow —
+ *  services/job-flow.ts) reorders them; steps it doesn't name keep their
+ *  default place relative to the rest. */
 export function includedStepDefs(
   deptNames: string[],
   hasInstall: boolean,
   overrides: Record<string, DeptOverride> = {},
+  order?: readonly string[],
 ): Array<{ key: string; label: string }> {
-  return ALL_STEP_DEFS.filter((def) => {
+  const defs = ALL_STEP_DEFS.filter((def) => {
     const ov = overrides[def.key];
     return ov ? ov.included : bcHasStep(def.key, deptNames, hasInstall);
   });
+  return order?.length ? orderSteps(defs, order) : defs;
+}
+
+/** Steps in `order`; any it doesn't name go right after the step that precedes
+ *  them in the default flow (or first, when none does). */
+export function orderSteps<T extends { key: string }>(defs: readonly T[], order: readonly string[]): T[] {
+  const named = order.map((k) => defs.find((d) => d.key === k)).filter((d): d is T => !!d);
+  const flow = ALL_STEP_DEFS.map((d) => d.key);
+  const out = [...named];
+  for (const d of defs) {
+    if (out.includes(d)) continue;
+    const before = flow.slice(0, flow.indexOf(d.key));
+    let at = 0;
+    for (let i = out.length - 1; i >= 0; i--) {
+      if (before.includes(out[i]!.key)) {
+        at = i + 1;
+        break;
+      }
+    }
+    out.splice(at, 0, d);
+  }
+  return out;
 }
 
 /** Candidate steps NOT currently in the stepper — the "add a department" pool. */
@@ -70,7 +95,8 @@ export function missingStepDefs(
 }
 
 /** Build ordered stepper steps from a job's production department names + whether
- *  it has install work + the completed step keys + editor overrides. `active` =
+ *  it has install work + the completed step keys + editor overrides, in the
+ *  job's flow order (`order`). `active` =
  *  the first not-completed step (default) PLUS any editor-marked-active step;
  *  everything else not-completed is `included`. */
 export function buildDepartmentSteps(
@@ -78,8 +104,9 @@ export function buildDepartmentSteps(
   completed: Set<string>,
   hasInstall = false,
   overrides: Record<string, DeptOverride> = {},
+  order?: readonly string[],
 ): DepartmentStep[] {
-  const defs = includedStepDefs(deptNames, hasInstall, overrides);
+  const defs = includedStepDefs(deptNames, hasInstall, overrides, order);
   // Default active = the first step in flow order that isn't completed.
   const firstActiveKey = defs.find((d) => !completed.has(d.key))?.key;
   return defs.map((d) => {

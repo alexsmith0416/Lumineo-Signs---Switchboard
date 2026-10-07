@@ -1,6 +1,7 @@
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import type { FullSyncPlan } from "../services/bc-full-sync";
+import { ensureFlowsLoaded, stepOrderFor } from "./job-flow-store";
 
 /**
  * Plan a "Sync to BC" for the given (tracked) jobs: their current stepper from
@@ -13,7 +14,7 @@ export async function planBcSync(jobNos: readonly string[]): Promise<FullSyncPla
     import("../services/bc-full-sync"),
     import("../services/production-steps"),
   ]);
-  await Promise.all([useJobDeptCompletionStore.getState().load(), useJobDeptOverrideStore.getState().load()]);
+  await Promise.all([useJobDeptCompletionStore.getState().load(), useJobDeptOverrideStore.getState().load(), ensureFlowsLoaded()]);
   const [stepInfo, snapshot, lastPushes] = await Promise.all([
     dv.allJobStepInfo(),
     dv.fetchSyncSnapshot(),
@@ -26,7 +27,7 @@ export async function planBcSync(jobNos: readonly string[]): Promise<FullSyncPla
       const info = stepInfo.get(jobNo) ?? { production: [], hasInstall: false };
       return [
         jobNo,
-        buildDepartmentSteps(info.production, new Set(Object.keys(completions[jobNo] ?? {})), info.hasInstall, overrides[jobNo] ?? {}),
+        buildDepartmentSteps(info.production, new Set(Object.keys(completions[jobNo] ?? {})), info.hasInstall, overrides[jobNo] ?? {}, stepOrderFor(jobNo)),
       ] as const;
     }),
   );

@@ -48,8 +48,14 @@ export function withDefaults(rules: Partial<Record<string, string>> | null | und
 
 /** May a job on this status be moved automatically? */
 export function isAutoMovable(status: string, rules: StatusRules): boolean {
+  return isAutoMovableStatus(status, Object.values(rules));
+}
+
+/** May a job on this status be moved automatically, given the statuses a flow uses?
+ *  Holds never are; nor are statuses outside the flow and the usual production ones. */
+export function isAutoMovableStatus(status: string, flowStatuses: readonly string[]): boolean {
   if (!status || isHoldStatus(status)) return false;
-  return Object.values(rules).includes(status) || ALSO_MOVABLE.includes(status);
+  return flowStatuses.includes(status) || ALSO_MOVABLE.includes(status);
 }
 
 /**
