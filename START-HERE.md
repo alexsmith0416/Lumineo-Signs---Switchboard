@@ -252,7 +252,7 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     - ✅ `scripts/reopen-auto-purchasing.ps1 -Apply` ran: **244** Purchasing
       completions re-opened (all were "Alex Smith (status backfill)"; none had
       reached BC). Commit `83d0729`.
-    - ⏸ **NOT done yet (Alex chose to wait):** Settings → Business Central →
+    - ⏸ **Superseded by the redesign below — don't run these:** Settings → Business Central →
       **Match Steppers**, then **Sync to BC**. Until Match Steppers runs, `RP`
       Ready for Planning is open on every job (and, wherever NO/UM are already
       done, it's the active lifecycle stage — departments still go active
