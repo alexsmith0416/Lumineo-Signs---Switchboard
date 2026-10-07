@@ -16,25 +16,41 @@
 
   Dry run by default. Device-code sign-in as asmith@lumineosigns.com.
 #>
-param([switch]$Apply)
+param(
+  [switch]$Apply,
+  # Optional file to keep the sign-in between the dry run and -Apply (OUTSIDE the repo).
+  [string]$TokenCache = ''
+)
 
 $ErrorActionPreference = 'Stop'
 $tenant   = 'fe0182fa-d183-46ab-8493-9e8ea9c3d0b8'
 $org      = 'https://org8fa22efd.crm.dynamics.com'
 $clientId = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
 
-$dc = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/devicecode" `
-  -Body @{ client_id = $clientId; scope = "$org/.default offline_access" }
-Write-Host ""; Write-Host "==> $($dc.message)" -ForegroundColor Cyan; Write-Host ""
-$token = $null; $deadline = (Get-Date).AddSeconds([int]$dc.expires_in)
-while (-not $token -and (Get-Date) -lt $deadline) {
-  Start-Sleep -Seconds ([int]$dc.interval)
+$resp = $null
+if ($TokenCache -and (Test-Path $TokenCache)) {
   try {
-    $token = (Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token" `
-      -Body @{ grant_type='urn:ietf:params:oauth:grant-type:device_code'; client_id=$clientId; device_code=$dc.device_code }).access_token
-  } catch { $err = ($_.ErrorDetails.Message | ConvertFrom-Json).error; if ($err -ne 'authorization_pending' -and $err -ne 'slow_down') { throw } }
+    $cached = Get-Content $TokenCache -Raw | ConvertFrom-Json
+    $resp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token" `
+      -Body @{ grant_type = 'refresh_token'; client_id = $clientId; refresh_token = $cached.refresh_token; scope = "$org/.default offline_access" }
+  } catch { $resp = $null }
 }
-if (-not $token) { throw "Device-code login timed out." }
+if (-not $resp) {
+  $dc = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/devicecode" `
+    -Body @{ client_id = $clientId; scope = "$org/.default offline_access" }
+  Write-Host ""; Write-Host "==> $($dc.message)" -ForegroundColor Cyan; Write-Host ""
+  $deadline = (Get-Date).AddSeconds([int]$dc.expires_in)
+  while (-not $resp -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Seconds ([int]$dc.interval)
+    try {
+      $resp = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token" `
+        -Body @{ grant_type='urn:ietf:params:oauth:grant-type:device_code'; client_id=$clientId; device_code=$dc.device_code }
+    } catch { $err = ($_.ErrorDetails.Message | ConvertFrom-Json).error; if ($err -ne 'authorization_pending' -and $err -ne 'slow_down') { throw } }
+  }
+}
+if (-not $resp) { throw "Device-code login timed out." }
+if ($TokenCache) { $resp | ConvertTo-Json | Set-Content $TokenCache }
+$token = $resp.access_token
 Write-Host "Authenticated." -ForegroundColor Green
 $h = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'OData-MaxVersion' = '4.0'; 'OData-Version' = '4.0' }
 $api = "$org/api/data/v9.2"
