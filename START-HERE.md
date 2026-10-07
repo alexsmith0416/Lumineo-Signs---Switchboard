@@ -312,7 +312,17 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     custom role grants the app's tables, so only System Administrators (13 users
     incl. Alex + Bill Weesner, the rest mostly `#` service accounts) can use it. ⚠️ Before a non-admin uses the app, they
     need a custom role covering ALL crfdf_ tables, not just these three — re-run
-    the script after creating it. BC entry no 1 never reached Dataverse (only
+    the script after creating it.
+  - **Non-admin role: script READY, not applied (Oct 6).**
+    `scripts/create-scheduler-user-role.ps1` builds "Lumineo Scheduler User"
+    (30 tables, Organization depth, only the ops the app performs — 147
+    privileges; BC/weather-fed tables read only) and with `-AssignAppUsers`
+    gives it + Basic User to every non-admin crfdf_appuser login. 🔴 **Blocker:
+    the app lives in a DEVELOPER environment** (`pac admin list` → Type
+    Developer). Only the owner + admins get in: 29 of 32 Settings → Users logins
+    aren't Dataverse users there. Non-admin rollout needs the app (+ tables +
+    flows) in a Sandbox / Production environment; then run the script with
+    `-Org <that env's URL>`. BC entry no 1 never reached Dataverse (only
     entry 2) — check BC if it matters.
 - **(Oct 4, 2026) — Job panel by role, phase 1 DEPLOYED.**
   Clicking a card: below the stepper, `components/JobInfoSections.tsx` shows the
