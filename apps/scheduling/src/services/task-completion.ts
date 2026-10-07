@@ -17,6 +17,7 @@
  */
 import { departmentNameForLine, isInstallResource, isProductionResource } from "./planning-line-mapping";
 import { ALL_STEP_DEFS, INSTALL_STEP, deptKeyForName, stepLabel } from "./production-steps";
+import { ALL_DONE } from "./status-rules";
 
 export interface TaskLine {
   resourceNo: string;
@@ -59,4 +60,49 @@ export function deptForCompletion(c: CompletionInput): DeptPick {
   const fromTask = deptKeyForName(c.taskDescription);
   if (fromTask) return { key: fromTask, why: "the task's description" };
   return { key: null, why: "couldn't tell which department this task is" };
+}
+
+/** What a tick did, as the Jobs → History columns show it. */
+export interface TickOutcome {
+  /** The department it completed ("Routing"). */
+  department: string;
+  /** The job's active step afterwards ("Metal Fab" / "All steps complete"; "" = unknown). */
+  nextDept: string;
+  statusFrom: string;
+  /** "" = the status was left as it was. */
+  statusTo: string;
+}
+
+/**
+ * A tick's outcome by column. Ticks applied before Oct 6 only carry the
+ * sentence in `result` ("Completed Routing (why) · status A → B"), so the
+ * department and status are read back out of it; a missing "moved to" step is
+ * the step whose Status rule is the status the job moved to.
+ */
+export function tickOutcome(
+  t: TickOutcome & { result: string },
+  rules: Readonly<Record<string, string>>,
+): TickOutcome {
+  let { department, nextDept, statusFrom, statusTo } = t;
+  const result = t.result ?? "";
+  if (!department) {
+    const m = /^Completed (.+?)(?: \(| · |$)/.exec(result) ?? /^(.+?) was already complete/.exec(result);
+    department = m?.[1]?.trim() ?? "";
+  }
+  if (!statusFrom) {
+    const moved = / · status (.+?) → (.+)$/.exec(result);
+    const left = / · status left as (.+)$/.exec(result);
+    if (moved) {
+      statusFrom = moved[1]!.trim();
+      statusTo = moved[2]!.trim();
+    } else if (left) {
+      statusFrom = left[1]!.trim();
+      statusTo = "";
+    }
+  }
+  if (!nextDept && statusTo) {
+    const key = Object.keys(rules).find((k) => rules[k] === statusTo);
+    if (key) nextDept = key === ALL_DONE ? "All steps complete" : stepLabel(key);
+  }
+  return { department, nextDept, statusFrom, statusTo };
 }

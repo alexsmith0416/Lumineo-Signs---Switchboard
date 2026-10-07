@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deptForCompletion } from "./task-completion";
+import { deptForCompletion, tickOutcome } from "./task-completion";
 import { DEFAULT_STATUS_RULES, isAutoMovable, nextStatus } from "./status-rules";
 
 const none = new Set<string>();
@@ -60,5 +60,33 @@ describe("the status a job moves to", () => {
   it("uses an edited rule", () => {
     expect(nextStatus([step("V", "active")], "MFG - Paint Prep / Paint", { ...DEFAULT_STATUS_RULES, V: "MFG - Vinyl Application" }))
       .toBe("MFG - Vinyl Application");
+  });
+});
+
+describe("a tick's History columns", () => {
+  const blank = { department: "", nextDept: "", statusFrom: "", statusTo: "" };
+
+  it("reads an older tick's sentence into department + status, and the step from the rules", () => {
+    const r = tickOutcome(
+      { ...blank, result: "Completed Routing (the task's description) · status NEK - Production → MFG - Len Metal Fab" },
+      DEFAULT_STATUS_RULES,
+    );
+    expect(r).toEqual({ department: "Routing", nextDept: "Metal Fab", statusFrom: "NEK - Production", statusTo: "MFG - Len Metal Fab" });
+  });
+
+  it("handles a department name with a slash and an unchanged status", () => {
+    const r = tickOutcome({ ...blank, result: "Completed Vinyl / Graphics (the task's planning lines) · status left as Hold - Customer" }, DEFAULT_STATUS_RULES);
+    expect(r).toEqual({ department: "Vinyl / Graphics", nextDept: "", statusFrom: "Hold - Customer", statusTo: "" });
+  });
+
+  it("reads 'already complete' and the all-done rule", () => {
+    const r = tickOutcome({ ...blank, result: "Assembly was already complete · status MFG - Assembly → Complete-need paperwork" }, DEFAULT_STATUS_RULES);
+    expect(r.department).toBe("Assembly");
+    expect(r.nextDept).toBe("All steps complete");
+  });
+
+  it("keeps the columns a newer tick already has", () => {
+    const t = { department: "Paint", nextDept: "Vinyl / Graphics", statusFrom: "A", statusTo: "B", result: "Completed Routing · status X → Y" };
+    expect(tickOutcome(t, DEFAULT_STATUS_RULES)).toEqual({ department: "Paint", nextDept: "Vinyl / Graphics", statusFrom: "A", statusTo: "B" });
   });
 });

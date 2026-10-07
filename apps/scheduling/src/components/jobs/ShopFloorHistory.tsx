@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import type { JobRow } from "../../services/job-tracking";
 import type { TaskCompletionRow } from "../../services/dataverse-live";
 import { useJobTrackingStore } from "../../store/job-tracking-store";
+import { useStatusRulesStore } from "../../store/status-rules-store";
+import { tickOutcome } from "../../services/task-completion";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 const DAYS = 30;
@@ -71,6 +73,10 @@ export function ShopFloorHistoryPanel({ rows, canDismiss, onOpenJob, onClose }: 
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
   useEffect(load, [load]);
+  const rules = useStatusRulesStore((s) => s.rules);
+  useEffect(() => {
+    void useStatusRulesStore.getState().load();
+  }, []);
 
   const byJob = useMemo(() => new Map(rows.map((r) => [r.jobNo, r])), [rows]);
   // A job's Auto tag belongs to its newest tick that moved the status.
@@ -137,7 +143,7 @@ export function ShopFloorHistoryPanel({ rows, canDismiss, onOpenJob, onClose }: 
             <tbody>
               {shown.map((t) => {
                 const row = byJob.get(t.jobNo);
-                const structured = !!(t.department || t.statusFrom);
+                const o = tickOutcome(t, rules);
                 return (
                   <tr key={t.id} className={t.state === "skipped" ? "sfh__row--skipped" : ""}>
                     <td className="sfh__when">
@@ -163,22 +169,26 @@ export function ShopFloorHistoryPanel({ rows, canDismiss, onOpenJob, onClose }: 
                       <td colSpan={3} className="sfh__muted">Waiting to be applied…</td>
                     ) : t.state === "skipped" ? (
                       <td colSpan={3} className="sfh__skipped">Skipped — {t.result}</td>
-                    ) : structured ? (
+                    ) : (
                       <>
-                        <td>{t.department}</td>
-                        <td>{t.nextDept}</td>
+                        <td>{o.department || <span className="sfh__muted">—</span>}</td>
+                        <td>{o.nextDept || <span className="sfh__muted">—</span>}</td>
                         <td>
-                          {t.statusTo ? (
+                          {o.statusTo ? (
                             <>
-                              <span className="sfh__from">{t.statusFrom}</span> → <strong>{t.statusTo}</strong>
+                              <strong>{o.statusTo}</strong>
+                              <span className="sfh__sub">was {o.statusFrom}</span>
+                            </>
+                          ) : o.statusFrom ? (
+                            <>
+                              {o.statusFrom}
+                              <span className="sfh__sub">unchanged</span>
                             </>
                           ) : (
-                            <span className="sfh__muted">Unchanged ({t.statusFrom})</span>
+                            <span className="sfh__muted">—</span>
                           )}
                         </td>
                       </>
-                    ) : (
-                      <td colSpan={3}>{t.result}</td>
                     )}
                     <td className="sfh__review">
                       {reviewIds.has(t.id) &&
