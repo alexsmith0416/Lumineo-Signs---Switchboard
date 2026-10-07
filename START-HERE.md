@@ -277,9 +277,26 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     service jobs — 136 SERVICE, 8 MNTCCONT, 1 SIGNCONT). Test job **J38696**.
     Probe: `scripts/bc-job-fields-probe.ps1`. Details:
     `flows/BCSync_JobDescriptions.md`.
-  - **Remaining go-live:** deploy the app, then Settings → Business Central →
-    **Match Steppers** right away (otherwise every job shows New Order active
-    and a stepper click would push New Order This Week Started).
+  - ✅ Deployed Oct 7 + Match Steppers run. **Follow-up (Alex, Oct 7, built —
+    deploy pending):** (1) Jobs list + card hovers show DEPARTMENTS only; the
+    job panel / stepper pop-up draw a "Lifecycle" line above "Departments"
+    (`StepperBlock`). (2) New stage **`RP` Ready for Planning** between UM and
+    PU — BC "Manufacturing Ready for Planning", status "Mfg. Ready for
+    Planning". (3) `preProductionToComplete`: leaving New Order this week /
+    Upcoming Mfg. / Mfg. Ready for Planning / Purchasing completes that stage
+    + earlier ones; a production status ("MFG - …", Steel MFG, NEK -
+    Production, Manufacturing, Active, or a dept stage's status) completes all
+    of NO/UM/RP — via setStatus → completeMany, so BC follows. Match
+    Steppers applies it too. (4) 🔴 **Purchasing (`PU`) is MANUAL-ONLY** (Alex,
+    Oct 7: "only completed by the purchaser"; not everything is bought before
+    release): `MANUAL_ONLY_KEYS` — no status pick / punch / backfill ever
+    completes it, and open it never holds the line (default active skips it;
+    it's active alongside once RP is done; `currentStage` / `nextStatus` skip
+    it, so the status follows the departments). **After deploying, in order:**
+    (a) `scripts/reopen-auto-purchasing.ps1` (dry run, then `-Apply`) — the
+    first deploy's Match Steppers auto-completed PU on many jobs; (b) Match
+    Steppers again (RP is new — it would be active on every job); (c) Sync to
+    BC so existing jobs' pre-production stages are Complete in BC too.
   - 🔧 **BCSync_JobPlanningLines fixed Oct 7** (`scripts/patch-planninglines-flow-upsert.ps1`;
     backup `flows/planninglines-clientdata-backup-20261007-013616.json`). It had
     "failed" every night since ≥ Sep 23 and was off since Oct 3: Update a row

@@ -17,7 +17,7 @@
  *    reason; moving OUT of one stamps Date off Hold. Days on hold from earlier
  *    holds are carried in priorHoldDays, so a second hold doesn't lose the first.
  */
-import { INSTALL_STEP, isDeptKey, isLifecycleKey } from "./production-steps";
+import { INSTALL_STEP, PRE_PRODUCTION_KEYS, isDeptKey, isLifecycleKey, isManualOnlyKey } from "./production-steps";
 import { isServiceKey } from "./service-steps";
 
 /** Current Status options, as in the LNI Production Scheduler app (+ the
@@ -63,7 +63,8 @@ export function stepsToComplete(
   steps: ReadonlyArray<StepLike>,
   flow?: { stages: ReadonlyArray<{ step: string; status: string }>; doneStatus: string },
 ): string[] {
-  const keysOf = (xs: ReadonlyArray<StepLike>) => xs.filter((s) => s.state !== "completed").map((s) => s.key);
+  // Never a manual-only step (Purchasing — the purchaser ticks it).
+  const keysOf = (xs: ReadonlyArray<StepLike>) => xs.filter((s) => s.state !== "completed" && !isManualOnlyKey(s.key)).map((s) => s.key);
   const service = steps.filter((s) => isServiceKey(s.key));
   const production = steps.filter((s) => !isServiceKey(s.key));
 
@@ -89,6 +90,44 @@ export function stepsToComplete(
   return [];
 }
 
+/** "MFG - …", Steel MFG, NEK - Production, Manufacturing, Active — the job is in production. */
+const PRODUCTION_STATUS = /^(MFG - |Steel MFG$|NEK - Production$|Manufacturing$|Active$)/;
+
+/** Is this a production status — one of the above, or the status of a
+ *  department stage in the job's flow? */
+export function isProductionStatus(status: string, flow?: { stages: ReadonlyArray<{ step: string; status: string }> }): boolean {
+  if (PRODUCTION_STATUS.test(status)) return true;
+  const stage = flow?.stages.find((s) => s.status === status);
+  return !!stage && isDeptKey(stage.step);
+}
+
+/**
+ * The pre-production stages (New Order, Upcoming Mfg, Ready for Planning) a
+ * status change completes (Alex, Oct 7) — never Purchasing, which only the
+ * purchaser completes:
+ *  - moving OFF one of their statuses ("New Order this week", "Upcoming
+ *    Mfg.", "Mfg. Ready for Planning", "Purchasing") completes that stage and
+ *    the ones before it — whatever the new status is (a hold included);
+ *  - moving ONTO a production status completes all of them.
+ * Only stages on the job's stepper that aren't complete yet.
+ */
+export function preProductionToComplete(
+  prev: string,
+  next: string,
+  steps: ReadonlyArray<StepLike>,
+  flow?: { stages: ReadonlyArray<{ step: string; status: string }> },
+): string[] {
+  const pre = steps.filter((s) => PRE_PRODUCTION_KEYS.includes(s.key));
+  // Never Purchasing (manual-only) — the purchaser ticks it.
+  const open = (xs: ReadonlyArray<StepLike>) => xs.filter((s) => s.state !== "completed" && !isManualOnlyKey(s.key)).map((s) => s.key);
+  if (isProductionStatus(next, flow)) return open(pre);
+  if (!prev || prev === next) return [];
+  const left = (flow?.stages ?? []).find((s) => s.status === prev && PRE_PRODUCTION_KEYS.includes(s.step))?.step;
+  if (!left) return [];
+  const upTo = PRE_PRODUCTION_KEYS.indexOf(left);
+  return open(pre.filter((s) => PRE_PRODUCTION_KEYS.indexOf(s.key) <= upTo));
+}
+
 /**
  * Lifecycle stages a job has clearly moved past but that aren't ticked — for
  * the one-time backfill when the lifecycle stages arrived (Oct 7, 2026). A
@@ -103,7 +142,10 @@ export function passedLifecycleSteps(production: ReadonlyArray<StepLike>): strin
   production.forEach((s, i) => {
     if (s.state === "completed") furthest = i;
   });
-  return production.slice(0, Math.max(0, furthest)).filter((s) => s.state !== "completed" && isLifecycleKey(s.key)).map((s) => s.key);
+  return production
+    .slice(0, Math.max(0, furthest))
+    .filter((s) => s.state !== "completed" && isLifecycleKey(s.key) && !isManualOnlyKey(s.key))
+    .map((s) => s.key);
 }
 
 export interface HoldFields {
@@ -182,9 +224,12 @@ export function planStatusBackfill(
   const out: StatusBackfillItem[] = [];
   for (const r of rows) {
     const steps = stepsFor(r.jobNo);
-    const byStatus = stepsToComplete(r.status, steps, flowFor?.(r.jobNo, steps));
+    const flow = flowFor?.(r.jobNo, steps);
+    const byStatus = stepsToComplete(r.status, steps, flow);
     const passed = passedLifecycleSteps(steps.filter((s) => !isServiceKey(s.key)));
-    const keys = [...new Set([...byStatus, ...passed])];
+    // On a production status (even one outside the flow): every pre-production stage.
+    const pre = preProductionToComplete("", r.status, steps, flow);
+    const keys = [...new Set([...byStatus, ...passed, ...pre])];
     if (!keys.length) continue;
     const kind = COMPLETE_STATUSES.has(r.status) ? "complete" : INSTALL_STATUSES.has(r.status) ? "install" : "lifecycle";
     out.push({ jobNo: r.jobNo, status: r.status, keys, allKeys: steps.map((s) => s.key), kind });

@@ -213,11 +213,25 @@ function StepperBlock({
       </div>
 
       {steps.length > 0 ? (
-        <DepartmentStepper
-          steps={steps}
-          onNodeClick={(step) => setSelectedKey((k) => (k === step.key ? null : step.key))}
-          selectedKey={selectedKey}
-        />
+        // The lifecycle stages (New Order … Complete Invoiced) on their own line
+        // above the departments + Install (Alex, Oct 7) — one stepper read as two.
+        <div className="job-stepper__rows">
+          {[
+            { label: "Lifecycle", row: steps.filter((s) => s.lifecycle) },
+            { label: "Departments", row: steps.filter((s) => !s.lifecycle) },
+          ]
+            .filter((r) => r.row.length)
+            .map((r, _, all) => (
+              <div key={r.label} className="job-stepper__row">
+                {all.length > 1 && <span className="job-stepper__row-label">{r.label}</span>}
+                <DepartmentStepper
+                  steps={r.row}
+                  onNodeClick={(step) => setSelectedKey((k) => (k === step.key ? null : step.key))}
+                  selectedKey={selectedKey}
+                />
+              </div>
+            ))}
+        </div>
       ) : (
         <div className="job-stepper__empty-note">{emptyNote}</div>
       )}

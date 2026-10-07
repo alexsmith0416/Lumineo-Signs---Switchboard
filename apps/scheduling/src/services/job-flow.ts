@@ -19,7 +19,7 @@
  * completes the job's next open stage of that step; the Current Status then
  * follows the first open stage of the whole flow.
  */
-import { ALL_STEP_DEFS } from "./production-steps";
+import { ALL_STEP_DEFS, isManualOnlyKey } from "./production-steps";
 import { ALL_DONE, DEFAULT_STATUS_RULES, OLD_DONE_STATUS, isAutoMovableStatus, type StatusRules } from "./status-rules";
 
 export interface FlowStage {
@@ -160,13 +160,15 @@ export function isStageDone(s: FlowStage, stagesDone: ReadonlySet<string>, compl
   return completedSteps.has(s.step) || stagesDone.has(stageId(s));
 }
 
-/** The first stage not done — where the job is now (null = every stage done). */
+/** The first stage not done — where the job is now (null = every stage done).
+ *  A manual-only step (Purchasing) left open doesn't hold the job there: the
+ *  status follows the departments, not the purchaser's to-do. */
 export function currentStage(
   flow: readonly FlowStage[],
   stagesDone: ReadonlySet<string>,
   completedSteps: ReadonlySet<string>,
 ): FlowStage | null {
-  return flow.find((s) => !isStageDone(s, stagesDone, completedSteps)) ?? null;
+  return flow.find((s) => !isManualOnlyKey(s.step) && !isStageDone(s, stagesDone, completedSteps)) ?? null;
 }
 
 /** The Current Status a flow puts the job on now. */

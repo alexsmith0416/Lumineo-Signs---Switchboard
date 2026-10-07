@@ -40,7 +40,7 @@ describe("company flow", () => {
   it("starts from the old step → status rules, in stepper order", () => {
     const f = flowFromRules(DEFAULT_STATUS_RULES);
     // Lifecycle stages (Oct 7) around the departments.
-    expect(stepOrder(f.stages)).toEqual(["NO", "UM", "PU", "MC", "S", "R", "MF", "P", "V", "A", "CR", "RI", "I", "CP", "CA", "CI"]);
+    expect(stepOrder(f.stages)).toEqual(["NO", "UM", "RP", "PU", "MC", "S", "R", "MF", "P", "V", "A", "CR", "RI", "I", "CP", "CA", "CI"]);
     expect(f.stages.find((s) => s.step === "V")!.status).toBe("MFG - Vinyl Cut");
     expect(f.doneStatus).toBe("Complete Invoiced");
   });
@@ -84,9 +84,9 @@ describe("a job's flow", () => {
 
   it("sets the stepper order (a reordered flow reorders the stepper)", () => {
     const own = [st("P", "MFG - Paint Prep / Paint"), st("R", "MFG - Routing"), st("A", "MFG - Assembly")];
-    const steps = buildDepartmentSteps(["Routing", "Paint", "Assembly"], new Set(["NO", "UM", "PU"]), false, {}, stepOrder(own));
+    const steps = buildDepartmentSteps(["Routing", "Paint", "Assembly"], new Set(["NO", "UM", "RP", "PU"]), false, {}, stepOrder(own));
     // The departments in the flow's order; the lifecycle stages keep their places around them.
-    expect(steps.map((s) => s.key)).toEqual(["NO", "UM", "PU", "P", "R", "A", "CP", "CA", "CI"]);
+    expect(steps.map((s) => s.key)).toEqual(["NO", "UM", "RP", "PU", "P", "R", "A", "CP", "CA", "CI"]);
     expect(steps.find((s) => s.key === "P")!.state).toBe("active");
   });
 

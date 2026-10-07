@@ -84,6 +84,7 @@ export const BC_STEP_FOR_KEY: Readonly<Record<string, string>> = {
   // names are confirmed (BC has two "Survey" steps — a write by name is refused).
   NO: "New Order This Week",
   UM: "Upcoming Manufacturing",
+  RP: "Manufacturing Ready for Planning",
   PU: "Job Purchasing",
   RI: "Product Ready for Install Scheduling",
   CP: "Complete-Need Paperwork",

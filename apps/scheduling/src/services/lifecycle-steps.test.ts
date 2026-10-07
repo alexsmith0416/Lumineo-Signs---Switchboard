@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildDepartmentSteps } from "./production-steps";
 import { buildServiceSteps, isServiceOrderType } from "./service-steps";
 import { bcStepStates, jobCompleteForBc } from "./bc-planning-sync";
-import { passedLifecycleSteps, planStatusBackfill, stepsToComplete } from "./job-status";
-import { companyFlow, effectiveFlow, flowFromRules, stepOrder } from "./job-flow";
-import { DEFAULT_STATUS_RULES } from "./status-rules";
+import { isProductionStatus, passedLifecycleSteps, planStatusBackfill, preProductionToComplete, stepsToComplete } from "./job-status";
+import { companyFlow, currentStage, effectiveFlow, flowFromRules, stepOrder } from "./job-flow";
+import { DEFAULT_STATUS_RULES, nextStatus } from "./status-rules";
 
 const keys = (s: ReadonlyArray<{ key: string }>) => s.map((x) => x.key);
 const st = (key: string, state: "completed" | "active" | "included") => ({ key, state });
@@ -13,14 +13,14 @@ const FLOW = { stages: flowFromRules(DEFAULT_STATUS_RULES).stages, doneStatus: "
 describe("the production lifecycle stepper", () => {
   it("puts the lifecycle stages around a production job's departments", () => {
     const steps = buildDepartmentSteps(["Routing", "Paint"], new Set(), true);
-    expect(keys(steps)).toEqual(["NO", "UM", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
+    expect(keys(steps)).toEqual(["NO", "UM", "RP", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
     expect(steps[0]!.state).toBe("active"); // a new job starts at New Order
     expect(steps.find((s) => s.key === "NO")!.lifecycle).toBe(true);
     expect(steps.find((s) => s.key === "R")!.lifecycle).toBeUndefined();
   });
 
   it("leaves out Ready for Install when there's no install work", () => {
-    expect(keys(buildDepartmentSteps(["Vinyl"], new Set(), false))).toEqual(["NO", "UM", "PU", "V", "CP", "CA", "CI"]);
+    expect(keys(buildDepartmentSteps(["Vinyl"], new Set(), false))).toEqual(["NO", "UM", "RP", "PU", "V", "CP", "CA", "CI"]);
   });
 
   it("gives a service-only job no lifecycle stages; a service job with departments keeps them", () => {
@@ -73,17 +73,19 @@ describe("BC write-back for the new stages", () => {
 });
 
 describe("picking a Current Status", () => {
-  const job = [st("NO", "active"), st("UM", "included"), st("PU", "included"), st("S", "included"), st("R", "included"), st("RI", "included"), st("I", "included"), st("CP", "included"), st("CA", "included"), st("CI", "included")];
+  const job = [st("NO", "active"), st("UM", "included"), st("RP", "included"), st("PU", "included"), st("S", "included"), st("R", "included"), st("RI", "included"), st("I", "included"), st("CP", "included"), st("CA", "included"), st("CI", "included")];
 
   it("a department status completes the lifecycle stages before it — never other departments", () => {
-    expect(stepsToComplete("MFG - Routing", job, FLOW)).toEqual(["NO", "UM", "PU"]);
+    expect(stepsToComplete("MFG - Routing", job, FLOW)).toEqual(["NO", "UM", "RP"]);
   });
 
   it("a status past production completes everything before it", () => {
-    expect(stepsToComplete("Ready for Install", job, FLOW)).toEqual(["NO", "UM", "PU", "S", "R"]);
+    expect(stepsToComplete("Ready for Install", job, FLOW)).toEqual(["NO", "UM", "RP", "S", "R"]);
     // Complete to Admin = with Admin: everything up to and including Complete to Admin.
-    expect(stepsToComplete("Complete to Admin", job, FLOW)).toEqual(["NO", "UM", "PU", "S", "R", "RI", "I", "CP", "CA"]);
+    expect(stepsToComplete("Complete to Admin", job, FLOW)).toEqual(["NO", "UM", "RP", "S", "R", "RI", "I", "CP", "CA"]);
+    // Everything but Purchasing — only the purchaser completes that.
     expect(stepsToComplete("Complete Invoiced", job, FLOW)).toHaveLength(10);
+    expect(stepsToComplete("Complete Invoiced", job, FLOW)).not.toContain("PU");
   });
 
   it("Upcoming Mfg. completes New Order", () => {
@@ -96,7 +98,63 @@ describe("picking a Current Status", () => {
   });
 
   it("statuses outside the flow keep the older rules", () => {
-    expect(stepsToComplete("Installation", job)).toEqual(["NO", "UM", "PU", "S", "R", "RI"]);
+    expect(stepsToComplete("Installation", job)).toEqual(["NO", "UM", "RP", "S", "R", "RI"]);
+  });
+});
+
+describe("leaving a pre-production status (Oct 7)", () => {
+  const job = [st("NO", "active"), st("UM", "included"), st("RP", "included"), st("PU", "included"), st("R", "included"), st("I", "included")];
+
+  it("completes the stage it leaves and the ones before it, whatever the new status", () => {
+    expect(preProductionToComplete("New Order this week", "Upcoming Mfg.", job, FLOW)).toEqual(["NO"]);
+    expect(preProductionToComplete("Upcoming Mfg.", "Hold - Customer", job, FLOW)).toEqual(["NO", "UM"]);
+    expect(preProductionToComplete("Mfg. Ready for Planning", "Purchasing", job, FLOW)).toEqual(["NO", "UM", "RP"]);
+  });
+
+  it("completes every pre-production stage on a production status — flow or not", () => {
+    for (const s of ["MFG - Routing", "MFG - Terry Metal Fab", "Steel MFG", "Manufacturing", "NEK - Production"]) {
+      expect(preProductionToComplete("New Order this week", s, job, FLOW)).toEqual(["NO", "UM", "RP"]);
+    }
+  });
+
+  it("leaves them when nothing pre-production was left and it's not production", () => {
+    expect(preProductionToComplete("Hold - Customer", "Service or Contract Order", job, FLOW)).toEqual([]);
+    expect(isProductionStatus("Mfg. Ready for Planning", FLOW)).toBe(false);
+    expect(isProductionStatus("Upcoming Mfg.", FLOW)).toBe(false);
+    expect(isProductionStatus("MFG - Paint Prep / Paint", FLOW)).toBe(true);
+  });
+
+  it("skips stages already complete", () => {
+    const done = [st("NO", "completed"), st("UM", "completed"), st("RP", "active"), st("PU", "included")];
+    expect(preProductionToComplete("Mfg. Ready for Planning", "Manufacturing", done, FLOW)).toEqual(["RP"]);
+  });
+
+  it("the backfill ticks them for jobs already on a production status outside the flow", () => {
+    const plan = planStatusBackfill([{ jobNo: "J2", status: "MFG - Terry Metal Fab" }], () => job, () => FLOW);
+    expect(plan[0]!.keys).toEqual(["NO", "UM", "RP"]);
+  });
+});
+
+describe("Purchasing — only the purchaser completes it (Oct 7)", () => {
+  it("is active alongside the next department once the stages before it are done, and never holds it up", () => {
+    const steps = buildDepartmentSteps(["Routing", "Paint"], new Set(["NO", "UM", "RP"]), false);
+    const state = Object.fromEntries(steps.map((s) => [s.key, s.state]));
+    expect(state.PU).toBe("active");
+    expect(state.R).toBe("active");
+    expect(state.P).toBe("included");
+  });
+
+  it("isn't active before Ready for Planning is done", () => {
+    const steps = buildDepartmentSteps(["Routing"], new Set(["NO"]), false);
+    expect(steps.find((s) => s.key === "PU")!.state).toBe("included");
+    expect(steps.find((s) => s.key === "UM")!.state).toBe("active");
+  });
+
+  it("an open Purchasing never decides the Current Status", () => {
+    const flow = flowFromRules(DEFAULT_STATUS_RULES).stages.filter((s) => ["NO", "UM", "RP", "PU", "R", "P"].includes(s.step));
+    const done = new Set(["NO", "UM", "RP", "R"]);
+    expect(currentStage(flow, new Set(), done)?.step).toBe("P");
+    expect(nextStatus([st("PU", "active"), st("R", "completed"), st("P", "active")], "MFG - Routing", DEFAULT_STATUS_RULES)).toBe("MFG - Paint Prep / Paint");
   });
 });
 
@@ -107,9 +165,9 @@ describe("the lifecycle backfill", () => {
   });
 
   it("plans from the status and from completed steps together", () => {
-    const steps = [st("NO", "active"), st("UM", "included"), st("PU", "included"), st("R", "included"), st("P", "included")];
+    const steps = [st("NO", "active"), st("UM", "included"), st("RP", "included"), st("PU", "included"), st("R", "included"), st("P", "included")];
     const plan = planStatusBackfill([{ jobNo: "J1", status: "MFG - Paint Prep / Paint" }, { jobNo: "J2", status: "New Order this week" }], () => steps, () => FLOW);
-    expect(plan).toEqual([{ jobNo: "J1", status: "MFG - Paint Prep / Paint", keys: ["NO", "UM", "PU"], allKeys: keys(steps), kind: "lifecycle" }]);
+    expect(plan).toEqual([{ jobNo: "J1", status: "MFG - Paint Prep / Paint", keys: ["NO", "UM", "RP"], allKeys: keys(steps), kind: "lifecycle" }]);
   });
 });
 
@@ -125,8 +183,8 @@ describe("a company flow saved before the lifecycle stages", () => {
 
   it("gets the lifecycle stages in their default places — New Order first, Complete Invoiced last", () => {
     const company = companyFlow(saved);
-    const flow = effectiveFlow(company, null, ["NO", "UM", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
-    expect(stepOrder(flow)).toEqual(["NO", "UM", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
+    const flow = effectiveFlow(company, null, ["NO", "UM", "RP", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
+    expect(stepOrder(flow)).toEqual(["NO", "UM", "RP", "PU", "R", "P", "RI", "I", "CP", "CA", "CI"]);
   });
 
   it("moves the old done status to Complete Invoiced", () => {

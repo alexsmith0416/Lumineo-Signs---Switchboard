@@ -605,7 +605,7 @@ function MemberDetailBody({
             >
               Production stage
             </div>
-            <DepartmentStepper steps={steps} size="sm" />
+            <DepartmentStepper steps={steps.filter((s) => !s.lifecycle)} size="sm" />
           </div>
         )}
       </div>
@@ -851,7 +851,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
             >
               Production stage
             </div>
-            <DepartmentStepper steps={steps} size="sm" />
+            <DepartmentStepper steps={steps.filter((s) => !s.lifecycle)} size="sm" />
           </div>
         )}
 

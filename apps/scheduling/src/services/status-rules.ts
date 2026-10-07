@@ -10,7 +10,7 @@
  * (Service, Morton, Billboards, Refurb, Complete to Admin / Invoiced…) are
  * left for people to change. Later, sign type / sign order can refine this.
  */
-import { INSTALL_STEP } from "./production-steps";
+import { INSTALL_STEP, isManualOnlyKey } from "./production-steps";
 import { isHoldStatus } from "./job-status";
 
 /** The rule key for "every step complete". */
@@ -26,6 +26,7 @@ export const DEFAULT_STATUS_RULES: StatusRules = {
   // ("Complete to Admin") until invoiced ("Complete Invoiced" = every step done).
   NO: "New Order this week",
   UM: "Upcoming Mfg.",
+  RP: "Mfg. Ready for Planning",
   PU: "Purchasing",
   MC: "MFG - Need Material Cut",
   S: "Steel MFG",
@@ -88,7 +89,8 @@ export function nextStatus(
   rules: StatusRules,
 ): string | null {
   if (!steps.length || !isAutoMovable(current, rules)) return null;
-  const active = steps.find((s) => s.state === "active");
-  const target = active ? rules[active.key] : steps.every((s) => s.state === "completed") ? rules[ALL_DONE] : undefined;
+  // An open manual-only step (Purchasing) never decides the status.
+  const active = steps.find((s) => s.state === "active" && !isManualOnlyKey(s.key));
+  const target = active ? rules[active.key] : steps.every((s) => s.state === "completed" || isManualOnlyKey(s.key)) ? rules[ALL_DONE] : undefined;
   return target && target !== current ? target : null;
 }

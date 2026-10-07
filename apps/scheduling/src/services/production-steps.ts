@@ -38,8 +38,24 @@ export const INSTALL_STEP = { key: "I", label: "Install" } as const;
 export const LIFECYCLE_BEFORE: ReadonlyArray<{ key: string; label: string }> = [
   { key: "NO", label: "New Order" },
   { key: "UM", label: "Upcoming Mfg" },
+  // BC "Manufacturing Ready for Planning" sits between Upcoming Manufacturing
+  // and Job Purchasing (Alex, Oct 7).
+  { key: "RP", label: "Ready for Planning" },
   { key: "PU", label: "Purchasing" },
 ];
+/** The pre-production stages (New Order … Purchasing). */
+export const PRE_PRODUCTION_KEYS: readonly string[] = LIFECYCLE_BEFORE.map((d) => d.key);
+
+/**
+ * Steps only a person completes — never a status change, a punch or a
+ * backfill — and that don't hold the job up while they're open (Alex, Oct 7):
+ * PURCHASING is the purchaser's to tick; not everything is bought before a job
+ * is released for production. Open, it is active alongside whatever comes
+ * next once the stages before it are done; the departments go on regardless,
+ * and the Current Status follows them, not it.
+ */
+export const MANUAL_ONLY_KEYS: ReadonlySet<string> = new Set(["PU"]);
+export const isManualOnlyKey = (key: string): boolean => MANUAL_ONLY_KEYS.has(key);
 export const READY_FOR_INSTALL = { key: "RI", label: "Ready for Install" } as const;
 export const LIFECYCLE_AFTER: ReadonlyArray<{ key: string; label: string }> = [
   { key: "CP", label: "Complete-Need Paperwork" },
@@ -152,12 +168,15 @@ export function buildDepartmentSteps(
   service = false,
 ): DepartmentStep[] {
   const defs = includedStepDefs(deptNames, hasInstall, overrides, order, service);
-  // Default active = the first step in flow order that isn't completed.
-  const firstActiveKey = defs.find((d) => !completed.has(d.key))?.key;
-  return defs.map((d) => {
+  // Default active = the first step in flow order that isn't completed —
+  // skipping manual-only steps (Purchasing), which never hold the line.
+  const firstActiveKey = defs.find((d) => !completed.has(d.key) && !isManualOnlyKey(d.key))?.key;
+  return defs.map((d, i) => {
     let state: DepartmentStep["state"] = "included";
     if (completed.has(d.key)) state = "completed";
     else if (d.key === firstActiveKey || overrides[d.key]?.active) state = "active";
+    // A manual-only step is active (in the purchaser's queue) once every step before it is done.
+    else if (isManualOnlyKey(d.key) && defs.slice(0, i).every((p) => completed.has(p.key) || isManualOnlyKey(p.key))) state = "active";
     return { key: d.key, label: d.label, state, ...(isLifecycleKey(d.key) ? { lifecycle: true } : {}) };
   });
 }

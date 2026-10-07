@@ -2,7 +2,7 @@ import type { FlowStage } from "../services/job-flow";
 import { create } from "zustand";
 import { format } from "date-fns";
 import { currentStatus, emptyJobTrack, type BcJobSummary, type JobTrack } from "../services/job-tracking";
-import { holdTransition, stepsToComplete } from "../services/job-status";
+import { holdTransition, preProductionToComplete, stepsToComplete } from "../services/job-status";
 import { buildDepartmentSteps } from "../services/production-steps";
 import { buildServiceSteps, isServiceKey } from "../services/service-steps";
 import { persistOrReport } from "./write-status-store";
@@ -154,7 +154,9 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     const steps = await jobSteps(jobNo);
     const { jobFlowConfigFor } = await import("./job-flow-store");
     const production = steps.filter((s) => !isServiceKey(s.key)).map((s) => s.key);
-    const keys = stepsToComplete(status, steps, jobFlowConfigFor(jobNo, production));
+    const flow = jobFlowConfigFor(jobNo, production);
+    // + the pre-production stage(s) it leaves, or all of them on a production status.
+    const keys = [...new Set([...stepsToComplete(status, steps, flow), ...preProductionToComplete(prev, status, steps, flow)])];
     if (keys.length) {
       await useJobDeptCompletionStore.getState().completeMany(jobNo, keys, by, steps.map((s) => s.key));
     }
