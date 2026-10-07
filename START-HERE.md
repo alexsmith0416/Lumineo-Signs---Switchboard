@@ -258,7 +258,9 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     takes `order` (`stepOrderFor(jobNo)` / `useStepOrder`); every call site
     passes it, and async paths (`pushStepperState`, bulk sync, ticks)
     `await ensureFlowsLoaded()` first so BC's Started follows the same order.
-  - Columns: `scripts/add-jobflow-columns.ps1` (crfdf_flow, crfdf_stagesdone).
+  - Columns: `scripts/add-jobflow-columns.ps1` (crfdf_flow, crfdf_stagesdone)
+    — ✅ created Oct 6; app DEPLOYED Oct 6 (guide v3.28). Next: Alex sets up the
+    company flow (e.g. Vinyl Cut → Vinyl Application) and tests a two-stage tick.
   - Status rules store/section deleted; History's "moved to" uses the flow.
 - **(Oct 6, 2026) — Shop-floor "Task complete" is LIVE in UAT
   + Jobs → History DEPLOYED (guide v3.25).** Full write-up:
