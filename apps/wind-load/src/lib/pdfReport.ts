@@ -11,7 +11,7 @@ import type { DesignInput, DesignResult } from './engine';
 import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound, sectionMaxOutsideIn } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
-import { LOGO_ASPECT, LUMINEO_BLUE, LumineoLogo } from '../ui/LumineoLogo';
+import { LOGO_ASPECT, LUMINEO_BLUE, LumineoLogo } from '@lumineo/ui';
 
 const PAGE_W = 612; // letter, pt
 const PAGE_H = 792;

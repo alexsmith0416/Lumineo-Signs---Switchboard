@@ -6,7 +6,7 @@
 
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { LumineoLogo } from "./LumineoLogo";
+import { LumineoLogo } from "@lumineo/ui";
 import { useTheme } from "./useTheme";
 import {
   BuilderIcon,

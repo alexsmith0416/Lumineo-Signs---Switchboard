@@ -1,5 +1,5 @@
 import { IconMoon, IconPdf, IconPrint, IconReset, IconSun } from './icons';
-import { LumineoLogo } from './LumineoLogo';
+import { LumineoLogo } from '@lumineo/ui';
 import type { Theme } from './useTheme';
 
 export type View = 'calc' | 'sketch' | 'specs';

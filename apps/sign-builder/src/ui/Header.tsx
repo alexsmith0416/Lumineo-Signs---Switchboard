@@ -6,7 +6,7 @@
 import { NavLink } from "react-router-dom";
 import type { LaunchContext } from "../app/launchParams";
 import { detectDataBackend } from "../data/dataverseAdapter";
-import { LumineoLogo } from "./LumineoLogo";
+import { LumineoLogo } from "@lumineo/ui";
 import { HamburgerMenu } from "./HamburgerMenu";
 
 type HeaderProps = {
