@@ -6,7 +6,7 @@
 import { NavLink } from "react-router-dom";
 import type { LaunchContext } from "../app/launchParams";
 import { detectDataBackend } from "../data/dataverseAdapter";
-import { RayMark } from "./RayMark";
+import { LumineoLogo } from "./LumineoLogo";
 import { HamburgerMenu } from "./HamburgerMenu";
 
 type HeaderProps = {
@@ -38,11 +38,7 @@ export function Header({ launch, productCode }: HeaderProps) {
       <div className="lum-header__left">
         <HamburgerMenu items={NAV_ITEMS} />
         <div className="lum-header__brand">
-          <RayMark size={32} />
-          <div className="lum-header__brand-text">
-            <span className="lum-header__brand-name">LUMINEO</span>
-            <span className="lum-header__brand-sub">SIGNS</span>
-          </div>
+          <LumineoLogo height={26} className="lum-header__brand-logo" />
         </div>
         <div className="lum-header__divider" aria-hidden />
         <nav className="lum-header__nav" aria-label="Primary">

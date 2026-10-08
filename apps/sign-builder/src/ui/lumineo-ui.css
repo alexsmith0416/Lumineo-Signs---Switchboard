@@ -167,8 +167,9 @@ input, select, textarea {
 
 .lum-sidebar__brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 0 6px 14px;
   border-bottom: 1px solid var(--border-soft);
   margin-bottom: 6px;
@@ -183,17 +184,11 @@ input, select, textarea {
   border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
-.lum-sidebar__brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-}
-
-.lum-sidebar__brand-name {
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--text-on-accent);
-  letter-spacing: 0.4px;
+/* The sidebar is the deep navy brand surface in both themes, so the
+   wordmark is always the white version. */
+.lum-sidebar__brand-logo {
+  display: block;
+  color: #ffffff;
 }
 
 .lum-sidebar__brand-sub {
@@ -202,7 +197,7 @@ input, select, textarea {
   color: rgba(255, 255, 255, 0.5);
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .lum-sidebar__caption {

@@ -6,7 +6,7 @@
 
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { RayMark } from "./RayMark";
+import { LumineoLogo } from "./LumineoLogo";
 import { useTheme } from "./useTheme";
 import {
   BuilderIcon,
@@ -45,11 +45,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <aside className={"lum-sidebar" + (open ? " is-open" : "")}>
       <div className="lum-sidebar__brand">
-        <RayMark size={36} />
-        <div className="lum-sidebar__brand-text">
-          <span className="lum-sidebar__brand-name">LUMINEO SIGNS</span>
-          <span className="lum-sidebar__brand-sub">Sign Builder Pro</span>
-        </div>
+        <LumineoLogo height={26} className="lum-sidebar__brand-logo" />
+        <span className="lum-sidebar__brand-sub">Sign Builder Pro</span>
       </div>
 
       <div className="lum-sidebar__caption">Main</div>
