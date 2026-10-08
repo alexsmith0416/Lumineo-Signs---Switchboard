@@ -24,6 +24,7 @@ import {
   solveEmbedment,
   stagnationPressure,
   type DesignInput,
+  type TransitionSegmentInput,
 } from '../lib/engine';
 import { ALUM_TUBE_SECTIONS, PIPE_SECTIONS, TUBE_SECTIONS, buildCustomSection } from '../data/tables';
 import { fmtInches } from '../ui/fields';
@@ -152,6 +153,23 @@ describe('pole footing embedment (Pier sheet, UBC 1806.7)', () => {
     expect(solveEmbedment(0, 20, 3, 200)).toEqual({ depthFt: 0, s1Psf: 0, converged: false });
   });
 });
+
+
+/** A transition segment with the defaults the UI would create. */
+function trSeg(
+  id: string,
+  spliceFt: number | null,
+  over: Partial<TransitionSegmentInput> = {},
+): TransitionSegmentInput {
+  return {
+    id,
+    spliceFt,
+    sizing: 'auto',
+    sizeName: null,
+    customSection: { shape: 'square', widthIn: 4, depthIn: 4, wallIn: 0.25 },
+    ...over,
+  };
+}
 
 function baseInput(): DesignInput {
   return {
@@ -557,12 +575,11 @@ describe('pole length & transition pipe', () => {
     expect(pl.embedFt).toBeCloseTo(r.footing!.depthFt - 0.25, 9);
     expect(pl.totalFt).toBeCloseTo(25 + pl.embedFt, 9);
     expect(pl.totalFt).toBeGreaterThan(30); // 25' top + ~9' embed
-    expect(pl.totalFt).toBeLessThan(MAX_POLE_FT);
-    // Past the haul limit but still inside the 35 ft max, so no splice is forced.
+    // The max piece length is the haul limit now, so this one must be split.
     expect(pl.haulOk).toBe(false);
-    expect(pl.withinMaxPiece).toBe(true);
-    expect(pl.recommendTransition).toBe(false);
-    expect(r.warnings.some((w) => w.includes('haul limit'))).toBe(true);
+    expect(pl.withinMaxPiece).toBe(false);
+    expect(pl.recommendTransition).toBe(true);
+    expect(r.warnings.some((w) => w.includes(`${MAX_POLE_FT} ft maximum`))).toBe(true);
   });
 
   it('has zero embedment when base-plate mounted', () => {
@@ -574,7 +591,7 @@ describe('pole length & transition pipe', () => {
   it('splits the pole into base + transition pieces with a 2 ft sleeve', () => {
     const input = baseInput();
     input.basePlate.enabled = false;
-    input.transition = { enabled: true, segments: [{ id: 't1', spliceFt: 15, sizeName: null }] };
+    input.transition = { enabled: true, segments: [trSeg('t1', 15)] };
     const r = computeDesign(input);
 
     expect(r.poleSegments).toHaveLength(2);
@@ -609,8 +626,8 @@ describe('pole length & transition pipe', () => {
     input.transition = {
       enabled: true,
       segments: [
-        { id: 't1', spliceFt: 16, sizeName: null },
-        { id: 't2', spliceFt: 32, sizeName: null },
+        trSeg('t1', 16),
+        trSeg('t2', 32),
       ],
     };
     const r = computeDesign(input);
@@ -631,9 +648,37 @@ describe('pole length & transition pipe', () => {
     }
     expect(r.poleLength!.pieces).toBe(3);
   });
+  it('takes a custom size on a transition piece and still checks the fit', () => {
+    const input = baseInput(); // base auto-sizes to 14"(.375), ID 13.25"
+    input.basePlate.enabled = false;
+    input.transition = {
+      enabled: true,
+      segments: [
+        trSeg('t1', 15, {
+          sizing: 'custom',
+          customSection: { shape: 'rect', widthIn: 6, depthIn: 10, wallIn: 0.25 },
+        }),
+      ],
+    };
+    const r = computeDesign(input);
+    expect(r.poleSegments[1].mode).toBe('custom');
+    expect(r.poleSegments[1].section!.name).toBe('6"×10"×0.25"');
+    expect(r.poleSegments[1].fitsInside).toBe(true);
+
+    // Too big to pass through the base pipe — flagged, not silently accepted.
+    input.transition.segments[0].customSection = {
+      shape: 'square',
+      widthIn: 20,
+      depthIn: 20,
+      wallIn: 0.25,
+    };
+    const bad = computeDesign(input);
+    expect(bad.poleSegments[1].fitsInside).toBe(false);
+    expect(bad.warnings.some((w) => w.includes('will not fit inside'))).toBe(true);
+  });
 });
 
-describe('35 ft maximum pole length', () => {
+describe('30 ft maximum pole piece', () => {
   it('flags a pole over the max and suggests a splice at a cabinet bottom', () => {
     const input = baseInput(); // base plate on → no embedment eating the reach
     input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 10, heightFt: 10, topFt: 40 }];
@@ -658,13 +703,13 @@ describe('35 ft maximum pole length', () => {
 
   it('hides the joint at a cabinet bottom when one is reachable', () => {
     // Base can reach 25 ft; the cabinet bottom at 20 ft leaves a coverable top.
-    expect(autoSplices(10, 40, [20])).toEqual([20]);
+    expect(autoSplices(10, 40, [20])[0]).toBe(20);
     // With no cabinet to hide behind it splices at the bare maximum.
-    expect(autoSplices(10, 40, [])).toEqual([25]);
+    expect(autoSplices(10, 40, [])[0]).toBeCloseTo(MAX_POLE_FT - 10, 9);
   });
 
   it('needs no splice when the whole pole fits', () => {
-    expect(autoSplices(5, 25, [12])).toEqual([]);
+    expect(autoSplices(5, 24, [12])).toEqual([]);
   });
 });
 
@@ -927,12 +972,11 @@ describe('pole length & transition pipe', () => {
     expect(pl.embedFt).toBeCloseTo(r.footing!.depthFt - 0.25, 9);
     expect(pl.totalFt).toBeCloseTo(25 + pl.embedFt, 9);
     expect(pl.totalFt).toBeGreaterThan(30); // 25' top + ~9' embed
-    expect(pl.totalFt).toBeLessThan(MAX_POLE_FT);
-    // Past the haul limit but still inside the 35 ft max, so no splice is forced.
+    // The max piece length is the haul limit now, so this one must be split.
     expect(pl.haulOk).toBe(false);
-    expect(pl.withinMaxPiece).toBe(true);
-    expect(pl.recommendTransition).toBe(false);
-    expect(r.warnings.some((w) => w.includes('haul limit'))).toBe(true);
+    expect(pl.withinMaxPiece).toBe(false);
+    expect(pl.recommendTransition).toBe(true);
+    expect(r.warnings.some((w) => w.includes(`${MAX_POLE_FT} ft maximum`))).toBe(true);
   });
 
   it('has zero embedment when base-plate mounted', () => {
@@ -944,7 +988,7 @@ describe('pole length & transition pipe', () => {
   it('auto-places the splice at a cabinet bottom when one is reachable', () => {
     const input = baseInput(); // base plate on, so the base piece can reach 35'
     input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 20, heightFt: 10, topFt: 40 }];
-    input.transition = { enabled: true, segments: [{ id: 't1', spliceFt: null, sizeName: null }] };
+    input.transition = { enabled: true, segments: [trSeg('t1', null)] };
     const r = computeDesign(input);
     expect(r.poleSegments).toHaveLength(2);
     expect(r.poleSegments[1].spanBottomFt).toBe(30); // bottom of face = 40 − 10

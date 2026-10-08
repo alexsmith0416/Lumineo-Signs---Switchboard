@@ -52,8 +52,12 @@ export interface TransitionSegmentInput {
   id: string;
   /** Splice elevation above grade, ft (null = auto-place). */
   spliceFt: number | null;
-  /** Stock size name for this segment (null = size it from the moment). */
+  /** How this piece is sized — same three options as the base pole. */
+  sizing: 'auto' | 'manual' | 'custom';
+  /** Stock size name when sizing is 'manual'. */
   sizeName: string | null;
+  /** User-entered dimensions when sizing is 'custom'. */
+  customSection: CustomSectionInput;
 }
 
 export interface TransitionInput {
@@ -850,8 +854,11 @@ export const MAX_HAUL_FT = 30;
 /** Standard splice: upper pipe extends this far into the base pipe, ft. */
 export const TRANSITION_OVERLAP_FT = 2;
 
-/** Longest single pole piece we build, ft — past this a transition is required. */
-export const MAX_POLE_FT = 35;
+/**
+ * Longest single pole piece we build, ft. Set to the haul limit so every piece
+ * loads on a truck without a permit — past this a transition is required.
+ */
+export const MAX_POLE_FT = 30;
 
 const SEGMENT_KEYS = 'ABCDEFGH';
 
@@ -998,14 +1005,19 @@ function buildPoleSegments(
       );
       const stock = sectionsFor(input.columnType);
       autoSection = stock.find((s) => s.sm > requiredSm && fitsInside(s, inside)) ?? null;
-      const wanted = input.transition.segments[i - 1]?.sizeName ?? null;
-      const manual = wanted ? findSectionByName(wanted, input.columnType) : null;
-      section = manual ?? autoSection;
-      mode = manual ? 'manual' : 'auto';
+      const spec = input.transition.segments[i - 1];
+      const chosen =
+        spec?.sizing === 'custom'
+          ? buildCustomSection(spec.customSection)
+          : spec?.sizing === 'manual' && spec.sizeName
+            ? findSectionByName(spec.sizeName, input.columnType)
+            : null;
+      section = chosen ?? autoSection;
+      mode = chosen === null ? 'auto' : spec!.sizing === 'custom' ? 'custom' : 'manual';
     }
 
     const belowRecommended =
-      mode === 'manual' && section !== null && autoSection !== null && section.sm < autoSection.sm;
+      mode !== 'auto' && section !== null && autoSection !== null && section.sm < autoSection.sm;
 
     let fbKsi: number | null = null;
     let FbKsi: number | null = null;
@@ -1299,6 +1311,13 @@ export function computeDesign(input: DesignInput): DesignResult {
           : '.'),
     );
   }
+  for (const [i, spec] of input.transition.segments.entries()) {
+    if (input.transition.enabled && spec.sizing === 'custom' && !buildCustomSection(spec.customSection)) {
+      warnings.push(
+        `Custom dimensions for transition pole ${i + 1} are incomplete (wall must be positive and leave a clear inside) — sizing it automatically instead.`,
+      );
+    }
+  }
   for (const seg of poleSegments) {
     const name = seg.label.toLowerCase();
     if (!seg.section) {
@@ -1325,10 +1344,6 @@ export function computeDesign(input: DesignInput): DesignResult {
     if (!seg.lengthOk) {
       warnings.push(
         `${seg.label} is ${seg.lengthFt.toFixed(1)} ft, past the ${MAX_POLE_FT} ft maximum — add a transition or move a splice.`,
-      );
-    } else if (!seg.haulOk) {
-      warnings.push(
-        `${seg.label} is ${seg.lengthFt.toFixed(1)} ft, past the ${MAX_HAUL_FT} ft haul limit — check how it will be delivered.`,
       );
     }
   }

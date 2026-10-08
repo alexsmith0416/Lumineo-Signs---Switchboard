@@ -7,6 +7,7 @@ import {
   isAluminum,
   isRound,
   sectionsFor,
+  type CustomSectionInput,
   type Exposure,
   type SectionShape,
 } from '../data/tables';
@@ -36,6 +37,60 @@ export function newElement(): SignElementInput {
   };
 }
 
+
+/** Dimension inputs for a user-entered pipe size (base pole or any transition). */
+function CustomSectionFields({
+  value,
+  onChange,
+}: {
+  value: CustomSectionInput;
+  onChange: (patch: Partial<CustomSectionInput>) => void;
+}) {
+  return (
+    <>
+      <label className="span-2">
+        <span>Custom shape</span>
+        <div className="seg full" role="tablist" aria-label="Custom shape">
+          {(['round', 'square', 'rect'] as const).map((s) => (
+            <button
+              key={s}
+              role="tab"
+              aria-selected={value.shape === s}
+              className={`seg-btn${value.shape === s ? ' active' : ''}`}
+              onClick={() => onChange({ shape: s })}
+            >
+              {s === 'round' ? 'Round' : s === 'square' ? 'Square' : 'Rectangular'}
+            </button>
+          ))}
+        </div>
+      </label>
+      <NumField
+        label={value.shape === 'round' ? 'Outside diameter' : 'Width (∥ sign face)'}
+        suffix="in"
+        value={value.widthIn}
+        min={0}
+        onChange={(v) => onChange({ widthIn: Math.max(0, v) })}
+      />
+      {value.shape === 'rect' && (
+        <NumField
+          label="Depth (⊥ sign face)"
+          suffix="in"
+          value={value.depthIn}
+          min={0}
+          onChange={(v) => onChange({ depthIn: Math.max(0, v) })}
+        />
+      )}
+      <NumField
+        label="Wall thickness"
+        suffix="in"
+        value={value.wallIn}
+        min={0}
+        onChange={(v) => onChange({ wallIn: Math.max(0, v) })}
+      />
+    </>
+  );
+}
+
 export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, autoDepthFt }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
@@ -44,6 +99,8 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
     onChange({ ...input, mowPad: { ...input.mowPad, ...patch } });
   const setTr = (patch: Partial<DesignInput['transition']>) =>
     onChange({ ...input, transition: { ...input.transition, ...patch } });
+  const patchSeg = (id: string, patch: Partial<DesignInput['transition']['segments'][number]>) =>
+    setTr({ segments: input.transition.segments.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
   const setCustom = (patch: Partial<DesignInput['customSection']>) =>
     onChange({ ...input, customSection: { ...input.customSection, ...patch } });
 
@@ -263,51 +320,11 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
 
           {input.columnSizing === 'custom' && (
             <>
-              <label className="span-2">
-                <span>Custom shape</span>
-                <div className="seg full" role="tablist" aria-label="Custom shape">
-                  {(['round', 'square', 'rect'] as const).map((s) => (
-                    <button
-                      key={s}
-                      role="tab"
-                      aria-selected={input.customSection.shape === s}
-                      className={`seg-btn${input.customSection.shape === s ? ' active' : ''}`}
-                      onClick={() => setCustom({ shape: s })}
-                    >
-                      {s === 'round' ? 'Round' : s === 'square' ? 'Square' : 'Rectangular'}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <NumField
-                label={input.customSection.shape === 'round' ? 'Outside diameter' : 'Width (∥ sign face)'}
-                suffix="in"
-                value={input.customSection.widthIn}
-                min={0}
-                onChange={(v) => setCustom({ widthIn: Math.max(0, v) })}
-              />
-              {input.customSection.shape === 'rect' && (
-                <NumField
-                  label="Depth (⊥ sign face)"
-                  suffix="in"
-                  value={input.customSection.depthIn}
-                  min={0}
-                  onChange={(v) => setCustom({ depthIn: Math.max(0, v) })}
-                />
-              )}
-              <NumField
-                label="Wall thickness"
-                suffix="in"
-                value={input.customSection.wallIn}
-                min={0}
-                onChange={(v) => setCustom({ wallIn: Math.max(0, v) })}
-              />
+              <CustomSectionFields value={input.customSection} onChange={setCustom} />
               <p className="hint span-2">
                 Wind pushes perpendicular to the sign face, so the ⊥ dimension is
                 the one carrying the bending — a 2×4 turned with the 4" into the
                 wind is far stronger than the same tube laid the other way.
-                Properties are computed from the dimensions and checked against
-                the {isAluminum(input.columnType) ? '6061-T6 aluminum' : 'steel'} allowables.
               </p>
             </>
           )}
@@ -579,16 +596,19 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
                   <label>
                     <span>Size</span>
                     <select
-                      value={seg.sizeName ?? ''}
+                      value={seg.sizing === 'custom' ? '__custom' : (seg.sizeName ?? '')}
                       onChange={(e) =>
-                        setTr({
-                          segments: input.transition.segments.map((s) =>
-                            s.id === seg.id ? { ...s, sizeName: e.target.value || null } : s,
-                          ),
-                        })
+                        patchSeg(seg.id,
+                          e.target.value === '__custom'
+                            ? { sizing: 'custom' }
+                            : e.target.value
+                              ? { sizing: 'manual', sizeName: e.target.value }
+                              : { sizing: 'auto', sizeName: null },
+                        )
                       }
                     >
                       <option value="">Auto</option>
+                      <option value="__custom">Custom size…</option>
                       {sectionsFor(input.columnType).map((s) => (
                         <option key={s.name} value={s.name}>
                           {s.name} · S {fmt(s.sm)} in³
@@ -597,6 +617,16 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
                     </select>
                   </label>
                 </div>
+                {seg.sizing === 'custom' && (
+                  <div className="form-grid custom-sub">
+                    <CustomSectionFields
+                      value={seg.customSection}
+                      onChange={(patch) =>
+                        patchSeg(seg.id, { customSection: { ...seg.customSection, ...patch } })
+                      }
+                    />
+                  </div>
+                )}
               </div>
             ))}
             <button
@@ -608,7 +638,9 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
                     {
                       id: `tr-${Date.now().toString(36)}-${input.transition.segments.length}`,
                       spliceFt: null,
+                      sizing: 'auto',
                       sizeName: null,
+                      customSection: { ...input.customSection },
                     },
                   ],
                 })
@@ -622,7 +654,8 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
               Each transition sleeves 2' inside the piece below it with 1/2"
               welded inner and outer ring plates — that overlap is already
               included in its pipe length. Leave a height blank to auto-place it
-              so no piece exceeds {MAX_POLE_FT}', preferring the bottom of a cabinet.
+              so no piece exceeds {MAX_POLE_FT}' (the haul limit), preferring the
+              bottom of a cabinet.
             </p>
           </div>
         )}

@@ -386,7 +386,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
         'Overall',
         `${fmtFtIn(pl.totalFt)} bottom to top in ${pl.pieces} piece${pl.pieces === 1 ? '' : 's'} · longest ${fmtFtIn(
           pl.longestPieceFt,
-        )} · max pole 35', order max 40', haul max 30'`,
+        )} · max piece 30' (haul limit), order max 40'`,
         pl.withinMaxPiece ? 'OK' : 'NG',
       );
       row(

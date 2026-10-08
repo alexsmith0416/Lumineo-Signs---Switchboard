@@ -73,12 +73,23 @@ function loadSaved(): DesignInput {
     const savedTransition = parsed.transition as
       | (Partial<DesignInput['transition']> & { spliceFt?: number | null })
       | undefined;
+    // Fill in fields older saves predate (per-piece sizing, custom dimensions).
+    const normalizeSegment = (
+      s: Partial<DesignInput['transition']['segments'][number]> & { id?: string },
+      i: number,
+    ): DesignInput['transition']['segments'][number] => ({
+      id: s.id ?? `tr-legacy-${i}`,
+      spliceFt: s.spliceFt ?? null,
+      sizing: s.sizing ?? (s.sizeName ? 'manual' : 'auto'),
+      sizeName: s.sizeName ?? null,
+      customSection: { ...base.customSection, ...(s.customSection ?? {}) },
+    });
     const transition: DesignInput['transition'] = Array.isArray(savedTransition?.segments)
-      ? { enabled: !!savedTransition?.enabled, segments: savedTransition!.segments! }
+      ? { enabled: !!savedTransition?.enabled, segments: savedTransition!.segments!.map(normalizeSegment) }
       : {
           enabled: !!savedTransition?.enabled,
           segments: savedTransition?.enabled
-            ? [{ id: 'tr-legacy', spliceFt: savedTransition?.spliceFt ?? null, sizeName: null }]
+            ? [normalizeSegment({ spliceFt: savedTransition?.spliceFt ?? null }, 0)]
             : [],
         };
     const footingSizing = ((parsed as { footingSizing?: string }).footingSizing === 'manual'

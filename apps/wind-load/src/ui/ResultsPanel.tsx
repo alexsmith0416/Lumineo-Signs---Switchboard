@@ -1,5 +1,5 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
-import { MAX_HAUL_FT, MAX_ORDER_FT, MAX_POLE_FT } from '../lib/engine';
+import { MAX_ORDER_FT, MAX_POLE_FT } from '../lib/engine';
 import { SHAPE_LABELS, isAluminum, sectionIsRound, sectionMaxOutsideIn } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches, fmtInt } from './fields';
 
@@ -124,11 +124,7 @@ export function ResultsPanel({ input, result }: Props) {
                             : `${fmtFtIn(seg.lengthFt)} — ${fmtFtIn(seg.topFt - seg.spanBottomFt)} exposed + ${fmt(seg.overlapFt)}' sleeved inside the piece below`
                         }
                         chip={
-                          <Chip
-                            ok={seg.lengthOk}
-                            okText={seg.haulOk ? 'HAULABLE' : `OVER ${MAX_HAUL_FT}' HAUL`}
-                            badText={`OVER ${MAX_POLE_FT}' MAX`}
-                          />
+                          <Chip ok={seg.lengthOk} okText="HAULABLE" badText={`OVER ${MAX_POLE_FT}'`} />
                         }
                       />
                       <Row
@@ -226,7 +222,7 @@ export function ResultsPanel({ input, result }: Props) {
                 />
                 <Row
                   label="Longest piece"
-                  value={`${fmtFtIn(r.poleLength.longestPieceFt)} · max pole ${MAX_POLE_FT}', order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
+                  value={`${fmtFtIn(r.poleLength.longestPieceFt)} · max piece ${MAX_POLE_FT}' (haul limit), order max ${MAX_ORDER_FT}'`}
                   chip={<Chip ok={r.poleLength.withinMaxPiece} okText="WITHIN MAX" badText={`OVER ${MAX_POLE_FT}'`} />}
                 />
                 <Row
