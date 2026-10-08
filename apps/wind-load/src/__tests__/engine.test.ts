@@ -6,7 +6,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AUGER_DIAMETERS_IN,
+  MAX_POLE_FT,
+  TRANSITION_OVERLAP_FT,
   allowableBendingKsi,
+  autoSplices,
+  solveWidthForDepth,
   autoFootingWidthFt,
   baseAllowablePsi,
   ceAt,
@@ -21,7 +25,7 @@ import {
   stagnationPressure,
   type DesignInput,
 } from '../lib/engine';
-import { ALUM_TUBE_SECTIONS, PIPE_SECTIONS, TUBE_SECTIONS } from '../data/tables';
+import { ALUM_TUBE_SECTIONS, PIPE_SECTIONS, TUBE_SECTIONS, buildCustomSection } from '../data/tables';
 import { fmtInches } from '../ui/fields';
 
 const V = 115; // workbook default basic wind speed
@@ -164,10 +168,12 @@ function baseInput(): DesignInput {
     columnType: 'P',
     columnSizing: 'auto',
     columnSizeName: null,
+    customSection: { shape: 'square', widthIn: 4, depthIn: 4, wallIn: 0.25 },
     stressIncrease: 1.33,
     footingType: 'round',
     // Tests pin the classic behavior (typed-in hole) unless they opt into auto.
-    footingSizing: 'manual',
+    footingSizing: 'diameter',
+    targetDepthFt: 6,
     footingClearanceIn: 12,
     numFootings: 2,
     lateralSoilPsf: 200,
@@ -177,7 +183,7 @@ function baseInput(): DesignInput {
     pierLengthFt: 3,
     signWeightLb: null,
     mowPad: { enabled: false, widthFt: 4, lengthFt: 12, heightIn: 5.5 },
-    transition: { enabled: false, spliceFt: null },
+    transition: { enabled: false, segments: [] },
     basePlate: {
       enabled: true,
       boltsPerLine: 2,
@@ -551,9 +557,12 @@ describe('pole length & transition pipe', () => {
     expect(pl.embedFt).toBeCloseTo(r.footing!.depthFt - 0.25, 9);
     expect(pl.totalFt).toBeCloseTo(25 + pl.embedFt, 9);
     expect(pl.totalFt).toBeGreaterThan(30); // 25' top + ~9' embed
+    expect(pl.totalFt).toBeLessThan(MAX_POLE_FT);
+    // Past the haul limit but still inside the 35 ft max, so no splice is forced.
     expect(pl.haulOk).toBe(false);
-    expect(pl.recommendTransition).toBe(true);
-    expect(r.warnings.some((w) => w.includes('haul') || w.includes('order'))).toBe(true);
+    expect(pl.withinMaxPiece).toBe(true);
+    expect(pl.recommendTransition).toBe(false);
+    expect(r.warnings.some((w) => w.includes('haul limit'))).toBe(true);
   });
 
   it('has zero embedment when base-plate mounted', () => {
@@ -562,40 +571,385 @@ describe('pole length & transition pipe', () => {
     expect(r.poleLength!.totalFt).toBe(25);
   });
 
-  it('sizes a transition pipe that fits inside the base pipe ID', () => {
+  it('splits the pole into base + transition pieces with a 2 ft sleeve', () => {
     const input = baseInput();
     input.basePlate.enabled = false;
-    input.transition = { enabled: true, spliceFt: 15 };
+    input.transition = { enabled: true, segments: [{ id: 't1', spliceFt: 15, sizeName: null }] };
     const r = computeDesign(input);
-    const tr = r.transition!;
-    const base = r.column.section!; // 14"(.375): ID = 14 − 0.75 = 13.25
-    expect(tr.spliceFt).toBe(15);
-    expect(tr.momentAtSpliceLbFt).toBeCloseTo(
-      200 * r.elements[0].pressurePsf * (20 - 15),
-      6,
-    );
-    expect(tr.section).not.toBeNull();
-    expect(tr.section!.odIn).toBeLessThan(tr.baseIdIn);
-    expect(tr.baseIdIn).toBeCloseTo(base.odIn - 2 * base.wallIn, 9);
-    expect(tr.fitsInside).toBe(true);
-    expect(tr.ok).toBe(true);
-    // Piece lengths: base = embed + splice; upper = (top − splice) + 2' overlap.
-    expect(tr.basePipeFt).toBeCloseTo(r.poleLength!.embedFt + 15, 9);
-    expect(tr.upperPipeFt).toBeCloseTo(25 - 15 + 2, 9);
-    // Ring plates: outer = base OD, inner = base ID, bored for the upper pipe.
-    expect(tr.ringOuterOdIn).toBeCloseTo(base.odIn, 9);
-    expect(tr.ringInnerOdIn).toBeCloseTo(tr.baseIdIn, 9);
-    expect(tr.ringBoreIn).toBeCloseTo(tr.section!.odIn, 9);
-    expect(tr.ringThicknessIn).toBe(0.5);
+
+    expect(r.poleSegments).toHaveLength(2);
+    const [base, upper] = r.poleSegments;
+
+    expect(base.isBase).toBe(true);
+    expect(base.label).toBe('Base pole');
+    expect(base.key).toBe('A');
+    expect(base.topFt).toBe(15);
+    expect(base.overlapFt).toBe(0);
+    // Base runs from the bottom of its embedment up to the splice.
+    expect(base.lengthFt).toBeCloseTo(r.poleLength!.embedFt + 15, 9);
+
+    expect(upper.label).toBe('Transition pole');
+    expect(upper.key).toBe('B');
+    expect(upper.spanBottomFt).toBe(15);
+    expect(upper.overlapFt).toBe(TRANSITION_OVERLAP_FT);
+    // The 2 ft sleeved inside the base is included in the pipe length.
+    expect(upper.lengthFt).toBeCloseTo(25 - 15 + 2, 9);
+    expect(upper.momentLbFt).toBeCloseTo(momentAtHeight(r.elements, 15), 6);
+    expect(upper.section).not.toBeNull();
+    expect(upper.fitsInside).toBe(true);
+    expect(upper.section!.odIn).toBeLessThanOrEqual(upper.belowInsideWidthIn!);
+    expect(upper.ring!.thicknessIn).toBe(0.5);
+    expect(upper.ring!.outerOdIn).toBeCloseTo(base.section!.odIn, 9);
   });
 
-  it('auto-places the splice at the lowest face bottom when tall enough', () => {
+  it('supports several stacked transitions, each sleeved into the one below', () => {
     const input = baseInput();
     input.basePlate.enabled = false;
-    input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 20, heightFt: 10, topFt: 40 }];
-    input.transition = { enabled: true, spliceFt: null };
+    input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 12, heightFt: 8, topFt: 46 }];
+    input.transition = {
+      enabled: true,
+      segments: [
+        { id: 't1', spliceFt: 16, sizeName: null },
+        { id: 't2', spliceFt: 32, sizeName: null },
+      ],
+    };
     const r = computeDesign(input);
-    expect(r.transition!.spliceFt).toBe(30); // bottom of face = 40 − 10
+    expect(r.poleSegments).toHaveLength(3);
+    expect(r.poleSegments.map((s) => s.label)).toEqual([
+      'Base pole',
+      'Transition pole 1',
+      'Transition pole 2',
+    ]);
+    expect(r.poleSegments.map((s) => s.key)).toEqual(['A', 'B', 'C']);
+    // Each piece gets smaller going up and fits inside the one below it.
+    for (let i = 1; i < r.poleSegments.length; i++) {
+      const below = r.poleSegments[i - 1].section!;
+      const here = r.poleSegments[i].section!;
+      expect(here.odIn).toBeLessThan(below.odIn);
+      expect(r.poleSegments[i].fitsInside).toBe(true);
+      expect(r.poleSegments[i].overlapFt).toBe(TRANSITION_OVERLAP_FT);
+    }
+    expect(r.poleLength!.pieces).toBe(3);
+  });
+});
+
+describe('35 ft maximum pole length', () => {
+  it('flags a pole over the max and suggests a splice at a cabinet bottom', () => {
+    const input = baseInput(); // base plate on → no embedment eating the reach
+    input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 10, heightFt: 10, topFt: 40 }];
+    const r = computeDesign(input);
+    expect(r.poleLength!.totalFt).toBe(40);
+    expect(r.poleLength!.recommendTransition).toBe(true);
+    // 40 ft top − 10 ft tall cabinet = 30 ft bottom, the preferred joint.
+    expect(r.poleLength!.suggestedSpliceFt).toBe(30);
+    expect(r.warnings.some((w) => w.includes(`${MAX_POLE_FT} ft maximum`))).toBe(true);
+  });
+
+  it('auto-places splices so no piece exceeds the max', () => {
+    // 10 ft embed + 60 ft of pole cannot be built in one or two 35 ft pieces.
+    const splices = autoSplices(10, 60, [20, 44]);
+    expect(splices.length).toBeGreaterThanOrEqual(2);
+    const bounds = [-10, ...splices, 60];
+    for (let i = 0; i < bounds.length - 1; i++) {
+      const overlap = i === 0 ? 0 : TRANSITION_OVERLAP_FT;
+      expect(bounds[i + 1] - bounds[i] + overlap).toBeLessThanOrEqual(MAX_POLE_FT + 1e-9);
+    }
+  });
+
+  it('hides the joint at a cabinet bottom when one is reachable', () => {
+    // Base can reach 25 ft; the cabinet bottom at 20 ft leaves a coverable top.
+    expect(autoSplices(10, 40, [20])).toEqual([20]);
+    // With no cabinet to hide behind it splices at the bare maximum.
+    expect(autoSplices(10, 40, [])).toEqual([25]);
+  });
+
+  it('needs no splice when the whole pole fits', () => {
+    expect(autoSplices(5, 25, [12])).toEqual([]);
+  });
+});
+
+describe('custom pole sizes', () => {
+  it('computes a rectangular tube about the axis the wind bends it', () => {
+    // 2" wide (∥ face) × 4" deep (⊥ face, into the wind) × 3/16" wall.
+    const s = buildCustomSection({ shape: 'rect', widthIn: 2, depthIn: 4, wallIn: 0.1875 })!;
+    const b = 2, d = 4, w = 0.1875;
+    const I = (b * d ** 3 - (b - 2 * w) * (d - 2 * w) ** 3) / 12;
+    expect(s.sm).toBeCloseTo((2 * I) / d, 6);
+    expect(s.areaSqIn).toBeCloseTo(b * d - (b - 2 * w) * (d - 2 * w), 6);
+    expect(s.odIn).toBe(2);
+    expect(s.depthIn).toBe(4);
+    expect(s.name).toBe('2"×4"×0.1875"');
+
+    // Turning the same tube 90° is much weaker, since depth drives bending.
+    const flat = buildCustomSection({ shape: 'rect', widthIn: 4, depthIn: 2, wallIn: 0.1875 })!;
+    expect(flat.sm).toBeLessThan(s.sm);
+    expect(flat.areaSqIn).toBeCloseTo(s.areaSqIn, 6);
+  });
+
+  it('computes round and square custom sections', () => {
+    const round = buildCustomSection({ shape: 'round', widthIn: 6, depthIn: 0, wallIn: 0.25 })!;
+    const I = (Math.PI * (6 ** 4 - 5.5 ** 4)) / 64;
+    expect(round.sm).toBeCloseTo((2 * I) / 6, 6);
+    expect(round.round).toBe(true);
+    const sq = buildCustomSection({ shape: 'square', widthIn: 5, depthIn: 0, wallIn: 0.25 })!;
+    expect(sq.depthIn).toBe(5);
+    expect(sq.name).toBe('5"×5"×0.25"');
+  });
+
+  it('rejects dimensions that leave no clear inside', () => {
+    expect(buildCustomSection({ shape: 'square', widthIn: 2, depthIn: 2, wallIn: 1 })).toBeNull();
+    expect(buildCustomSection({ shape: 'round', widthIn: 4, depthIn: 0, wallIn: 0 })).toBeNull();
+  });
+
+  it('drives the whole design from a custom size, footing included', () => {
+    const input = baseInput();
+    input.columnType = 'ALTS';
+    input.elements = [{ id: 'a', label: 'Panel', widthFt: 5, heightFt: 4, topFt: 10 }];
+    input.footingSizing = 'auto';
+    input.columnSizing = 'custom';
+    input.customSection = { shape: 'rect', widthIn: 2, depthIn: 4, wallIn: 0.1875 };
+    const r = computeDesign(input);
+
+    expect(r.column.mode).toBe('custom');
+    expect(r.column.section!.name).toBe('2"×4"×0.1875"');
+    // The footing clears the LARGEST outside dimension (4"), not the width.
+    expect(r.footing!.minWidthForCoverFt).toBeCloseTo((4 + 6) / 12, 9);
+    // Auto hole = 4" + 12" clearance → 18" auger.
+    expect(r.footing!.diameterFt).toBeCloseTo(1.5, 9);
+    expect(r.footing!.coverOk).toBe(true);
+  });
+});
+
+describe('footing driven by a target depth', () => {
+  it('inverts the embedment solve exactly', () => {
+    const P = 3000, h = 18, q = 200, D = 7;
+    const b = solveWidthForDepth(P, h, D, q);
+    expect(b).toBeGreaterThan(0);
+    // Feeding that width back through the forward solve returns the depth.
+    expect(solveEmbedment(P, h, b, q).depthFt).toBeCloseTo(D, 6);
+  });
+
+  it('widens the hole for a shallower target and narrows it for a deeper one', () => {
+    const input = baseInput();
+    input.footingSizing = 'depth';
+    input.targetDepthFt = 5;
+    const shallow = computeDesign(input);
+    input.targetDepthFt = 9;
+    const deep = computeDesign(input);
+
+    expect(shallow.footing!.depthFt).toBeCloseTo(5, 4);
+    expect(deep.footing!.depthFt).toBeCloseTo(9, 4);
+    expect(shallow.footing!.diameterFt).toBeGreaterThan(deep.footing!.diameterFt);
+    expect(shallow.footing!.fromDepth).toBe(true);
+  });
+});
+
+describe('manual pole sizing', () => {
+
+  it('uses the chosen size and flags it as larger than the recommendation', () => {
+    const input = baseInput(); // auto picks 14"(.375), S = 53.2
+    input.columnSizing = 'manual';
+    input.columnSizeName = '18"(.375)';
+    const r = computeDesign(input);
+    expect(r.column.mode).toBe('manual');
+    expect(r.column.section?.name).toBe('18"(.375)');
+    expect(r.column.autoSection?.name).toBe('14"(.375)');
+    expect(r.column.belowRecommended).toBe(false);
+    // Stress is computed against the CHOSEN section, not the recommendation.
+    expect(r.column.fbKsi).toBeCloseTo((r.momentAtGradeLbFt * 12) / (89.6 * 2 * 1000), 6);
+    expect(r.column.ok).toBe(true);
+  });
+
+  it('allows an undersized pole but reports it overstressed with a warning', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '6"(.280)';
+    const r = computeDesign(input);
+    expect(r.column.section?.name).toBe('6"(.280)');
+    expect(r.column.belowRecommended).toBe(true);
+    expect(r.column.ok).toBe(false);
+    expect((r.column.utilization ?? 0)).toBeGreaterThan(1);
+    expect(r.warnings.some((w) => w.includes('overstressed') && w.includes('14"(.375)'))).toBe(true);
+  });
+
+  it('falls back to the recommendation when the name is not in the shape table', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '8"×8"×1/4"'; // a TUBE size while columnType is pipe
+    const r = computeDesign(input);
+    expect(r.column.mode).toBe('auto');
+    expect(r.column.section?.name).toBe('14"(.375)');
+    expect(r.warnings.some((w) => w.includes("isn't a round steel pipe size"))).toBe(true);
+  });
+
+  it('flows the chosen size through footing volume, base plate and transition', () => {
+    const auto = computeDesign(baseInput());
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '20"(.375)';
+    const manual = computeDesign(input);
+
+    // Footing depth is load-driven (unchanged), but the bigger pole displaces
+    // more concrete and demands a wider hole for cover.
+    expect(manual.footing!.depthFt).toBeCloseTo(auto.footing!.depthFt, 9);
+    expect(manual.footing!.volumePerFootingYd3).toBeLessThan(auto.footing!.volumePerFootingYd3);
+    expect(manual.footing!.minWidthForCoverFt).toBeCloseTo((20 + 6) / 12, 9);
+    // Base plate geometry keys off the column OD.
+    expect(manual.basePlate!.plateNIn).toBe(28);
+    expect(manual.basePlate!.boltLineSpacingIn).toBe(24);
+  });
+
+  it('checks 3-inch concrete cover against the smallest footing dimension', () => {
+    const input = baseInput();
+    input.columnSizing = 'manual';
+    input.columnSizeName = '20"(.375)'; // needs 26" = 2.167 ft across
+    input.caissonDiaFt = 2;
+    const tight = computeDesign(input);
+    expect(tight.footing!.coverOk).toBe(false);
+    expect(tight.warnings.some((w) => w.includes('3" of concrete cover'))).toBe(true);
+
+    input.caissonDiaFt = 3;
+    const ok = computeDesign(input);
+    expect(ok.footing!.coverOk).toBe(true);
+  });
+});
+
+describe('footing sized from the pole', () => {
+  it('rounds up to the next standard auger that clears the pole', () => {
+    // 12" clearance = 6" of concrete all round.
+    expect(autoFootingWidthFt(8.625, 12)).toBeCloseTo(24 / 12, 9); // needs 20.6" → 24"
+    expect(autoFootingWidthFt(10.75, 12)).toBeCloseTo(24 / 12, 9); // needs 22.75" → 24"
+    expect(autoFootingWidthFt(14, 12)).toBeCloseTo(30 / 12, 9); // needs 26" → 30"
+    expect(autoFootingWidthFt(20, 12)).toBeCloseTo(36 / 12, 9); // needs 32" → 36"
+    // A wider clearance pushes it to the next auger.
+    expect(autoFootingWidthFt(10.75, 24)).toBeCloseTo(36 / 12, 9); // needs 34.75" → 36"
+  });
+
+  it('changes the hole — and therefore depth and volume — when the pole changes', () => {
+    const small = baseInput();
+    small.footingSizing = 'auto';
+    small.columnSizing = 'manual';
+    small.columnSizeName = '10"(.365)';
+    const big = { ...small, columnSizeName: '20"(.375)' };
+
+    const rSmall = computeDesign(small);
+    const rBig = computeDesign(big);
+
+    // The hole follows the pole...
+    expect(rSmall.footing!.diameterFt).toBeCloseTo(2, 9); // 24" auger
+    expect(rBig.footing!.diameterFt).toBeCloseTo(3, 9); // 36" auger
+    expect(rSmall.footing!.autoSized).toBe(true);
+    // ...a wider hole develops lateral resistance sooner, so it gets shallower,
+    // while the larger plan area still means more concrete.
+    expect(rBig.footing!.depthFt).toBeLessThan(rSmall.footing!.depthFt);
+    expect(rBig.footing!.volumePerFootingYd3).toBeGreaterThan(rSmall.footing!.volumePerFootingYd3);
+    // Auto sizing always satisfies the 3" cover check.
+    expect(rSmall.footing!.coverOk).toBe(true);
+    expect(rBig.footing!.coverOk).toBe(true);
+  });
+
+  it('leaves the typed-in size alone in manual mode', () => {
+    const input = baseInput(); // manual, Ø 3'
+    input.columnSizing = 'manual';
+    const a = computeDesign({ ...input, columnSizeName: '10"(.365)' });
+    const b = computeDesign({ ...input, columnSizeName: '20"(.375)' });
+    expect(a.footing!.diameterFt).toBe(3);
+    expect(b.footing!.diameterFt).toBe(3);
+    expect(a.footing!.autoSized).toBe(false);
+    // Depth is load-driven, so it does NOT move with the pole when the hole is fixed.
+    expect(a.footing!.depthFt).toBeCloseTo(b.footing!.depthFt, 9);
+  });
+
+  it('measures the mow pad clearance against the auto-sized hole', () => {
+    const input = baseInput();
+    input.footingSizing = 'auto';
+    input.columnSizing = 'manual';
+    input.columnSizeName = '14"(.375)'; // → 30" auger = 2.5 ft
+    input.mowPad = { enabled: true, widthFt: 3, lengthFt: 3, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.footing!.diameterFt).toBeCloseTo(2.5, 9);
+    expect(r.mowPad!.requiredWidthFt).toBeCloseTo(3, 9); // 2.5' + 6"
+    expect(r.mowPad!.sizeOk).toBe(true);
+  });
+});
+
+describe('mow pad', () => {
+  it('computes the pad volume and the 6-inch footing clearance', () => {
+    const input = baseInput(); // round caisson Ø 3'
+    input.mowPad = { enabled: true, widthFt: 4, lengthFt: 12, heightIn: 5.5 };
+    const r = computeDesign(input);
+    const mp = r.mowPad!;
+    expect(mp.volumeYd3).toBeCloseTo((4 * 12 * (5.5 / 12)) / 27, 9);
+    expect(mp.requiredWidthFt).toBeCloseTo(3.5, 9); // Ø 3' + 6"
+    expect(mp.requiredLengthFt).toBeCloseTo(3.5, 9);
+    expect(mp.sizeOk).toBe(true);
+    expect(r.warnings.some((w) => w.includes('Mow pad'))).toBe(false);
+  });
+
+  it('warns when the pad does not clear the footing by 6 inches', () => {
+    const input = baseInput();
+    // Pad exactly the footing size — must be flagged.
+    input.mowPad = { enabled: true, widthFt: 3, lengthFt: 12, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.mowPad!.sizeOk).toBe(false);
+    expect(r.warnings.some((w) => w.includes('Mow pad'))).toBe(true);
+  });
+
+  it('checks each pad axis against the matching pier dimension', () => {
+    const input = baseInput();
+    input.footingType = 'rect';
+    input.pierWidthFt = 3; // parallel to face → pad LENGTH must clear it
+    input.pierLengthFt = 4; // perpendicular → pad WIDTH must clear it
+    input.mowPad = { enabled: true, widthFt: 4.5, lengthFt: 3.5, heightIn: 5.5 };
+    const r = computeDesign(input);
+    expect(r.mowPad!.requiredLengthFt).toBeCloseTo(3.5, 9);
+    expect(r.mowPad!.requiredWidthFt).toBeCloseTo(4.5, 9);
+    expect(r.mowPad!.sizeOk).toBe(true);
+    input.mowPad.widthFt = 4.4;
+    expect(computeDesign(input).mowPad!.sizeOk).toBe(false);
+  });
+});
+
+describe('pole length & transition pipe', () => {
+  it('computes moment about a height, dropping elements below it', () => {
+    const r = computeDesign(baseInput()); // one element, area 200, centroid 20
+    const p = r.elements[0].pressurePsf;
+    expect(momentAtHeight(r.elements, 10)).toBeCloseTo(200 * p * (20 - 10), 6);
+    expect(momentAtHeight(r.elements, 0)).toBeCloseTo(r.momentAtGradeLbFt, 6);
+    expect(momentAtHeight(r.elements, 25)).toBe(0);
+  });
+
+  it('reports total pole length (height + embedment) and haul/order limits', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    const r = computeDesign(input);
+    const pl = r.poleLength!;
+    expect(pl.embedFt).toBeCloseTo(r.footing!.depthFt - 0.25, 9);
+    expect(pl.totalFt).toBeCloseTo(25 + pl.embedFt, 9);
+    expect(pl.totalFt).toBeGreaterThan(30); // 25' top + ~9' embed
+    expect(pl.totalFt).toBeLessThan(MAX_POLE_FT);
+    // Past the haul limit but still inside the 35 ft max, so no splice is forced.
+    expect(pl.haulOk).toBe(false);
+    expect(pl.withinMaxPiece).toBe(true);
+    expect(pl.recommendTransition).toBe(false);
+    expect(r.warnings.some((w) => w.includes('haul limit'))).toBe(true);
+  });
+
+  it('has zero embedment when base-plate mounted', () => {
+    const r = computeDesign(baseInput()); // base plate enabled
+    expect(r.poleLength!.embedFt).toBe(0);
+    expect(r.poleLength!.totalFt).toBe(25);
+  });
+
+  it('auto-places the splice at a cabinet bottom when one is reachable', () => {
+    const input = baseInput(); // base plate on, so the base piece can reach 35'
+    input.elements = [{ id: 'a', label: 'Cabinet', widthFt: 20, heightFt: 10, topFt: 40 }];
+    input.transition = { enabled: true, segments: [{ id: 't1', spliceFt: null, sizeName: null }] };
+    const r = computeDesign(input);
+    expect(r.poleSegments).toHaveLength(2);
+    expect(r.poleSegments[1].spanBottomFt).toBe(30); // bottom of face = 40 − 10
+    // Both pieces land inside the 35 ft maximum.
+    for (const s of r.poleSegments) expect(s.lengthFt).toBeLessThanOrEqual(MAX_POLE_FT);
   });
 });
 

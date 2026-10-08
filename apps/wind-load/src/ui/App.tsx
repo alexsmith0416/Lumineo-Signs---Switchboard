@@ -23,9 +23,11 @@ function defaultInput(): DesignInput {
     columnType: 'P',
     columnSizing: 'auto',
     columnSizeName: null,
+    customSection: { shape: 'square', widthIn: 4, depthIn: 4, wallIn: 0.25 },
     stressIncrease: 1.33,
     footingType: 'round',
     footingSizing: 'auto',
+    targetDepthFt: 6,
     footingClearanceIn: 12,
     numFootings: 1,
     lateralSoilPsf: 200,
@@ -40,10 +42,7 @@ function defaultInput(): DesignInput {
       lengthFt: 12,
       heightIn: 5.5,
     },
-    transition: {
-      enabled: false,
-      spliceFt: null,
-    },
+    transition: { enabled: false, segments: [] },
     basePlate: {
       enabled: false,
       boltsPerLine: 2,
@@ -68,15 +67,34 @@ function loadSaved(): DesignInput {
     const savedSize = parsed.columnSizeName
       ? (findSectionByName(parsed.columnSizeName, shape)?.name ?? parsed.columnSizeName)
       : null;
+
+    // Older saves: a single `transition.spliceFt`, and footingSizing 'manual'
+    // before it split into 'diameter' / 'depth'.
+    const savedTransition = parsed.transition as
+      | (Partial<DesignInput['transition']> & { spliceFt?: number | null })
+      | undefined;
+    const transition: DesignInput['transition'] = Array.isArray(savedTransition?.segments)
+      ? { enabled: !!savedTransition?.enabled, segments: savedTransition!.segments! }
+      : {
+          enabled: !!savedTransition?.enabled,
+          segments: savedTransition?.enabled
+            ? [{ id: 'tr-legacy', spliceFt: savedTransition?.spliceFt ?? null, sizeName: null }]
+            : [],
+        };
+    const footingSizing = ((parsed as { footingSizing?: string }).footingSizing === 'manual'
+      ? 'diameter'
+      : (parsed.footingSizing ?? base.footingSizing)) as DesignInput['footingSizing'];
     return {
       ...base,
       ...parsed,
       columnSizeName: savedSize,
+      footingSizing,
+      transition,
+      customSection: { ...base.customSection, ...(parsed.customSection ?? {}) },
       elements: Array.isArray(parsed.elements) && parsed.elements.length > 0
         ? parsed.elements
         : base.elements,
       mowPad: { ...base.mowPad, ...(parsed.mowPad ?? {}) },
-      transition: { ...base.transition, ...(parsed.transition ?? {}) },
       basePlate: { ...base.basePlate, ...(parsed.basePlate ?? {}) },
     };
   } catch {
@@ -156,6 +174,7 @@ export function App() {
               input={input}
               onChange={setInput}
               recommendedSizeName={result.column.autoSection?.name ?? null}
+              autoDepthFt={result.footing?.depthFt ?? null}
               autoPlan={
                 result.footing
                   ? {

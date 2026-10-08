@@ -1,5 +1,5 @@
 import type { DesignInput, SignElementInput } from '../lib/engine';
-import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
+import { MAX_POLE_FT } from '../lib/engine';
 import {
   EXPOSURE_DESCRIPTIONS,
   SHAPE_LABELS,
@@ -20,6 +20,8 @@ interface Props {
   recommendedSizeName?: string | null;
   /** Footing plan dimensions the engine resolved, for the auto-size readout. */
   autoPlan?: { diaFt: number; widthFt: number; lengthFt: number } | null;
+  /** Depth the engine last solved, used to seed depth-driven mode. */
+  autoDepthFt?: number | null;
 }
 
 let elementSeq = 0;
@@ -34,7 +36,7 @@ export function newElement(): SignElementInput {
   };
 }
 
-export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: Props) {
+export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, autoDepthFt }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
@@ -42,6 +44,8 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
     onChange({ ...input, mowPad: { ...input.mowPad, ...patch } });
   const setTr = (patch: Partial<DesignInput['transition']>) =>
     onChange({ ...input, transition: { ...input.transition, ...patch } });
+  const setCustom = (patch: Partial<DesignInput['customSection']>) =>
+    onChange({ ...input, customSection: { ...input.customSection, ...patch } });
 
   const setElement = (id: string, patch: Partial<SignElementInput>) =>
     set({ elements: input.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
@@ -225,7 +229,15 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
                   })
                 }
               >
-                Choose a size
+                Pick stock
+              </button>
+              <button
+                role="tab"
+                aria-selected={input.columnSizing === 'custom'}
+                className={`seg-btn${input.columnSizing === 'custom' ? ' active' : ''}`}
+                onClick={() => set({ columnSizing: 'custom' })}
+              >
+                Custom size
               </button>
             </div>
           </label>
@@ -247,6 +259,57 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
                 ))}
               </select>
             </label>
+          )}
+
+          {input.columnSizing === 'custom' && (
+            <>
+              <label className="span-2">
+                <span>Custom shape</span>
+                <div className="seg full" role="tablist" aria-label="Custom shape">
+                  {(['round', 'square', 'rect'] as const).map((s) => (
+                    <button
+                      key={s}
+                      role="tab"
+                      aria-selected={input.customSection.shape === s}
+                      className={`seg-btn${input.customSection.shape === s ? ' active' : ''}`}
+                      onClick={() => setCustom({ shape: s })}
+                    >
+                      {s === 'round' ? 'Round' : s === 'square' ? 'Square' : 'Rectangular'}
+                    </button>
+                  ))}
+                </div>
+              </label>
+              <NumField
+                label={input.customSection.shape === 'round' ? 'Outside diameter' : 'Width (∥ sign face)'}
+                suffix="in"
+                value={input.customSection.widthIn}
+                min={0}
+                onChange={(v) => setCustom({ widthIn: Math.max(0, v) })}
+              />
+              {input.customSection.shape === 'rect' && (
+                <NumField
+                  label="Depth (⊥ sign face)"
+                  suffix="in"
+                  value={input.customSection.depthIn}
+                  min={0}
+                  onChange={(v) => setCustom({ depthIn: Math.max(0, v) })}
+                />
+              )}
+              <NumField
+                label="Wall thickness"
+                suffix="in"
+                value={input.customSection.wallIn}
+                min={0}
+                onChange={(v) => setCustom({ wallIn: Math.max(0, v) })}
+              />
+              <p className="hint span-2">
+                Wind pushes perpendicular to the sign face, so the ⊥ dimension is
+                the one carrying the bending — a 2×4 turned with the 4" into the
+                wind is far stronger than the same tube laid the other way.
+                Properties are computed from the dimensions and checked against
+                the {isAluminum(input.columnType) ? '6061-T6 aluminum' : 'steel'} allowables.
+              </p>
+            </>
           )}
 
           <p className="hint span-2">
@@ -300,16 +363,15 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
                 className={`seg-btn${input.footingSizing === 'auto' ? ' active' : ''}`}
                 onClick={() => set({ footingSizing: 'auto' })}
               >
-                Size from pole
+                From pole
               </button>
               <button
                 role="tab"
-                aria-selected={input.footingSizing === 'manual'}
-                className={`seg-btn${input.footingSizing === 'manual' ? ' active' : ''}`}
+                aria-selected={input.footingSizing === 'diameter'}
+                className={`seg-btn${input.footingSizing === 'diameter' ? ' active' : ''}`}
                 onClick={() =>
                   set({
-                    footingSizing: 'manual',
-                    // Seed the boxes with whatever auto just produced.
+                    footingSizing: 'diameter',
                     ...(autoPlan
                       ? input.footingType === 'round'
                         ? { caissonDiaFt: autoPlan.diaFt }
@@ -318,7 +380,15 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
                   })
                 }
               >
-                Enter it myself
+                Set size
+              </button>
+              <button
+                role="tab"
+                aria-selected={input.footingSizing === 'depth'}
+                className={`seg-btn${input.footingSizing === 'depth' ? ' active' : ''}`}
+                onClick={() => set({ footingSizing: 'depth', ...(autoDepthFt ? { targetDepthFt: autoDepthFt } : {}) })}
+              >
+                Set depth
               </button>
             </div>
           </label>
@@ -338,6 +408,12 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
               value={input.footingClearanceIn}
               min={0}
               onChange={(v) => set({ footingClearanceIn: Math.max(0, v) })}
+            />
+          ) : input.footingSizing === 'depth' ? (
+            <FtInField
+              label="Depth you want"
+              value={input.targetDepthFt}
+              onChange={(v) => set({ targetDepthFt: Math.max(0, v) })}
             />
           ) : input.footingType === 'round' ? (
             <NumField
@@ -360,6 +436,20 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
                 onChange={(v) => set({ pierLengthFt: v })}
               />
             </>
+          )}
+
+          {input.footingSizing === 'depth' && (
+            <p className="hint span-2">
+              The hole is widened or narrowed until it reaches this depth
+              {autoPlan
+                ? ` — currently ${
+                    input.footingType === 'round'
+                      ? `Ø ${fmtInches(autoPlan.diaFt)}`
+                      : `${fmt(autoPlan.widthFt)}' × ${fmt(autoPlan.lengthFt)}'`
+                  }`
+                : ''}
+              . A deeper hole needs less width; a shallower one needs more.
+            </p>
           )}
 
           {input.footingSizing === 'auto' && (
@@ -455,20 +545,84 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
           </label>
         </h2>
         {input.transition.enabled && (
-          <div className="panel-body form-grid">
-            <FtInField
-              label="Splice height above grade"
-              value={input.transition.spliceFt}
-              allowEmpty
-              placeholder="auto"
-              onChange={() => undefined}
-              onChangeNullable={(v) => setTr({ spliceFt: v })}
-            />
-            <p className="hint span-2">
-              Splits the pole so no piece exceeds the {MAX_ORDER_FT} ft order /
-              {' '}{MAX_HAUL_FT} ft haul limits. Standard splice: upper pipe sits
-              2' inside the base pipe with 1/2" welded inner and outer ring
-              plates. Leave blank to auto-place just below the lowest sign face.
+          <div className="panel-body">
+            {input.transition.segments.map((seg, i) => (
+              <div key={seg.id} className="element-row">
+                <div className="element-head">
+                  <span className="element-label-static">
+                    Transition pole{input.transition.segments.length > 1 ? ` ${i + 1}` : ''}
+                  </span>
+                  <button
+                    className="icon-btn"
+                    onClick={() => setTr({ segments: input.transition.segments.filter((s) => s.id !== seg.id) })}
+                    title="Remove this transition"
+                    aria-label={`Remove transition ${i + 1}`}
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+                <div className="form-grid">
+                  <FtInField
+                    label="Splice height"
+                    value={seg.spliceFt}
+                    allowEmpty
+                    placeholder="auto"
+                    onChange={() => undefined}
+                    onChangeNullable={(v) =>
+                      setTr({
+                        segments: input.transition.segments.map((s) =>
+                          s.id === seg.id ? { ...s, spliceFt: v } : s,
+                        ),
+                      })
+                    }
+                  />
+                  <label>
+                    <span>Size</span>
+                    <select
+                      value={seg.sizeName ?? ''}
+                      onChange={(e) =>
+                        setTr({
+                          segments: input.transition.segments.map((s) =>
+                            s.id === seg.id ? { ...s, sizeName: e.target.value || null } : s,
+                          ),
+                        })
+                      }
+                    >
+                      <option value="">Auto</option>
+                      {sectionsFor(input.columnType).map((s) => (
+                        <option key={s.name} value={s.name}>
+                          {s.name} · S {fmt(s.sm)} in³
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+            ))}
+            <button
+              className="btn-soft add-element"
+              onClick={() =>
+                setTr({
+                  segments: [
+                    ...input.transition.segments,
+                    {
+                      id: `tr-${Date.now().toString(36)}-${input.transition.segments.length}`,
+                      spliceFt: null,
+                      sizeName: null,
+                    },
+                  ],
+                })
+              }
+              disabled={input.transition.segments.length >= 3}
+            >
+              <IconPlus size={15} />
+              <span>Add transition pole</span>
+            </button>
+            <p className="hint">
+              Each transition sleeves 2' inside the piece below it with 1/2"
+              welded inner and outer ring plates — that overlap is already
+              included in its pipe length. Leave a height blank to auto-place it
+              so no piece exceeds {MAX_POLE_FT}', preferring the bottom of a cabinet.
             </p>
           </div>
         )}

@@ -528,3 +528,28 @@ label .unit { color: var(--text-dim); font-weight: 600; }
     break-inside: avoid;
   }
 }
+
+/* Pole-piece key badge in a panel caption, matching the sketch legend */
+.seg-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 14px;
+  margin-right: 7px;
+  border-radius: 3px;
+  background: var(--accent-brand);
+  color: var(--text-on-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+[data-theme='dark'] .seg-key { color: #0b0e1f; }
+
+.element-label-static {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 4px 6px;
+}

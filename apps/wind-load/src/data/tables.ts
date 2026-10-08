@@ -58,6 +58,16 @@ export function isRound(shape: SectionShape): boolean {
 export interface SteelSection {
   /** Display name, e.g. `10"(.365)` for pipe or `8"×8"×1/4"` for tube. */
   name: string;
+  /**
+   * Rectangular tube only: outside depth PERPENDICULAR to the sign face, in
+   * (the direction the wind pushes). Omitted for round and square sections,
+   * where it equals `odIn`.
+   */
+  depthIn?: number;
+  /** Round section, regardless of which table it came from (custom sizes). */
+  round?: boolean;
+  /** User-entered size rather than a stocked one. */
+  custom?: boolean;
   /** Section modulus provided, in^3. */
   sm: number;
   /** Recommended sleeve depth for a stepped column splice, in (null = n/a). */
@@ -186,3 +196,94 @@ export const SPEC_NOTES = {
     'Maintain a minimum 3" concrete cover over all embedded steel.',
   ],
 } as const;
+
+// ── Custom (non-stock) sections ─────────────────────────────────────────────
+
+export type CustomShape = 'round' | 'square' | 'rect';
+
+export interface CustomSectionInput {
+  shape: CustomShape;
+  /** Round: outside diameter. Square/rect: outside width PARALLEL to the sign face. */
+  widthIn: number;
+  /** Rect only: outside depth PERPENDICULAR to the sign face (into the wind). */
+  depthIn: number;
+  wallIn: number;
+}
+
+function trimNum(n: number): string {
+  return String(Number(n.toFixed(4)));
+}
+
+/**
+ * Build a section from user-entered dimensions, e.g. a 2" x 4" x 3/16"
+ * aluminum tube. Wind pushes perpendicular to the sign face, so the member
+ * bends about the axis parallel to the face and the beam depth is the
+ * PERPENDICULAR dimension — a 2x4 stood with the 4" into the wind is far
+ * stronger than the same tube turned 90 degrees.
+ */
+export function buildCustomSection(c: CustomSectionInput): SteelSection | null {
+  const t = c.wallIn;
+  if (!(t > 0)) return null;
+
+  if (c.shape === 'round') {
+    const D = c.widthIn;
+    const Di = D - 2 * t;
+    if (!(D > 0) || Di <= 0) return null;
+    const I = (Math.PI * (D ** 4 - Di ** 4)) / 64;
+    return {
+      name: `Ø ${trimNum(D)}" × ${trimNum(t)}" wall`,
+      sm: (2 * I) / D,
+      sleeveIn: null,
+      areaSqIn: (Math.PI * (D * D - Di * Di)) / 4,
+      odIn: D,
+      wallIn: t,
+      round: true,
+      custom: true,
+    };
+  }
+
+  const b = c.widthIn; // parallel to the sign face
+  const d = c.shape === 'square' ? b : c.depthIn; // perpendicular, into the wind
+  const bi = b - 2 * t;
+  const di = d - 2 * t;
+  if (!(b > 0) || !(d > 0) || bi <= 0 || di <= 0) return null;
+  const I = (b * d ** 3 - bi * di ** 3) / 12;
+  return {
+    name: `${trimNum(b)}"×${trimNum(d)}"×${trimNum(t)}"`,
+    sm: (2 * I) / d,
+    sleeveIn: null,
+    areaSqIn: b * d - bi * di,
+    odIn: b,
+    depthIn: d,
+    wallIn: t,
+    round: false,
+    custom: true,
+  };
+}
+
+// ── Section geometry helpers ────────────────────────────────────────────────
+
+/** Is this section round? Custom sections carry their own flag. */
+export function sectionIsRound(s: SteelSection, shape: SectionShape): boolean {
+  return s.round ?? isRound(shape);
+}
+
+/** Outside depth perpendicular to the sign face, in (base plates bolt this way). */
+export function sectionDepthIn(s: SteelSection): number {
+  return s.depthIn ?? s.odIn;
+}
+
+/** Largest outside plan dimension, in — what the footing has to clear. */
+export function sectionMaxOutsideIn(s: SteelSection): number {
+  return Math.max(s.odIn, sectionDepthIn(s));
+}
+
+/** Gross outside cross-section area, sq in — concrete the pole displaces. */
+export function sectionGrossAreaSqIn(s: SteelSection, round: boolean): number {
+  return round ? Math.PI * (s.odIn / 2) ** 2 : s.odIn * sectionDepthIn(s);
+}
+
+/** Clear inside dimensions, in — what a transition pipe has to fit through. */
+export function sectionInsideIn(s: SteelSection): { widthIn: number; depthIn: number } {
+  return { widthIn: s.odIn - 2 * s.wallIn, depthIn: sectionDepthIn(s) - 2 * s.wallIn };
+}

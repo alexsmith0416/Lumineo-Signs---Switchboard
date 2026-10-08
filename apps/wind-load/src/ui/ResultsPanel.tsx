@@ -1,6 +1,6 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
-import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
-import { SHAPE_LABELS, isAluminum, isRound } from '../data/tables';
+import { MAX_HAUL_FT, MAX_ORDER_FT, MAX_POLE_FT } from '../lib/engine';
+import { SHAPE_LABELS, isAluminum, sectionIsRound, sectionMaxOutsideIn } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches, fmtInt } from './fields';
 
 interface Props {
@@ -89,114 +89,151 @@ export function ResultsPanel({ input, result }: Props) {
             </div>
           </div>
 
-          <section className="panel">
-            <h2 className="panel-caption">
-              {r.column.mode === 'manual' ? 'Pole (your size)' : 'Recommended Pole'}
-            </h2>
-            <div className="panel-body">
-              {r.column.section ? (
-                <>
-                  <div className="hero-line">
-                    <span className="hero-value">
-                      {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {r.column.section.name}
-                    </span>
-                    <Chip ok={r.column.ok} okText="OK" badText="OVERSTRESSED" />
-                    {r.column.mode === 'manual' && r.column.autoSection && (
-                      <span className="chip chip-neutral">
-                        {r.column.autoSection.name === r.column.section.name
-                          ? 'MATCHES RECOMMENDATION'
-                          : r.column.belowRecommended
-                            ? `SMALLER THAN ${r.column.autoSection.name}`
-                            : `LARGER THAN ${r.column.autoSection.name}`}
-                      </span>
-                    )}
-                  </div>
-                  <Row
-                    label="Section modulus"
-                    value={`${fmt(r.column.requiredSm)} in³ required · ${fmt(r.column.section.sm)} in³ provided (per pole)`}
-                  />
-                  <Row
-                    label="Bending stress"
-                    value={
-                      r.column.FbKsi !== null
-                        ? `fb ${fmt(r.column.fbKsi ?? 0)} ksi vs Fb ${fmt(r.column.FbKsi)} ksi (incl. ×${input.stressIncrease} wind increase)`
-                        : `fb ${fmt(r.column.fbKsi ?? 0)} ksi — slender section`
-                    }
-                  />
-                  <UtilizationBar ratio={r.column.utilization} />
-                  <Row
-                    label="Size"
-                    value={`${fmt(r.column.section.odIn, 3)}" ${isRound(input.columnType) ? 'OD' : 'square'} × ${fmt(r.column.section.wallIn, 4)}" wall · ${fmt(r.column.section.areaSqIn)} in² ${isAluminum(input.columnType) ? 'aluminum' : 'steel'}`}
-                  />
-                  {r.column.section.sleeveIn !== null && (
-                    <Row label="Splice sleeve depth" value={`${r.column.section.sleeveIn}" (if a stepped column is used)`} />
-                  )}
-                  {r.poleLength && (
-                    <Row
-                      label="Pole length"
-                      value={`${fmtFtIn(r.poleLength.totalFt)} total (${fmtFtIn(r.poleLength.embedFt)} embedded + ${fmtFtIn(r.poleLength.totalFt - r.poleLength.embedFt)} above grade) · order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
-                      chip={
-                        r.transition
-                          ? <span className="chip chip-green">SPLICED</span>
-                          : <Chip
-                              ok={r.poleLength.haulOk}
-                              okText="HAULABLE"
-                              badText={r.poleLength.orderOk ? 'OVER 30\' HAUL' : 'OVER 40\' ORDER'}
-                            />
-                      }
-                    />
-                  )}
-                  <p className="hint">{r.column.compactness}</p>
-                </>
-              ) : (
-                <p className="muted">No standard size carries this load — add poles or reduce the sign.</p>
-              )}
-            </div>
-          </section>
+          {r.poleSegments.length > 0 ? (
+            r.poleSegments.map((seg) => (
+              <section className="panel" key={seg.index}>
+                <h2 className="panel-caption">
+                  <span className="seg-key">{seg.key}</span>
+                  {seg.label.toUpperCase()}
+                  {seg.mode === 'custom' ? ' · CUSTOM SIZE' : seg.mode === 'manual' ? ' · YOUR SIZE' : ''}
+                </h2>
+                <div className="panel-body">
+                  {seg.section ? (
+                    <>
+                      <div className="hero-line">
+                        <span className="hero-value">
+                          {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {seg.section.name}
+                        </span>
+                        <Chip ok={seg.ok} okText="OK" badText="OVERSTRESSED" />
+                        {seg.mode !== 'auto' && seg.autoSection && (
+                          <span className="chip chip-neutral">
+                            {seg.autoSection.name === seg.section.name
+                              ? 'MATCHES RECOMMENDATION'
+                              : seg.belowRecommended
+                                ? `SMALLER THAN ${seg.autoSection.name}`
+                                : `LARGER THAN ${seg.autoSection.name}`}
+                          </span>
+                        )}
+                      </div>
 
-          {r.transition && (
-            <section className="panel">
-              <h2 className="panel-caption">Transition Pipe Splice</h2>
-              <div className="panel-body">
-                <div className="hero-line">
-                  <span className="hero-value">
-                    {r.transition.section
-                      ? `Upper: ${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${r.transition.section.name}`
-                      : 'No fitting upper size'}
-                  </span>
-                  <Chip
-                    ok={r.transition.fitsInside && r.transition.ok && r.transition.orderOk && r.transition.haulOk}
-                    okText="OK"
-                    badText="CHECK"
-                  />
+                      <Row
+                        label="Pipe length"
+                        value={
+                          seg.isBase
+                            ? `${fmtFtIn(seg.lengthFt)} — ${fmtFtIn(Math.max(0, -seg.spanBottomFt))} embedded + ${fmtFtIn(seg.topFt)} above grade`
+                            : `${fmtFtIn(seg.lengthFt)} — ${fmtFtIn(seg.topFt - seg.spanBottomFt)} exposed + ${fmt(seg.overlapFt)}' sleeved inside the piece below`
+                        }
+                        chip={
+                          <Chip
+                            ok={seg.lengthOk}
+                            okText={seg.haulOk ? 'HAULABLE' : `OVER ${MAX_HAUL_FT}' HAUL`}
+                            badText={`OVER ${MAX_POLE_FT}' MAX`}
+                          />
+                        }
+                      />
+                      <Row
+                        label="Runs"
+                        value={`${fmtFtIn(seg.spanBottomFt < 0 ? 0 : seg.spanBottomFt)} to ${fmtFtIn(seg.topFt)} above grade${
+                          seg.isBase && seg.spanBottomFt < 0 ? ` (plus ${fmtFtIn(-seg.spanBottomFt)} below grade)` : ''
+                        }`}
+                      />
+                      <Row
+                        label="Section modulus"
+                        value={`${fmt(seg.requiredSm)} in³ required · ${fmt(seg.section.sm)} in³ provided (per pole)`}
+                      />
+                      <Row
+                        label="Bending stress"
+                        value={
+                          seg.FbKsi !== null
+                            ? `fb ${fmt(seg.fbKsi ?? 0)} ksi vs Fb ${fmt(seg.FbKsi)} ksi (incl. ×${input.stressIncrease} wind increase)`
+                            : `fb ${fmt(seg.fbKsi ?? 0)} ksi — slender section`
+                        }
+                      />
+                      <UtilizationBar ratio={seg.utilization} />
+                      <Row
+                        label="Size"
+                        value={`${fmt(seg.section.odIn, 3)}"${
+                          seg.section.depthIn ? ` × ${fmt(seg.section.depthIn, 3)}"` : ''
+                        } ${
+                          sectionIsRound(seg.section, input.columnType)
+                            ? 'OD'
+                            : seg.section.depthIn
+                              ? '(width ∥ face × depth ⊥ face)'
+                              : 'square'
+                        } × ${fmt(seg.section.wallIn, 4)}" wall · ${fmt(seg.section.areaSqIn)} in² ${
+                          isAluminum(input.columnType) ? 'aluminum' : 'steel'
+                        }`}
+                      />
+                      {!seg.isBase && (
+                        <>
+                          <Row
+                            label="Splice"
+                            value={`${fmtFtIn(seg.spanBottomFt)} above grade · ${fmt(seg.overlapFt)}' sleeved inside · clear inside below ${fmt(
+                              seg.belowInsideWidthIn ?? 0,
+                              2,
+                            )}" × ${fmt(seg.belowInsideDepthIn ?? 0, 2)}"`}
+                            chip={<Chip ok={seg.fitsInside !== false} okText="FITS INSIDE" badText="WON'T FIT" />}
+                          />
+                          {seg.ring && (
+                            <Row
+                              label="Ring plates"
+                              value={`${fmt(seg.ring.thicknessIn, 3)}" steel · outer Ø ${fmt(seg.ring.outerOdIn, 2)}" welded to the top of the piece below · inner Ø ${fmt(
+                                seg.ring.innerOdIn,
+                                2,
+                              )}" snug in its ID · bored ${fmt(seg.ring.boreWidthIn, 2)}" × ${fmt(seg.ring.boreDepthIn, 2)}" for this pipe`}
+                            />
+                          )}
+                        </>
+                      )}
+                      <Row
+                        label="Moment at base"
+                        value={`${fmtInt(seg.momentLbFt)} lb-ft at ${
+                          seg.isBase ? 'grade' : `${fmtFtIn(seg.spanBottomFt)} above grade`
+                        } (all poles combined)`}
+                      />
+                      {seg.isBase && seg.section.sleeveIn !== null && (
+                        <Row label="Splice sleeve depth" value={`${seg.section.sleeveIn}" (if a stepped column is used)`} />
+                      )}
+                      <p className="hint">{seg.compactness}</p>
+                    </>
+                  ) : (
+                    <p className="muted">
+                      No size both carries this load and fits inside the piece below — move the splice or upsize the
+                      piece below.
+                    </p>
+                  )}
                 </div>
+              </section>
+            ))
+          ) : (
+            <section className="panel">
+              <h2 className="panel-caption">Pole</h2>
+              <div className="panel-body">
+                <p className="muted">No standard size carries this load — add poles or reduce the sign.</p>
+              </div>
+            </section>
+          )}
+
+          {r.poleLength && r.poleSegments.length > 0 && (
+            <section className="panel">
+              <h2 className="panel-caption">Pole Summary</h2>
+              <div className="panel-body">
                 <Row
-                  label="Splice height"
-                  value={`${fmtFtIn(r.transition.spliceFt)} above grade · upper pipe extends ${fmt(r.transition.overlapFt)}' inside the base pipe`}
+                  label="Overall"
+                  value={`${fmtFtIn(r.poleLength.totalFt)} bottom to top (${fmtFtIn(r.poleLength.embedFt)} embedded + ${fmtFtIn(
+                    r.poleLength.totalFt - r.poleLength.embedFt,
+                  )} above grade) in ${r.poleLength.pieces} piece${r.poleLength.pieces === 1 ? '' : 's'}`}
                 />
                 <Row
-                  label="Piece lengths"
-                  value={`base ${fmtFtIn(r.transition.basePipeFt)} · upper ${fmtFtIn(r.transition.upperPipeFt)} (incl. ${fmt(r.transition.overlapFt)}' overlap) · order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
-                  chip={<Chip ok={r.transition.orderOk && r.transition.haulOk} okText="HAULABLE" badText="TOO LONG" />}
+                  label="Longest piece"
+                  value={`${fmtFtIn(r.poleLength.longestPieceFt)} · max pole ${MAX_POLE_FT}', order max ${MAX_ORDER_FT}', haul max ${MAX_HAUL_FT}'`}
+                  chip={<Chip ok={r.poleLength.withinMaxPiece} okText="WITHIN MAX" badText={`OVER ${MAX_POLE_FT}'`} />}
                 />
                 <Row
-                  label="Moment at splice"
-                  value={`${fmtInt(r.transition.momentAtSpliceLbFt)} lb-ft → ${fmt(r.transition.requiredSm)} in³ required per pole`}
-                />
-                {r.transition.section && (
-                  <Row
-                    label="Upper pipe stress"
-                    value={
-                      r.transition.FbKsi !== null
-                        ? `fb ${fmt(r.transition.fbKsi ?? 0)} ksi vs Fb ${fmt(r.transition.FbKsi)} ksi · ${fmt(r.transition.section.odIn, 3)}" OD fits ${fmt(r.transition.baseIdIn, 3)}" base ID`
-                        : 'slender section — verify with an engineer'
-                    }
-                    chip={<Chip ok={r.transition.ok} />}
-                  />
-                )}
-                <Row
-                  label="Ring plates"
-                  value={`1/2" steel · outer Ø ${fmt(r.transition.ringOuterOdIn, 2)}" welded to top of base pipe · inner Ø ${fmt(r.transition.ringInnerOdIn, 2)}" snug in base pipe ID${r.transition.ringBoreIn ? ` · bored Ø ${fmt(r.transition.ringBoreIn, 2)}" for the upper pipe` : ''}`}
+                  label="Cut list"
+                  value={r.poleSegments
+                    .map((s) => `${s.key}: ${s.section ? s.section.name : '—'} @ ${fmtFtIn(s.lengthFt)}`)
+                    .join(' · ')}
                 />
               </div>
             </section>
@@ -233,7 +270,7 @@ export function ResultsPanel({ input, result }: Props) {
                 {r.column.section && (
                   <Row
                     label="Concrete cover"
-                    value={`needs ≥ ${input.footingType === 'round' ? fmtInches(r.footing.minWidthForCoverFt) : `${fmt(r.footing.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(r.column.section.odIn, 3)}" pole`}
+                    value={`needs ≥ ${input.footingType === 'round' ? fmtInches(r.footing.minWidthForCoverFt) : `${fmt(r.footing.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(sectionMaxOutsideIn(r.column.section), 3)}" pole`}
                     chip={<Chip ok={r.footing.coverOk} okText={'3" COVER OK'} badText="TOO TIGHT" />}
                   />
                 )}

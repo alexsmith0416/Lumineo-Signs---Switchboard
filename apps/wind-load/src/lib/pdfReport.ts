@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { jsPDF } from 'jspdf';
 
 import type { DesignInput, DesignResult } from './engine';
-import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound } from '../data/tables';
+import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound, sectionMaxOutsideIn } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
 
@@ -296,7 +296,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     if (result.column.section) {
       row(
         'Concrete cover',
-        `needs ≥ ${input.footingType === 'round' ? fmtInches(f.minWidthForCoverFt) : `${fmt(f.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(result.column.section.odIn, 3)}" pole`,
+        `needs ≥ ${input.footingType === 'round' ? fmtInches(f.minWidthForCoverFt) : `${fmt(f.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(sectionMaxOutsideIn(result.column.section), 3)}" pole`,
         f.coverOk ? 'OK' : 'NG',
       );
     }
@@ -315,61 +315,84 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     }
   }
 
-  // ── Pole length / transition splice ──────────────────────────────────────
+  // ── Pole pieces ──────────────────────────────────────────────────────────
   const pl = result.poleLength;
-  const tr = result.transition;
-  if (pl && result.column.section) {
-    sectionTitle('Pole length & transition');
-    row(
-      'Pole length',
-      `${fmtFtIn(pl.totalFt)} total (${fmtFtIn(pl.embedFt)} embedded + ${fmtFtIn(pl.totalFt - pl.embedFt)} above grade) · order max 40', haul max 30'`,
-      tr ? undefined : pl.haulOk ? 'OK' : 'NG',
-    );
-    if (tr) {
-      if (tr.section) {
-        row('Splice', `${fmtFtIn(tr.spliceFt)} above grade · upper pipe extends ${fmt(tr.overlapFt)}' inside the base pipe`);
-        row('Upper pipe', `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${tr.section.name} · ${fmt(tr.section.odIn, 3)}" OD fits ${fmt(tr.baseIdIn, 3)}" base ID`, tr.ok ? 'OK' : 'NG');
-        row('Piece lengths', `base ${fmtFtIn(tr.basePipeFt)} · upper ${fmtFtIn(tr.upperPipeFt)} (incl. ${fmt(tr.overlapFt)}' overlap)`, tr.orderOk && tr.haulOk ? 'OK' : 'NG');
-        row('Moment at splice', `${fmtInt(tr.momentAtSpliceLbFt)} lb-ft → ${fmt(tr.requiredSm)} in³ required per pole`);
-        row('Ring plates', `1/2" steel · outer Ø ${fmt(tr.ringOuterOdIn, 2)}" welded to top of base pipe · inner Ø ${fmt(tr.ringInnerOdIn, 2)}" snug in base pipe ID${tr.ringBoreIn ? ` · bored Ø ${fmt(tr.ringBoreIn, 2)}" for the upper pipe` : ''}`);
-      } else {
-        row('Splice', 'No standard upper size both carries the splice moment and fits inside the base pipe ID.', 'NG');
+  if (result.poleSegments.length > 0) {
+    sectionTitle('Pole pieces');
+    for (const seg of result.poleSegments) {
+      ensureRoom(26);
+      setFont(10.5, 'bold', BRAND);
+      doc.text(
+        `${seg.key} · ${seg.label}${seg.section ? ` — ${input.numColumns} × ${SHAPE_LABELS[input.columnType].short} ${seg.section.name}` : ''}`,
+        M,
+        y,
+      );
+      y += 13;
+      if (!seg.section) {
+        row('Result', 'No size both carries this load and fits inside the piece below.', 'NG');
+        continue;
       }
-    } else if (!pl.haulOk) {
-      row('Recommendation', `Pole exceeds the ${pl.orderOk ? '30 ft haul limit' : '40 ft order limit'} — use a transition pipe.`, 'NG');
+      row(
+        'Pipe length',
+        seg.isBase
+          ? `${fmtFtIn(seg.lengthFt)} — ${fmtFtIn(Math.max(0, -seg.spanBottomFt))} embedded + ${fmtFtIn(seg.topFt)} above grade`
+          : `${fmtFtIn(seg.lengthFt)} — ${fmtFtIn(seg.topFt - seg.spanBottomFt)} exposed + ${fmt(seg.overlapFt)}' sleeved inside the piece below`,
+        seg.lengthOk ? 'OK' : 'NG',
+      );
+      row(
+        'Section modulus',
+        `${fmt(seg.requiredSm)} in³ required · ${fmt(seg.section.sm)} in³ provided · moment ${fmtInt(seg.momentLbFt)} lb-ft at ${
+          seg.isBase ? 'grade' : `${fmtFtIn(seg.spanBottomFt)}`
+        }`,
+      );
+      row(
+        'Bending stress',
+        seg.FbKsi !== null
+          ? `fb ${fmt(seg.fbKsi ?? 0)} ksi vs Fb ${fmt(seg.FbKsi)} ksi — ${fmt((seg.utilization ?? 0) * 100, 0)}% utilized`
+          : `fb ${fmt(seg.fbKsi ?? 0)} ksi — slender section`,
+        seg.ok ? 'OK' : 'NG',
+      );
+      row(
+        'Size',
+        `${fmt(seg.section.odIn, 3)}"${seg.section.depthIn ? ` × ${fmt(seg.section.depthIn, 3)}"` : ''} ${
+          isRound(input.columnType) && !seg.section.depthIn ? 'OD' : 'outside'
+        } × ${fmt(seg.section.wallIn, 4)}" wall · ${fmt(seg.section.areaSqIn)} in² ${
+          isAluminum(input.columnType) ? 'aluminum' : 'steel'
+        }`,
+      );
+      if (!seg.isBase) {
+        row(
+          'Splice',
+          `${fmtFtIn(seg.spanBottomFt)} above grade · ${fmt(seg.overlapFt)}' sleeved inside · clear inside below ${fmt(
+            seg.belowInsideWidthIn ?? 0,
+            2,
+          )}" × ${fmt(seg.belowInsideDepthIn ?? 0, 2)}"`,
+          seg.fitsInside === false ? 'NG' : 'OK',
+        );
+        if (seg.ring) {
+          row(
+            'Ring plates',
+            `${fmt(seg.ring.thicknessIn, 3)}" steel · outer Ø ${fmt(seg.ring.outerOdIn, 2)}" welded to the top of the piece below · inner Ø ${fmt(
+              seg.ring.innerOdIn,
+              2,
+            )}" snug in its ID · bored ${fmt(seg.ring.boreWidthIn, 2)}" × ${fmt(seg.ring.boreDepthIn, 2)}"`,
+          );
+        }
+      }
+      y += 4;
     }
-  }
-
-  // ── Base plate ───────────────────────────────────────────────────────────
-  const bp = result.basePlate;
-  if (bp) {
-    sectionTitle('Base plate & anchor bolts');
-    setFont(12, 'bold', BRAND);
-    ensureRoom(16);
-    doc.text(`PL ${fmt(bp.plateNIn, 1)}" × ${fmt(bp.plateBIn, 1)}" × ${fmt(Math.ceil(bp.plateThicknessIn * 8) / 8, 3)}"`, M, y);
-    y += 16;
-    row('Plate thickness', `${fmt(bp.plateThicknessIn, 3)}" calculated (without gussets) · per plate M ${fmtInt(bp.momentPerPlateLbFt)} lb-ft`);
-    row('Anchor bolts', `${2 * input.basePlate.boltsPerLine} per plate · Ø ${fmt(bp.boltDiaIn, 3)}" A36 rod (min ${fmt(bp.minBoltDiaIn, 3)}") · embed ${fmt(bp.embedLengthIn, 1)}"`);
-    row('Bolt spacing', `lines at ${fmt(bp.boltLineSpacingIn, 1)}" · in-line ${fmt(bp.boltSpacingIn, 1)}" (min ${fmt(bp.minBoltSpacingIn, 1)}") · edge ≥ ${fmt(bp.minEdgeSpacingIn, 1)}"`);
-    row('Concrete cone', `capacity ${fmtInt(bp.coneCapacityLb)} lb vs ${fmtInt(bp.tensionPerAnchorLb)} lb / anchor`, bp.coneOk ? 'OK' : 'NG');
-    row('Tension + shear', `ft ${fmtInt(bp.actualTensionPsi)} psi vs allowed ${fmtInt(bp.allowedTensionPsi)} psi (fv ${fmtInt(bp.shearStressPsi)} psi)`, bp.tensionOk ? 'OK' : 'NG');
-    row('Column weld', `${fmt(input.basePlate.weldLegIn, 4)}" fillet · fw ${fmtInt(bp.weldStressPsi)} psi vs 21,000 psi (E70XX)`, bp.weldOk ? 'OK' : 'NG');
-  }
-
-  // Warnings / errors.
-  if (result.errors.length > 0 || result.warnings.length > 0) {
-    sectionTitle('Notes & warnings');
-    for (const e of result.errors) {
-      ensureRoom(12);
-      setFont(8.5, 'bold', RED);
-      doc.text(doc.splitTextToSize(`• ${e}`, CONTENT_W) as string[], M, y);
-      y += 12;
-    }
-    for (const w of result.warnings) {
-      ensureRoom(12);
-      setFont(8.5, 'normal', MID);
-      doc.text(doc.splitTextToSize(`• ${w}`, CONTENT_W) as string[], M, y);
-      y += 12;
+    if (pl) {
+      row(
+        'Overall',
+        `${fmtFtIn(pl.totalFt)} bottom to top in ${pl.pieces} piece${pl.pieces === 1 ? '' : 's'} · longest ${fmtFtIn(
+          pl.longestPieceFt,
+        )} · max pole 35', order max 40', haul max 30'`,
+        pl.withinMaxPiece ? 'OK' : 'NG',
+      );
+      row(
+        'Cut list',
+        result.poleSegments.map((s2) => `${s2.key}: ${s2.section ? s2.section.name : '—'} @ ${fmtFtIn(s2.lengthFt)}`).join(' · '),
+      );
     }
   }
 

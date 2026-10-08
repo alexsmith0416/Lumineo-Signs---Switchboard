@@ -26,6 +26,10 @@ export interface SketchPalette {
   dimLabel: string;
   ext: string;
   callout: string;
+  legendBg: string;
+  legendBorder: string;
+  keyBg: string;
+  keyText: string;
 }
 
 // Values mirror the Switchboard design tokens (DESIGN.md §2) per theme.
@@ -47,6 +51,10 @@ export const SKETCH_PALETTES: Record<'light' | 'dark', SketchPalette> = {
     dimLabel: '#1f1f2e',
     ext: '#d4d5da',
     callout: '#1f1f2e',
+    legendBg: '#ffffff',
+    legendBorder: '#e4e5ea',
+    keyBg: '#141464',
+    keyText: '#ffffff',
   },
   dark: {
     earth: '#131734',
@@ -65,6 +73,10 @@ export const SKETCH_PALETTES: Record<'light' | 'dark', SketchPalette> = {
     dimLabel: '#f3f4f8',
     ext: '#2a3056',
     callout: '#f3f4f8',
+    legendBg: '#1a1f3d',
+    legendBorder: '#2a3056',
+    keyBg: '#7388ff',
+    keyText: '#0b0e1f',
   },
 };
 
@@ -102,47 +114,58 @@ interface Props {
   idPrefix?: string;
 }
 
+const LEGEND_ROW_H = 16;
+const LEGEND_PAD = 9;
+
 export function SketchSvg({ input, result, palette: p, background, idPrefix = 'sk' }: Props) {
   const faces = result.elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const section = result.column.section!;
   const footing = result.footing!;
+  const segments = result.poleSegments;
 
   const topMax = Math.max(...faces.map((f) => f.topFt));
   const widest = Math.max(...faces.map((f) => f.widthFt));
   const depth = footing.depthFt;
   const footWFt = input.footingType === 'round' ? footing.diameterFt : footing.planWidthFt;
-  const poleWFt = section.odIn / 12;
 
   const poleXs = layoutXs(input.numColumns, widest);
   const footXs = layoutXs(input.numFootings, widest);
 
   const mowPad = input.mowPad.enabled ? result.mowPad : null;
-  const transition = result.transition;
 
+  // Widest pole piece governs the horizontal extent.
+  const maxPoleWFt = Math.max(
+    ...segments.map((s) => (s.section ? s.section.odIn / 12 : 0)),
+    section.odIn / 12,
+  );
   const maxHalfX = Math.max(
     widest / 2,
     ...footXs.map((x) => Math.abs(x) + footWFt / 2),
-    ...poleXs.map((x) => Math.abs(x) + poleWFt / 2),
+    ...poleXs.map((x) => Math.abs(x) + maxPoleWFt / 2),
     mowPad ? input.mowPad.lengthFt / 2 : 0,
   );
+
+  // A legend band across the top keeps the piece call-outs off the cabinets.
+  const legendRows = segments.filter((s) => s.section).length;
+  const legendH = legendRows ? LEGEND_PAD * 2 + legendRows * LEGEND_ROW_H : 0;
+  const drawTop = PAD_T + legendH;
+
   const scale = Math.min(
-    (SKETCH_VB_H - PAD_T - PAD_B) / (topMax + depth),
+    (SKETCH_VB_H - drawTop - PAD_B) / (topMax + depth),
     (SKETCH_VB_W - PAD_L - PAD_R) / (2 * maxHalfX),
   );
 
   const cx = SKETCH_VB_W / 2;
-  const gradeY = PAD_T + topMax * scale;
+  const gradeY = drawTop + topMax * scale;
   const footBotY = gradeY + depth * scale;
   const X = (ft: number) => cx + ft * scale;
   const Y = (ftAboveGrade: number) => gradeY - ftAboveGrade * scale;
 
-  const poleWpx = Math.max(poleWFt * scale, 7);
   const footWpx = Math.max(footWFt * scale, 16);
-  const lowestFaceBottom = Math.min(...faces.map((f) => Math.max(0, f.topFt - f.heightFt)));
   const dimX = X(maxHalfX) + 30;
   const dimLX = X(-maxHalfX) - 30;
+  const keyX = X(-maxHalfX) - 14;
 
-  const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
       ? `${input.numFootings} × Ø ${fmtInches(footing.diameterFt)} caisson`
@@ -150,6 +173,9 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
 
   const earthId = `${idPrefix}-earth`;
   const concId = `${idPrefix}-conc`;
+
+  const pxWidth = (s: typeof segments[number]) =>
+    Math.max((s.section ? s.section.odIn / 12 : 0) * scale, 7);
 
   return (
     <svg
@@ -173,6 +199,49 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
 
       {background && <rect x={0} y={0} width={SKETCH_VB_W} height={SKETCH_VB_H} fill={background} />}
 
+      {/* Pole legend — keeps piece call-outs clear of the cabinets */}
+      {legendRows > 0 && (
+        <g>
+          <rect
+            x={16}
+            y={12}
+            width={SKETCH_VB_W - 32}
+            height={legendH}
+            rx={6}
+            fill={p.legendBg}
+            stroke={p.legendBorder}
+            strokeWidth={1}
+          />
+          {segments
+            .filter((s) => s.section)
+            .map((s, row) => {
+              const y = 12 + LEGEND_PAD + row * LEGEND_ROW_H + 11;
+              return (
+                <g key={s.index}>
+                  <rect x={26} y={y - 9} width={14} height={13} rx={3} fill={p.keyBg} />
+                  <text x={33} y={y + 1} textAnchor="middle" fill={p.keyText} fontSize={9} fontWeight={800}>
+                    {s.key}
+                  </text>
+                  <text x={48} y={y + 1} fill={p.callout} fontSize={11} fontWeight={700}>
+                    {s.label}
+                  </text>
+                  <text x={160} y={y + 1} fill={p.callout} fontSize={11} fontWeight={700}>
+                    {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {s.section!.name}
+                  </text>
+                  <text x={360} y={y + 1} fill={p.faceDims} fontSize={11} fontWeight={700}>
+                    {fmtFtIn(s.lengthFt)} long
+                  </text>
+                  <text x={450} y={y + 1} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
+                    {s.isBase
+                      ? `${fmtFtIn(Math.max(0, -s.spanBottomFt))} embedded · to ${fmtFtIn(s.topFt)}`
+                      : `splice ${fmtFtIn(s.spanBottomFt)} · ${fmt(s.overlapFt)}' sleeved in · to ${fmtFtIn(s.topFt)}`}
+                  </text>
+                </g>
+              );
+            })}
+        </g>
+      )}
+
       {/* Earth below grade */}
       <rect x={0} y={gradeY} width={SKETCH_VB_W} height={SKETCH_VB_H - gradeY} fill={p.earth} />
       <rect x={0} y={gradeY} width={SKETCH_VB_W} height={SKETCH_VB_H - gradeY} fill={`url(#${earthId})`} />
@@ -195,7 +264,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
 
       {/* Mow pad: concrete apron sitting on top of the soil */}
       {mowPad && (() => {
-        const padWpx = input.mowPad.lengthFt * scale; // along-face dimension in elevation
+        const padWpx = input.mowPad.lengthFt * scale;
         const padHpx = Math.max((input.mowPad.heightIn / 12) * scale, 4);
         return (
           <g>
@@ -205,64 +274,113 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         );
       })()}
 
-      {/* Poles (embedded to 3" above footing bottom, or stopped on base plates) */}
-      {poleXs.map((px, i) => {
-        const botY = input.basePlate.enabled ? gradeY : footBotY - Math.min(6, 0.25 * scale);
-        if (transition?.section) {
-          // Spliced pole: base pipe up to the splice, narrower upper pipe
-          // extending 2' down inside it.
-          const spliceY = Y(transition.spliceFt);
-          const upperWpx = Math.max((transition.section.odIn / 12) * scale, 5);
-          const overlapY = Y(Math.max(0, transition.spliceFt - transition.overlapFt));
+      {/* Sign faces — boxes first; their labels are drawn after the poles */}
+      {faces.map((f) => {
+        const bot = Math.max(0, f.topFt - f.heightFt);
+        const hPx = (f.topFt - bot) * scale;
+        const wPx = f.widthFt * scale;
+        return (
+          <rect
+            key={f.id}
+            x={X(-f.widthFt / 2)}
+            y={Y(f.topFt)}
+            width={wPx}
+            height={hPx}
+            fill={p.faceFill}
+            stroke={p.faceStroke}
+            strokeWidth={1.5}
+          />
+        );
+      })}
+
+      {/* Pole pieces — on top of the cabinets so the full run reads, each
+          transition stacked on the one below with its sleeved 2 ft dashed. */}
+      {poleXs.map((px, col) =>
+        segments.map((s) => {
+          const w = pxWidth(s);
+          const topY = Y(s.topFt);
+          const bodyBotY = Y(s.spanBottomFt);
+          const sleeveBotY = Y(s.spanBottomFt - s.overlapFt);
           return (
-            <g key={`p-${i}`}>
-              <rect x={X(px) - poleWpx / 2} y={spliceY} width={poleWpx} height={botY - spliceY} fill={p.pole} />
-              <rect x={X(px) - upperWpx / 2} y={Y(topMax)} width={upperWpx} height={overlapY - Y(topMax)} fill={p.pole} />
-              <line x1={X(px) - poleWpx / 2 - 4} y1={spliceY} x2={X(px) + poleWpx / 2 + 4} y2={spliceY} stroke={p.plate} strokeWidth={2} />
+            <g key={`p-${col}-${s.index}`}>
+              <rect x={X(px) - w / 2} y={topY} width={w} height={Math.max(1, bodyBotY - topY)} fill={p.pole} />
+              {s.overlapFt > 0 && (
+                <rect
+                  x={X(px) - w / 2}
+                  y={bodyBotY}
+                  width={w}
+                  height={Math.max(1, sleeveBotY - bodyBotY)}
+                  fill="none"
+                  stroke={p.keyBg}
+                  strokeWidth={1.2}
+                  strokeDasharray="4 3"
+                />
+              )}
+              {!s.isBase && (
+                <line
+                  x1={X(px) - w / 2 - 5}
+                  y1={bodyBotY}
+                  x2={X(px) + w / 2 + 5}
+                  y2={bodyBotY}
+                  stroke={p.plate}
+                  strokeWidth={2}
+                />
+              )}
             </g>
           );
-        }
-        return <rect key={`p-${i}`} x={X(px) - poleWpx / 2} y={Y(topMax)} width={poleWpx} height={botY - Y(topMax)} fill={p.pole} />;
-      })}
+        }),
+      )}
 
       {/* Base plates + anchor bolts */}
       {input.basePlate.enabled &&
-        poleXs.map((px, i) => (
-          <g key={`bp-${i}`}>
-            <rect x={X(px) - poleWpx * 1.15} y={gradeY - 4} width={poleWpx * 2.3} height={5} fill={p.plate} />
-            <line
-              x1={X(px) - poleWpx * 0.85} y1={gradeY} x2={X(px) - poleWpx * 0.85} y2={gradeY + 22}
-              stroke={p.plate} strokeWidth={2} strokeDasharray="3 2"
-            />
-            <line
-              x1={X(px) + poleWpx * 0.85} y1={gradeY} x2={X(px) + poleWpx * 0.85} y2={gradeY + 22}
-              stroke={p.plate} strokeWidth={2} strokeDasharray="3 2"
-            />
-          </g>
-        ))}
+        poleXs.map((px, i) => {
+          const w = pxWidth(segments[0] ?? { section } as typeof segments[number]);
+          return (
+            <g key={`bp-${i}`}>
+              <rect x={X(px) - w * 1.15} y={gradeY - 4} width={w * 2.3} height={5} fill={p.plate} />
+              <line x1={X(px) - w * 0.85} y1={gradeY} x2={X(px) - w * 0.85} y2={gradeY + 22} stroke={p.plate} strokeWidth={2} strokeDasharray="3 2" />
+              <line x1={X(px) + w * 0.85} y1={gradeY} x2={X(px) + w * 0.85} y2={gradeY + 22} stroke={p.plate} strokeWidth={2} strokeDasharray="3 2" />
+            </g>
+          );
+        })}
 
-      {/* Sign faces */}
+      {/* Sign face labels — last, with a backing chip so the pole behind them
+          can never swallow the text. */}
       {faces.map((f) => {
         const bot = Math.max(0, f.topFt - f.heightFt);
         const hPx = (f.topFt - bot) * scale;
         const wPx = f.widthFt * scale;
         const boxY = Y(f.topFt);
-        const fits = hPx >= 30 && wPx >= 110;
+        const name = f.label || 'Sign face';
+        const dims = `${fmt(f.widthFt)}' × ${fmt(f.heightFt)}'`;
+        const twoLine = hPx >= 34 && wPx >= 110;
+        const chipW = Math.min(wPx - 6, Math.max(name.length * 7.2, dims.length * 7, 70));
+        const chipH = twoLine ? 30 : 16;
+        const cyMid = boxY + hPx / 2;
+        if (wPx < 34 || hPx < 14) return null;
         return (
-          <g key={f.id}>
-            <rect x={X(-f.widthFt / 2)} y={boxY} width={wPx} height={hPx} fill={p.faceFill} stroke={p.faceStroke} strokeWidth={1.5} />
-            {fits ? (
+          <g key={`lbl-${f.id}`}>
+            <rect
+              x={cx - chipW / 2}
+              y={cyMid - chipH / 2}
+              width={chipW}
+              height={chipH}
+              rx={3}
+              fill={p.faceFill}
+              opacity={0.94}
+            />
+            {twoLine ? (
               <>
-                <text x={cx} y={boxY + hPx / 2 - 7} textAnchor="middle" fill={p.faceName} fontSize={13} fontWeight={800}>
-                  {f.label || 'Sign face'}
+                <text x={cx} y={cyMid - 3} textAnchor="middle" fill={p.faceName} fontSize={13} fontWeight={800}>
+                  {name}
                 </text>
-                <text x={cx} y={boxY + hPx / 2 + 10} textAnchor="middle" fill={p.faceDims} fontSize={12} fontWeight={700}>
-                  {fmt(f.widthFt)}' × {fmt(f.heightFt)}'
+                <text x={cx} y={cyMid + 11} textAnchor="middle" fill={p.faceDims} fontSize={12} fontWeight={700}>
+                  {dims}
                 </text>
               </>
             ) : (
-              <text x={cx} y={boxY + hPx / 2 + 3} textAnchor="middle" fill={p.faceDims} fontSize={12} fontWeight={700}>
-                {fmt(f.widthFt)}' × {fmt(f.heightFt)}'
+              <text x={cx} y={cyMid + 4} textAnchor="middle" fill={p.faceDims} fontSize={12} fontWeight={700}>
+                {dims}
               </text>
             )}
           </g>
@@ -272,6 +390,25 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
       {/* Grade line + label */}
       <line x1={0} y1={gradeY} x2={SKETCH_VB_W} y2={gradeY} stroke={p.grade} strokeWidth={2} />
       <text x={10} y={gradeY - 6} fill={p.gradeLabel} fontSize={10} fontWeight={800} letterSpacing="1">GRADE</text>
+
+      {/* Piece keys, parked clear of the sign with a thin leader */}
+      {segments
+        .filter((s) => s.section)
+        .map((s) => {
+          const visibleBottom = Math.max(s.spanBottomFt, 0);
+          const midFt = Math.min(Math.max((visibleBottom + s.topFt) / 2, 0.4), topMax);
+          const y = Y(midFt);
+          const leftPole = X(poleXs[0]) - pxWidth(s) / 2;
+          return (
+            <g key={`key-${s.index}`}>
+              <line x1={keyX + 8} y1={y} x2={leftPole} y2={y} stroke={p.ext} strokeWidth={1} strokeDasharray="3 3" />
+              <rect x={keyX - 7} y={y - 7} width={15} height={14} rx={3} fill={p.keyBg} />
+              <text x={keyX + 0.5} y={y + 3.5} textAnchor="middle" fill={p.keyText} fontSize={9.5} fontWeight={800}>
+                {s.key}
+              </text>
+            </g>
+          );
+        })}
 
       {/* Extension + dimension lines: OAH right, embed left */}
       <line x1={X(widest / 2)} y1={Y(topMax)} x2={dimX + 5} y2={Y(topMax)} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
@@ -286,7 +423,6 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
       </g>
 
       <line x1={X(-maxHalfX)} y1={footBotY} x2={dimLX - 5} y2={footBotY} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
-      <line x1={X(-maxHalfX)} y1={gradeY} x2={dimLX - 5} y2={gradeY} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
       <g>
         <line x1={dimLX} y1={gradeY} x2={dimLX} y2={footBotY} stroke={p.dim} strokeWidth={1} />
         <line x1={dimLX - 5} y1={gradeY} x2={dimLX + 5} y2={gradeY} stroke={p.dim} strokeWidth={1} />
@@ -295,43 +431,6 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           {fmtFtIn(depth)} embed
         </text>
       </g>
-
-      {/* Pole leader + label (base pipe when spliced) */}
-      {(() => {
-        const px = poleXs[poleXs.length - 1];
-        const anchor = transition?.section
-          ? Math.max(transition.spliceFt / 2, 0.5)
-          : Math.max(lowestFaceBottom / 2, lowestFaceBottom > 2 ? lowestFaceBottom / 2 : topMax * 0.12);
-        const midY = Y(anchor);
-        const lx = X(px) + poleWpx / 2;
-        const label = transition?.section ? `base: ${poleLabel}` : poleLabel;
-        return (
-          <g>
-            <line x1={lx} y1={midY} x2={lx + 26} y2={midY - 14} stroke={p.dim} strokeWidth={1} />
-            <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>{label}</text>
-          </g>
-        );
-      })()}
-
-      {/* Splice callout */}
-      {transition?.section && (() => {
-        const px = poleXs[poleXs.length - 1];
-        const upperWpx = Math.max((transition.section.odIn / 12) * scale, 5);
-        const midY = Y(transition.spliceFt + (topMax - transition.spliceFt) / 2);
-        const lx = X(px) + upperWpx / 2;
-        const spliceY = Y(transition.spliceFt);
-        return (
-          <g>
-            <line x1={lx} y1={midY} x2={lx + 26} y2={midY - 14} stroke={p.dim} strokeWidth={1} />
-            <text x={lx + 30} y={midY - 17} fill={p.callout} fontSize={12} fontWeight={700}>
-              upper: {input.numColumns} × {SHAPE_LABELS[input.columnType].short.toLowerCase()} {transition.section.name}
-            </text>
-            <text x={X(px) + poleWpx / 2 + 8} y={spliceY + 4} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
-              splice {fmtFtIn(transition.spliceFt)} · 2'-0" inside
-            </text>
-          </g>
-        );
-      })()}
 
       {/* Footing label */}
       <text x={cx} y={footBotY + 18} textAnchor="middle" fill={p.callout} fontSize={12} fontWeight={700}>

@@ -11,8 +11,15 @@ import {
   CE_HEIGHTS,
   SEISMIC_Z,
   SHAPE_LABELS,
+  buildCustomSection,
   isAluminum,
+  sectionDepthIn,
+  sectionGrossAreaSqIn,
+  sectionInsideIn,
+  sectionIsRound,
+  sectionMaxOutsideIn,
   sectionsFor,
+  type CustomSectionInput,
   type Exposure,
   type SectionShape,
   type SteelSection,
@@ -41,10 +48,18 @@ export interface MowPadInput {
   heightIn: number;
 }
 
+export interface TransitionSegmentInput {
+  id: string;
+  /** Splice elevation above grade, ft (null = auto-place). */
+  spliceFt: number | null;
+  /** Stock size name for this segment (null = size it from the moment). */
+  sizeName: string | null;
+}
+
 export interface TransitionInput {
   enabled: boolean;
-  /** Splice elevation above grade, ft (null = auto at the lowest face bottom). */
-  spliceFt: number | null;
+  /** Ordered bottom → top; each sleeves 2 ft into the segment below it. */
+  segments: TransitionSegmentInput[];
 }
 
 export interface BasePlateInput {
@@ -75,16 +90,27 @@ export interface DesignInput {
 
   numColumns: number;
   columnType: SectionShape;
-  /** 'auto' sizes the pole from the wind moment; 'manual' uses columnSizeName. */
-  columnSizing: 'auto' | 'manual';
+  /**
+   * 'auto' sizes the base pole from the wind moment, 'manual' picks a stocked
+   * size by name, 'custom' uses the dimensions in `customSection`.
+   */
+  columnSizing: 'auto' | 'manual' | 'custom';
   /** Chosen section name when columnSizing is 'manual' (e.g. `12"(.375)`). */
   columnSizeName: string | null;
+  /** User-entered size used when columnSizing is 'custom'. */
+  customSection: CustomSectionInput;
   /** Allowable stress increase for short-duration wind loads (UBC: 1.33). */
   stressIncrease: number;
 
   footingType: FootingType;
-  /** 'auto' sizes the hole from the pole; 'manual' uses the dimensions below. */
-  footingSizing: 'auto' | 'manual';
+  /**
+   * 'auto' sizes the hole from the pole, 'diameter' takes the plan dimensions
+   * below and solves the depth, 'depth' takes `targetDepthFt` and solves the
+   * plan dimensions needed to reach it.
+   */
+  footingSizing: 'auto' | 'diameter' | 'depth';
+  /** Depth to hit when footingSizing is 'depth', ft. */
+  targetDepthFt: number;
   /** Total concrete clearance around the pole when auto-sizing, in (12 = 6" all round). */
   footingClearanceIn: number;
   numFootings: number;
@@ -132,7 +158,7 @@ export interface ColumnResult {
   requiredSm: number;
   section: SteelSection | null;
   /** How the section was chosen. */
-  mode: 'auto' | 'manual';
+  mode: 'auto' | 'manual' | 'custom';
   /** The size auto-sizing would pick — shown alongside a manual override. */
   autoSection: SteelSection | null;
   /** Manual choice provides less section modulus than the auto recommendation. */
@@ -177,6 +203,8 @@ export interface FootingResult {
   planWidthFt: number;
   planLengthFt: number;
   autoSized: boolean;
+  /** Plan size was back-solved from a target depth. */
+  fromDepth: boolean;
 }
 
 export interface BasePlateResult {
@@ -216,34 +244,72 @@ export interface MowPadResult {
 export interface PoleLengthResult {
   /** Depth of pole inside the footing, ft (0 when base-plate mounted). */
   embedFt: number;
-  /** Full pole length: overall height + embedment, ft. */
+  /** Bottom of the base pole to top of sign, ft. */
   totalFt: number;
-  orderOk: boolean; // ≤ 40 ft (longest pipe we can order)
-  haulOk: boolean; // ≤ 30 ft (longest we can haul)
-  recommendTransition: boolean;
-}
-
-export interface TransitionResult {
-  spliceFt: number;
-  overlapFt: number;
-  momentAtSpliceLbFt: number;
-  requiredSm: number;
-  section: SteelSection | null;
-  /** Upper pipe OD fits inside the base pipe ID. */
-  fitsInside: boolean;
-  fbKsi: number | null;
-  FbKsi: number | null;
-  ok: boolean;
-  basePipeFt: number;
-  upperPipeFt: number;
-  baseIdIn: number;
-  /** 1/2" ring plates: outer welded to the top of the base pipe, inner snug in its ID. */
-  ringOuterOdIn: number;
-  ringInnerOdIn: number;
-  ringBoreIn: number | null;
-  ringThicknessIn: number;
+  /** Longest single piece to order, ft. */
+  longestPieceFt: number;
+  /** How many pieces the pole is built from. */
+  pieces: number;
+  /** Every piece is within the max single-pole length. */
+  withinMaxPiece: boolean;
   orderOk: boolean;
   haulOk: boolean;
+  /** Over the max pole length with no transition specified. */
+  recommendTransition: boolean;
+  /** Where a transition would be placed if one were added, ft. */
+  suggestedSpliceFt: number | null;
+}
+
+/** 1/2" plates that close the splice: outer welded on, inner snug in the ID. */
+export interface RingPlates {
+  outerOdIn: number;
+  innerOdIn: number;
+  boreWidthIn: number;
+  boreDepthIn: number;
+  thicknessIn: number;
+}
+
+/**
+ * One physical pole piece. Index 0 is the base pole (embedded or on a base
+ * plate); each later piece sleeves TRANSITION_OVERLAP_FT into the one below.
+ */
+export interface PoleSegmentResult {
+  index: number;
+  /** Sketch legend key — 'A', 'B', 'C'… */
+  key: string;
+  /** 'Base pole' | 'Transition pole 1' | … */
+  label: string;
+  isBase: boolean;
+  section: SteelSection | null;
+  mode: 'auto' | 'manual' | 'custom';
+  /** What auto-sizing would pick, for comparison against an override. */
+  autoSection: SteelSection | null;
+  belowRecommended: boolean;
+  /** Elevation where this piece starts carrying load, ft (base = −embedment). */
+  spanBottomFt: number;
+  /** Elevation of the top of this piece, ft. */
+  topFt: number;
+  /** Length sleeved inside the piece below, ft (0 for the base). */
+  overlapFt: number;
+  /** Physical length to order, ft — span plus the sleeved overlap. */
+  lengthFt: number;
+  /** Design moment at the bottom of this piece's span, lb-ft (all poles). */
+  momentLbFt: number;
+  requiredSm: number;
+  fbKsi: number | null;
+  FbKsi: number | null;
+  compactness: string;
+  utilization: number | null;
+  ok: boolean;
+  lengthOk: boolean;
+  haulOk: boolean;
+  orderOk: boolean;
+  /** Transitions only: clears the inside of the piece below. */
+  fitsInside: boolean | null;
+  /** Transitions only: clear inside dimensions of the piece below, in. */
+  belowInsideWidthIn: number | null;
+  belowInsideDepthIn: number | null;
+  ring: RingPlates | null;
 }
 
 export interface SeismicResult {
@@ -264,7 +330,8 @@ export interface DesignResult {
   footing: FootingResult | null;
   mowPad: MowPadResult | null;
   poleLength: PoleLengthResult | null;
-  transition: TransitionResult | null;
+  /** Every pole piece, bottom to top. Empty until a base size is known. */
+  poleSegments: PoleSegmentResult[];
   basePlate: BasePlateResult | null;
   seismic: SeismicResult;
   errors: string[];
@@ -458,18 +525,22 @@ function columnCheck(
   shape: SectionShape,
   numColumns: number,
   stressIncrease: number,
-  sizing: 'auto' | 'manual',
+  sizing: 'auto' | 'manual' | 'custom',
   sizeName: string | null,
+  customSection: SteelSection | null,
 ): ColumnResult {
   const requiredSm = requiredSectionModulus(momentLbFt, shape, numColumns, stressIncrease);
   const autoSection = selectSection(requiredSm, shape);
   // A manual choice that isn't in the current shape's table (e.g. after
-  // switching pipe → tube) falls back to the auto pick.
+  // switching pipe → tube), or a custom size that doesn't resolve, falls back
+  // to the auto pick.
   const manualSection = sizing === 'manual' && sizeName ? findSectionByName(sizeName, shape) : null;
-  const mode: 'auto' | 'manual' = manualSection ? 'manual' : 'auto';
-  const section = manualSection ?? autoSection;
+  const chosen = sizing === 'custom' ? customSection : manualSection;
+  const mode: 'auto' | 'manual' | 'custom' =
+    chosen === null ? 'auto' : sizing === 'custom' ? 'custom' : 'manual';
+  const section = chosen ?? autoSection;
   const belowRecommended =
-    manualSection !== null && autoSection !== null && manualSection.sm < autoSection.sm;
+    chosen !== null && autoSection !== null && chosen.sm < autoSection.sm;
 
   if (!section || momentLbFt <= 0) {
     return {
@@ -529,6 +600,8 @@ export interface FootingPlan {
   lengthFt: number;
   /** True when these were derived from the pole size rather than typed in. */
   auto: boolean;
+  /** True when these were back-solved from a target depth. */
+  fromDepth: boolean;
 }
 
 /**
@@ -536,16 +609,77 @@ export interface FootingPlan {
  * by the pole's outside dimension, so changing the pole changes the hole (and
  * therefore the embedment depth and concrete volume).
  */
-export function resolveFootingPlan(input: DesignInput, poleOdIn: number | null): FootingPlan {
+export function resolveFootingPlan(
+  input: DesignInput,
+  poleOdIn: number | null,
+  demand: FootingDemand | null,
+): FootingPlan {
   if (input.footingSizing === 'auto' && poleOdIn !== null) {
     const w = autoFootingWidthFt(poleOdIn, input.footingClearanceIn);
-    return { diaFt: w, widthFt: w, lengthFt: w, auto: true };
+    return { diaFt: w, widthFt: w, lengthFt: w, auto: true, fromDepth: false };
   }
+
+  // Depth-driven: solve the plan size that reaches the depth the estimator
+  // wants. Piers keep their width:length ratio and scale to the equivalent
+  // width the solve calls for.
+  if (input.footingSizing === 'depth' && demand && input.targetDepthFt > 0) {
+    const b = solveWidthForDepth(
+      demand.equivalentLoadLb,
+      demand.centroidFt,
+      input.targetDepthFt,
+      input.lateralSoilPsf,
+    );
+    if (b > 0) {
+      if (input.footingType === 'round') {
+        return { diaFt: b, widthFt: b, lengthFt: b, auto: false, fromDepth: true };
+      }
+      const current = Math.hypot(input.pierWidthFt, input.pierLengthFt);
+      const k = current > 0 ? b / current : 1;
+      return {
+        diaFt: b,
+        widthFt: input.pierWidthFt * k,
+        lengthFt: input.pierLengthFt * k,
+        auto: false,
+        fromDepth: true,
+      };
+    }
+  }
+
   return {
     diaFt: input.caissonDiaFt,
     widthFt: input.pierWidthFt,
     lengthFt: input.pierLengthFt,
     auto: false,
+    fromDepth: false,
+  };
+}
+
+/** Overturning demand the footing has to resist — independent of its size. */
+export interface FootingDemand {
+  centroidFt: number;
+  momentPerFootingLbFt: number;
+  equivalentLoadLb: number;
+  totalAreaSqFt: number;
+}
+
+export function footingDemand(
+  input: DesignInput,
+  momentAtGradeLbFt: number,
+  elements: readonly ElementResult[],
+): FootingDemand | null {
+  const n = input.numFootings;
+  if (n <= 0 || momentAtGradeLbFt <= 0) return null;
+  const totalAreaSqFt = elements.reduce((s, e) => s + e.areaSqFt, 0);
+  if (totalAreaSqFt <= 0) return null;
+  // Composite centroid of the sign faces (area-weighted, per the Pier sheet).
+  const centroidFt =
+    elements.reduce((s, e) => s + e.areaSqFt * e.centroidFt, 0) / totalAreaSqFt;
+  const momentPerFootingLbFt = momentAtGradeLbFt / n;
+  return {
+    centroidFt,
+    momentPerFootingLbFt,
+    equivalentLoadLb: centroidFt > 0 ? momentPerFootingLbFt / centroidFt : 0,
+    totalAreaSqFt,
   };
 }
 
@@ -588,6 +722,22 @@ export function solveEmbedment(
   return { depthFt: d, s1Psf: 2 * lateralSoilPsf * (d / 3), converged };
 }
 
+/**
+ * Plan width needed to reach a target embedment depth — the inverse of
+ * `solveEmbedment`. Substituting S1 = 2q(D/3) into the UBC 1806.7 expression
+ * reduces it to D³ = k(D + 1.09h) with k = 3.51P/(q·b), which rearranges to a
+ * closed form for b.
+ */
+export function solveWidthForDepth(
+  loadLb: number,
+  centroidFt: number,
+  depthFt: number,
+  lateralSoilPsf: number,
+): number {
+  if (loadLb <= 0 || depthFt <= 0 || lateralSoilPsf <= 0) return 0;
+  return (3.51 * loadLb * (depthFt + 1.09 * centroidFt)) / (lateralSoilPsf * depthFt ** 3);
+}
+
 const CONCRETE_PCF = 150;
 
 /** Trim trailing zeros from an inch dimension for message text. */
@@ -598,20 +748,16 @@ function fmtIn(n: number): string {
 function footingCheck(
   input: DesignInput,
   plan: FootingPlan,
-  momentAtGradeLbFt: number,
-  elements: ElementResult[],
-  columnOdIn: number,
+  demand: FootingDemand,
+  section: SteelSection,
 ): FootingResult | null {
   const n = input.numFootings;
-  if (n <= 0 || momentAtGradeLbFt <= 0) return null;
+  if (n <= 0) return null;
 
-  const totalArea = elements.reduce((s, e) => s + e.areaSqFt, 0);
-  if (totalArea <= 0) return null;
-
-  // Composite centroid of the sign faces (area-weighted, per the Pier sheet).
-  const centroidFt = elements.reduce((s, e) => s + e.areaSqFt * e.centroidFt, 0) / totalArea;
-  const momentPerFooting = momentAtGradeLbFt / n;
-  const p = centroidFt > 0 ? momentPerFooting / centroidFt : 0;
+  const totalArea = demand.totalAreaSqFt;
+  const centroidFt = demand.centroidFt;
+  const momentPerFooting = demand.momentPerFootingLbFt;
+  const p = demand.equivalentLoadLb;
 
   const b =
     input.footingType === 'round'
@@ -634,11 +780,13 @@ function footingCheck(
   // Concrete volume: gross prism less the embedded column (pole stops 3"
   // above the bottom of the excavation, per the standard cover note).
   const embedFt = Math.max(0, d - 0.25);
-  const displaced = Math.PI * (columnOdIn / 12 / 2) ** 2 * embedFt;
+  const round = sectionIsRound(section, input.columnType);
+  const displaced = (sectionGrossAreaSqIn(section, round) / 144) * embedFt;
   const volumePerFootingYd3 = Math.max(0, planArea * d - displaced) / 27;
 
   // The footing must clear the pole by the 3" minimum concrete cover all
   // round (Spec sheet), so a bigger pole forces a bigger hole.
+  const columnOdIn = sectionMaxOutsideIn(section);
   const minWidthForCoverFt = (columnOdIn + 6) / 12;
   const smallestPlanDimFt =
     input.footingType === 'round' ? plan.diaFt : Math.min(plan.widthFt, plan.lengthFt);
@@ -665,6 +813,7 @@ function footingCheck(
     planWidthFt: plan.widthFt,
     planLengthFt: plan.lengthFt,
     autoSized: plan.auto,
+    fromDepth: plan.fromDepth,
   };
 }
 
@@ -701,87 +850,214 @@ export const MAX_HAUL_FT = 30;
 /** Standard splice: upper pipe extends this far into the base pipe, ft. */
 export const TRANSITION_OVERLAP_FT = 2;
 
+/** Longest single pole piece we build, ft — past this a transition is required. */
+export const MAX_POLE_FT = 35;
+
+const SEGMENT_KEYS = 'ABCDEFGH';
+
+/**
+ * Where to splice a pole that is too long to build in one piece.
+ *
+ * Works bottom-up: each piece reaches as high as it can, and the joint is
+ * placed at a cabinet bottom wherever one is reachable (so the splice is
+ * hidden behind the sign rather than left exposed on open pipe). Preference
+ * goes to the LOWEST cabinet bottom that still lets the remainder be covered
+ * by one more piece; otherwise the highest reachable cabinet; otherwise the
+ * bare maximum length.
+ */
+export function autoSplices(
+  embedFt: number,
+  topFt: number,
+  candidates: readonly number[],
+  maxPieceFt: number = MAX_POLE_FT,
+): number[] {
+  const splices: number[] = [];
+  const sorted = [...new Set(candidates.filter((c) => c > 0.5))].sort((a, b) => a - b);
+  let base = -embedFt;
+  for (let guard = 0; guard < 6; guard++) {
+    const overlap = splices.length === 0 ? 0 : TRANSITION_OVERLAP_FT;
+    const maxTop = base + maxPieceFt - overlap;
+    if (maxTop >= topFt) break; // what is left fits in this piece
+    const reachable = sorted.filter((c) => c > base + TRANSITION_OVERLAP_FT && c <= maxTop);
+    const hides = reachable.find((c) => topFt - c + TRANSITION_OVERLAP_FT <= maxPieceFt);
+    const s = hides ?? (reachable.length ? reachable[reachable.length - 1] : maxTop);
+    if (s <= base + 0.5) break; // no progress possible
+    splices.push(s);
+    base = s;
+  }
+  return splices;
+}
+
+/** Splice elevations actually used, honouring any the estimator typed in. */
+function resolveSplices(
+  input: DesignInput,
+  embedFt: number,
+  topMaxFt: number,
+  faceBottoms: readonly number[],
+): number[] {
+  if (!input.transition.enabled || input.transition.segments.length === 0) return [];
+  const n = input.transition.segments.length;
+  const auto = autoSplices(embedFt, topMaxFt, faceBottoms);
+  // More transitions than the length rule requires: spread the extras evenly
+  // over the pole, snapping each to a cabinet bottom when one is close enough
+  // to hide the joint behind the sign.
+  const span = topMaxFt + embedFt;
+  const evenly = (i: number) => {
+    const target = -embedFt + (span * (i + 1)) / (n + 1);
+    const near = faceBottoms.filter((c) => Math.abs(c - target) <= span / (2 * (n + 1)));
+    if (!near.length) return target;
+    return near.reduce((best, c) => (Math.abs(c - target) < Math.abs(best - target) ? c : best));
+  };
+  return input.transition.segments
+    .map((s, i) => s.spliceFt ?? auto[i] ?? evenly(i))
+    .map((s) => Math.min(Math.max(s, 1), Math.max(1, topMaxFt - 1)))
+    .sort((a, b) => a - b);
+}
+
 function poleLengthCheck(
   input: DesignInput,
   footing: FootingResult | null,
   topMaxFt: number,
+  segments: readonly PoleSegmentResult[],
+  faceBottoms: readonly number[],
 ): PoleLengthResult | null {
   if (topMaxFt <= 0) return null;
   const embedFt = input.basePlate.enabled || !footing ? 0 : Math.max(0, footing.depthFt - 0.25);
   const totalFt = topMaxFt + embedFt;
+  const lengths = segments.map((s) => s.lengthFt);
+  const longestPieceFt = lengths.length ? Math.max(...lengths) : totalFt;
+  const recommendTransition = !input.transition.enabled && totalFt > MAX_POLE_FT;
   return {
     embedFt,
     totalFt,
-    orderOk: totalFt <= MAX_ORDER_FT,
-    haulOk: totalFt <= MAX_HAUL_FT,
-    recommendTransition: totalFt > MAX_HAUL_FT && !input.transition.enabled,
+    longestPieceFt,
+    pieces: Math.max(1, segments.length),
+    withinMaxPiece: longestPieceFt <= MAX_POLE_FT,
+    orderOk: longestPieceFt <= MAX_ORDER_FT,
+    haulOk: longestPieceFt <= MAX_HAUL_FT,
+    recommendTransition,
+    suggestedSpliceFt: recommendTransition
+      ? (autoSplices(embedFt, topMaxFt, faceBottoms)[0] ?? null)
+      : null,
   };
 }
 
-function transitionCheck(
+/** Does `s` pass through the clear inside of the piece below? */
+function fitsInside(s: SteelSection, inside: { widthIn: number; depthIn: number } | null): boolean {
+  if (!inside) return true;
+  return s.odIn <= inside.widthIn + 1e-9 && sectionDepthIn(s) <= inside.depthIn + 1e-9;
+}
+
+/**
+ * Build every pole piece bottom to top. The base carries the moment at grade;
+ * each transition carries the moment at its own splice elevation and must slide
+ * inside the piece below it.
+ */
+function buildPoleSegments(
   input: DesignInput,
   elements: readonly ElementResult[],
-  baseSection: SteelSection,
-  poleLength: PoleLengthResult,
+  baseColumn: ColumnResult,
+  momentAtGradeLbFt: number,
+  embedFt: number,
   topMaxFt: number,
-  lowestFaceBottomFt: number,
-): TransitionResult | null {
-  if (!input.transition.enabled) return null;
+  faceBottoms: readonly number[],
+): PoleSegmentResult[] {
+  if (topMaxFt <= 0 || !baseColumn.section) return [];
 
-  // Auto splice: hide it just under the lowest face when practical.
-  const auto = lowestFaceBottomFt >= 4 ? lowestFaceBottomFt : topMaxFt / 2;
-  const spliceFt = Math.min(Math.max(input.transition.spliceFt ?? auto, 1), Math.max(1, topMaxFt - 1));
+  const splices = resolveSplices(input, embedFt, topMaxFt, faceBottoms);
+  const bounds = [-embedFt, ...splices, topMaxFt];
+  const segs: PoleSegmentResult[] = [];
 
-  const momentAtSpliceLbFt = momentAtHeight(elements, spliceFt);
-  const requiredSm = requiredSectionModulus(
-    momentAtSpliceLbFt,
-    input.columnType,
-    input.numColumns,
-    input.stressIncrease,
-  );
+  for (let i = 0; i < bounds.length - 1; i++) {
+    const isBase = i === 0;
+    const spanBottomFt = bounds[i];
+    const topFt = bounds[i + 1];
+    const overlapFt = isBase ? 0 : TRANSITION_OVERLAP_FT;
+    const lengthFt = topFt - spanBottomFt + overlapFt;
+    const momentLbFt = isBase ? momentAtGradeLbFt : momentAtHeight(elements, spanBottomFt);
 
-  const baseIdIn = baseSection.odIn - 2 * baseSection.wallIn;
-  // Upper pipe must clear the base pipe's ID (the snug part is the welded
-  // inner ring plate, not the pipe itself).
-  const candidates = sectionsFor(input.columnType).filter((s) => s.odIn < baseIdIn);
-  const section = candidates.find((s) => s.sm > requiredSm) ?? null;
-  const fitsInside = section !== null;
+    const below = isBase ? null : segs[i - 1].section;
+    const inside = below ? sectionInsideIn(below) : null;
 
-  let fbKsi: number | null = null;
-  let FbKsi: number | null = null;
-  let ok = false;
-  if (section && momentAtSpliceLbFt > 0) {
-    fbKsi = (momentAtSpliceLbFt * 12) / (section.sm * input.numColumns * 1000);
-    FbKsi = allowableBendingKsi(section, input.columnType, input.stressIncrease).FbKsi;
-    ok = FbKsi !== null && fbKsi <= FbKsi;
-  } else if (section) {
-    ok = true;
+    let section: SteelSection | null;
+    let mode: 'auto' | 'manual' | 'custom';
+    let autoSection: SteelSection | null;
+    let requiredSm: number;
+
+    if (isBase) {
+      section = baseColumn.section;
+      mode = baseColumn.mode;
+      autoSection = baseColumn.autoSection;
+      requiredSm = baseColumn.requiredSm;
+    } else {
+      requiredSm = requiredSectionModulus(
+        momentLbFt,
+        input.columnType,
+        input.numColumns,
+        input.stressIncrease,
+      );
+      const stock = sectionsFor(input.columnType);
+      autoSection = stock.find((s) => s.sm > requiredSm && fitsInside(s, inside)) ?? null;
+      const wanted = input.transition.segments[i - 1]?.sizeName ?? null;
+      const manual = wanted ? findSectionByName(wanted, input.columnType) : null;
+      section = manual ?? autoSection;
+      mode = manual ? 'manual' : 'auto';
+    }
+
+    const belowRecommended =
+      mode === 'manual' && section !== null && autoSection !== null && section.sm < autoSection.sm;
+
+    let fbKsi: number | null = null;
+    let FbKsi: number | null = null;
+    let compactness = '';
+    if (section && momentLbFt > 0) {
+      fbKsi = (momentLbFt * 12) / (section.sm * input.numColumns * 1000);
+      const allow = allowableBendingKsi(section, input.columnType, input.stressIncrease);
+      FbKsi = allow.FbKsi;
+      compactness = allow.note;
+    } else if (section) {
+      compactness = allowableBendingKsi(section, input.columnType, input.stressIncrease).note;
+    }
+
+    segs.push({
+      index: i,
+      key: SEGMENT_KEYS[i] ?? String(i + 1),
+      label: isBase ? 'Base pole' : splices.length > 1 ? `Transition pole ${i}` : 'Transition pole',
+      isBase,
+      section,
+      mode,
+      autoSection,
+      belowRecommended,
+      spanBottomFt,
+      topFt,
+      overlapFt,
+      lengthFt,
+      momentLbFt,
+      requiredSm,
+      fbKsi,
+      FbKsi,
+      compactness,
+      utilization: fbKsi !== null && FbKsi ? fbKsi / FbKsi : null,
+      ok: section !== null && FbKsi !== null && (fbKsi ?? 0) <= FbKsi,
+      lengthOk: lengthFt <= MAX_POLE_FT,
+      haulOk: lengthFt <= MAX_HAUL_FT,
+      orderOk: lengthFt <= MAX_ORDER_FT,
+      fitsInside: isBase ? null : section ? fitsInside(section, inside) : false,
+      belowInsideWidthIn: inside?.widthIn ?? null,
+      belowInsideDepthIn: inside?.depthIn ?? null,
+      ring:
+        isBase || !below
+          ? null
+          : {
+              outerOdIn: sectionMaxOutsideIn(below),
+              innerOdIn: Math.min(inside!.widthIn, inside!.depthIn),
+              boreWidthIn: section ? section.odIn : 0,
+              boreDepthIn: section ? sectionDepthIn(section) : 0,
+              thicknessIn: 0.5,
+            },
+    });
   }
-
-  const basePipeFt = poleLength.embedFt + spliceFt;
-  const upperPipeFt = topMaxFt - spliceFt + TRANSITION_OVERLAP_FT;
-  const longest = Math.max(basePipeFt, upperPipeFt);
-
-  return {
-    spliceFt,
-    overlapFt: TRANSITION_OVERLAP_FT,
-    momentAtSpliceLbFt,
-    requiredSm,
-    section,
-    fitsInside,
-    fbKsi,
-    FbKsi,
-    ok,
-    basePipeFt,
-    upperPipeFt,
-    baseIdIn,
-    ringOuterOdIn: baseSection.odIn,
-    ringInnerOdIn: baseIdIn,
-    ringBoreIn: section ? section.odIn : null,
-    ringThicknessIn: 0.5,
-    orderOk: longest <= MAX_ORDER_FT,
-    haulOk: longest <= MAX_HAUL_FT,
-  };
+  return segs;
 }
 
 // ── Base plate + anchor bolts (AISC Design Guide 1) ─────────────────────────
@@ -924,6 +1200,13 @@ export function computeDesign(input: DesignInput): DesignResult {
   const momentAtGradeLbFt = elements.reduce((s, e) => s + e.momentLbFt, 0);
   const shearAtGradeLb = totalForceLb;
 
+  const customSection = buildCustomSection(input.customSection);
+  if (input.columnSizing === 'custom' && !customSection) {
+    warnings.push(
+      'Custom pole dimensions are incomplete (wall must be positive and leave a clear inside) — using the recommended size instead.',
+    );
+  }
+
   const column = columnCheck(
     momentAtGradeLbFt,
     input.columnType,
@@ -931,20 +1214,13 @@ export function computeDesign(input: DesignInput): DesignResult {
     input.stressIncrease,
     input.columnSizing,
     input.columnSizeName,
+    customSection,
   );
   if (momentAtGradeLbFt > 0 && !column.section) {
     errors.push(
       isAluminum(input.columnType)
         ? 'No stocked aluminum tube is large enough — add poles, switch to steel, or reduce the sign.'
         : 'No standard pipe/tube size is large enough — add columns or reduce the sign.',
-    );
-  }
-  if (column.section && !column.ok && column.FbKsi !== null) {
-    warnings.push(
-      column.mode === 'manual'
-        ? `Chosen pole ${column.section.name} is overstressed (fb ${(column.fbKsi ?? 0).toFixed(1)} ksi > Fb ${column.FbKsi.toFixed(1)} ksi)` +
-            `${column.autoSection ? ` — ${column.autoSection.name} or larger is required` : ''}.`
-        : 'Selected column exceeds its allowable bending stress — verify with an engineer.',
     );
   }
   if (input.columnSizing === 'manual' && input.columnSizeName && column.mode === 'auto') {
@@ -955,10 +1231,14 @@ export function computeDesign(input: DesignInput): DesignResult {
 
   // Resolve the hole size first — in auto mode it follows the chosen pole, so
   // the embedment solve and concrete volume both move with the pole size.
-  const footingPlan = resolveFootingPlan(input, column.section?.odIn ?? null);
-  const footing = column.section
-    ? footingCheck(input, footingPlan, momentAtGradeLbFt, elements, column.section.odIn)
-    : null;
+  const demand = footingDemand(input, momentAtGradeLbFt, elements);
+  const footingPlan = resolveFootingPlan(
+    input,
+    column.section ? sectionMaxOutsideIn(column.section) : null,
+    demand,
+  );
+  const footing =
+    column.section && demand ? footingCheck(input, footingPlan, demand, column.section) : null;
   if (footing && !footing.converged) {
     warnings.push('Footing depth solve did not converge — treat the footing result as invalid.');
   }
@@ -967,9 +1247,22 @@ export function computeDesign(input: DesignInput): DesignResult {
   }
   if (footing && !footing.coverOk && column.section) {
     warnings.push(
-      `Footing is too small for the ${fmtIn(column.section.odIn)}" pole — it needs to be at least ` +
+      `Footing is too small for the ${fmtIn(sectionMaxOutsideIn(column.section))}" pole — it needs to be at least ` +
         `${footing.minWidthForCoverFt.toFixed(2)} ft across to keep 3" of concrete cover around the steel.`,
     );
+  }
+
+  if (input.footingSizing === 'depth' && footing && footingPlan.fromDepth) {
+    const widest =
+      input.footingType === 'round'
+        ? footingPlan.diaFt
+        : Math.max(footingPlan.widthFt, footingPlan.lengthFt);
+    if (widest > footing.depthFt) {
+      warnings.push(
+        `A ${input.targetDepthFt.toFixed(1)} ft hole would have to be ${widest.toFixed(1)} ft across to hold this sign — ` +
+          'wider than it is deep is no longer a pole footing. Go deeper, or have an engineer design a spread footing.',
+      );
+    }
   }
 
   const mowPad = mowPadCheck(input, footingPlan);
@@ -983,39 +1276,60 @@ export function computeDesign(input: DesignInput): DesignResult {
 
   const validFaces = elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const topMaxFt = validFaces.length ? Math.max(...validFaces.map((e) => e.topFt)) : 0;
-  const lowestFaceBottomFt = validFaces.length
-    ? Math.min(...validFaces.map((e) => Math.max(0, e.topFt - e.heightFt)))
-    : 0;
+  const faceBottoms = validFaces.map((e) => Math.max(0, e.topFt - e.heightFt));
 
-  const poleLength = poleLengthCheck(input, footing, topMaxFt);
-  const transition =
-    column.section && poleLength
-      ? transitionCheck(input, elements, column.section, poleLength, topMaxFt, lowestFaceBottomFt)
-      : null;
+  const embedFt = input.basePlate.enabled || !footing ? 0 : Math.max(0, footing.depthFt - 0.25);
+  const poleSegments = buildPoleSegments(
+    input,
+    elements,
+    column,
+    momentAtGradeLbFt,
+    embedFt,
+    topMaxFt,
+    faceBottoms,
+  );
+  const poleLength = poleLengthCheck(input, footing, topMaxFt, poleSegments, faceBottoms);
 
-  if (poleLength && !input.transition.enabled) {
-    if (!poleLength.orderOk) {
-      warnings.push(
-        `Pole length ${poleLength.totalFt.toFixed(1)} ft exceeds the ${MAX_ORDER_FT} ft max order length — enable a transition pipe.`,
-      );
-    } else if (!poleLength.haulOk) {
-      warnings.push(
-        `Pole length ${poleLength.totalFt.toFixed(1)} ft exceeds the ${MAX_HAUL_FT} ft haul limit — consider a transition pipe.`,
-      );
-    }
+  if (poleLength?.recommendTransition) {
+    warnings.push(
+      `Pole is ${poleLength.totalFt.toFixed(1)} ft overall, past the ${MAX_POLE_FT} ft maximum for a single pole — ` +
+        `a transition is required` +
+        (poleLength.suggestedSpliceFt !== null
+          ? `, best placed at ${poleLength.suggestedSpliceFt.toFixed(1)} ft (bottom of a cabinet).`
+          : '.'),
+    );
   }
-  if (transition) {
-    if (!transition.fitsInside) {
+  for (const seg of poleSegments) {
+    const name = seg.label.toLowerCase();
+    if (!seg.section) {
       warnings.push(
-        'No standard upper pipe both carries the splice moment and fits inside the base pipe ID — raise the splice or upsize the base pipe.',
+        seg.isBase
+          ? 'No size carries the base pole load.'
+          : `No stocked size both carries the ${name} load and fits inside the piece below — raise the splice or upsize the piece below.`,
       );
-    } else if (!transition.ok) {
-      warnings.push('Upper transition pipe exceeds its allowable bending stress — raise the splice or upsize.');
+      continue;
     }
-    if (!transition.orderOk) {
-      warnings.push(`A transition piece still exceeds the ${MAX_ORDER_FT} ft order limit — move the splice.`);
-    } else if (!transition.haulOk) {
-      warnings.push(`A transition piece still exceeds the ${MAX_HAUL_FT} ft haul limit — move the splice.`);
+    if (seg.fitsInside === false) {
+      warnings.push(
+        `${seg.label} ${seg.section.name} will not fit inside the piece below (clear inside ` +
+          `${fmtIn(seg.belowInsideWidthIn ?? 0)}" × ${fmtIn(seg.belowInsideDepthIn ?? 0)}") — upsize the piece below.`,
+      );
+    } else if (!seg.ok && seg.FbKsi !== null) {
+      warnings.push(
+        seg.mode === 'auto'
+          ? `${seg.label} exceeds its allowable bending stress — verify with an engineer.`
+          : `${seg.label} ${seg.section.name} is overstressed (fb ${(seg.fbKsi ?? 0).toFixed(1)} ksi > Fb ${seg.FbKsi.toFixed(1)} ksi)` +
+              `${seg.autoSection ? ` — ${seg.autoSection.name} or larger is required` : ''}.`,
+      );
+    }
+    if (!seg.lengthOk) {
+      warnings.push(
+        `${seg.label} is ${seg.lengthFt.toFixed(1)} ft, past the ${MAX_POLE_FT} ft maximum — add a transition or move a splice.`,
+      );
+    } else if (!seg.haulOk) {
+      warnings.push(
+        `${seg.label} is ${seg.lengthFt.toFixed(1)} ft, past the ${MAX_HAUL_FT} ft haul limit — check how it will be delivered.`,
+      );
     }
   }
 
@@ -1036,7 +1350,7 @@ export function computeDesign(input: DesignInput): DesignResult {
         'Base plate, anchor bolt and weld checks assume A36 steel — for an aluminum pole have an engineer confirm the plate, the welded connection (6061-T6 loses strength in the weld heat-affected zone) and isolation from dissimilar metals.',
       );
     }
-    if (transition?.section) {
+    if (poleSegments.length > 1) {
       warnings.push(
         'Transition ring plates are specified as steel — on an aluminum pole the splice needs engineered aluminum detailing (weld HAZ strength) and isolation from the steel plates.',
       );
@@ -1072,7 +1386,7 @@ export function computeDesign(input: DesignInput): DesignResult {
     footing,
     mowPad,
     poleLength,
-    transition,
+    poleSegments,
     basePlate,
     seismic,
     errors,
