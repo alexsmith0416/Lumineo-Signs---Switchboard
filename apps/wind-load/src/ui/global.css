@@ -585,3 +585,9 @@ label .unit { color: var(--text-dim); font-weight: 600; }
 .sketch-tools .btn-soft { font-size: 11px; padding: 5px 11px; }
 .sk-face-hit { cursor: pointer; }
 .sk-face-move { cursor: move; }
+
+/* Sketch summary: wider tiles so a pole size like 2 × Pipe 18"(.375)
+   stays on one line instead of breaking before the wall thickness. */
+.kpi-row--pieces { grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); }
+.kpi-row--pieces .kpi-caption { display: flex; align-items: center; }
+.kpi-row--pieces .sketch-kpi { font-size: 15px; }

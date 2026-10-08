@@ -73,14 +73,13 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
     );
   }
 
-  const section = result.column.section!;
   const footing = result.footing!;
   const faces = result.elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const topMax = Math.max(...faces.map((f) => f.topFt));
 
   const transitionSegments = result.poleSegments.filter((s) => !s.isBase && s.section);
 
-  const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
+  const poleTiles = result.poleSegments.filter((s) => s.section);
   const footingLabel =
     input.footingType === 'round'
       ? `${input.numFootings} × Ø ${fmtInches(footing.diameterFt)} caisson`
@@ -209,12 +208,22 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
         </div>
       </section>
 
-      <div className="kpi-row">
-        <div className="kpi">
-          <p className="kpi-caption">POLE</p>
-          <p className="kpi-value sketch-kpi">{poleLabel}</p>
-          <p className="kpi-foot">{fmt(section.odIn, 3)}" × {fmt(section.wallIn, 4)}" wall</p>
-        </div>
+      <div className="kpi-row kpi-row--pieces">
+        {/* One tile per pole piece, keyed and labelled to match the sketch legend. */}
+        {poleTiles.map((s) => (
+          <div className="kpi" key={s.index}>
+            <p className="kpi-caption">
+              <span className="seg-key">{s.key}</span>
+              {s.label.toUpperCase()}
+            </p>
+            <p className="kpi-value sketch-kpi">
+              {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {s.section!.name}
+            </p>
+            <p className="kpi-foot">
+              {fmtFtIn(s.lengthFt)} long · {fmt(s.section!.odIn, 3)}" × {fmt(s.section!.wallIn, 4)}" wall
+            </p>
+          </div>
+        ))}
         <div className="kpi">
           <p className="kpi-caption">FOOTING</p>
           <p className="kpi-value sketch-kpi">{fmtFtIn(footing.depthFt)} deep</p>
