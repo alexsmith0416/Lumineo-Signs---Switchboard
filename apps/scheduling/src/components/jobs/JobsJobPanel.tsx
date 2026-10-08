@@ -27,7 +27,7 @@ const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live"
 
 /**
  * A job opened from the Jobs list. It is built from the SAME sections the boards'
- * job editor uses, so the list and the Weekly Scheduler stay one system:
+ * job editor uses, so the list and the boards stay one system:
  *  - Production stepper — completing / re-opening / "Set active" writes the
  *    shared stepper stores and queues the BC Project Planning state push
  *    (store/bc-stepper-push.ts), exactly as it does from a board card.

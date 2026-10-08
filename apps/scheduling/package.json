@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Production / Installation / Shipping scheduling hub for Lumineo Signs. React Code App replacement for the Canvas Production Scheduling app.",
+  "description": "Lumineo Switchboard — jobs, scheduling (Production / Installation / Shipping) and warehouse receiving for Lumineo Signs. React Code App replacement for the Canvas Production Scheduling app.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

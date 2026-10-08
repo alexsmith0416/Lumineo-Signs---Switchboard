@@ -79,7 +79,7 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
       (v.id !== "warehouse" || showWarehouse),
   );
   return (
-    <aside className="switchboard-sidebar" aria-label="Scheduler navigation">
+    <aside className="switchboard-sidebar" aria-label="Switchboard navigation">
       <div className="sb-brand">
         <LumineoWordmark className="sb-brand__wordmark" />
       </div>

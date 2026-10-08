@@ -1,4 +1,4 @@
-# Lumineo Scheduling Hub — CLAUDE.md
+# Lumineo Switchboard (formerly Scheduling Hub) — CLAUDE.md
 
 Working notes for Claude Code on this app. Read this before starting any task.
 

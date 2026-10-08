@@ -36,7 +36,7 @@ const SCHEDULING_STEPS: TourStep[] = [
   {
     view: "production",
     title: "Welcome to your sandbox 👋",
-    body: "This is a full, private copy of the scheduler loaded with test jobs. Nothing you do here is saved — so go ahead and try anything. Let's schedule some work.",
+    body: "This is a full, private copy of Switchboard loaded with test jobs. Nothing you do here is saved — so go ahead and try anything. Let's schedule some work.",
     placement: "center",
   },
   {
@@ -306,7 +306,7 @@ export default function DemoTutorial({ onNavigate }: Props) {
           <div className="tour-welcome__eyebrow">Interactive Demo</div>
           <h2 className="tour-welcome__title">Want a quick guided tour?</h2>
           <p className="tour-welcome__sub">
-            You're in a safe sandbox — a private copy of the scheduler loaded with test
+            You're in a safe sandbox — a private copy of Switchboard loaded with test
             jobs. Nothing you do here is saved, so feel free to try anything.
           </p>
           <div className="tour-welcome__choices">

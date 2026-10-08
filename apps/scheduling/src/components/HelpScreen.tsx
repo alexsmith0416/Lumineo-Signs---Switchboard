@@ -31,7 +31,7 @@ export default function HelpScreen({ onLaunchDemo }: HelpScreenProps) {
         <div className="help-screen__intro">
           <div className="help-screen__title">User Guide</div>
           <div className="help-screen__sub">
-            Everything you need to know about the Lumineo Project Scheduler.
+            Everything you need to know about the Lumineo Switchboard.
           </div>
         </div>
         <div className="help-screen__actions">
@@ -46,7 +46,7 @@ export default function HelpScreen({ onLaunchDemo }: HelpScreenProps) {
       <iframe
         className="help-screen__frame"
         src={GUIDE_URL}
-        title="Lumineo Project Scheduler — User Guide"
+        title="Lumineo Switchboard — User Guide"
         loading="lazy"
       />
     </div>

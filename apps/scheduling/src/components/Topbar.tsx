@@ -29,7 +29,7 @@ export default function Topbar({ title, onMenu, minimal = false }: TopbarProps) 
         </button>
       )}
       <div className="app-topbar__lead">
-        <span className="app-topbar__eyebrow">WEEKLY SCHEDULER</span>
+        <span className="app-topbar__eyebrow">SWITCHBOARD</span>
         <span className="app-topbar__title">{title}</span>
       </div>
       {!minimal && (

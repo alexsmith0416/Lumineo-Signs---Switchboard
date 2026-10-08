@@ -1,4 +1,4 @@
-# START HERE — Lumineo Scheduling Hub
+# START HERE — Lumineo Switchboard (formerly the Scheduling Hub)
 
 **Point Claude at this file first in any new terminal.** It's the map: what this
 project is, where everything lives, and exactly how to commit + deploy to the
@@ -9,13 +9,13 @@ architecture/engine detail.
 
 ## 1. What this project is
 
-The **Lumineo Scheduling Hub** — a React + TypeScript **Power Apps Code App**
+**Lumineo Switchboard** (renamed Oct 8, 2026 — formerly the Lumineo Scheduling Hub / Project Scheduler) — a React + TypeScript **Power Apps Code App**
 that replaces the old Canvas Production Scheduling app. Three calendars
 (Production, Installation, Shipping) share one constraint-based scheduling
 engine, plus a Scenario Sandbox for what-if planning, a Monthly Plan roll-up,
 and a per-user "My Schedule" view.
 
-- **Live app name:** Lumineo Project Scheduler
+- **Live app name:** Lumineo Switchboard (was "Lumineo Project Scheduler" until Oct 8, 2026; same app ID)
 - **Linear project:** https://linear.app/lumineosigns/project/lumineo-scheduling-hub-b4e29b417bee
 - **Issues:** `ALE-79`–`ALE-87`, milestones M0–M8 (status table in `apps/scheduling/CLAUDE.md`)
 
