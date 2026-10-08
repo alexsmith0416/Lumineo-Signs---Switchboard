@@ -27,6 +27,8 @@ export interface SketchPalette {
   dim: string;
   dimLabel: string;
   ext: string;
+  /** Leader lines from the [A][B] piece keys to the pole — must read on both themes. */
+  leader: string;
   callout: string;
   legendBg: string;
   legendBorder: string;
@@ -52,6 +54,7 @@ export const SKETCH_PALETTES: Record<'light' | 'dark', SketchPalette> = {
     dim: '#8b91a3',
     dimLabel: '#1f1f2e',
     ext: '#d4d5da',
+    leader: '#141464',
     callout: '#1f1f2e',
     legendBg: '#ffffff',
     legendBorder: '#e4e5ea',
@@ -74,6 +77,7 @@ export const SKETCH_PALETTES: Record<'light' | 'dark', SketchPalette> = {
     dim: '#7b82a0',
     dimLabel: '#f3f4f8',
     ext: '#2a3056',
+    leader: '#7388ff',
     callout: '#f3f4f8',
     legendBg: '#1a1f3d',
     legendBorder: '#2a3056',
@@ -572,7 +576,17 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           const leftPole = X(poleXs[0]) - pxWidth(s) / 2;
           return (
             <g key={`key-${s.index}`}>
-              <line x1={keyX + 8} y1={y} x2={leftPole} y2={y} stroke={p.ext} strokeWidth={1} strokeDasharray="3 3" />
+              <line
+                x1={keyX + 8}
+                y1={y}
+                x2={leftPole}
+                y2={y}
+                stroke={p.leader}
+                strokeWidth={1.3}
+                strokeDasharray="5 3"
+                strokeLinecap="round"
+                strokeOpacity={0.8}
+              />
               <rect x={keyX - 7} y={y - 7} width={15} height={14} rx={3} fill={p.keyBg} />
               <text x={keyX + 0.5} y={y + 3.5} textAnchor="middle" fill={p.keyText} fontSize={9.5} fontWeight={800}>
                 {s.key}
