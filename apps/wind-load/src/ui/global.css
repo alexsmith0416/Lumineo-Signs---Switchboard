@@ -207,17 +207,15 @@ label .unit { color: var(--text-dim); font-weight: 600; }
   flex-wrap: wrap;
 }
 
-.tb-brand { display: flex; align-items: center; gap: 12px; padding-right: 16px; border-right: 1px solid var(--border-default); }
-.tb-brand-mark {
-  width: 36px; height: 36px; flex-shrink: 0;
-  border-radius: var(--radius-sm-card);
-  background: var(--accent-brand);
-  color: var(--text-on-accent);
-  display: flex; align-items: center; justify-content: center;
+.tb-brand {
+  display: flex;
+  align-items: center;
+  padding-right: 16px;
+  border-right: 1px solid var(--border-default);
 }
-.tb-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.tb-brand-name { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; color: var(--text-primary); }
-.tb-brand-sub { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-dim); }
+/* Wordmark inherits this; the red mark is fixed in the artwork. */
+.tb-brand-logo { color: #171a63; display: block; }
+[data-theme='dark'] .tb-brand-logo { color: #ffffff; }
 
 .tb-head { display: flex; flex-direction: column; min-width: 0; }
 .tb-eyebrow {

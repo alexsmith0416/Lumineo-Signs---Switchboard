@@ -11,6 +11,7 @@ import type { DesignInput, DesignResult } from './engine';
 import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound, sectionMaxOutsideIn } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
+import { LOGO_ASPECT, LUMINEO_BLUE, LumineoLogo } from '../ui/LumineoLogo';
 
 const PAGE_W = 612; // letter, pt
 const PAGE_H = 792;
@@ -67,6 +68,35 @@ async function rasterizeSketch(input: DesignInput, result: DesignResult): Promis
   }
 }
 
+/** Rasterize the Lumineo lockup for the PDF title block. */
+async function rasterizeLogo(heightPt: number): Promise<{ data: string; widthPt: number } | null> {
+  const markup = renderToStaticMarkup(
+    createElement(LumineoLogo, { height: 200, color: LUMINEO_BLUE }),
+  );
+  const blob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('logo rasterization failed'));
+      i.src = url;
+    });
+    const scale = 4; // small on the page, so oversample for crisp edges
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(heightPt * LOGO_ASPECT * scale);
+    canvas.height = Math.round(heightPt * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return { data: canvas.toDataURL('image/png'), widthPt: heightPt * LOGO_ASPECT };
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function slugify(s: string): string {
   const slug = s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   return slug || 'calc';
@@ -109,6 +139,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
   };
 
   const row = (label: string, value: string, status?: 'OK' | 'NG') => {
+    setFont(9, 'normal', INK);
     const lines = doc.splitTextToSize(value, CONTENT_W - 150) as string[];
     const h = Math.max(12, lines.length * 10 + 2);
     ensureRoom(h + 4);
@@ -124,32 +155,22 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
   };
 
   // ── Title block ───────────────────────────────────────────────────────────
-  // Ray-mark logo: red rounded square, white rays from the bottom-left.
-  const logo = 30;
-  doc.setFillColor(RED);
-  doc.roundedRect(M, y, logo, logo, 2.5, 2.5, 'F');
-  doc.setDrawColor('#ffffff');
-  doc.setLineWidth(1.2);
-  doc.setLineCap('round');
-  const s = logo / 88;
-  const ox = M + 3 * s;
-  const oy = y + 85 * s;
-  for (const [tx, ty] of [[90, 4], [88, 20], [82, 36], [72, 52], [58, 66], [40, 76], [20, 82]] as const) {
-    doc.line(ox, oy, M + tx * s, y + ty * s);
+  const logoH = 22;
+  const logo = await rasterizeLogo(logoH);
+  if (logo) {
+    doc.addImage(logo.data, 'PNG', M, y, logo.widthPt, logoH);
   }
-
-  setFont(13, 'bold', INK);
-  doc.text('LUMINEO SIGNS', M + logo + 12, y + 12);
-  setFont(7.5, 'bold', DIM);
-  doc.text('SWITCHBOARD · WIND LOAD CALCULATION', M + logo + 12, y + 24);
   setFont(8.5, 'normal', DIM);
   doc.text(
     new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
     PAGE_W - M,
-    y + 12,
+    y + 14,
     { align: 'right' },
   );
-  y += logo + 20;
+  y += logoH + 10;
+  setFont(7.5, 'bold', DIM);
+  doc.text('WIND LOAD CALCULATION', M, y);
+  y += 14;
 
   setFont(16, 'bold', INK);
   doc.text(input.projectName.trim() || 'Untitled project', M, y);
@@ -164,6 +185,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
   const disc =
     'PRELIMINARY SIZING ONLY — calculations follow the shop’s UBC 1994 / AISC 9th ed. workbook. ' +
     'Final structural design and permit drawings must be prepared or verified by a licensed engineer.';
+  setFont(7.5, 'bold', MID);
   const discLines = doc.splitTextToSize(disc, CONTENT_W - 20) as string[];
   const discH = discLines.length * 9 + 12;
   doc.setFillColor(AMBER_SOFT);
@@ -296,7 +318,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     if (result.column.section) {
       row(
         'Concrete cover',
-        `needs ≥ ${input.footingType === 'round' ? fmtInches(f.minWidthForCoverFt) : `${fmt(f.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(sectionMaxOutsideIn(result.column.section), 3)}" pole`,
+        `needs at least ${input.footingType === 'round' ? fmtInches(f.minWidthForCoverFt) : `${fmt(f.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(sectionMaxOutsideIn(result.column.section), 3)}" pole`,
         f.coverOk ? 'OK' : 'NG',
       );
     }
@@ -306,7 +328,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
       row(
         'Mow pad',
         `${fmt(input.mowPad.lengthFt)}' along face × ${fmt(input.mowPad.widthFt)}' across × ${fmt(input.mowPad.heightIn, 2)}" tall on soil · ` +
-          `${fmt(mp.volumeYd3, 2)} yd³ · needs ≥ ${fmt(mp.requiredLengthFt)}' × ${fmt(mp.requiredWidthFt)}' (footing + 6")`,
+          `${fmt(mp.volumeYd3, 2)} yd³ · needs at least ${fmt(mp.requiredLengthFt)}' × ${fmt(mp.requiredWidthFt)}' (footing + 6")`,
         mp.sizeOk ? 'OK' : 'NG',
       );
       row('Total concrete', `order ${fmt(Math.ceil((f.totalVolumeYd3 + mp.volumeYd3) * 2) / 2, 1)} yd³ (footings ${fmt(f.totalVolumeYd3, 2)} + pad ${fmt(mp.volumeYd3, 2)}) (±)`);
@@ -426,6 +448,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     doc.text(title, M, y);
     y += 11;
     for (const item of items) {
+      setFont(8, 'normal', MID);
       const lines = doc.splitTextToSize(`• ${item}`, CONTENT_W - 8) as string[];
       ensureRoom(lines.length * 9 + 2);
       setFont(8, 'normal', MID);

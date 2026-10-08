@@ -1,5 +1,5 @@
 import { IconMoon, IconPdf, IconPrint, IconReset, IconSun } from './icons';
-import { RayMark } from './RayMark';
+import { LumineoLogo } from './LumineoLogo';
 import type { Theme } from './useTheme';
 
 export type View = 'calc' | 'sketch' | 'specs';
@@ -27,12 +27,8 @@ const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
 export function Topbar({ projectName, view, theme, exportingPdf, onChangeView, onToggleTheme, onPrint, onExportPdf, onReset }: Props) {
   return (
     <header className="tb">
-      <div className="tb-brand" aria-hidden="true">
-        <RayMark size={36} />
-        <span className="tb-brand-text">
-          <span className="tb-brand-name">LUMINEO SIGNS</span>
-          <span className="tb-brand-sub">SWITCHBOARD</span>
-        </span>
+      <div className="tb-brand">
+        <LumineoLogo height={30} className="tb-brand-logo" />
       </div>
 
       <div className="tb-head">
