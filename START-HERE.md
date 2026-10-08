@@ -308,7 +308,21 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       their own default opening page (Settings → Display or the user menu),
       overriding their user type's default (`TYPE_CONFIG` in
       `services/current-user.ts`). Stored per login.
-    - 🔴 **REDESIGN AGREED (Alex, Oct 7 ~2:30 AM) — NOT BUILT YET. This replaces
+    - ✅ **REDESIGN BUILT + DEPLOYED (Oct 8, ~12:10 AM).** Push flow patched (Completed_By; backup flows/pushflow-clientdata-backup-20261008-000757.json). Remaining: Alex runs Match Steppers, then Sync to BC. Code:
+      `services/status-lifecycle.ts` (pure: `statusRank`, `lifecycleBcStates`,
+      `adjustForStatus`), `job-status.ts` (`stepsToComplete` /
+      `stepsToReopen` / `statusDates`), `job-tracking-store setStatus` (dates,
+      Vinyl Install → Install active override, BC push with `prev`, BC job
+      complete at Complete to Admin), `bc-stepper-push` (lifecycle states +
+      Completed By = `myResourceNo()` / punch employee), completion store
+      (`installCompleted` → Complete-need paperwork), Sync to BC includes
+      lifecycle. Lifecycle keys removed from the stepper; Purchasing untracked.
+      **Go-live, in order:** (1) `scripts/patch-pushflow-completedby.ps1` (BC
+      Completed_By on state rows — patches the live BCPush_PlanningSteps
+      Push_Body only); (2) deploy the app; (3) Settings → Business Central →
+      Match Steppers; (4) Sync to BC. Guide v3.33.
+      Spec as agreed (kept for reference):
+    - 🔴 **REDESIGN AGREED (Alex, Oct 7 ~2:30 AM) — spec. This replaces
       the lifecycle-on-the-stepper approach. Build it next:**
       1. **Stepper = departments + Install only, everywhere** (Jobs list, job
          panel, pop-up, card hovers). Remove the lifecycle nodes (NO UM RP PU

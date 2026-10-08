@@ -2,6 +2,8 @@ import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import type { FullSyncPlan } from "../services/bc-full-sync";
 import { ensureFlowsLoaded } from "./job-flow-store";
+import { useJobTrackingStore } from "./job-tracking-store";
+import { currentStatus } from "../services/job-tracking";
 
 /**
  * Plan a "Sync to BC" for the given (tracked) jobs: their current stepper from
@@ -31,7 +33,10 @@ export async function planBcSync(jobNos: readonly string[]): Promise<FullSyncPla
       ] as const;
     }),
   );
-  return sync.planFullSync({ jobNos, stepsByJob, lastPushes, ...snapshot });
+  // Each job's Current Status → its BC lifecycle steps.
+  const tracks = new Map(useJobTrackingStore.getState().tracks.map((t) => [t.jobNo, t]));
+  const statusByJob = new Map(jobNos.map((jobNo) => [jobNo, currentStatus(tracks.get(jobNo)).status] as const));
+  return sync.planFullSync({ jobNos, stepsByJob, lastPushes, statusByJob, ...snapshot });
 }
 
 /** Queue a planned sync's pushes; the BCPush_PlanningSteps flow drains them. */

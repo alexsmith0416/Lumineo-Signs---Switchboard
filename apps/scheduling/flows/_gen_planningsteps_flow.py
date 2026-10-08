@@ -71,8 +71,13 @@ want_started = f"equals({T('started')}, true)"
 want_complete = f"equals({T('complete')}, true)"
 started_part = (f"if(equals({cur}?['Started'], {want_started}), json('{{}}'), "
                 f"if({want_started}, json('{{\"Started\":true}}'), json('{{\"Started\":false}}')))")
+# Completing also stamps Completed_By with the mover's BC Resource No. when the
+# app sent one — on a state row it rides in crfdf_assignedto (state pushes
+# have no assignee of their own; Oct 7, 2026).
+complete_true = (f"if(empty({T('assignedto')}), json('{{\"Complete\":true}}'), "
+                 f"addProperty(json('{{\"Complete\":true}}'), 'Completed_By', {T('assignedto')}))")
 complete_part = (f"if(equals({cur}?['Complete'], {want_complete}), json('{{}}'), "
-                 f"if({want_complete}, json('{{\"Complete\":true}}'), "
+                 f"if({want_complete}, {complete_true}, "
                  f"json('{{\"Complete\":false,\"Completed_Date\":\"0001-01-01T00:00:00Z\"}}')))")
 state_body = f"union({started_part}, {complete_part})"
 

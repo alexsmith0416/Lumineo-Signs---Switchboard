@@ -601,11 +601,8 @@ function Cell({ row, def, canDismissAuto = false }: { row: JobRow; def: JobField
 /** The job's production stepper — its steps load lazily per visible row. */
 function StepperCell({ jobNo }: { jobNo: string | undefined }) {
   const { steps, serviceSteps } = useJobSteps(jobNo);
-  // The list shows the DEPARTMENTS only — the lifecycle stages (New Order …
-  // Complete Invoiced) are on their own line in the job panel / stepper pop-up
-  // (Alex, Oct 7: too busy here). A service-only job shows its Service stepper.
-  const departments = steps.filter((s) => !s.lifecycle);
-  const shown = departments.length ? departments : serviceSteps;
+  // A service-only job (no departments) shows its Service stepper.
+  const shown = steps.length ? steps : serviceSteps;
   if (!shown.length) return null;
   return <DepartmentStepper steps={shown} size="sm" />;
 }

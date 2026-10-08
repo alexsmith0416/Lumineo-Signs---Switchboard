@@ -19,7 +19,7 @@
  */
 import { addDays, addWeeks, format, parseISO, startOfWeek } from "date-fns";
 import { COMPLETE_STATUSES } from "./job-status";
-import { INSTALL_STEP, READY_FOR_INSTALL, isDeptKey } from "./production-steps";
+import { INSTALL_STEP, isDeptKey } from "./production-steps";
 
 export type Region = "WK" | "NEK";
 export type Stage = "ready" | "near" | "other";
@@ -88,8 +88,8 @@ export function neededByOf(j: Pick<PlanJob, "redDate" | "scheduledInstall" | "in
 
 /** Where a job is in production, from its stepper. */
 export function stageOf(steps: readonly PlanStep[]): Stage {
-  // Ready = production done: Ready for Install (Oct 7) or Install itself is active.
-  if (steps.some((s) => (s.key === INSTALL_STEP.key || s.key === READY_FOR_INSTALL.key) && s.state === "active")) return "ready";
+  // Ready = production done: Install is the active step.
+  if (steps.some((s) => s.key === INSTALL_STEP.key && s.state === "active")) return "ready";
   // Departments only — the lifecycle stages (New Order… Complete Invoiced) aren't production work.
   const openProduction = steps.filter((s) => isDeptKey(s.key) && s.state !== "completed");
   return openProduction.length === 1 ? "near" : "other";

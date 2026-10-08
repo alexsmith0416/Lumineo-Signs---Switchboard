@@ -13,17 +13,17 @@ import { useIsServiceJob } from "../store/service-jobs-store";
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
 /**
- * A job's steppers. PRODUCTION: the lifecycle stages (New Order → Upcoming Mfg
- * → Purchasing … Ready for Install → Install → Complete-Need Paperwork →
- * Complete to Admin → Complete Invoiced) around the departments its planning
- * lines need, in its flow order, each included / active / completed. SERVICE
- * (service / contract jobs — BC Order Type SERVICE, SIGNCONT, MNTCCONT):
- * Survey → Service → Complete to Admin → Complete Invoiced, below it.
+ * A job's steppers. PRODUCTION: the departments its planning lines need (+
+ * Install), in its flow order, each included / active / completed — the job's
+ * lifecycle is its Current Status, not stepper steps (Oct 7). SERVICE (service
+ * / contract jobs — BC Order Type SERVICE, SIGNCONT, MNTCCONT): Survey →
+ * Service → Complete to Admin → Complete Invoiced, below it.
  *
  * Anyone can complete a step: click it (it glows), then Complete. Editors
  * (Admin / Ops / Developer) also get Edit to add a missing step, Delete under
  * a selected one, Reopen, and Set active. Each completion is stamped who +
- * when. Completing Complete to Admin completes the job in BC.
+ * when. Completing Install moves the job to Complete-need paperwork; the
+ * Service stepper's Complete to Admin completes a service job in BC.
  */
 export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const { fullName, upn, realType } = useCurrentUser();
@@ -136,7 +136,7 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
       {showProduction && (
         <StepperBlock
           title="Production stage"
-          hint="click a stage, then Complete"
+          hint="click a department, then Complete"
           emptyNote="No production stages yet — add one below."
           addLabel="Add stage:"
           steps={steps}
@@ -213,25 +213,11 @@ function StepperBlock({
       </div>
 
       {steps.length > 0 ? (
-        // The lifecycle stages (New Order … Complete Invoiced) on their own line
-        // above the departments + Install (Alex, Oct 7) — one stepper read as two.
-        <div className="job-stepper__rows">
-          {[
-            { label: "Lifecycle", row: steps.filter((s) => s.lifecycle) },
-            { label: "Departments", row: steps.filter((s) => !s.lifecycle) },
-          ]
-            .filter((r) => r.row.length)
-            .map((r, _, all) => (
-              <div key={r.label} className="job-stepper__row">
-                {all.length > 1 && <span className="job-stepper__row-label">{r.label}</span>}
-                <DepartmentStepper
-                  steps={r.row}
-                  onNodeClick={(step) => setSelectedKey((k) => (k === step.key ? null : step.key))}
-                  selectedKey={selectedKey}
-                />
-              </div>
-            ))}
-        </div>
+        <DepartmentStepper
+          steps={steps}
+          onNodeClick={(step) => setSelectedKey((k) => (k === step.key ? null : step.key))}
+          selectedKey={selectedKey}
+        />
       ) : (
         <div className="job-stepper__empty-note">{emptyNote}</div>
       )}

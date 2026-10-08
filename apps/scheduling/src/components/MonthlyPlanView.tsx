@@ -126,7 +126,7 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
   // ── The pools: Jobs list rows + steppers + BC install planning lines.
   const rows = useJobRows();
   const stepInfo = useJobTrackingStore((s) => s.stepInfo);
-  // Service-only jobs have no lifecycle stages (store/service-jobs-store).
+  // The jobs' BC Order Types (service jobs — store/service-jobs-store).
   const orderTypes = useServiceJobsStore((s) => s.orderTypes);
   const loadOrderTypes = useServiceJobsStore((s) => s.load);
   useEffect(() => {

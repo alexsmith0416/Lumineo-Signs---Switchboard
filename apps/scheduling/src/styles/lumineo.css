@@ -3353,33 +3353,6 @@ input.lead-times__weeks { width: 64px; }
 }
 .lum-stepper__bar { height: 2px; width: var(--lum-bar-w); flex: none; background: var(--lum-faint); }
 .lum-stepper__bar.is-filled { background: var(--lum-navy); }
-/* Job panel / stepper pop-up: the lifecycle stages on their own line above the departments. */
-.job-stepper__rows { display: flex; flex-direction: column; gap: 8px; }
-.job-stepper__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.job-stepper__row-label {
-  width: 78px;
-  flex: none;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-/* Lifecycle stages (New Order … Complete Invoiced) — rounded squares, outlined
-   rather than filled, so the departments still read first. Active / selected
-   keep their red / amber. In the compact (sm) stepper they shrink to small
-   markers with short bars, so a full lifecycle fits a grid cell. */
-.lum-stepper__node.is-lifecycle {
-  border-radius: 6px;
-  width: calc(var(--lum-node) - 4px);
-  height: calc(var(--lum-node) - 4px);
-  font-size: 9px;
-}
-.lum-stepper__node.is-lifecycle.is-included { background: var(--bg-primary); color: var(--lum-navy); }
-.lum-stepper__node.is-lifecycle.is-active { width: var(--lum-node-active); height: var(--lum-node-active); }
-.lum-stepper--sm .lum-stepper__node.is-lifecycle { width: 10px; height: 10px; font-size: 0; border-radius: 3px; }
-.lum-stepper--sm .lum-stepper__node.is-lifecycle.is-active { width: 14px; height: 14px; }
-.lum-stepper--sm .lum-stepper__bar.is-lifecycle { width: 6px; }
 .lum-stepper-empty { color: var(--grid-line); }
 
 /* Editable stepper — Edit toggle, per-node action panel, add-department row. */

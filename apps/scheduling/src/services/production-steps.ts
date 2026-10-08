@@ -25,61 +25,22 @@ export const DEPT_FLOW: ReadonlyArray<{ match: RegExp; key: string; label: strin
 export const INSTALL_STEP = { key: "I", label: "Install" } as const;
 
 /**
- * The job LIFECYCLE stages around the departments (decided Sep 29, 2026): the
- * production stepper runs New Order → Upcoming Mfg → Purchasing → the
- * departments → Ready for Install → Install → Complete-Need Paperwork →
- * Complete to Admin (the production team's last step — BC's job "complete"
- * fires here) → Complete Invoiced (Admin's step, the true end).
- * Every production job has them; Ready for Install only with install work.
- * A service-only job (BC Order Type SERVICE / SIGNCONT / MNTCCONT and no
- * production department) has none — it gets the Service stepper instead
- * (services/service-steps.ts).
+ * The stepper is the job's DEPARTMENTS + Install only (Alex, Oct 7 — the
+ * lifecycle stages tried earlier that day are gone from it). The lifecycle —
+ * New Order … Complete Invoiced — lives in the Current Status, and BC's
+ * lifecycle steps follow the status (services/status-lifecycle.ts).
+ * Completion rows for the old lifecycle keys (NO, UM, RP, PU, RI, CP, CA, CI)
+ * are simply ignored.
  */
-export const LIFECYCLE_BEFORE: ReadonlyArray<{ key: string; label: string }> = [
-  { key: "NO", label: "New Order" },
-  { key: "UM", label: "Upcoming Mfg" },
-  // BC "Manufacturing Ready for Planning" sits between Upcoming Manufacturing
-  // and Job Purchasing (Alex, Oct 7).
-  { key: "RP", label: "Ready for Planning" },
-  { key: "PU", label: "Purchasing" },
-];
-/** The pre-production stages (New Order … Purchasing). */
-export const PRE_PRODUCTION_KEYS: readonly string[] = LIFECYCLE_BEFORE.map((d) => d.key);
 
-/**
- * Steps only a person completes — never a status change, a punch or a
- * backfill — and that don't hold the job up while they're open (Alex, Oct 7):
- * PURCHASING is the purchaser's to tick; not everything is bought before a job
- * is released for production. Open, it is active alongside whatever comes
- * next once the stages before it are done; the departments go on regardless,
- * and the Current Status follows them, not it.
- */
-export const MANUAL_ONLY_KEYS: ReadonlySet<string> = new Set(["PU"]);
-export const isManualOnlyKey = (key: string): boolean => MANUAL_ONLY_KEYS.has(key);
-export const READY_FOR_INSTALL = { key: "RI", label: "Ready for Install" } as const;
-export const LIFECYCLE_AFTER: ReadonlyArray<{ key: string; label: string }> = [
-  { key: "CP", label: "Complete-Need Paperwork" },
-  { key: "CA", label: "Complete to Admin" },
-  { key: "CI", label: "Complete Invoiced" },
-];
-const LIFECYCLE_KEYS: ReadonlySet<string> = new Set(
-  [...LIFECYCLE_BEFORE, READY_FOR_INSTALL, ...LIFECYCLE_AFTER].map((d) => d.key),
-);
-/** A lifecycle stage (not a department, not Install)? */
-export const isLifecycleKey = (key: string): boolean => LIFECYCLE_KEYS.has(key);
 /** A production department (MC, S, R, MF, P, V, A, CR)? */
 export const isDeptKey = (key: string): boolean => DEPT_FLOW.some((d) => d.key === key);
-/** Complete to Admin — completing it completes the job in BC. */
-export const COMPLETE_TO_ADMIN = "CA";
 
-/** Every candidate production-stepper step in flow order — the pool an editor
- *  can add a missing step from. */
+/** Every candidate step in flow order (production departments + Install last) —
+ *  the pool an editor can add a missing department from. */
 export const ALL_STEP_DEFS: ReadonlyArray<{ key: string; label: string }> = [
-  ...LIFECYCLE_BEFORE,
   ...DEPT_FLOW.map((d) => ({ key: d.key, label: d.label })),
-  READY_FOR_INSTALL,
   { key: INSTALL_STEP.key, label: INSTALL_STEP.label },
-  ...LIFECYCLE_AFTER,
 ];
 
 /** An editor's override for one department on one job (from crfdf_jobdeptoverride). */
@@ -90,16 +51,11 @@ export interface DeptOverride {
   active: boolean;
 }
 
-/** True when a job has this step by default: departments from its BC planning
- *  lines, Install from install labor, lifecycle stages on every production job
- *  (`service` = a service / contract order — with no department it's a
- *  service-only job and gets no lifecycle stages). */
-export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean, service = false): boolean {
+/** True when the BC planning lines put this step in the job by default. (`service`
+ *  is kept for callers; it no longer changes anything here.) */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function bcHasStep(key: string, deptNames: string[], hasInstall: boolean, _service = false): boolean {
   if (key === INSTALL_STEP.key) return hasInstall;
-  if (isLifecycleKey(key)) {
-    const productionJob = !service || deptNames.some((n) => DEPT_FLOW.some((d) => d.match.test(n)));
-    return productionJob && (key !== READY_FOR_INSTALL.key || hasInstall);
-  }
   const def = DEPT_FLOW.find((d) => d.key === key);
   return !!def && deptNames.some((n) => def.match.test(n));
 }
@@ -168,16 +124,13 @@ export function buildDepartmentSteps(
   service = false,
 ): DepartmentStep[] {
   const defs = includedStepDefs(deptNames, hasInstall, overrides, order, service);
-  // Default active = the first step in flow order that isn't completed —
-  // skipping manual-only steps (Purchasing), which never hold the line.
-  const firstActiveKey = defs.find((d) => !completed.has(d.key) && !isManualOnlyKey(d.key))?.key;
-  return defs.map((d, i) => {
+  // Default active = the first step in flow order that isn't completed.
+  const firstActiveKey = defs.find((d) => !completed.has(d.key))?.key;
+  return defs.map((d) => {
     let state: DepartmentStep["state"] = "included";
     if (completed.has(d.key)) state = "completed";
     else if (d.key === firstActiveKey || overrides[d.key]?.active) state = "active";
-    // A manual-only step is active (in the purchaser's queue) once every step before it is done.
-    else if (isManualOnlyKey(d.key) && defs.slice(0, i).every((p) => completed.has(p.key) || isManualOnlyKey(p.key))) state = "active";
-    return { key: d.key, label: d.label, state, ...(isLifecycleKey(d.key) ? { lifecycle: true } : {}) };
+    return { key: d.key, label: d.label, state };
   });
 }
 

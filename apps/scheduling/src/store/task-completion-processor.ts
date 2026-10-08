@@ -28,7 +28,7 @@ import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
 import { ensureJobsLoaded, useJobTrackingStore } from "./job-tracking-store";
 import { ensureFlowsLoaded, jobFlowFor, stepOrderFor, useJobFlowStore } from "./job-flow-store";
-import { buildDepartmentSteps, isLifecycleKey, isManualOnlyKey, stepLabel } from "../services/production-steps";
+import { buildDepartmentSteps, stepLabel } from "../services/production-steps";
 import { isServiceJob } from "./service-jobs-store";
 import { currentStatus } from "../services/job-tracking";
 import { deptForCompletion } from "../services/task-completion";
@@ -128,16 +128,6 @@ async function applyOne(t: TaskCompletionRow): Promise<Outcome> {
   const doneStatus = useJobFlowStore.getState().company.doneStatus;
   const doneBefore = parseStagesDone(track?.stagesDone ?? "");
 
-  // A punch in a department means the job is past the lifecycle stages before
-  // it (New Order, Upcoming Mfg, Purchasing…) — tick any still open, or the
-  // status would follow the flow back to "New Order this week".
-  const at0 = before.findIndex((s) => s.key === pick.key);
-  const passed = before.slice(0, Math.max(0, at0)).filter((s) => s.state !== "completed" && isLifecycleKey(s.key) && !isManualOnlyKey(s.key)).map((s) => s.key);
-  if (passed.length) {
-    await useJobDeptCompletionStore.getState().completeMany(t.jobNo, passed, by, stepKeys);
-    for (const k of passed) completed.add(k);
-  }
-
   let what: string;
   let stagesDone = doneBefore;
   if (completed.has(pick.key)) {
@@ -167,7 +157,8 @@ async function applyOne(t: TaskCompletionRow): Promise<Outcome> {
   const detail = { department: label, nextDept, statusFrom: current, statusTo: target ?? "" };
   if (target) {
     const stamp = `${by} · ${format(new Date(), "M/d/yyyy")}`;
-    await useJobTrackingStore.getState().setStatus(t.jobNo, target, stamp, stamp);
+    // BC's Completed By = the employee who punched (their BC Resource No.).
+    await useJobTrackingStore.getState().setStatus(t.jobNo, target, stamp, stamp, t.resourceNo || undefined);
     return { state: "done", result: `${what} · status ${current} → ${target}`, detail };
   }
   return { state: "done", result: `${what} · status left as ${current}`, detail };

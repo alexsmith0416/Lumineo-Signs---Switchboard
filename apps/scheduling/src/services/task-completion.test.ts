@@ -43,10 +43,7 @@ describe("the status a job moves to", () => {
   });
 
   it("moves to the done status when every step is complete", () => {
-    // Since the lifecycle stages (Oct 7) "every step done" is Complete Invoiced;
-    // with Complete-Need Paperwork still open the job moves there instead.
-    expect(nextStatus([step("P", "completed"), step("I", "completed")], "Installation", DEFAULT_STATUS_RULES)).toBe("Complete Invoiced");
-    expect(nextStatus([step("I", "completed"), step("CP", "active")], "Installation", DEFAULT_STATUS_RULES)).toBe("Complete-need paperwork");
+    expect(nextStatus([step("P", "completed"), step("I", "completed")], "Installation", DEFAULT_STATUS_RULES)).toBe("Complete-need paperwork");
   });
 
   it("never moves a hold or a special status", () => {
@@ -88,8 +85,7 @@ describe("a tick's History columns", () => {
   it("reads 'already complete' and the all-done rule", () => {
     const r = tickOutcome({ ...blank, result: "Assembly was already complete · status MFG - Assembly → Complete-need paperwork" }, stepFor);
     expect(r.department).toBe("Assembly");
-    // "Complete-need paperwork" is the Complete-Need Paperwork stage since Oct 7.
-    expect(r.nextDept).toBe("Complete-Need Paperwork");
+    expect(r.nextDept).toBe("All steps complete");
   });
 
   it("keeps the columns a newer tick already has", () => {

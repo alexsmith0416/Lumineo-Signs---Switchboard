@@ -2,9 +2,10 @@ import type { FlowStage } from "../services/job-flow";
 import { create } from "zustand";
 import { format } from "date-fns";
 import { currentStatus, emptyJobTrack, type BcJobSummary, type JobTrack } from "../services/job-tracking";
-import { holdTransition, preProductionToComplete, stepsToComplete } from "../services/job-status";
-import { buildDepartmentSteps } from "../services/production-steps";
-import { buildServiceSteps, isServiceKey } from "../services/service-steps";
+import { holdTransition, statusDates, stepsToComplete, stepsToReopen } from "../services/job-status";
+import { isVinylInstall, statusRank } from "../services/status-lifecycle";
+import { INSTALL_STEP, buildDepartmentSteps } from "../services/production-steps";
+import { buildServiceSteps } from "../services/service-steps";
 import { persistOrReport } from "./write-status-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { useJobDeptOverrideStore } from "./job-dept-override-store";
@@ -32,13 +33,18 @@ interface JobTrackingState {
   /** Rename a job ("" = back to BC's ship-to name). Starts tracking an untracked job. */
   renameJob: (jobNo: string, name: string) => Promise<void>;
   /**
-   * Set a job's Current Status. Stamps the hold dates on the way into / out of
-   * a hold, and completes the stepper steps the status implies (job-status.ts),
-   * which pushes the new step states to BC like a stepper click.
+   * Set a job's Current Status — the job's lifecycle (Oct 7, 2026). Stamps the
+   * hold dates on the way into / out of a hold and Date Installed / Date to
+   * Admin; completes (or, moving back, re-opens) the stepper steps the status
+   * implies (job-status.ts); then pushes BC: the steps, the lifecycle steps
+   * the status implies (status-lifecycle.ts) and, at Complete to Admin, the
+   * job's complete flag.
    * `auto` marks a shop-floor punch's move ("Punch · <name> · <date>" → the
-   * Auto tag); a status set by hand clears that marker.
+   * Auto tag); a status set by hand clears that marker. `completedBy` = the BC
+   * Resource No. to stamp as Completed By (a punch passes the employee's;
+   * default: the signed-in user's).
    */
-  setStatus: (jobNo: string, status: string, by: string, auto?: string) => Promise<void>;
+  setStatus: (jobNo: string, status: string, by: string, auto?: string, completedBy?: string) => Promise<void>;
   /** Dismiss a job's Auto tag (the status stays as it is). */
   dismissAuto: (jobNo: string) => Promise<void>;
   /** Give a job its own flow stages (null = back to the company flow). */
@@ -131,7 +137,7 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     });
   },
 
-  setStatus: async (jobNo, status, by, auto) => {
+  setStatus: async (jobNo, status, by, auto, completedBy) => {
     const track = get().tracks.find((t) => t.jobNo === jobNo);
     const prev = currentStatus(track).status;
     const statusAuto = auto ?? "";
@@ -141,26 +147,47 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
       return;
     }
     const t = track ?? emptyJobTrack(jobNo);
+    const today = format(new Date(), "yyyy-MM-dd");
     const hold = holdTransition(
       { holdReason: t.holdReason, dateToHold: t.dateToHold, dateOffHold: t.dateOffHold, priorHoldDays: t.priorHoldDays ?? 0 },
       prev,
       status,
-      format(new Date(), "yyyy-MM-dd"),
+      today,
     );
-    const saving = saveTrack(jobNo, { statusOverride: status, statusAuto, ...hold }, "Change job status");
+    // Date Installed (first time a job reaches Complete-need paperwork or later)
+    // and Date to Admin (every move to Complete to Admin) fill themselves in.
+    const dates = statusDates(status, { dateInstalled: t.dateInstalled, dateToAdmin: t.dateToAdmin }, today);
+    const saving = saveTrack(jobNo, { statusOverride: status, statusAuto, ...hold, ...dates }, "Change job status");
 
-    // Stepper automation: complete what the status implies — through the job's
-    // flow (lifecycle stages before it; departments too once it's past production).
+    // Stepper: complete what the status implies, re-open Install on a move back
+    // from a complete status, and Vinyl Install = Vinyl AND Install active.
     const steps = await jobSteps(jobNo);
-    const { jobFlowConfigFor } = await import("./job-flow-store");
-    const production = steps.filter((s) => !isServiceKey(s.key)).map((s) => s.key);
-    const flow = jobFlowConfigFor(jobNo, production);
-    // + the pre-production stage(s) it leaves, or all of them on a production status.
-    const keys = [...new Set([...stepsToComplete(status, steps, flow), ...preProductionToComplete(prev, status, steps, flow)])];
-    if (keys.length) {
-      await useJobDeptCompletionStore.getState().completeMany(jobNo, keys, by, steps.map((s) => s.key));
+    const allKeys = steps.map((s) => s.key);
+    const done = stepsToComplete(status, steps);
+    const reopen = stepsToReopen(prev, status, steps);
+    const overrides = useJobDeptOverrideStore.getState();
+    const installOv = overrides.byJob[jobNo]?.[INSTALL_STEP.key];
+    if (isVinylInstall(status) && !installOv?.active) {
+      await overrides.setOverride(jobNo, INSTALL_STEP.key, { included: true, active: true });
+    } else if (!isVinylInstall(status) && isVinylInstall(prev) && installOv?.active) {
+      await overrides.clearOverride(jobNo, INSTALL_STEP.key);
     }
+    const completions = useJobDeptCompletionStore.getState();
+    // BC follows (steps + the lifecycle the status implies) in one push at the end.
+    if (done.length) await completions.completeMany(jobNo, done, by, allKeys, { pushBc: false });
+    for (const k of reopen) await completions.setComplete(jobNo, k, by, false);
     await saving;
+
+    const opts = { prev, ...(completedBy !== undefined ? { completedBy } : {}) };
+    void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by, opts));
+    // BC's job "complete" flag follows Complete to Admin (and re-opens on a move back).
+    const was = statusRank(prev);
+    const now = statusRank(status);
+    if (LIVE && now !== null && was !== null && (was >= 7) !== (now >= 7)) {
+      void Promise.all([import("../services/bc-planning-sync"), import("../services/dataverse-live")]).then(([sync, dv]) =>
+        dv.enqueueBcPush(sync.buildJobPush({ jobNo, complete: now >= 7, completedBy: by, completedDate: new Date() })),
+      );
+    }
   },
 
   setJobFlow: (jobNo, stages) =>

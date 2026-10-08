@@ -10,7 +10,7 @@
  * (Service, Morton, Billboards, Refurb, Complete to Admin / Invoiced…) are
  * left for people to change. Later, sign type / sign order can refine this.
  */
-import { INSTALL_STEP, isManualOnlyKey } from "./production-steps";
+import { INSTALL_STEP } from "./production-steps";
 import { isHoldStatus } from "./job-status";
 
 /** The rule key for "every step complete". */
@@ -20,14 +20,6 @@ export const ALL_DONE = "done";
 export type StatusRules = Readonly<Record<string, string>>;
 
 export const DEFAULT_STATUS_RULES: StatusRules = {
-  // Lifecycle stages (Oct 7, 2026). Complete to Admin is the production team
-  // handing the paperwork over, so while it's open the job still reads
-  // "Complete-need paperwork"; once it's done the job is with Admin
-  // ("Complete to Admin") until invoiced ("Complete Invoiced" = every step done).
-  NO: "New Order this week",
-  UM: "Upcoming Mfg.",
-  RP: "Mfg. Ready for Planning",
-  PU: "Purchasing",
   MC: "MFG - Need Material Cut",
   S: "Steel MFG",
   R: "MFG - Routing",
@@ -36,22 +28,17 @@ export const DEFAULT_STATUS_RULES: StatusRules = {
   V: "MFG - Vinyl Cut",
   A: "MFG - Assembly",
   CR: "Needs Shipped",
-  RI: "Ready for Install",
-  [INSTALL_STEP.key]: "Install - waiting on product",
-  CP: "Complete-need paperwork",
-  CA: "Complete-need paperwork",
-  CI: "Complete to Admin",
-  [ALL_DONE]: "Complete Invoiced",
+  // Production done → ready for install scheduling (Oct 7; was "Install - waiting on product").
+  [INSTALL_STEP.key]: "Install - Ready for Planning",
+  // Install done → the production order is complete (Date Installed fills in).
+  [ALL_DONE]: "Complete-need paperwork",
 };
-
-/** The "every step done" status before the lifecycle stages existed. */
-export const OLD_DONE_STATUS = "Complete-need paperwork";
 
 /** Production statuses besides the rule targets that may also be moved on. */
 const ALSO_MOVABLE = [
   "—", "New Order this week", "Upcoming Mfg.", "Mfg. Ready for Planning", "Manufacturing", "Active",
   "MFG - Terry Metal Fab", "MFG - Chris Metal Fab", "MFG - Vinyl Application", "MFG - Vinyl Install",
-  "MFG - Assembly & Graphics", "NEK - Production", "Installation",
+  "MFG - Assembly & Graphics", "NEK - Production", "Install - waiting on product", "Installation",
 ];
 
 /** Statuses the automation never moves a job off. */
@@ -89,8 +76,7 @@ export function nextStatus(
   rules: StatusRules,
 ): string | null {
   if (!steps.length || !isAutoMovable(current, rules)) return null;
-  // An open manual-only step (Purchasing) never decides the status.
-  const active = steps.find((s) => s.state === "active" && !isManualOnlyKey(s.key));
-  const target = active ? rules[active.key] : steps.every((s) => s.state === "completed" || isManualOnlyKey(s.key)) ? rules[ALL_DONE] : undefined;
+  const active = steps.find((s) => s.state === "active");
+  const target = active ? rules[active.key] : steps.every((s) => s.state === "completed") ? rules[ALL_DONE] : undefined;
   return target && target !== current ? target : null;
 }

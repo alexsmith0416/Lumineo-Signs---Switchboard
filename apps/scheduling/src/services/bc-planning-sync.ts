@@ -22,7 +22,7 @@
  * Dataverse (not the loaded week), which also makes each push idempotent.
  */
 import type { ScheduleLine } from "../engine/types";
-import { COMPLETE_TO_ADMIN, DEPT_FLOW, INSTALL_STEP, isDeptKey } from "./production-steps";
+import { DEPT_FLOW, INSTALL_STEP, isDeptKey } from "./production-steps";
 import { SERVICE_COMPLETE_TO_ADMIN } from "./service-steps";
 
 /** `"schedule"` = a step's dates/assignee; `"state"` = a step's Started /
@@ -79,15 +79,10 @@ export const BC_STEP_FOR_KEY: Readonly<Record<string, string>> = {
   A: "Final Assembly",
   CR: "Crating",
   [INSTALL_STEP.key]: "Install",
-  // Lifecycle + Service stages with a known BC step (Alex, Oct 7). Complete to
-  // Admin / Complete Invoiced and Survey stay in the app until their BC step
-  // names are confirmed (BC has two "Survey" steps — a write by name is refused).
-  NO: "New Order This Week",
-  UM: "Upcoming Manufacturing",
-  RP: "Manufacturing Ready for Planning",
-  PU: "Job Purchasing",
-  RI: "Product Ready for Install Scheduling",
-  CP: "Complete-Need Paperwork",
+  // The Service stepper's Service step. (The lifecycle steps — New Order This
+  // Week … Complete-Need Paperwork — follow the Current Status instead:
+  // services/status-lifecycle.ts. Survey stays in the app: BC has two "Survey"
+  // steps, so a write by name is refused.)
   SE: "Service",
 };
 
@@ -272,8 +267,17 @@ export const BC_PRODUCTION_STEP = "Production";
 /** BC's main Installation step (heads Install and the other install steps). */
 export const BC_INSTALLATION_STEP = "Installation/Service";
 
-/** A Started/Complete push for one (job, BC step). */
-export function buildStepStatePush(input: { jobNo: string; state: BcStepState; by?: string }): BcPlanningPush | null {
+/** A Started/Complete push for one (job, BC step). `completedBy` = the BC
+ *  Resource No. of the person who moved it on — written to BC's Completed By
+ *  when the step becomes Complete. It rides in the outbox's assignee column,
+ *  which state pushes don't otherwise use (BCPush_PlanningSteps reads it as
+ *  Completed_By on a state row). "" = leave Completed By as it is. */
+export function buildStepStatePush(input: {
+  jobNo: string;
+  state: BcStepState;
+  by?: string;
+  completedBy?: string;
+}): BcPlanningPush | null {
   if (!input.jobNo) return null;
   return {
     kind: "state",
@@ -282,7 +286,7 @@ export function buildStepStatePush(input: { jobNo: string; state: BcStepState; b
     deptKey: input.state.keys.join(","),
     startDateTime: null,
     endDateTime: null,
-    assignedTo: "",
+    assignedTo: input.state.complete ? input.completedBy ?? "" : "",
     assignedToName: input.by ?? "",
     complete: input.state.complete,
     started: input.state.started,
@@ -308,17 +312,14 @@ export function allStepsComplete(
 }
 
 /**
- * Is the job complete as far as BC's job "complete" flag goes? Since Oct 7,
- * 2026 that's COMPLETE TO ADMIN (decided Sep 29): the production team's last
- * step — Complete Invoiced, Admin's step, comes after and doesn't hold it.
- * `allStepKeys` = every step the job's steppers show (production + service):
- * each Complete to Admin among them (production CA, service SA) must be done.
- * A job whose steppers have no Complete to Admin (an editor removed it) falls
- * back to every step complete, as before.
+ * Does a STEPPER change complete the job for BC's job "complete" flag? Since
+ * Oct 7, 2026 the flag follows the Current Status — moving to Complete to
+ * Admin sets it (job-tracking-store `setStatus`) — so production steps never
+ * decide it. Only a service job's own Service-stepper "Complete to Admin"
+ * (SA) still does. `allStepKeys` = every step the job's steppers show.
  */
 export function jobCompleteForBc(allStepKeys: readonly string[], completedKeys: ReadonlySet<string>): boolean {
-  const admin = allStepKeys.filter((k) => k === COMPLETE_TO_ADMIN || k === SERVICE_COMPLETE_TO_ADMIN);
-  return admin.length ? admin.every((k) => completedKeys.has(k)) : allStepsComplete(allStepKeys, completedKeys);
+  return allStepKeys.includes(SERVICE_COMPLETE_TO_ADMIN) && completedKeys.has(SERVICE_COMPLETE_TO_ADMIN);
 }
 
 /**

@@ -1240,6 +1240,26 @@ async function pushProductionStep(line: ScheduleLine): Promise<void> {
   }
 }
 
+// The signed-in person's BC Resource No. (crfdf_appuser.crfdf_no, matched on
+// their login email) — stamped as BC's Completed By when they move a job on
+// (status-lifecycle / bc-stepper-push). "" when they have none: never guessed.
+let myResourceNoP: Promise<string> | null = null;
+export function myResourceNo(): Promise<string> {
+  myResourceNoP ??= import("@microsoft/power-apps/app")
+    .then(({ getContext }) => getContext())
+    .then(async (ctx) => {
+      const email = (ctx.user.userPrincipalName ?? "").trim().toLowerCase();
+      if (!email) return "";
+      const rows = await list(APPUSER_SET, { select: "crfdf_no", filter: `crfdf_email eq '${odataLit(email)}'` });
+      return s(rows[0]?.crfdf_no).trim();
+    })
+    .catch((e) => {
+      myResourceNoP = null;
+      throw e;
+    });
+  return myResourceNoP;
+}
+
 // App-user directory as BC people, for naming install crew. Cached for the
 // session like the department names; a failed read is retried next time.
 let bcPeopleP: Promise<BcPerson[]> | null = null;

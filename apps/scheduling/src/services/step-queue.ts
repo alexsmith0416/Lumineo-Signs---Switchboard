@@ -18,7 +18,7 @@
  */
 import type { QueueItem, QueueKind } from "./job-queue-data";
 import { bcStepForDepartmentName, bcStepForKey } from "./bc-planning-sync";
-import { DEPT_FLOW, INSTALL_STEP, READY_FOR_INSTALL, isDeptKey } from "./production-steps";
+import { DEPT_FLOW, INSTALL_STEP, isDeptKey } from "./production-steps";
 
 export interface StepQueueJob {
   jobNo: string;
@@ -80,8 +80,7 @@ export function buildStepQueue(input: {
     const lines = input.linesByJob.get(job.jobNo) ?? [];
     if (isInstall) {
       if ((job.installRegion || "WK").toUpperCase() !== region) continue;
-      // Ready for install: Ready for Install (Oct 7) or Install is the active stage.
-      if (!steps.some((s) => (s.key === INSTALL_STEP.key || s.key === READY_FOR_INSTALL.key) && s.state === "active")) continue;
+      if (!steps.some((s) => s.key === INSTALL_STEP.key && s.state === "active")) continue;
       const mine = lines.filter((l) => l.isInstall);
       groups.get(INSTALL_QUEUE_STEP)!.push(
         item(job, INSTALL_QUEUE_STEP, mine, "", input.scheduled.has(`${job.jobNo}|Install`)),

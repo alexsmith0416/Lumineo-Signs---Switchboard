@@ -52,6 +52,32 @@ interface JobDeptCompletionState {
   ) => Promise<void>;
 }
 
+const INSTALL_KEY = "I";
+
+/**
+ * Install was just completed (a stepper click, or a punch's Task complete on
+ * install): the production order is done, so the job moves to "Complete-need
+ * paperwork" — which completes every step still open and fills Date Installed
+ * (job-tracking-store setStatus). Only from a lifecycle status before that
+ * point or one of the shipping statuses (Needs Shipped, Ready to send to
+ * NEK / DC) — never from a hold, a special status (Service, Morton…) or a job
+ * already at / past it, so a status move that itself completes Install
+ * (Complete to Admin…) is left alone.
+ */
+async function installCompleted(jobNo: string, by: string): Promise<void> {
+  const [{ useJobTrackingStore }, { currentStatus }, { statusRank, STATUS }] = await Promise.all([
+    import("./job-tracking-store"),
+    import("../services/job-tracking"),
+    import("../services/status-lifecycle"),
+  ]);
+  const track = useJobTrackingStore.getState().tracks.find((t) => t.jobNo === jobNo);
+  const status = currentStatus(track).status;
+  const rank = statusRank(status);
+  const shipping = /^(needs shipped|ready to send to (nek|dc))$/i.test(status.trim());
+  if (rank === null ? !shipping : rank >= 6) return;
+  await useJobTrackingStore.getState().setStatus(jobNo, STATUS.needPaperwork, by);
+}
+
 export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, get) => ({
   byJob: {},
   loaded: false,
@@ -101,6 +127,8 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
         ? m.addJobDeptCompletion(jobNo, deptKey, by)
         : m.removeJobDeptCompletion(jobNo, deptKey);
     });
+    // Install done = the production order is complete → Complete-need paperwork.
+    if (done && deptKey === INSTALL_KEY) await installCompleted(jobNo, by);
     // Mirror the stepper into BC's step Started/Complete (fire-and-forget).
     void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by));
 
@@ -136,6 +164,7 @@ export const useJobDeptCompletionStore = create<JobDeptCompletionState>((set, ge
       // Idempotent upserts, so a retry after a partial failure is safe.
       await Promise.all(keys.map((k) => m.addJobDeptCompletion(jobNo, k, by)));
     });
+    if (keys.includes(INSTALL_KEY)) await installCompleted(jobNo, by);
     if (opts.pushBc === false) return;
     void import("./bc-stepper-push").then((b) => b.pushStepperState(jobNo, by));
     const after = new Set(Object.keys(get().byJob[jobNo] ?? {}));

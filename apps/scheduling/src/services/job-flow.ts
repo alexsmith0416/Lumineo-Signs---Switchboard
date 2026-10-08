@@ -19,8 +19,8 @@
  * completes the job's next open stage of that step; the Current Status then
  * follows the first open stage of the whole flow.
  */
-import { ALL_STEP_DEFS, isManualOnlyKey } from "./production-steps";
-import { ALL_DONE, DEFAULT_STATUS_RULES, OLD_DONE_STATUS, isAutoMovableStatus, type StatusRules } from "./status-rules";
+import { ALL_STEP_DEFS } from "./production-steps";
+import { ALL_DONE, DEFAULT_STATUS_RULES, isAutoMovableStatus, type StatusRules } from "./status-rules";
 
 export interface FlowStage {
   /** Stepper step key (S, R, MF, P, V, A, CR, MC, I). */
@@ -74,20 +74,15 @@ export function parseStages(raw: unknown): FlowStage[] | null {
   return out.length ? out : null;
 }
 
-/** The company flow from its stored config value, else built from the old rules.
- *  A flow saved before the lifecycle stages (no Complete Invoiced stage, done
- *  status still the old "Complete-need paperwork") gets the new done status —
- *  "Complete-need paperwork" is now the Complete-Need Paperwork stage's. */
+/** The company flow from its stored config value, else built from the old rules. */
 export function companyFlow(stored: unknown, rules: StatusRules = DEFAULT_STATUS_RULES): FlowConfig {
   const fallback = flowFromRules(rules);
   if (!stored || typeof stored !== "object") return fallback;
   const stages = parseStages((stored as { stages?: unknown }).stages);
   const done = (stored as { doneStatus?: unknown }).doneStatus;
-  const doneStatus = typeof done === "string" && done.trim() ? done.trim() : fallback.doneStatus;
-  const legacyDone = doneStatus === OLD_DONE_STATUS && !(stages ?? []).some((s) => s.step === "CI");
   return {
     stages: stages ?? fallback.stages,
-    doneStatus: legacyDone ? DEFAULT_STATUS_RULES[ALL_DONE]! : doneStatus,
+    doneStatus: typeof done === "string" && done.trim() ? done.trim() : fallback.doneStatus,
   };
 }
 
@@ -168,7 +163,7 @@ export function currentStage(
   stagesDone: ReadonlySet<string>,
   completedSteps: ReadonlySet<string>,
 ): FlowStage | null {
-  return flow.find((s) => !isManualOnlyKey(s.step) && !isStageDone(s, stagesDone, completedSteps)) ?? null;
+  return flow.find((s) => !isStageDone(s, stagesDone, completedSteps)) ?? null;
 }
 
 /** The Current Status a flow puts the job on now. */

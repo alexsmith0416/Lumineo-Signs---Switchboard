@@ -22,6 +22,7 @@ import {
   stepWindow,
   type BcPlanningPush,
 } from "./bc-planning-sync";
+import { adjustForStatus, lifecycleBcStates } from "./status-lifecycle";
 
 export interface LastPush {
   kind: string;
@@ -48,6 +49,8 @@ export interface FullSyncInput {
   installResourceNo: (employeeId: string) => string;
   /** Every earlier push still in the outbox (pending or synced). */
   lastPushes: readonly LastPush[];
+  /** Each job's Current Status — drives BC's lifecycle steps (status-lifecycle.ts). */
+  statusByJob?: ReadonlyMap<string, string>;
 }
 
 export interface FullSyncPlan {
@@ -85,9 +88,19 @@ export function planFullSync(input: FullSyncInput): FullSyncPlan {
 
   const desired: BcPlanningPush[] = [];
   for (const jobNo of input.jobNos) {
-    for (const state of bcStepStates(input.stepsByJob.get(jobNo) ?? [])) {
+    // The stepper's states adjusted for the Current Status, plus the lifecycle
+    // steps the status implies (services/status-lifecycle.ts) — as live pushes do.
+    const status = input.statusByJob?.get(jobNo) ?? "";
+    for (const state of adjustForStatus(bcStepStates(input.stepsByJob.get(jobNo) ?? []), status)) {
       const push = buildStepStatePush({ jobNo, state, by: "Sync to BC" });
       if (push) desired.push(push);
+    }
+    for (const state of lifecycleBcStates(status)) {
+      const push = buildStepStatePush({ jobNo, state, by: "Sync to BC" });
+      // A lifecycle step "not Started, not Complete" that was never pushed has
+      // nothing to undo (a department's still goes: BC may have Started it itself).
+      if (!push || (!push.started && !push.complete && !latest.has(key(push.kind, jobNo, push.planningStep)))) continue;
+      desired.push(push);
     }
     // Production cards grouped by the BC step their department feeds.
     const byStep = groupBy(prodByJob.get(jobNo) ?? [], (c) => bcStepForDepartmentName(input.departmentName(c.departmentId)) ?? "");
