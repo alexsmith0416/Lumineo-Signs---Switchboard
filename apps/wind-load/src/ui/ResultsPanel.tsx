@@ -350,9 +350,9 @@ export function ResultsPanel({ input, result }: Props) {
                 <thead>
                   <tr>
                     <th>Element</th>
-                    <th className="num">W × H (ft)</th>
+                    <th className="num">W × H</th>
                     <th className="num">Area (sq ft)</th>
-                    <th className="num">Centroid (ft)</th>
+                    <th className="num">Centroid</th>
                     <th className="num">Pressure (psf)</th>
                     <th className="num">Force (lb)</th>
                     <th className="num">Moment (lb-ft)</th>
@@ -362,9 +362,9 @@ export function ResultsPanel({ input, result }: Props) {
                   {r.elements.map((e) => (
                     <tr key={e.id}>
                       <td>{e.label || '—'}</td>
-                      <td className="num">{fmt(e.widthFt)} × {fmt(e.heightFt)}</td>
+                      <td className="num">{fmtFtIn(e.widthFt)} × {fmtFtIn(e.heightFt)}</td>
                       <td className="num">{fmt(e.areaSqFt, 1)}</td>
-                      <td className="num">{fmt(e.centroidFt, 1)}</td>
+                      <td className="num">{fmtFtIn(e.centroidFt)}</td>
                       <td className="num">{fmt(e.pressurePsf, 1)}</td>
                       <td className="num">{fmtInt(e.forceLb)}</td>
                       <td className="num">{fmtInt(e.momentLbFt)}</td>

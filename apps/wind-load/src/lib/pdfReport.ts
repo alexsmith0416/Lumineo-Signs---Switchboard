@@ -217,10 +217,10 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
   // ── Wind forces table ─────────────────────────────────────────────────────
   sectionTitle('Wind forces by element');
   const cols = [
-    { h: 'Element', w: 118, align: 'left' as const },
-    { h: 'W × H (ft)', w: 66, align: 'right' as const },
+    { h: 'Element', w: 108, align: 'left' as const },
+    { h: 'W × H', w: 84, align: 'right' as const },
     { h: 'Area (sf)', w: 56, align: 'right' as const },
-    { h: 'Centroid (ft)', w: 68, align: 'right' as const },
+    { h: 'Centroid', w: 60, align: 'right' as const },
     { h: 'Press. (psf)', w: 64, align: 'right' as const },
     { h: 'Force (lb)', w: 62, align: 'right' as const },
     { h: 'Moment (lb-ft)', w: 82, align: 'right' as const },
@@ -243,9 +243,9 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     setFont(9, 'normal', INK);
     const vals = [
       e.label || '—',
-      `${fmt(e.widthFt)} × ${fmt(e.heightFt)}`,
+      `${fmtFtIn(e.widthFt)} × ${fmtFtIn(e.heightFt)}`,
       fmt(e.areaSqFt, 1),
-      fmt(e.centroidFt, 1),
+      fmtFtIn(e.centroidFt),
       fmt(e.pressurePsf, 1),
       fmtInt(e.forceLb),
       fmtInt(e.momentLbFt),
