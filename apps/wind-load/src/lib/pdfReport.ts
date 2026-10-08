@@ -9,7 +9,7 @@ import { jsPDF } from 'jspdf';
 
 import type { DesignInput, DesignResult } from './engine';
 import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound } from '../data/tables';
-import { fmt, fmtFtIn, fmtInt } from '../ui/fields';
+import { fmt, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
 
 const PAGE_W = 612; // letter, pt
@@ -283,7 +283,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     ensureRoom(16);
     doc.text(
       input.footingType === 'round'
-        ? `${input.numFootings} × Ø ${fmt(f.diameterFt)}' × ${fmtFtIn(f.depthFt)} deep`
+        ? `${input.numFootings} × Ø ${fmtInches(f.diameterFt)} × ${fmtFtIn(f.depthFt)} deep`
         : `${input.numFootings} × ${fmt(f.planWidthFt)}' × ${fmt(f.planLengthFt)}' × ${fmtFtIn(f.depthFt)} deep`,
       M,
       y,
@@ -296,7 +296,7 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
     if (result.column.section) {
       row(
         'Concrete cover',
-        `needs ≥ ${fmt(f.minWidthForCoverFt)}' across for 3" cover around the ${fmt(result.column.section.odIn, 3)}" pole`,
+        `needs ≥ ${input.footingType === 'round' ? fmtInches(f.minWidthForCoverFt) : `${fmt(f.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(result.column.section.odIn, 3)}" pole`,
         f.coverOk ? 'OK' : 'NG',
       );
     }

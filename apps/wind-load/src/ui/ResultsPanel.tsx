@@ -1,7 +1,7 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
 import { MAX_HAUL_FT, MAX_ORDER_FT } from '../lib/engine';
 import { SHAPE_LABELS, isAluminum, isRound } from '../data/tables';
-import { fmt, fmtFtIn, fmtInt } from './fields';
+import { fmt, fmtFtIn, fmtInches, fmtInt } from './fields';
 
 interface Props {
   input: DesignInput;
@@ -211,7 +211,7 @@ export function ResultsPanel({ input, result }: Props) {
                 <div className="hero-line">
                   <span className="hero-value">
                     {input.footingType === 'round'
-                      ? `${input.numFootings} × Ø ${fmt(r.footing.diameterFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`
+                      ? `${input.numFootings} × Ø ${fmtInches(r.footing.diameterFt)} × ${fmtFtIn(r.footing.depthFt)} deep`
                       : `${input.numFootings} × ${fmt(r.footing.planWidthFt)}' × ${fmt(r.footing.planLengthFt)}' × ${fmtFtIn(r.footing.depthFt)} deep`}
                   </span>
                   <Chip ok={r.footing.bearingOk} okText="BEARING OK" badText="BEARING NG" />
@@ -233,7 +233,7 @@ export function ResultsPanel({ input, result }: Props) {
                 {r.column.section && (
                   <Row
                     label="Concrete cover"
-                    value={`needs ≥ ${fmt(r.footing.minWidthForCoverFt)}' across for 3" cover around the ${fmt(r.column.section.odIn, 3)}" pole`}
+                    value={`needs ≥ ${input.footingType === 'round' ? fmtInches(r.footing.minWidthForCoverFt) : `${fmt(r.footing.minWidthForCoverFt)}'`} across for 3" cover around the ${fmt(r.column.section.odIn, 3)}" pole`}
                     chip={<Chip ok={r.footing.coverOk} okText={'3" COVER OK'} badText="TOO TIGHT" />}
                   />
                 )}

@@ -1,5 +1,5 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
-import { fmt, fmtFtIn } from './fields';
+import { fmt, fmtFtIn, fmtInches } from './fields';
 import { SHAPE_LABELS } from '../data/tables';
 import { SKETCH_PALETTES, SketchSvg, sketchAvailable } from './SketchSvg';
 import type { Theme } from './useTheme';
@@ -32,7 +32,7 @@ export function SketchPanel({ input, result, theme }: Props) {
   const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
-      ? `${input.numFootings} × Ø ${fmt(footing.diameterFt)}' caisson`
+      ? `${input.numFootings} × Ø ${fmtInches(footing.diameterFt)} caisson`
       : `${input.numFootings} × ${fmt(footing.planWidthFt)}' × ${fmt(footing.planLengthFt)}' pier`;
 
   return (

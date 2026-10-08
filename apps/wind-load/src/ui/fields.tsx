@@ -189,3 +189,14 @@ export function fmtFtIn(ft: number): string {
   if (inches === 12) { whole += 1; inches = 0; }
   return `${whole}'-${inches}"`;
 }
+
+/**
+ * Feet → inches, for drilled/augered dimensions that are ordered in inches
+ * (a 2.5 ft caisson is a 30" auger). Whole inches print bare; anything else
+ * keeps one decimal.
+ */
+export function fmtInches(ft: number): string {
+  if (!Number.isFinite(ft)) return '—';
+  const rounded = Math.round(ft * 12 * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}"`;
+}

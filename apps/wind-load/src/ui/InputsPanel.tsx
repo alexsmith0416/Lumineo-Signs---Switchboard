@@ -10,7 +10,7 @@ import {
   type Exposure,
   type SectionShape,
 } from '../data/tables';
-import { FtInField, NumField, fmt } from './fields';
+import { FtInField, NumField, fmt, fmtInches } from './fields';
 import { IconPlus, IconTrash } from './icons';
 
 interface Props {
@@ -340,10 +340,12 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
               onChange={(v) => set({ footingClearanceIn: Math.max(0, v) })}
             />
           ) : input.footingType === 'round' ? (
-            <FtInField
+            <NumField
               label="Caisson diameter"
-              value={input.caissonDiaFt}
-              onChange={(v) => set({ caissonDiaFt: v })}
+              suffix="in"
+              value={Math.round(input.caissonDiaFt * 120) / 10}
+              min={0}
+              onChange={(v) => set({ caissonDiaFt: Math.max(0, v) / 12 })}
             />
           ) : (
             <>
@@ -365,7 +367,7 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan }: 
               {autoPlan
                 ? `Hole follows the pole: ${fmt(input.footingClearanceIn / 2)}" of concrete all round, rounded up to the next standard auger — currently ${
                     input.footingType === 'round'
-                      ? `Ø ${fmt(autoPlan.diaFt * 12, 0)}" (${fmt(autoPlan.diaFt)}')`
+                      ? `Ø ${fmtInches(autoPlan.diaFt)}`
                       : `${fmt(autoPlan.widthFt)}' × ${fmt(autoPlan.lengthFt)}'`
                   }. Depth and concrete volume update with it.`
                 : 'Enter the sign dimensions and the hole will size itself from the recommended pole.'}

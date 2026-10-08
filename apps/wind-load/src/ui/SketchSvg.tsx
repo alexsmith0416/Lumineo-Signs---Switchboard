@@ -1,6 +1,6 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
 import { SHAPE_LABELS } from '../data/tables';
-import { fmt, fmtFtIn } from './fields';
+import { fmt, fmtFtIn, fmtInches } from './fields';
 
 // Pure elevation-sketch SVG: sign faces as boxes on the pole(s), footings
 // hatched in below grade, dimension lines for overall height and embedment.
@@ -145,7 +145,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
-      ? `${input.numFootings} × Ø ${fmt(footing.diameterFt)}' caisson`
+      ? `${input.numFootings} × Ø ${fmtInches(footing.diameterFt)} caisson`
       : `${input.numFootings} × ${fmt(footing.planWidthFt)}' × ${fmt(footing.planLengthFt)}' pier`;
 
   const earthId = `${idPrefix}-earth`;

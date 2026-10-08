@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AUGER_DIAMETERS_IN,
   allowableBendingKsi,
   autoFootingWidthFt,
   baseAllowablePsi,
@@ -21,6 +22,7 @@ import {
   type DesignInput,
 } from '../lib/engine';
 import { ALUM_TUBE_SECTIONS, PIPE_SECTIONS, TUBE_SECTIONS } from '../data/tables';
+import { fmtInches } from '../ui/fields';
 
 const V = 115; // workbook default basic wind speed
 const CQ = 1.4;
@@ -594,5 +596,25 @@ describe('pole length & transition pipe', () => {
     input.transition = { enabled: true, spliceFt: null };
     const r = computeDesign(input);
     expect(r.transition!.spliceFt).toBe(30); // bottom of face = 40 − 10
+  });
+});
+
+describe('caisson display units', () => {
+  it('prints drilled diameters in inches', () => {
+    expect(fmtInches(2.5)).toBe('30"'); // 30" auger
+    expect(fmtInches(1.5)).toBe('18"');
+    expect(fmtInches(2)).toBe('24"');
+    expect(fmtInches(6)).toBe('72"');
+    // A hand-entered odd size keeps one decimal rather than lying about it.
+    expect(fmtInches(2.54)).toBe('30.5"');
+    expect(fmtInches(NaN)).toBe('—');
+  });
+
+  it('auto-sized caissons are always whole inches on the auger ladder', () => {
+    for (const od of [3.5, 6.625, 10.75, 14, 20, 24]) {
+      const inches = autoFootingWidthFt(od, 12) * 12;
+      expect(AUGER_DIAMETERS_IN).toContain(inches);
+      expect(fmtInches(inches / 12)).toBe(`${inches}"`);
+    }
   });
 });
