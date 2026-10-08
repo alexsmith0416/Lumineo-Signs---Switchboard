@@ -265,6 +265,49 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       Same deploy: sketch viewer **Download** fixed — `downloadUrlOf` was given
       the already-encoded link and encoded it again (Shared%2520Documents →
       "file not found"); now takes the decoded path (`sketchFileRef`).
+    - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
+      (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - 📋 **WAREHOUSE MANAGEMENT — spec agreed Oct 7, NOT BUILT** (Alex's sketch:
+      `OneDrive…\Documents\Working Files\Warehouse Management Tool.jpg`).
+      Page name: **"Warehouse Management"** (not "… (Job Purchasing)").
+      - **Per-PO receiving record** (keyed by PO #): **Status** = Airtable Vendor
+        Status list (Ordered, Shipping, Received, Ready to Pick Up, Shipped,
+        Artwork Approved, Delayed, On Hold) **+ new "Partially Received"**;
+        status is MANUAL only (no auto "Ordered" for now — approvals may be
+        pending), set by **Admin / Ops**. **Deliveries** = lines (date
+        received, storage location, received by auto, notes, optional photo):
+        a partial delivery adds a line → Partially Received; the final one →
+        Received. Rare split across locations = another line.
+      - **Never posts the BC receipt** — the PO's writer does that in BC.
+      - **Receivers: Nick, Hayden, Tanner** — Production-type users; give them
+        a per-login **Receiving** grant (like Jobs edit grants), NOT a new user
+        type and NOT a Warehouse landing page.
+      - **Page:** tabs **Job POs | Stock POs** (stock = non-job POs, lookup +
+        receiving); one search (PO #, job #, vendor, job name) — a PO shows its
+        job + the job's other POs, a job shows all its POs, **open + archived**
+        (history); Mark Received / Partially Received; Open PO in BC; work
+        lists (expected this week, overdue, partially received, recently
+        received); **Refresh** button (runs the PO sync on demand).
+        **Phone only** (mobile layout): camera scan of the PO # + packing-slip
+        photo to the job's SharePoint folder. Desktop layout unchanged.
+      - **Everywhere:** Jobs list compact **POs** column ("3 POs · 1 partial · 1
+        received", colored, pop-up list, editable with permission); job panel
+        Purchase orders shows status / deliveries / locations; scheduler cards
+        "Stored at: …".
+      - **Materials ready:** when EVERY non-archived PO on a job is Received →
+        BC **Job Purchasing** step completed automatically + "Materials ready"
+        badge (Jobs list, job panel, cards); a new un-received PO clears it.
+      - **BC:** extension version adds a query/API for stock POs + archived POs
+        for all jobs + expected receipt date, and a **receiving table + API**
+        shown as a panel on the Purchase Order card and the Job card. PO sync
+        widened accordingly.
+      - Build in phases: (1) page + receiving in the app, (2) Jobs list /
+        cards / Materials ready, (3) BC panels + Job Purchasing auto-complete,
+        (4) stock POs + phone scan / photo.
+    - 📋 **Per-user landing page (Alex, Oct 7 idea, NOT BUILT):** each user picks
+      their own default opening page (Settings → Display or the user menu),
+      overriding their user type's default (`TYPE_CONFIG` in
+      `services/current-user.ts`). Stored per login.
     - 🔴 **REDESIGN AGREED (Alex, Oct 7 ~2:30 AM) — NOT BUILT YET. This replaces
       the lifecycle-on-the-stepper approach. Build it next:**
       1. **Stepper = departments + Install only, everywhere** (Jobs list, job
