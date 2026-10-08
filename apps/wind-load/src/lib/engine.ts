@@ -52,6 +52,12 @@ export interface TransitionSegmentInput {
   id: string;
   /** Splice elevation above grade, ft (null = auto-place). */
   spliceFt: number | null;
+  /**
+   * Put the splice at the bottom of this sign face, so it stays tucked under
+   * the cabinet even if the cabinet later moves. Takes precedence over
+   * `spliceFt`; cleared when a height is typed or dragged.
+   */
+  anchorFaceId: string | null;
   /** How this piece is sized — same three options as the base pole. */
   sizing: 'auto' | 'manual' | 'custom';
   /** Stock size name when sizing is 'manual'. */
@@ -895,12 +901,38 @@ export function autoSplices(
   return splices;
 }
 
+/** How close to a cabinet bottom a dragged splice snaps onto it, ft (3"). */
+export const SPLICE_SNAP_FT = 0.25;
+
+/**
+ * Snap a splice elevation: onto a cabinet bottom when one is within 3",
+ * otherwise to the nearest full inch. Keeps dragging on the sketch landing on
+ * buildable numbers rather than arbitrary decimals.
+ */
+export function snapSpliceFt(
+  ft: number,
+  faceBottoms: readonly number[],
+  minFt: number,
+  maxFt: number,
+): number {
+  const clamped = Math.min(Math.max(ft, minFt), maxFt);
+  let best: number | null = null;
+  for (const b of faceBottoms) {
+    if (b < minFt || b > maxFt) continue;
+    if (Math.abs(b - clamped) > SPLICE_SNAP_FT) continue;
+    if (best === null || Math.abs(b - clamped) < Math.abs(best - clamped)) best = b;
+  }
+  if (best !== null) return best;
+  return Math.round(clamped * 12) / 12;
+}
+
 /** Splice elevations actually used, honouring any the estimator typed in. */
 function resolveSplices(
   input: DesignInput,
   embedFt: number,
   topMaxFt: number,
   faceBottoms: readonly number[],
+  bottomByFaceId: ReadonlyMap<string, number>,
 ): number[] {
   if (!input.transition.enabled || input.transition.segments.length === 0) return [];
   const n = input.transition.segments.length;
@@ -916,7 +948,10 @@ function resolveSplices(
     return near.reduce((best, c) => (Math.abs(c - target) < Math.abs(best - target) ? c : best));
   };
   return input.transition.segments
-    .map((s, i) => s.spliceFt ?? auto[i] ?? evenly(i))
+    .map((s, i) => {
+      const anchored = s.anchorFaceId ? bottomByFaceId.get(s.anchorFaceId) : undefined;
+      return anchored ?? s.spliceFt ?? auto[i] ?? evenly(i);
+    })
     .map((s) => Math.min(Math.max(s, 1), Math.max(1, topMaxFt - 1)))
     .sort((a, b) => a - b);
 }
@@ -968,10 +1003,11 @@ function buildPoleSegments(
   embedFt: number,
   topMaxFt: number,
   faceBottoms: readonly number[],
+  bottomByFaceId: ReadonlyMap<string, number>,
 ): PoleSegmentResult[] {
   if (topMaxFt <= 0 || !baseColumn.section) return [];
 
-  const splices = resolveSplices(input, embedFt, topMaxFt, faceBottoms);
+  const splices = resolveSplices(input, embedFt, topMaxFt, faceBottoms, bottomByFaceId);
   const bounds = [-embedFt, ...splices, topMaxFt];
   const segs: PoleSegmentResult[] = [];
 
@@ -1289,6 +1325,7 @@ export function computeDesign(input: DesignInput): DesignResult {
   const validFaces = elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const topMaxFt = validFaces.length ? Math.max(...validFaces.map((e) => e.topFt)) : 0;
   const faceBottoms = validFaces.map((e) => Math.max(0, e.topFt - e.heightFt));
+  const bottomByFaceId = new Map(validFaces.map((e) => [e.id, Math.max(0, e.topFt - e.heightFt)]));
 
   const embedFt = input.basePlate.enabled || !footing ? 0 : Math.max(0, footing.depthFt - 0.25);
   const poleSegments = buildPoleSegments(
@@ -1299,6 +1336,7 @@ export function computeDesign(input: DesignInput): DesignResult {
     embedFt,
     topMaxFt,
     faceBottoms,
+    bottomByFaceId,
   );
   const poleLength = poleLengthCheck(input, footing, topMaxFt, poleSegments, faceBottoms);
 

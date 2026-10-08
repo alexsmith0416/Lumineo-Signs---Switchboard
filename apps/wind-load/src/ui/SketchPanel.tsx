@@ -1,4 +1,6 @@
-import type { DesignInput, DesignResult } from '../lib/engine';
+import { useMemo, useState } from 'react';
+
+import { computeDesign, type DesignInput, type DesignResult } from '../lib/engine';
 import { fmt, fmtFtIn, fmtInches } from './fields';
 import { SHAPE_LABELS } from '../data/tables';
 import { SKETCH_PALETTES, SketchSvg, sketchAvailable } from './SketchSvg';
@@ -11,9 +13,43 @@ interface Props {
   input: DesignInput;
   result: DesignResult;
   theme: Theme;
+  onChange: (next: DesignInput) => void;
 }
 
-export function SketchPanel({ input, result, theme }: Props) {
+export function SketchPanel({ input, result: committed, theme, onChange }: Props) {
+  const [selected, setSelected] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // While dragging, recompute locally instead of writing to app state on every
+  // pointer move — that keeps every piece length live without thrashing the
+  // autosave. The move is committed on pointer-up.
+  const [dragFt, setDragFt] = useState<number | null>(null);
+
+  const editingSegmentId =
+    editingIndex !== null ? (input.transition.segments[editingIndex - 1]?.id ?? null) : null;
+
+  const withDrag = useMemo((): DesignInput => {
+    if (dragFt === null || !editingSegmentId) return input;
+    return {
+      ...input,
+      transition: {
+        ...input.transition,
+        segments: input.transition.segments.map((s) =>
+          s.id === editingSegmentId ? { ...s, spliceFt: dragFt, anchorFaceId: null } : s,
+        ),
+      },
+    };
+  }, [input, dragFt, editingSegmentId]);
+
+  const result = useMemo(
+    () => (dragFt === null ? committed : computeDesign(withDrag)),
+    [committed, dragFt, withDrag],
+  );
+
+  const commitDrag = () => {
+    if (dragFt !== null) onChange(withDrag);
+    setDragFt(null);
+  };
+
   if (!sketchAvailable(result)) {
     return (
       <div className="results-col">
@@ -29,6 +65,8 @@ export function SketchPanel({ input, result, theme }: Props) {
   const faces = result.elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const topMax = Math.max(...faces.map((f) => f.topFt));
 
+  const transitionSegments = result.poleSegments.filter((s) => !s.isBase && s.section);
+
   const poleLabel = `${input.numColumns} × ${SHAPE_LABELS[input.columnType].short.toLowerCase()} ${section.name}`;
   const footingLabel =
     input.footingType === 'round'
@@ -40,11 +78,91 @@ export function SketchPanel({ input, result, theme }: Props) {
       <section className="panel">
         <h2 className="panel-caption">Elevation Sketch</h2>
         <div className="panel-body sketch-body">
-          <SketchSvg input={input} result={result} palette={SKETCH_PALETTES[theme]} />
+          <SketchSvg
+            input={withDrag}
+            result={result}
+            palette={SKETCH_PALETTES[theme]}
+            interaction={{
+              selected,
+              onSelectPole: () => setSelected(true),
+              editingIndex,
+              onSpliceDrag: setDragFt,
+              onSpliceCommit: commitDrag,
+              snapTo: faces.map((f) => Math.max(0, f.topFt - f.heightFt)),
+            }}
+          />
+          {selected && (
+            <div className="sketch-tools" role="group" aria-label="Pole structure">
+              {transitionSegments.length === 0 ? (
+                <>
+                  <span className="sketch-tools__label">Pole selected</span>
+                  <button
+                    className="btn-soft"
+                    onClick={() =>
+                      onChange({
+                        ...input,
+                        transition: {
+                          enabled: true,
+                          segments: [
+                            {
+                              id: `tr-${Date.now().toString(36)}`,
+                              spliceFt: null,
+                              anchorFaceId: null,
+                              sizing: 'auto',
+                              sizeName: null,
+                              customSection: { ...input.customSection },
+                            },
+                          ],
+                        },
+                      })
+                    }
+                  >
+                    Add a transition
+                  </button>
+                </>
+              ) : editingIndex === null ? (
+                <>
+                  <span className="sketch-tools__label">Pole selected</span>
+                  {transitionSegments.map((seg) => (
+                    <button key={seg.index} className="btn-soft" onClick={() => setEditingIndex(seg.index)}>
+                      Edit transition location{transitionSegments.length > 1 ? ` (${seg.key})` : ''}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <span className="sketch-tools__label">
+                    Drag the splice — snaps to full inches and cabinet bottoms
+                  </span>
+                  <button
+                    className="btn-soft"
+                    onClick={() => {
+                      commitDrag();
+                      setEditingIndex(null);
+                    }}
+                  >
+                    Done
+                  </button>
+                </>
+              )}
+              <button
+                className="btn-soft"
+                onClick={() => {
+                  setDragFt(null);
+                  setEditingIndex(null);
+                  setSelected(false);
+                }}
+              >
+                {editingIndex === null ? 'Deselect' : 'Cancel'}
+              </button>
+            </div>
+          )}
+
           <p className="hint sketch-note">
-            Proportions are to scale from the calculated design; very thin poles
-            and footings are widened slightly so they stay visible. Elevation
-            view — pier length runs perpendicular to the sign face.
+            Click the pole to move a transition. Proportions are to scale from
+            the calculated design; very thin poles and footings are widened
+            slightly so they stay visible. Elevation view — pier length runs
+            perpendicular to the sign face.
           </p>
         </div>
       </section>

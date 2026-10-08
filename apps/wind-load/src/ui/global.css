@@ -558,3 +558,28 @@ label .unit { color: var(--text-dim); font-weight: 600; }
   padding-top: 8px;
   border-top: 1px dashed var(--border-default);
 }
+
+/* Interactive elevation sketch */
+.sketch-svg.is-selected { cursor: default; }
+.sk-pole-hit { cursor: pointer; }
+.sketch-svg.is-editing .sk-pole-hit { cursor: default; }
+.sk-handle { cursor: ns-resize; touch-action: none; }
+
+.sketch-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-inset);
+}
+.sketch-tools__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mid);
+  margin-right: 2px;
+}
+.sketch-tools .btn-soft { font-size: 11px; padding: 5px 11px; }

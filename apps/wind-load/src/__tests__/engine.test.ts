@@ -10,6 +10,7 @@ import {
   TRANSITION_OVERLAP_FT,
   allowableBendingKsi,
   autoSplices,
+  snapSpliceFt,
   solveWidthForDepth,
   autoFootingWidthFt,
   baseAllowablePsi,
@@ -164,6 +165,7 @@ function trSeg(
   return {
     id,
     spliceFt,
+    anchorFaceId: null,
     sizing: 'auto',
     sizeName: null,
     customSection: { shape: 'square', widthIn: 4, depthIn: 4, wallIn: 0.25 },
@@ -675,6 +677,58 @@ describe('pole length & transition pipe', () => {
     const bad = computeDesign(input);
     expect(bad.poleSegments[1].fitsInside).toBe(false);
     expect(bad.warnings.some((w) => w.includes('will not fit inside'))).toBe(true);
+  });
+});
+
+describe('relocating a transition', () => {
+  it('snaps a dragged splice to full inches', () => {
+    expect(snapSpliceFt(12.3456, [], 1, 40)).toBeCloseTo(Math.round(12.3456 * 12) / 12, 9);
+    expect(snapSpliceFt(12.5, [], 1, 40)).toBe(12.5); // 12'-6" is already whole inches
+    expect(snapSpliceFt(9.001, [], 1, 40)).toBe(9);
+  });
+
+  it('prefers a cabinet bottom within 3 inches', () => {
+    // 20.1 ft is a touch over a cabinet bottom at 20 → snaps onto it.
+    expect(snapSpliceFt(20.1, [20], 1, 40)).toBe(20);
+    expect(snapSpliceFt(19.8, [20], 1, 40)).toBe(20);
+    // Beyond the tolerance it falls back to the nearest inch.
+    expect(snapSpliceFt(20.5, [20], 1, 40)).toBe(20.5);
+    // Picks the closest when two are in range.
+    expect(snapSpliceFt(20.1, [20, 20.2], 1, 40)).toBe(20.2);
+  });
+
+  it('clamps to the allowed range and ignores out-of-range cabinets', () => {
+    expect(snapSpliceFt(100, [], 1, 30)).toBe(30);
+    expect(snapSpliceFt(-5, [], 1, 30)).toBe(1);
+    expect(snapSpliceFt(29.9, [45], 1, 30)).toBeCloseTo(29.917, 3);
+  });
+
+  it('anchors a splice to a cabinet bottom and follows the cabinet when it moves', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    input.elements = [
+      { id: 'main', label: 'Main cabinet', widthFt: 12, heightFt: 8, topFt: 40 },
+    ];
+    input.transition = {
+      enabled: true,
+      segments: [trSeg('t1', null, { anchorFaceId: 'main' })],
+    };
+    expect(computeDesign(input).poleSegments[1].spanBottomFt).toBe(32); // 40 − 8
+
+    // Make the cabinet taller: the splice tracks its new bottom.
+    input.elements[0].heightFt = 12;
+    expect(computeDesign(input).poleSegments[1].spanBottomFt).toBe(28); // 40 − 12
+  });
+
+  it('lets an explicit height win once the anchor is cleared', () => {
+    const input = baseInput();
+    input.basePlate.enabled = false;
+    input.elements = [{ id: 'main', label: 'Main', widthFt: 12, heightFt: 8, topFt: 40 }];
+    input.transition = {
+      enabled: true,
+      segments: [trSeg('t1', 18, { anchorFaceId: null })],
+    };
+    expect(computeDesign(input).poleSegments[1].spanBottomFt).toBe(18);
   });
 });
 

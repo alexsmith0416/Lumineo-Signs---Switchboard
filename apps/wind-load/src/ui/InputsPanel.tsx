@@ -23,6 +23,8 @@ interface Props {
   autoPlan?: { diaFt: number; widthFt: number; lengthFt: number } | null;
   /** Depth the engine last solved, used to seed depth-driven mode. */
   autoDepthFt?: number | null;
+  /** Where the engine actually placed a given transition, for seeding edits. */
+  resolvedSpliceFt?: (segmentId: string) => number | null;
 }
 
 let elementSeq = 0;
@@ -91,7 +93,7 @@ function CustomSectionFields({
   );
 }
 
-export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, autoDepthFt }: Props) {
+export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, autoDepthFt, resolvedSpliceFt }: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
@@ -579,20 +581,47 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
                   </button>
                 </div>
                 <div className="form-grid">
-                  <FtInField
-                    label="Splice height"
-                    value={seg.spliceFt}
-                    allowEmpty
-                    placeholder="auto"
-                    onChange={() => undefined}
-                    onChangeNullable={(v) =>
-                      setTr({
-                        segments: input.transition.segments.map((s) =>
-                          s.id === seg.id ? { ...s, spliceFt: v } : s,
-                        ),
-                      })
-                    }
-                  />
+                  <label className="span-2">
+                    <span>Transition at</span>
+                    <select
+                      value={
+                        seg.anchorFaceId
+                          ? `face:${seg.anchorFaceId}`
+                          : seg.spliceFt !== null
+                            ? 'custom'
+                            : 'auto'
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === 'auto') patchSeg(seg.id, { anchorFaceId: null, spliceFt: null });
+                        else if (v === 'custom')
+                          patchSeg(seg.id, {
+                            anchorFaceId: null,
+                            spliceFt: resolvedSpliceFt?.(seg.id) ?? 10,
+                          });
+                        else patchSeg(seg.id, { anchorFaceId: v.slice(5), spliceFt: null });
+                      }}
+                    >
+                      <option value="auto">Auto — keep every piece haulable</option>
+                      {input.elements
+                        .filter((el) => el.widthFt > 0 && el.heightFt > 0 && el.topFt > 0)
+                        .map((el) => (
+                          <option key={el.id} value={`face:${el.id}`}>
+                            Under {el.label || 'sign face'} ({fmt(Math.max(0, el.topFt - el.heightFt))}')
+                          </option>
+                        ))}
+                      <option value="custom">Custom height…</option>
+                    </select>
+                  </label>
+
+                  {seg.anchorFaceId === null && seg.spliceFt !== null && (
+                    <FtInField
+                      label="Splice height"
+                      value={seg.spliceFt}
+                      onChange={(v) => patchSeg(seg.id, { spliceFt: v, anchorFaceId: null })}
+                    />
+                  )}
+
                   <label>
                     <span>Size</span>
                     <select
@@ -638,6 +667,7 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
                     {
                       id: `tr-${Date.now().toString(36)}-${input.transition.segments.length}`,
                       spliceFt: null,
+                      anchorFaceId: null,
                       sizing: 'auto',
                       sizeName: null,
                       customSection: { ...input.customSection },

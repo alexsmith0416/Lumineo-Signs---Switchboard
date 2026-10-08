@@ -80,6 +80,7 @@ function loadSaved(): DesignInput {
     ): DesignInput['transition']['segments'][number] => ({
       id: s.id ?? `tr-legacy-${i}`,
       spliceFt: s.spliceFt ?? null,
+      anchorFaceId: s.anchorFaceId ?? null,
       sizing: s.sizing ?? (s.sizeName ? 'manual' : 'auto'),
       sizeName: s.sizeName ?? null,
       customSection: { ...base.customSection, ...(s.customSection ?? {}) },
@@ -186,6 +187,10 @@ export function App() {
               onChange={setInput}
               recommendedSizeName={result.column.autoSection?.name ?? null}
               autoDepthFt={result.footing?.depthFt ?? null}
+              resolvedSpliceFt={(id) => {
+                const i = input.transition.segments.findIndex((s) => s.id === id);
+                return i < 0 ? null : (result.poleSegments[i + 1]?.spanBottomFt ?? null);
+              }}
               autoPlan={
                 result.footing
                   ? {
@@ -199,7 +204,7 @@ export function App() {
             {view === 'calc' ? (
               <ResultsPanel input={input} result={result} />
             ) : (
-              <SketchPanel input={input} result={result} theme={theme} />
+              <SketchPanel input={input} result={result} theme={theme} onChange={setInput} />
             )}
           </div>
         )}

@@ -1,4 +1,6 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
+import { useRef } from 'react';
+import { snapSpliceFt } from '../lib/engine';
 import { SHAPE_LABELS } from '../data/tables';
 import { fmt, fmtFtIn, fmtInches } from './fields';
 
@@ -104,10 +106,25 @@ export function sketchAvailable(result: DesignResult): boolean {
   );
 }
 
+export interface SketchInteraction {
+  /** Pole structure is currently selected (click to select). */
+  selected: boolean;
+  onSelectPole: () => void;
+  /** Index of the pole segment whose splice is being dragged, or null. */
+  editingIndex: number | null;
+  /** Called continuously while dragging, with a snapped elevation in ft. */
+  onSpliceDrag: (ft: number) => void;
+  onSpliceCommit: () => void;
+  /** Elevations a dragged splice snaps onto (cabinet bottoms). */
+  snapTo: readonly number[];
+}
+
 interface Props {
   input: DesignInput;
   result: DesignResult;
   palette: SketchPalette;
+  /** Omitted for static renders (the PDF export). */
+  interaction?: SketchInteraction;
   /** Solid background fill (for export); omit for transparent on-screen use. */
   background?: string;
   /** Unique pattern-id prefix if multiple sketches are mounted at once. */
@@ -117,7 +134,7 @@ interface Props {
 const LEGEND_ROW_H = 16;
 const LEGEND_PAD = 9;
 
-export function SketchSvg({ input, result, palette: p, background, idPrefix = 'sk' }: Props) {
+export function SketchSvg({ input, result, palette: p, background, idPrefix = 'sk', interaction }: Props) {
   const faces = result.elements.filter((e) => e.widthFt > 0 && e.heightFt > 0 && e.topFt > 0);
   const section = result.column.section!;
   const footing = result.footing!;
@@ -177,9 +194,39 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const pxWidth = (s: typeof segments[number]) =>
     Math.max((s.section ? s.section.odIn / 12 : 0) * scale, 7);
 
+  // Pointer → elevation. The viewBox scales uniformly to the rendered width,
+  // so the ratio of rendered height to viewBox height is the only conversion
+  // needed to get back from a client Y to feet above grade.
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const elevationAt = (clientY: number): number => {
+    const el = svgRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    if (rect.height === 0) return 0;
+    const vbY = ((clientY - rect.top) / rect.height) * SKETCH_VB_H;
+    return (gradeY - vbY) / scale;
+  };
+
+  const editing =
+    interaction && interaction.editingIndex !== null
+      ? segments[interaction.editingIndex] ?? null
+      : null;
+
+  const dragTo = (clientY: number) => {
+    if (!interaction || !editing) return;
+    const minFt = Math.max(1, (segments[editing.index - 1]?.spanBottomFt ?? 0) + 2);
+    const maxFt = Math.min(topMax - 1, segments[editing.index + 1]?.topFt ?? topMax - 1);
+    interaction.onSpliceDrag(snapSpliceFt(elevationAt(clientY), interaction.snapTo, minFt, maxFt));
+  };
+
   return (
     <svg
-      className="sketch-svg"
+      ref={svgRef}
+      onPointerMove={(e) => {
+        if (editing && e.buttons === 1) dragTo(e.clientY);
+      }}
+      onPointerUp={() => editing && interaction?.onSpliceCommit()}
+      className={`sketch-svg${interaction?.selected ? ' is-selected' : ''}${editing ? ' is-editing' : ''}`}
       viewBox={`0 0 ${SKETCH_VB_W} ${SKETCH_VB_H}`}
       width={SKETCH_VB_W}
       height={SKETCH_VB_H}
@@ -295,6 +342,10 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
 
       {/* Pole pieces — on top of the cabinets so the full run reads, each
           transition stacked on the one below with its sleeved 2 ft dashed. */}
+      <g
+        className={interaction ? 'sk-pole-hit' : undefined}
+        onPointerDown={interaction ? () => interaction.onSelectPole() : undefined}
+      >
       {poleXs.map((px, col) =>
         segments.map((s) => {
           const w = pxWidth(s);
@@ -326,10 +377,24 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
                   strokeWidth={2}
                 />
               )}
+              {interaction?.selected && (
+                <rect
+                  x={X(px) - w / 2 - 2}
+                  y={topY - 2}
+                  width={w + 4}
+                  height={Math.max(1, sleeveBotY - topY) + 4}
+                  rx={2}
+                  fill="none"
+                  stroke={p.keyBg}
+                  strokeWidth={1.4}
+                  strokeDasharray="5 3"
+                />
+              )}
             </g>
           );
         }),
       )}
+      </g>
 
       {/* Base plates + anchor bolts */}
       {input.basePlate.enabled &&
@@ -431,6 +496,73 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           {fmtFtIn(depth)} embed
         </text>
       </g>
+
+      {/* Splice drag handle — appears once a transition is picked for editing */}
+      {editing && interaction && (
+        <g>
+          {interaction.snapTo
+            .filter((b) => b > 0.5 && b < topMax)
+            .map((b) => (
+              <line
+                key={`snap-${b}`}
+                x1={X(-maxHalfX) - 6}
+                y1={Y(b)}
+                x2={X(maxHalfX) + 6}
+                y2={Y(b)}
+                stroke={p.keyBg}
+                strokeWidth={1}
+                strokeDasharray="2 5"
+                opacity={0.5}
+              />
+            ))}
+          <line
+            x1={X(-maxHalfX) - 6}
+            y1={Y(editing.spanBottomFt)}
+            x2={X(maxHalfX) + 6}
+            y2={Y(editing.spanBottomFt)}
+            stroke={p.keyBg}
+            strokeWidth={1.4}
+          />
+          <g
+            className="sk-handle"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              (e.target as Element).setPointerCapture?.(e.pointerId);
+            }}
+          >
+            <rect
+              x={X(poleXs[poleXs.length - 1]) + pxWidth(editing) / 2 + 8}
+              y={Y(editing.spanBottomFt) - 11}
+              width={92}
+              height={22}
+              rx={11}
+              fill={p.keyBg}
+            />
+            {/* Grip arrows, drawn rather than typed — the ↕ glyph has no
+                fallback in the SVG font stack and renders as a colon. */}
+            {(() => {
+              const gx = X(poleXs[poleXs.length - 1]) + pxWidth(editing) / 2 + 20;
+              const gy = Y(editing.spanBottomFt);
+              return (
+                <path
+                  d={`M${gx} ${gy - 7} l4 5 h-8 z M${gx} ${gy + 7} l4 -5 h-8 z`}
+                  fill={p.keyText}
+                />
+              );
+            })()}
+            <text
+              x={X(poleXs[poleXs.length - 1]) + pxWidth(editing) / 2 + 58}
+              y={Y(editing.spanBottomFt) + 4}
+              textAnchor="middle"
+              fill={p.keyText}
+              fontSize={11}
+              fontWeight={800}
+            >
+              {fmtFtIn(editing.spanBottomFt)}
+            </text>
+          </g>
+        </g>
+      )}
 
       {/* Footing label */}
       <text x={cx} y={footBotY + 18} textAnchor="middle" fill={p.callout} fontSize={12} fontWeight={700}>
