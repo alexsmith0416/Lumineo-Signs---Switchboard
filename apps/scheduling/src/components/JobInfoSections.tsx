@@ -4,6 +4,8 @@ import { formatShipTo, googleMapsUrl } from "../services/ship-to";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { ARCHIVED, bcPurchaseOrderUrl, formatOrderDate } from "../services/job-pos";
 import { useJobPOs } from "../hooks/useJobPOs";
+import { usePoReceivingStore, statusIn, useJobPoSummary } from "../store/po-receiving-store";
+import { isPartial, isReceived } from "../services/po-receiving";
 import { useJobDescriptions } from "../hooks/useJobDescriptions";
 import type { JobDescriptions } from "../services/job-descriptions";
 import WeatherChip from "./WeatherChip";
@@ -111,11 +113,17 @@ function Description({ jobNo, which }: { jobNo: string; which: keyof JobDescript
  *  Rendered only when its section is opened, so the read happens then. */
 function PurchaseOrders({ jobNo }: { jobNo: string }) {
   const { pos, loading, error } = useJobPOs(jobNo);
+  const summary = useJobPoSummary(jobNo);
   if (loading) return <span className="job-info__empty">Loading…</span>;
   if (error) return <span className="job-info__empty">{error}</span>;
   if (!pos.length) return <span className="job-info__empty">No purchase orders in BC</span>;
   return (
     <ul className="job-po-list">
+      {summary?.materialsReady && (
+        <li className="job-po job-po--ready">
+          <span className="wh-ready">Materials ready</span>
+        </li>
+      )}
       {pos.map((po) => (
         <li key={po.poNo} className="job-po">
           <div className="job-po__top">
@@ -130,9 +138,30 @@ function PurchaseOrders({ jobNo }: { jobNo: string }) {
             <span className="job-po__date">{po.orderDate ? formatOrderDate(po.orderDate) : "—"}</span>
           </div>
           <div className="job-po__vendor">{po.vendorName || po.vendorNo || "—"}</div>
+          <PoReceiving poNo={po.poNo} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A PO's Vendor Status + deliveries (Warehouse Management). */
+function PoReceiving({ poNo }: { poNo: string }) {
+  const status = usePoReceivingStore((s) => statusIn(s, poNo));
+  const deliveries = usePoReceivingStore((s) => s.deliveries.get(poNo));
+  if (!status && !deliveries?.length) return null;
+  const tone = isReceived(status) ? " wh-status--received" : isPartial(status) ? " wh-status--partial" : "";
+  return (
+    <div className="job-po__receiving">
+      {status && <span className={`wh-status${tone}`}>{status}</span>}
+      {deliveries?.map((d) => (
+        <span key={d.id}>
+          {formatOrderDate(d.date)}
+          {d.location ? ` · ${d.location}` : ""}
+          {d.final ? "" : " (partial)"}
+        </span>
+      ))}
+    </div>
   );
 }
 

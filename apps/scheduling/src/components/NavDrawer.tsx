@@ -13,6 +13,7 @@ interface NavDrawerProps {
   /** Scenarios is Admin/Ops only. */
   showScenario?: boolean;
   showJobs?: boolean;
+  showWarehouse?: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export default function NavDrawer({
   showMonthly,
   showScenario,
   showJobs,
+  showWarehouse,
 }: NavDrawerProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -76,6 +78,7 @@ export default function NavDrawer({
           showMonthly={showMonthly}
           showScenario={showScenario}
           showJobs={showJobs}
+          showWarehouse={showWarehouse}
         />
       </div>
     </div>

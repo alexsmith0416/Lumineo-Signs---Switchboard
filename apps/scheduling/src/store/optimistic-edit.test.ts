@@ -309,3 +309,45 @@ describe("editing a Jobs field (name / type) when the save fails", () => {
     expect(failed[0]!.label).toBe("Edit custom field");
   });
 });
+
+describe("receiving a PO delivery when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the delivery and the Received status on screen, reports the failure and doesn't push BC", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    const enqueueBcPush = vi.fn(async () => {});
+    vi.doMock("../services/dataverse-live", () => ({
+      savePoDelivery: async () => {
+        throw new Error("Failed to fetch");
+      },
+      savePoReceipt: async () => {
+        throw new Error("Failed to fetch");
+      },
+      enqueueBcPush,
+      myResourceNo: async () => "R1",
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { usePoReceivingStore, statusIn } = await import("./po-receiving-store");
+    status.getState().clear();
+    const po = { jobNo: "J1", poNo: "PO-1", vendorNo: "V1", vendorName: "Vendor", orderDate: "2026-10-01", status: "Released" };
+    usePoReceivingStore.setState({ pos: [po], receipts: new Map(), deliveries: new Map(), loaded: true });
+
+    await usePoReceivingStore
+      .getState()
+      .receive(po, { date: "2026-10-08", location: "Supply Room", notes: "", final: true }, "Tester");
+    await flush();
+
+    const s = usePoReceivingStore.getState();
+    expect(s.deliveries.get("PO-1")).toHaveLength(1);
+    expect(statusIn(s, "PO-1")).toBe("Received");
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Receive a delivery");
+    expect(enqueueBcPush).not.toHaveBeenCalled();
+  });
+});

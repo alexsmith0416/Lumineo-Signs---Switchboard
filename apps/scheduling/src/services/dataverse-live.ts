@@ -55,6 +55,7 @@ import type { CustomFieldDef, CustomValues } from "./custom-fields";
 import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
 import { sortJobPOs, type JobPO } from "./job-pos";
+import type { PoDelivery, PoReceipt, WarehousePO } from "./po-receiving";
 import type { JobDescriptions } from "./job-descriptions";
 import {
   departmentNameForLine,
@@ -3091,6 +3092,106 @@ export async function fetchJobPOs(jobNo: string): Promise<JobPO[]> {
       }))
       .filter((p) => p.poNo),
   );
+}
+
+/** Every job PO (open jobs, open + archived orders) — the Warehouse Management page. */
+export async function fetchAllJobPOs(): Promise<WarehousePO[]> {
+  const rows = await listAll(JOBPO_SET, {
+    select: "crfdf_jobno,crfdf_pono,crfdf_vendorno,crfdf_vendorname,crfdf_orderdate,crfdf_postatus",
+  });
+  return rows
+    .map((r) => ({
+      jobNo: s(r.crfdf_jobno).trim(),
+      poNo: s(r.crfdf_pono).trim(),
+      vendorNo: s(r.crfdf_vendorno).trim(),
+      vendorName: s(r.crfdf_vendorname).trim(),
+      orderDate: s(r.crfdf_orderdate).trim(),
+      status: s(r.crfdf_postatus).trim(),
+    }))
+    .filter((p) => p.poNo);
+}
+
+// ---------------------------------------------------------------------------
+// PO receiving (crfdf_poreceipt — one row per PO: Vendor Status) and its
+// deliveries (crfdf_podelivery — one row per delivery). Warehouse Management,
+// services/po-receiving.ts. Created by scripts/create-poreceiving-tables.ps1.
+// ---------------------------------------------------------------------------
+const PORECEIPT_SET = "crfdf_poreceipts";
+const PODELIVERY_SET = "crfdf_podeliveries";
+
+export async function fetchPoReceipts(): Promise<PoReceipt[]> {
+  const rows = await listAll(PORECEIPT_SET, {
+    select: "crfdf_pono,crfdf_jobno,crfdf_vendorstatus,crfdf_statusby,crfdf_statusat",
+  });
+  return rows
+    .map((r) => ({
+      poNo: s(r.crfdf_pono).trim(),
+      jobNo: s(r.crfdf_jobno).trim(),
+      vendorStatus: s(r.crfdf_vendorstatus).trim(),
+      statusBy: s(r.crfdf_statusby),
+      statusAt: s(r.crfdf_statusat),
+    }))
+    .filter((r) => r.poNo);
+}
+
+/** Set a PO's Vendor Status (creates its row the first time). */
+export async function savePoReceipt(r: PoReceipt): Promise<void> {
+  const rec: Row = {
+    crfdf_name: r.poNo,
+    crfdf_pono: r.poNo,
+    crfdf_jobno: r.jobNo,
+    crfdf_vendorstatus: r.vendorStatus,
+    crfdf_statusby: r.statusBy,
+    crfdf_statusat: r.statusAt,
+  };
+  const existing = await list(PORECEIPT_SET, { select: "crfdf_poreceiptid", filter: `crfdf_pono eq '${odataLit(r.poNo)}'` });
+  const res = existing[0]
+    ? await dvUpdate(PORECEIPT_SET, s(existing[0].crfdf_poreceiptid), rec)
+    : await dvCreate(PORECEIPT_SET, { crfdf_poreceiptid: uuid(), ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "savePoReceipt failed");
+}
+
+export async function fetchPoDeliveries(): Promise<PoDelivery[]> {
+  const rows = await listAll(PODELIVERY_SET, {
+    select: "crfdf_podeliveryid,crfdf_pono,crfdf_jobno,crfdf_receiveddate,crfdf_location,crfdf_receivedby,crfdf_notes,crfdf_final",
+  });
+  return rows
+    .map((r) => ({
+      id: s(r.crfdf_podeliveryid),
+      poNo: s(r.crfdf_pono).trim(),
+      jobNo: s(r.crfdf_jobno).trim(),
+      date: s(r.crfdf_receiveddate).trim().slice(0, 10),
+      location: s(r.crfdf_location).trim(),
+      receivedBy: s(r.crfdf_receivedby),
+      notes: s(r.crfdf_notes),
+      final: r.crfdf_final === true,
+    }))
+    .filter((d) => d.poNo);
+}
+
+const deliveryRecord = (d: PoDelivery): Row => ({
+  crfdf_name: `${d.poNo} · ${d.date}`,
+  crfdf_pono: d.poNo,
+  crfdf_jobno: d.jobNo,
+  crfdf_receiveddate: d.date,
+  crfdf_location: d.location,
+  crfdf_receivedby: d.receivedBy,
+  crfdf_notes: d.notes,
+  crfdf_final: d.final,
+});
+
+/** Record a delivery (the id is the app's — so a retry never doubles it). */
+export async function savePoDelivery(d: PoDelivery): Promise<void> {
+  const existing = await list(PODELIVERY_SET, { select: "crfdf_podeliveryid", filter: `crfdf_podeliveryid eq ${d.id}` });
+  const res = existing[0]
+    ? await dvUpdate(PODELIVERY_SET, d.id, deliveryRecord(d))
+    : await dvCreate(PODELIVERY_SET, { crfdf_podeliveryid: d.id, ...deliveryRecord(d) });
+  if (!res.success) throw new Error(res.error?.message ?? "savePoDelivery failed");
+}
+
+export async function deletePoDelivery(id: string): Promise<void> {
+  const res = await dvDelete(PODELIVERY_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? "deletePoDelivery failed");
 }
 
 // ---------------------------------------------------------------------------

@@ -6719,3 +6719,319 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .flow-editor__note { margin-top: 6px; font-size: 12px; color: var(--status-amber, #8a5300); }
 .flow-editor__done { display: flex; gap: 8px; align-items: center; margin: 14px 0 8px; font-size: 13px; flex-wrap: wrap; }
 .flow-editor__done .form-field__select { flex: 1; min-width: 200px; }
+
+/* ── Warehouse Management (receiving against POs) ───────────────────────── */
+.wh {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1100px;
+}
+.wh-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.wh-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.wh-tab {
+  border: none;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  padding: 7px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wh-tab--on {
+  background: var(--lumineo-navy);
+  color: #fff;
+}
+.wh-search {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font: inherit;
+}
+.wh-updated {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.wh-error {
+  color: var(--status-red);
+}
+.wh-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 10px;
+}
+.wh-empty--small {
+  padding: 10px;
+  font-size: 13px;
+}
+.wh-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wh-job {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.wh-job__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.wh-job__no {
+  font-weight: 700;
+  color: var(--lumineo-navy);
+}
+.wh-job__name {
+  color: var(--text-secondary);
+}
+.wh-job__sum {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.wh-ready {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--status-green-soft);
+  color: var(--status-green);
+}
+.wh-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wh-po {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.wh-po:last-child {
+  border-bottom: none;
+}
+.wh-po--match {
+  background: var(--accent-brand-soft);
+}
+.wh-po--archived {
+  opacity: 0.75;
+}
+.wh-po__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.wh-po__no {
+  font-weight: 700;
+  color: var(--lumineo-navy);
+  text-underline-offset: 2px;
+}
+.wh-po__vendor {
+  color: var(--text-primary);
+}
+.wh-po__job {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-secondary);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.wh-po__date,
+.wh-po__closed {
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+.wh-po__spacer {
+  flex: 1;
+}
+.wh-status {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.wh-status--received {
+  background: var(--status-green-soft);
+  color: var(--status-green);
+  border-color: transparent;
+}
+.wh-status--partial {
+  background: var(--status-amber-soft);
+  color: var(--text-primary);
+  border-color: var(--status-amber);
+}
+.wh-deliveries {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.wh-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.wh-delivery__date {
+  font-weight: 600;
+}
+.wh-delivery__loc {
+  color: var(--lumineo-navy);
+  font-weight: 600;
+}
+.wh-delivery__kind,
+.wh-delivery__by {
+  color: var(--text-secondary);
+}
+.wh-delivery__notes {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.wh-delivery__remove {
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.wh-delivery__remove:hover {
+  color: var(--status-red);
+}
+.wh-more {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  padding: 8px;
+  color: var(--lumineo-navy);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wh-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 12, 30, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.wh-modal__card {
+  width: min(440px, 100%);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+.wh-modal__title {
+  margin: 0;
+  font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wh-modal__sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.wh-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.wh-field input,
+.wh-field select,
+.wh-field textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+.wh-kind {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.wh-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .wh {
+    padding: 12px;
+  }
+  .wh-po__spacer {
+    display: none;
+  }
+  .wh-receive {
+    flex: 1 1 100%;
+    padding: 10px;
+  }
+}
+.job-po__receiving {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.job-po__receiving .wh-status {
+  font-size: 11px;
+  padding: 1px 6px;
+}

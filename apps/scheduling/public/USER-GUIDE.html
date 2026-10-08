@@ -1230,6 +1230,30 @@
   </ul>
   <p>The full lifecycle stepper and the Service stepper are next.</p>
 
+  <h3>5.18 &nbsp;Warehouse Management &mdash; receiving against POs</h3>
+  <p>Sidebar &rarr; <strong>Warehouse Management</strong>. Admin / Ops see it, and anyone given the
+  <strong>Receiving</strong> grant in Settings &rarr; Users (the receivers). Every job PO from BC is here.</p>
+  <ul>
+    <li><strong>Find a PO</strong> &mdash; type a PO #, job #, vendor or job name. You get the whole job: all of its POs
+    (closed ones greyed out as history) and a summary like <em>2 POs &middot; 1 partial</em>. Click a PO # to open it in
+    Business Central.</li>
+    <li>With nothing typed you see the work lists: <strong>Partially received</strong>, <strong>Waiting to
+    arrive</strong> (open POs nothing has come in on, oldest order first) and <strong>Recently received</strong> (last 7
+    days).</li>
+    <li><strong>Receive</strong> &mdash; enter the date, the storage location and any notes, then pick
+    <em>Everything on the PO is here</em> (&rarr; <strong>Received</strong>) or <em>Part of it</em> (&rarr;
+    <strong>Partially Received</strong>). Each delivery is its own line, so material split across two spots is just
+    two lines. This never posts the receipt in BC &mdash; whoever wrote the PO still does that.</li>
+    <li><strong>Vendor Status</strong> (Ordered, Shipping, Delayed, On Hold&hellip;) is set by hand by Admin / Ops from
+    the drop-down on each PO. Admin / Ops can also remove a delivery entered by mistake (&times;).</li>
+    <li><strong>Materials ready</strong> &mdash; when every open PO on a job is Received, the job shows a
+    <em>Materials ready</em> badge and BC's <strong>Job Purchasing</strong> step is completed automatically.</li>
+    <li>The job panel's <strong>Purchase orders</strong> section shows each PO's status and deliveries (date and
+    location).</li>
+    <li><strong>Refresh</strong> re-reads the POs. Stock POs (not tied to a job), expected dates and phone
+    scanning come with a later update.</li>
+  </ul>
+
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
@@ -1408,6 +1432,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 8, 2026</td><td><strong>Warehouse Management</strong> &mdash; a new screen for receiving against purchase orders: search by PO #, job #, vendor or job name, see the job's other POs, and record each delivery (date, storage location, notes; partial or final). Admin / Ops set the Vendor Status. When every PO on a job is received the job is <strong>Materials ready</strong> and BC's Job Purchasing step completes itself. Receivers get the new <strong>Receiving</strong> grant in Settings &rarr; Users. See &sect;5.18.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>The Current Status is the job's lifecycle</strong> &mdash; replaces the lifecycle stages on the stepper (the stepper is departments + Install again). Moving a job's status forward moves BC's lifecycle steps (New Order This Week, Upcoming Manufacturing, Manufacturing Ready for Planning, Product Ready for Install Scheduling, Install-Waiting on Product, Install, Complete-Need Paperwork) with <strong>Completed By</strong> = who moved it; <em>Install - Ready for Planning</em> makes Install active; <em>MFG - Vinyl Install</em> makes Vinyl and Install active; completing Install moves the job to Complete-need paperwork; <strong>Date Installed</strong> and <strong>Date to Admin</strong> fill themselves in; Complete to Admin flags the job complete in BC; moving back re-opens. Purchasing is left to the purchaser in BC. See &sect;5.4 and &sect;5.17.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>Jobs: drag the freeze line</strong> &mdash; like Airtable, a grey line marks where the frozen columns end. Hover it for the blue handle and drag it to another column edge to freeze more or fewer columns; it's saved on the view for everyone. See &sect;5.17.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>Cleaner steppers, Ready for Planning, and pre-production stages that finish themselves</strong> &mdash; the Jobs list and card previews show the departments only; in the job panel and stepper pop-up the lifecycle stages sit on their own <strong>Lifecycle</strong> line above the <strong>Departments</strong>. New stage <strong>Ready for Planning</strong> (BC <em>Manufacturing Ready for Planning</em>) between Upcoming Mfg and Purchasing. Moving a job off <em>New Order this week</em>, <em>Upcoming Mfg.</em> or <em>Mfg. Ready for Planning</em> completes that stage (and the ones before it) in the app and BC; a production status completes all three. <strong>Purchasing</strong> is completed only by the purchaser, and an open Purchasing never holds up the departments. See &sect;5.4 and &sect;5.17.</td></tr>
@@ -1527,7 +1552,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Project Scheduler — User Guide v3.33 · Oct 7, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Project Scheduler — User Guide v3.34 · Oct 8, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

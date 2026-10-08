@@ -86,6 +86,9 @@ $TABLES = [ordered]@{
   'crfdf_bccustomers'              = 'R'
   'crfdf_jobpos'                   = 'R'
   'crfdf_jobdescs'                 = 'R'
+  # Warehouse Management (Oct 8) — keyed by LOGICAL name (the set name is looked up).
+  'crfdf_poreceipt'                = 'RCW'
+  'crfdf_podelivery'               = 'RCWD'
   'lum_weathercaches'              = 'R'
 }
 $OPS = @{ R = 'Read'; C = 'Create'; W = 'Write'; D = 'Delete' }
@@ -126,9 +129,11 @@ function Get-Json($path) { Invoke-RestMethod -Headers $h -Uri "$api/$path" }
 $wanted = [ordered]@{}   # privilege name → table
 $logical = @{}           # entity set → logical name
 foreach ($set in $TABLES.Keys) {
-  $def = (Get-Json "EntityDefinitions?`$select=LogicalName&`$filter=EntitySetName eq '$set'").value
-  if (-not $def) { throw "No table with entity set '$set' — renamed or not created?" }
+  # A key is an entity set, or a table's logical name (newer tables — prints the set).
+  $def = (Get-Json "EntityDefinitions?`$select=LogicalName,EntitySetName&`$filter=EntitySetName eq '$set' or LogicalName eq '$set'").value
+  if (-not $def) { throw "No table with entity set or logical name '$set' — renamed or not created?" }
   $ln = $def[0].LogicalName
+  if ($ln -eq $set) { Write-Host ("  {0} -> entity set {1}" -f $ln, $def[0].EntitySetName) -ForegroundColor Yellow }
   $logical[$set] = $ln
   foreach ($op in $TABLES[$set].ToCharArray()) { $wanted["prv$($OPS[[string]$op])$ln"] = $ln }
   $wanted["prvAppend$ln"] = $ln

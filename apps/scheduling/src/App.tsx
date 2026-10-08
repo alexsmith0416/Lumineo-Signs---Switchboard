@@ -21,6 +21,8 @@ import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser, TYPE_CONFIG } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
+import WarehouseView from "./components/warehouse/WarehouseView";
+import { canEditJobField } from "./services/job-edit-access";
 import { useSettingsStore } from "./store/settings-store";
 import { useJobTrackingStore } from "./store/job-tracking-store";
 import { useJobScheduleStore } from "./store/job-schedule-store";
@@ -36,6 +38,7 @@ type View =
   | "scenario"
   | "monthly"
   | "jobs"
+  | "warehouse"
   | "settings"
   | "help";
 
@@ -47,6 +50,7 @@ const VIEW_TITLES: Record<View, string> = {
   scenario: "Scenario Schedule",
   monthly: "Monthly Install Plan",
   jobs: "Jobs",
+  warehouse: "Warehouse Management",
   settings: "Settings",
   help: "Help & User Guide",
 };
@@ -82,7 +86,7 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser, realType } =
+  const { role, loading: userLoading, fullName, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser, realType } =
     useCurrentUser();
 
   // Demo sandbox. Demo users boot LOCKED into it (welcome tour shown); anyone
@@ -162,6 +166,11 @@ export default function App() {
   // Only Admin/Ops may edit the schedules; everyone else gets view-only boards.
   const canEdit = permissions.editSchedule;
 
+  // Warehouse Management: Admin / Ops, and logins granted "Receiving".
+  const whEdit = demoMode ? NO_JOB_EDITS : jobEdit;
+  const canReceive = canEditJobField(whEdit, "receiving");
+  const showWarehouse = permissions.editJobs || canReceive;
+
   if (view === null) {
     return (
       <div className="app-shell">
@@ -185,6 +194,7 @@ export default function App() {
           showMonthly={permissions.monthly}
           showScenario={permissions.scenarios}
           showJobs={permissions.jobs}
+          showWarehouse={showWarehouse}
         />
       )}
 
@@ -220,6 +230,9 @@ export default function App() {
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
           {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
           {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} />}
+          {view === "warehouse" && showWarehouse && (
+            <WarehouseView canReceive={canReceive} canSetStatus={whEdit.all} userName={fullName ?? ""} />
+          )}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (
             <HelpScreen
@@ -255,6 +268,7 @@ export default function App() {
         showMonthly={permissions.monthly}
         showScenario={permissions.scenarios}
         showJobs={permissions.jobs}
+          showWarehouse={showWarehouse}
       />
     </div>
   );

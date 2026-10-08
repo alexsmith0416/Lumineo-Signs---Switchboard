@@ -267,7 +267,24 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
-    - 📋 **WAREHOUSE MANAGEMENT — spec agreed Oct 7, NOT BUILT** (Alex's sketch:
+    - ✅ **WAREHOUSE MANAGEMENT — phase 1 DEPLOYED Oct 8** (guide v3.34 §5.18).
+      Tables created (`crfdf_poreceipts`, `crfdf_podeliveries` entity sets).
+      `create-scheduler-user-role.ps1 -Apply` created the **Lumineo Scheduler
+      User** role (158 privileges, incl. both new tables) — it had never been
+      applied before; no one holds it yet (non-admins aren't users in this
+      Developer env). Nick / Hayden / Tanner: add in Settings → Users + the
+      **Receiving** grant. Code: `services/po-receiving.ts` (pure,
+      tested), `store/po-receiving-store.ts` (all job POs + receipts +
+      deliveries; Materials ready → BC Job Purchasing push, only after a
+      successful save), `components/warehouse/WarehouseView.tsx` (tabs, search,
+      work lists: partially received / waiting / recently received, Receive
+      dialog, status select for Admin/Ops, Refresh), job panel PO section
+      shows status + deliveries + Materials ready. Nav: "Warehouse Management"
+      for editJobs or the new **Receiving** grant (Settings → Users).
+      Not yet: "expected this week / overdue" lists (need BC expected receipt
+      date), Jobs list POs column, cards "Stored at", stock POs, phone
+      scan/photo, delivery edit (remove only, Admin/Ops), user guide entry.
+    - 📋 **WAREHOUSE MANAGEMENT — spec agreed Oct 7** (Alex's sketch:
       `OneDrive…\Documents\Working Files\Warehouse Management Tool.jpg`).
       Page name: **"Warehouse Management"** (not "… (Job Purchasing)").
       - **Per-PO receiving record** (keyed by PO #): **Status** = Airtable Vendor

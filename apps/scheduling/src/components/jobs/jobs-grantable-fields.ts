@@ -22,6 +22,7 @@ const JOB: GrantableField[] = [
   { key: "job", label: "Job name", group: "Job", hint: "Rename in the job panel" },
   { key: "stepper", label: "Stepper", group: "Job", hint: "Complete / reopen steps — pushed to BC" },
   { key: "sketch", label: "Sketch", group: "Job", hint: "Choose, upload or remove the sketch" },
+  { key: "receiving", label: "Receiving", group: "Job", hint: "Warehouse Management — receive deliveries against POs" },
 ];
 
 /** Every grantable field, in checklist order. `renamed` = built-in column names

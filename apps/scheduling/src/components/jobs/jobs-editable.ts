@@ -62,7 +62,7 @@ const ROUTING_TYPE = [
 const POWERLINES = ["?", "YES", "Covered", "N/A", "Powerlines", "Requested"];
 const MFG_REGION = ["WK", "NEK", "Sub", "HOUSE"];
 const INSTALL_REGION = ["WK", "NEK", "Sub-Installer", "HOUSE"];
-const STORAGE = [
+export const STORAGE_LOCATIONS = [
   "Bus Barn - Floor", "Bus Barn - Garage", "Car Barn - Floor", "Outside of Shop", "Receiving Shelf", "Supply Room",
   "Vinyl Room", "Warehouse - Floor", "Warehouse - South Wall", "Warehouse - West Wall",
 ];
@@ -85,7 +85,7 @@ export const BUILTIN_EDITS: Readonly<Record<string, EditTarget>> = Object.fromEn
   track("vendor", "vendor", "select", VENDOR),
   track("po", "poNumber", "text"),
   track("vendorStatus", "vendorStatus", "select", VENDOR_STATUS),
-  track("storageLocation", "storageLocation", "select", STORAGE),
+  track("storageLocation", "storageLocation", "select", STORAGE_LOCATIONS),
   track("vendorShipDate", "vendorShipDate", "date"),
   track("vendorShipDate2", "vendorShipDate2", "date"),
   track("outsourcedArrival", "outsourcedArrival", "date"),
