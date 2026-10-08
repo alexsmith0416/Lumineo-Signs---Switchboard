@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { computeDesign, type DesignInput, type DesignResult } from '../lib/engine';
+import type { FacePatch, SketchSelection } from './SketchSvg';
 import { fmt, fmtFtIn, fmtInches } from './fields';
 import { SHAPE_LABELS } from '../data/tables';
 import { SKETCH_PALETTES, SketchSvg, sketchAvailable } from './SketchSvg';
@@ -17,37 +18,49 @@ interface Props {
 }
 
 export function SketchPanel({ input, result: committed, theme, onChange }: Props) {
-  const [selected, setSelected] = useState(false);
+  const [selection, setSelection] = useState<SketchSelection>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  // While dragging, recompute locally instead of writing to app state on every
-  // pointer move — that keeps every piece length live without thrashing the
-  // autosave. The move is committed on pointer-up.
-  const [dragFt, setDragFt] = useState<number | null>(null);
+  const [editingFaceId, setEditingFaceId] = useState<string | null>(null);
+  // Any drag previews into this input and recomputes locally; writing to app
+  // state on every pointer move would thrash the autosave. Committed on up.
+  const [preview, setPreview] = useState<DesignInput | null>(null);
 
-  const editingSegmentId =
-    editingIndex !== null ? (input.transition.segments[editingIndex - 1]?.id ?? null) : null;
+  const shown = preview ?? input;
+  const result = useMemo(
+    () => (preview ? computeDesign(preview) : committed),
+    [preview, committed],
+  );
 
-  const withDrag = useMemo((): DesignInput => {
-    if (dragFt === null || !editingSegmentId) return input;
-    return {
+  const commit = () => {
+    if (preview) onChange(preview);
+    setPreview(null);
+  };
+  const cancel = () => {
+    setPreview(null);
+    setEditingIndex(null);
+    setEditingFaceId(null);
+    setSelection(null);
+  };
+
+  const dragSplice = (ft: number) => {
+    const segId = editingIndex !== null ? input.transition.segments[editingIndex - 1]?.id : null;
+    if (!segId) return;
+    setPreview({
       ...input,
       transition: {
         ...input.transition,
         segments: input.transition.segments.map((s) =>
-          s.id === editingSegmentId ? { ...s, spliceFt: dragFt, anchorFaceId: null } : s,
+          s.id === segId ? { ...s, spliceFt: ft, anchorFaceId: null } : s,
         ),
       },
-    };
-  }, [input, dragFt, editingSegmentId]);
+    });
+  };
 
-  const result = useMemo(
-    () => (dragFt === null ? committed : computeDesign(withDrag)),
-    [committed, dragFt, withDrag],
-  );
-
-  const commitDrag = () => {
-    if (dragFt !== null) onChange(withDrag);
-    setDragFt(null);
+  const dragFace = (id: string, patch: FacePatch) => {
+    setPreview({
+      ...input,
+      elements: input.elements.map((el) => (el.id === id ? { ...el, ...patch } : el)),
+    });
   };
 
   if (!sketchAvailable(result)) {
@@ -79,87 +92,116 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
         <h2 className="panel-caption">Elevation Sketch</h2>
         <div className="panel-body sketch-body">
           <SketchSvg
-            input={withDrag}
+            input={shown}
             result={result}
             palette={SKETCH_PALETTES[theme]}
             interaction={{
-              selected,
-              onSelectPole: () => setSelected(true),
+              selection,
+              onSelectPole: () => {
+                setSelection({ kind: 'pole' });
+                setEditingFaceId(null);
+              },
+              onSelectFace: (id) => {
+                setSelection({ kind: 'face', id });
+                setEditingIndex(null);
+              },
               editingIndex,
-              onSpliceDrag: setDragFt,
-              onSpliceCommit: commitDrag,
+              onSpliceDrag: dragSplice,
+              editingFaceId,
+              onFaceDrag: dragFace,
+              onCommit: commit,
               snapTo: faces.map((f) => Math.max(0, f.topFt - f.heightFt)),
             }}
           />
-          {selected && (
-            <div className="sketch-tools" role="group" aria-label="Pole structure">
-              {transitionSegments.length === 0 ? (
-                <>
-                  <span className="sketch-tools__label">Pole selected</span>
-                  <button
-                    className="btn-soft"
-                    onClick={() =>
-                      onChange({
-                        ...input,
-                        transition: {
-                          enabled: true,
-                          segments: [
-                            {
-                              id: `tr-${Date.now().toString(36)}`,
-                              spliceFt: null,
-                              anchorFaceId: null,
-                              sizing: 'auto',
-                              sizeName: null,
-                              customSection: { ...input.customSection },
-                            },
-                          ],
-                        },
-                      })
-                    }
-                  >
-                    Add a transition
-                  </button>
-                </>
-              ) : editingIndex === null ? (
-                <>
-                  <span className="sketch-tools__label">Pole selected</span>
-                  {transitionSegments.map((seg) => (
-                    <button key={seg.index} className="btn-soft" onClick={() => setEditingIndex(seg.index)}>
-                      Edit transition location{transitionSegments.length > 1 ? ` (${seg.key})` : ''}
+          {selection && (
+            <div className="sketch-tools" role="group" aria-label="Sketch editing">
+              {selection.kind === 'pole' ? (
+                transitionSegments.length === 0 ? (
+                  <>
+                    <span className="sketch-tools__label">Pole selected</span>
+                    <button
+                      className="btn-soft"
+                      onClick={() =>
+                        onChange({
+                          ...input,
+                          transition: {
+                            enabled: true,
+                            segments: [
+                              {
+                                id: `tr-${Date.now().toString(36)}`,
+                                spliceFt: null,
+                                anchorFaceId: null,
+                                sizing: 'auto',
+                                sizeName: null,
+                                customSection: { ...input.customSection },
+                              },
+                            ],
+                          },
+                        })
+                      }
+                    >
+                      Add a transition
                     </button>
-                  ))}
+                  </>
+                ) : editingIndex === null ? (
+                  <>
+                    <span className="sketch-tools__label">Pole selected</span>
+                    {transitionSegments.map((seg) => (
+                      <button key={seg.index} className="btn-soft" onClick={() => setEditingIndex(seg.index)}>
+                        Edit transition location{transitionSegments.length > 1 ? ` (${seg.key})` : ''}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <span className="sketch-tools__label">
+                      Drag the splice — snaps to full inches and cabinet bottoms
+                    </span>
+                    <button
+                      className="btn-soft"
+                      onClick={() => {
+                        commit();
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Done
+                    </button>
+                  </>
+                )
+              ) : editingFaceId === null ? (
+                <>
+                  <span className="sketch-tools__label">
+                    {shown.elements.find((e) => e.id === selection.id)?.label || 'Sign face'} selected
+                  </span>
+                  <button className="btn-soft" onClick={() => setEditingFaceId(selection.id)}>
+                    Edit size &amp; position
+                  </button>
                 </>
               ) : (
                 <>
                   <span className="sketch-tools__label">
-                    Drag the splice — snaps to full inches and cabinet bottoms
+                    Drag the box to move it, or a handle to resize — full inches
                   </span>
                   <button
                     className="btn-soft"
                     onClick={() => {
-                      commitDrag();
-                      setEditingIndex(null);
+                      commit();
+                      setEditingFaceId(null);
                     }}
                   >
                     Done
                   </button>
                 </>
               )}
-              <button
-                className="btn-soft"
-                onClick={() => {
-                  setDragFt(null);
-                  setEditingIndex(null);
-                  setSelected(false);
-                }}
-              >
-                {editingIndex === null ? 'Deselect' : 'Cancel'}
+              <button className="btn-soft" onClick={cancel}>
+                {editingIndex === null && editingFaceId === null ? 'Deselect' : 'Cancel'}
               </button>
             </div>
           )}
 
           <p className="hint sketch-note">
-            Click the pole to move a transition. Proportions are to scale from
+            Click the pole to move a transition, or a cabinet to move and
+            resize it. Proportions are to scale from
             the calculated design; very thin poles and footings are widened
             slightly so they stay visible. Elevation view — pier length runs
             perpendicular to the sign face.

@@ -583,3 +583,5 @@ label .unit { color: var(--text-dim); font-weight: 600; }
   margin-right: 2px;
 }
 .sketch-tools .btn-soft { font-size: 11px; padding: 5px 11px; }
+.sk-face-hit { cursor: pointer; }
+.sk-face-move { cursor: move; }

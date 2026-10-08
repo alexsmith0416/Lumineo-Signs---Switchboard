@@ -106,15 +106,29 @@ export function sketchAvailable(result: DesignResult): boolean {
   );
 }
 
+export type SketchSelection = { kind: 'pole' } | { kind: 'face'; id: string } | null;
+
+/** Which edge of a cabinet is being dragged ('move' = the whole box). */
+export type FaceHandle = 'move' | 'top' | 'bottom' | 'left' | 'right';
+
+export interface FacePatch {
+  topFt?: number;
+  heightFt?: number;
+  widthFt?: number;
+}
+
 export interface SketchInteraction {
-  /** Pole structure is currently selected (click to select). */
-  selected: boolean;
+  selection: SketchSelection;
   onSelectPole: () => void;
-  /** Index of the pole segment whose splice is being dragged, or null. */
+  onSelectFace: (id: string) => void;
+  /** Pole segment whose splice is armed for dragging, or null. */
   editingIndex: number | null;
-  /** Called continuously while dragging, with a snapped elevation in ft. */
   onSpliceDrag: (ft: number) => void;
-  onSpliceCommit: () => void;
+  /** Cabinet armed for move/resize, or null. */
+  editingFaceId: string | null;
+  onFaceDrag: (id: string, patch: FacePatch) => void;
+  /** Fired on pointer-up at the end of any drag. */
+  onCommit: () => void;
   /** Elevations a dragged splice snaps onto (cabinet bottoms). */
   snapTo: readonly number[];
 }
@@ -194,39 +208,97 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const pxWidth = (s: typeof segments[number]) =>
     Math.max((s.section ? s.section.odIn / 12 : 0) * scale, 7);
 
-  // Pointer → elevation. The viewBox scales uniformly to the rendered width,
-  // so the ratio of rendered height to viewBox height is the only conversion
-  // needed to get back from a client Y to feet above grade.
+  // Pointer → drawing coordinates. The viewBox scales uniformly to the
+  // rendered width, so one ratio converts a client point back to feet.
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const elevationAt = (clientY: number): number => {
+  const dragRef = useRef<
+    | { kind: 'splice' }
+    | { kind: 'face'; id: string; handle: FaceHandle; grabFt: number }
+    | null
+  >(null);
+
+  const toViewBox = (clientX: number, clientY: number) => {
     const el = svgRef.current;
-    if (!el) return 0;
+    if (!el) return { x: 0, y: 0 };
     const rect = el.getBoundingClientRect();
-    if (rect.height === 0) return 0;
-    const vbY = ((clientY - rect.top) / rect.height) * SKETCH_VB_H;
-    return (gradeY - vbY) / scale;
+    if (rect.height === 0 || rect.width === 0) return { x: 0, y: 0 };
+    return {
+      x: ((clientX - rect.left) / rect.width) * SKETCH_VB_W,
+      y: ((clientY - rect.top) / rect.height) * SKETCH_VB_H,
+    };
   };
+  const elevationAt = (clientY: number) => (gradeY - toViewBox(0, clientY).y) / scale;
+  const halfWidthAt = (clientX: number) => Math.abs(toViewBox(clientX, 0).x - cx) / scale;
+  const snapInch = (ft: number) => Math.round(ft * 12) / 12;
 
   const editing =
     interaction && interaction.editingIndex !== null
       ? segments[interaction.editingIndex] ?? null
       : null;
 
-  const dragTo = (clientY: number) => {
+  const dragSplice = (clientY: number) => {
     if (!interaction || !editing) return;
     const minFt = Math.max(1, (segments[editing.index - 1]?.spanBottomFt ?? 0) + 2);
     const maxFt = Math.min(topMax - 1, segments[editing.index + 1]?.topFt ?? topMax - 1);
     interaction.onSpliceDrag(snapSpliceFt(elevationAt(clientY), interaction.snapTo, minFt, maxFt));
   };
 
+  const MIN_FACE_FT = 0.5;
+  const dragFace = (clientX: number, clientY: number) => {
+    const d = dragRef.current;
+    if (!interaction || !d || d.kind !== 'face') return;
+    const face = faces.find((f) => f.id === d.id);
+    if (!face) return;
+    const bottom = Math.max(0, face.topFt - face.heightFt);
+
+    if (d.handle === 'left' || d.handle === 'right') {
+      interaction.onFaceDrag(d.id, {
+        widthFt: Math.max(MIN_FACE_FT, snapInch(2 * halfWidthAt(clientX))),
+      });
+      return;
+    }
+    const at = snapInch(elevationAt(clientY) - d.grabFt);
+    if (d.handle === 'move') {
+      // Keep the box the same size; never let it sink below grade.
+      interaction.onFaceDrag(d.id, { topFt: Math.max(face.heightFt, at) });
+    } else if (d.handle === 'top') {
+      const top = Math.max(bottom + MIN_FACE_FT, at);
+      interaction.onFaceDrag(d.id, { topFt: top, heightFt: top - bottom });
+    } else {
+      const newBottom = Math.min(Math.max(0, at), face.topFt - MIN_FACE_FT);
+      interaction.onFaceDrag(d.id, { heightFt: face.topFt - newBottom });
+    }
+  };
+
+  const beginFaceDrag = (
+    e: React.PointerEvent,
+    id: string,
+    handle: FaceHandle,
+    topFt: number,
+  ) => {
+    if (!interaction || interaction.editingFaceId !== id) return;
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    const ref = handle === 'bottom' ? Math.max(0, topFt - (faces.find((f) => f.id === id)?.heightFt ?? 0)) : topFt;
+    dragRef.current = { kind: 'face', id, handle, grabFt: elevationAt(e.clientY) - ref };
+  };
+
   return (
     <svg
       ref={svgRef}
       onPointerMove={(e) => {
-        if (editing && e.buttons === 1) dragTo(e.clientY);
+        if (e.buttons !== 1 || !dragRef.current) return;
+        if (dragRef.current.kind === 'splice') dragSplice(e.clientY);
+        else dragFace(e.clientX, e.clientY);
       }}
-      onPointerUp={() => editing && interaction?.onSpliceCommit()}
-      className={`sketch-svg${interaction?.selected ? ' is-selected' : ''}${editing ? ' is-editing' : ''}`}
+      onPointerUp={() => {
+        if (!dragRef.current) return;
+        dragRef.current = null;
+        interaction?.onCommit();
+      }}
+      className={`sketch-svg${interaction?.selection ? ' is-selected' : ''}${
+        editing || interaction?.editingFaceId ? ' is-editing' : ''
+      }`}
       viewBox={`0 0 ${SKETCH_VB_W} ${SKETCH_VB_H}`}
       width={SKETCH_VB_W}
       height={SKETCH_VB_H}
@@ -326,17 +398,44 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         const bot = Math.max(0, f.topFt - f.heightFt);
         const hPx = (f.topFt - bot) * scale;
         const wPx = f.widthFt * scale;
+        const isSel = interaction?.selection?.kind === 'face' && interaction.selection.id === f.id;
+        const isEditing = interaction?.editingFaceId === f.id;
         return (
-          <rect
-            key={f.id}
-            x={X(-f.widthFt / 2)}
-            y={Y(f.topFt)}
-            width={wPx}
-            height={hPx}
-            fill={p.faceFill}
-            stroke={p.faceStroke}
-            strokeWidth={1.5}
-          />
+          <g key={f.id}>
+            <rect
+              x={X(-f.widthFt / 2)}
+              y={Y(f.topFt)}
+              width={wPx}
+              height={hPx}
+              fill={p.faceFill}
+              stroke={p.faceStroke}
+              strokeWidth={isSel ? 2.4 : 1.5}
+              className={interaction ? (isEditing ? 'sk-face-move' : 'sk-face-hit') : undefined}
+              onPointerDown={
+                interaction
+                  ? (e) => {
+                      e.stopPropagation();
+                      interaction.onSelectFace(f.id);
+                      beginFaceDrag(e, f.id, 'move', f.topFt);
+                    }
+                  : undefined
+              }
+            />
+            {isSel && !isEditing && (
+              <rect
+                x={X(-f.widthFt / 2) - 3}
+                y={Y(f.topFt) - 3}
+                width={wPx + 6}
+                height={hPx + 6}
+                rx={2}
+                fill="none"
+                stroke={p.keyBg}
+                strokeWidth={1.4}
+                strokeDasharray="5 3"
+                pointerEvents="none"
+              />
+            )}
+          </g>
         );
       })}
 
@@ -344,7 +443,14 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           transition stacked on the one below with its sleeved 2 ft dashed. */}
       <g
         className={interaction ? 'sk-pole-hit' : undefined}
-        onPointerDown={interaction ? () => interaction.onSelectPole() : undefined}
+        onPointerDown={
+          interaction
+            ? (e) => {
+                e.stopPropagation();
+                interaction.onSelectPole();
+              }
+            : undefined
+        }
       >
       {poleXs.map((px, col) =>
         segments.map((s) => {
@@ -377,7 +483,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
                   strokeWidth={2}
                 />
               )}
-              {interaction?.selected && (
+              {interaction?.selection?.kind === 'pole' && (
                 <rect
                   x={X(px) - w / 2 - 2}
                   y={topY - 2}
@@ -417,14 +523,14 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         const wPx = f.widthFt * scale;
         const boxY = Y(f.topFt);
         const name = f.label || 'Sign face';
-        const dims = `${fmt(f.widthFt)}' × ${fmt(f.heightFt)}'`;
+        const dims = `${fmtFtIn(f.widthFt)} × ${fmtFtIn(f.heightFt)}`;
         const twoLine = hPx >= 34 && wPx >= 110;
         const chipW = Math.min(wPx - 6, Math.max(name.length * 7.2, dims.length * 7, 70));
         const chipH = twoLine ? 30 : 16;
         const cyMid = boxY + hPx / 2;
         if (wPx < 34 || hPx < 14) return null;
         return (
-          <g key={`lbl-${f.id}`}>
+          <g key={`lbl-${f.id}`} pointerEvents="none">
             <rect
               x={cx - chipW / 2}
               y={cyMid - chipH / 2}
@@ -497,6 +603,69 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
         </text>
       </g>
 
+      {/* Cabinet resize handles — top/bottom change height, sides change width */}
+      {interaction?.editingFaceId &&
+        (() => {
+          const f = faces.find((x) => x.id === interaction.editingFaceId);
+          if (!f) return null;
+          const bot = Math.max(0, f.topFt - f.heightFt);
+          const topY = Y(f.topFt);
+          const botY = Y(bot);
+          const lx = X(-f.widthFt / 2);
+          const rx = X(f.widthFt / 2);
+          const midY = (topY + botY) / 2;
+          const grip = (
+            key: string,
+            x: number,
+            y: number,
+            handle: FaceHandle,
+            cursor: string,
+          ) => (
+            <rect
+              key={key}
+              x={x - 5}
+              y={y - 5}
+              width={10}
+              height={10}
+              rx={2}
+              fill={p.keyBg}
+              stroke={p.keyText}
+              strokeWidth={1}
+              style={{ cursor }}
+              onPointerDown={(e) => beginFaceDrag(e, f.id, handle, f.topFt)}
+            />
+          );
+          return (
+            <g>
+              <rect
+                x={lx}
+                y={topY}
+                width={rx - lx}
+                height={botY - topY}
+                fill="none"
+                stroke={p.keyBg}
+                strokeWidth={1.4}
+                strokeDasharray="4 3"
+                pointerEvents="none"
+              />
+              {grip('t', cx, topY, 'top', 'ns-resize')}
+              {grip('b', cx, botY, 'bottom', 'ns-resize')}
+              {grip('l', lx, midY, 'left', 'ew-resize')}
+              {grip('r', rx, midY, 'right', 'ew-resize')}
+              <text
+                x={rx + 12}
+                y={midY + 4}
+                fill={p.callout}
+                fontSize={11}
+                fontWeight={800}
+                pointerEvents="none"
+              >
+                {fmtFtIn(f.widthFt)} × {fmtFtIn(f.heightFt)} · top {fmtFtIn(f.topFt)}
+              </text>
+            </g>
+          );
+        })()}
+
       {/* Splice drag handle — appears once a transition is picked for editing */}
       {editing && interaction && (
         <g>
@@ -528,6 +697,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
             onPointerDown={(e) => {
               e.stopPropagation();
               (e.target as Element).setPointerCapture?.(e.pointerId);
+              dragRef.current = { kind: 'splice' };
             }}
           >
             <rect
