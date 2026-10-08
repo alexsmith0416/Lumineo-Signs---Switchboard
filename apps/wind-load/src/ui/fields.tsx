@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Numeric field that tolerates in-progress typing ("2.", "", "-") without
 // fighting the caller's number state: it keeps a local string, commits any
@@ -161,6 +161,84 @@ export function FtInField({ label, value, onChange, allowEmpty, onChangeNullable
           />
           <span className="ftin-suffix">in</span>
         </span>
+      </span>
+    </label>
+  );
+}
+
+// ── Compact feet + inches field for the on-sketch popover ───────────────────
+// Same split entry as FtInField, but it never re-syncs while either box has
+// focus: the sketch clamps and snaps what it commits, and a field that pulled
+// the clamped value back mid-keystroke would fight the typist.
+
+interface PopFtInProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  /** Called on blur, so a typed edit lands in app state like a finished drag. */
+  onCommit?: () => void;
+  /** Focused and selected when it flips true (clicking the number on the sketch). */
+  autoFocus?: boolean;
+}
+
+export function PopFtIn({ label, value, onChange, onCommit, autoFocus }: PopFtInProps) {
+  const start = splitFtIn(value);
+  const [ftText, setFtText] = useState(start.ft);
+  const [inText, setInText] = useState(start.in);
+  const open = useRef(0);
+  const ftRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (open.current > 0) return;
+    const s = splitFtIn(value);
+    setFtText(s.ft);
+    setInText(s.in);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  useEffect(() => {
+    if (autoFocus) ftRef.current?.select();
+  }, [autoFocus]);
+
+  function commit(nextFt: string, nextIn: string) {
+    const joined = joinFtIn(nextFt, nextIn);
+    if (joined !== null) onChange(joined);
+  }
+
+  const box = (
+    which: 'ft' | 'in',
+    text: string,
+    set: (v: string) => void,
+    suffix: string,
+  ) => (
+    <span className="ftin-part">
+      <input
+        ref={which === 'ft' ? ftRef : undefined}
+        type="number"
+        inputMode="decimal"
+        value={text}
+        step="any"
+        aria-label={`${label} ${which === 'ft' ? 'feet' : 'inches'}`}
+        onFocus={() => { open.current += 1; }}
+        onBlur={() => {
+          open.current = Math.max(0, open.current - 1);
+          if (open.current === 0) onCommit?.();
+        }}
+        onChange={(e) => {
+          set(e.target.value);
+          commit(which === 'ft' ? e.target.value : ftText, which === 'in' ? e.target.value : inText);
+        }}
+      />
+      <span className="ftin-suffix">{suffix}</span>
+    </span>
+  );
+
+  return (
+    <label className="pop-field">
+      <span>{label}</span>
+      <span className="ftin">
+        {box('ft', ftText, setFtText, 'ft')}
+        {box('in', inText, setInText, 'in')}
       </span>
     </label>
   );

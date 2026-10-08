@@ -86,12 +86,14 @@ export const SKETCH_PALETTES: Record<'light' | 'dark', SketchPalette> = {
   },
 };
 
-export const SKETCH_VB_W = 760;
+export const SKETCH_VB_W = 880;
 export const SKETCH_VB_H = 620;
-const PAD_L = 118;
-const PAD_R = 118;
 const PAD_T = 40;
 const PAD_B = 56;
+/** Gutter between the stacked per-piece length dimensions on the left. */
+const PIECE_GAP = 34;
+/** Right gutter: stage chain, then the OAH dimension and its label. */
+const PAD_R = 184;
 const FONT = "'Open Sans', Helvetica, Arial, sans-serif";
 
 /** Even pole/footing positions across the widest face (centered strips). */
@@ -121,10 +123,21 @@ export interface FacePatch {
   widthFt?: number;
 }
 
+/** Where the pointer was, in client coordinates — the popover anchors here. */
+export interface SketchPoint {
+  x: number;
+  y: number;
+}
+
+/** A measurement readout that can be clicked to type a value instead. */
+export type EditField = 'splice' | 'width' | 'height' | 'top';
+
 export interface SketchInteraction {
   selection: SketchSelection;
-  onSelectPole: () => void;
-  onSelectFace: (id: string) => void;
+  onSelectPole: (at: SketchPoint) => void;
+  onSelectFace: (id: string, at: SketchPoint) => void;
+  /** A dimension readout was clicked: open the popover on that field. */
+  onEditField: (field: EditField, at: SketchPoint) => void;
   /** Pole segment whose splice is armed for dragging, or null. */
   editingIndex: number | null;
   onSpliceDrag: (ft: number) => void;
@@ -185,20 +198,29 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const legendH = legendRows ? LEGEND_PAD * 2 + legendRows * LEGEND_ROW_H : 0;
   const drawTop = PAD_T + legendH;
 
+  // Each piece gets its own length dimension stacked to the left of the
+  // structure, so the left gutter grows with the number of pieces.
+  const nPieces = Math.max(1, legendRows);
+  const padL = Math.max(110, 97 + (nPieces - 1) * PIECE_GAP);
+
   const scale = Math.min(
     (SKETCH_VB_H - drawTop - PAD_B) / (topMax + depth),
-    (SKETCH_VB_W - PAD_L - PAD_R) / (2 * maxHalfX),
+    (SKETCH_VB_W - padL - PAD_R) / (2 * maxHalfX),
   );
 
-  const cx = SKETCH_VB_W / 2;
+  const cx = padL + (SKETCH_VB_W - padL - PAD_R) / 2;
   const gradeY = drawTop + topMax * scale;
   const footBotY = gradeY + depth * scale;
   const X = (ft: number) => cx + ft * scale;
   const Y = (ftAboveGrade: number) => gradeY - ftAboveGrade * scale;
 
   const footWpx = Math.max(footWFt * scale, 16);
-  const dimX = X(maxHalfX) + 30;
-  const dimLX = X(-maxHalfX) - 30;
+  /** Overall-height dimension, outboard of everything else. */
+  const dimX = X(maxHalfX) + 86;
+  /** Stage chain above grade, footing embedment below it — one column. */
+  const stageX = X(maxHalfX) + 24;
+  /** Length dimension for pole piece `i`, stepping away from the structure. */
+  const pieceX = (i: number) => X(-maxHalfX) - 48 - i * PIECE_GAP;
   const keyX = X(-maxHalfX) - 14;
 
   const footingLabel =
@@ -211,6 +233,122 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
 
   const pxWidth = (s: typeof segments[number]) =>
     Math.max((s.section ? s.section.odIn / 12 : 0) * scale, 7);
+
+  /**
+   * A measurement that can also be typed: clicking it opens the popover with
+   * that field focused. Dragging still works — this only adds the keyboard
+   * route for people who know the number they want.
+   */
+  const numText = (
+    key: string,
+    field: EditField,
+    x: number,
+    y: number,
+    text: string,
+    fill: string,
+    size: number,
+    anchor: 'start' | 'middle' = 'start',
+    /** Paint the hit area, for readouts that sit over dimension lines. */
+    backed = false,
+  ) => {
+    const w = text.length * size * 0.64 + 10;
+    const left = anchor === 'middle' ? x - w / 2 : x - 5;
+    return (
+      <g
+        key={key}
+        className={interaction ? 'sk-num' : undefined}
+        onPointerDown={
+          interaction
+            ? (e) => {
+                e.stopPropagation();
+                // Without this the browser's own mousedown focus handling
+                // lands on the (unfocusable) SVG and blanks the field we are
+                // about to focus.
+                e.preventDefault();
+                interaction.onEditField(field, { x: e.clientX, y: e.clientY });
+              }
+            : undefined
+        }
+      >
+        <rect
+          x={left}
+          y={y - 11}
+          width={w}
+          height={15}
+          rx={3}
+          fill={p.legendBg}
+          opacity={backed ? 0.92 : 0}
+          pointerEvents="all"
+        />
+        <text x={x} y={y} textAnchor={anchor} fill={fill} fontSize={size} fontWeight={800} pointerEvents="none">
+          {text}
+        </text>
+        {interaction && (
+          <line
+            x1={left + 5}
+            y1={y + 2.5}
+            x2={left + w - 5}
+            y2={y + 2.5}
+            stroke={fill}
+            strokeWidth={0.9}
+            strokeDasharray="2 2"
+            opacity={0.55}
+            pointerEvents="none"
+          />
+        )}
+      </g>
+    );
+  };
+
+  /** Dimension-line end tick. */
+  const tick = (key: string, x: number, y: number, half = 5) => (
+    <line key={key} x1={x - half} y1={y} x2={x + half} y2={y} stroke={p.dim} strokeWidth={1} />
+  );
+
+  /**
+   * Dimension text sitting on its line, over an opaque chip so the line and
+   * anything behind it never run through the digits. Spans too short to hold
+   * the chip get it parked to one side on a short leader instead.
+   */
+  const CHIP_LEAD = 10.5;
+  const CHIP_SUB = 9;
+  const chip = (
+    key: string,
+    x: number,
+    y: number,
+    lines: string[],
+    /** -1 parks a tight chip to the left of the line, +1 to the right. */
+    side: -1 | 1,
+    spanPx: number,
+  ) => {
+    const w =
+      Math.max(...lines.map((l, i) => l.length * (i === 0 ? 6.3 : 5.0))) + 12;
+    const h = 6 + lines.length * (lines.length > 1 ? 11 : 10);
+    const tight = spanPx < h + 6;
+    const atX = tight ? x + side * (w / 2 + 13) : x;
+    const first = y - h / 2 + (lines.length > 1 ? 11 : 10);
+    return (
+      <g key={key} pointerEvents="none">
+        {tight && (
+          <line x1={x} y1={y} x2={atX - side * (w / 2)} y2={y} stroke={p.dim} strokeWidth={0.8} />
+        )}
+        <rect x={atX - w / 2} y={y - h / 2} width={w} height={h} rx={3} fill={p.legendBg} opacity={0.96} />
+        {lines.map((l, i) => (
+          <text
+            key={i}
+            x={atX}
+            y={first + i * 11}
+            textAnchor="middle"
+            fill={i === 0 ? p.dimLabel : p.gradeLabel}
+            fontSize={i === 0 ? CHIP_LEAD : CHIP_SUB}
+            fontWeight={i === 0 ? 800 : 700}
+          >
+            {l}
+          </text>
+        ))}
+      </g>
+    );
+  };
 
   // Pointer → drawing coordinates. The viewBox scales uniformly to the
   // rendered width, so one ratio converts a client point back to feet.
@@ -348,13 +486,13 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
                   <text x={48} y={y + 1} fill={p.callout} fontSize={11} fontWeight={700}>
                     {s.label}
                   </text>
-                  <text x={160} y={y + 1} fill={p.callout} fontSize={11} fontWeight={700}>
+                  <text x={186} y={y + 1} fill={p.callout} fontSize={11} fontWeight={700}>
                     {input.numColumns} × {SHAPE_LABELS[input.columnType].short} {s.section!.name}
                   </text>
-                  <text x={360} y={y + 1} fill={p.faceDims} fontSize={11} fontWeight={700}>
+                  <text x={400} y={y + 1} fill={p.faceDims} fontSize={11} fontWeight={700}>
                     {fmtFtIn(s.lengthFt)} long
                   </text>
-                  <text x={450} y={y + 1} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
+                  <text x={500} y={y + 1} fill={p.gradeLabel} fontSize={10} fontWeight={700}>
                     {s.isBase
                       ? `${fmtFtIn(Math.max(0, -s.spanBottomFt))} embedded · to ${fmtFtIn(s.topFt)}`
                       : `splice ${fmtFtIn(s.spanBottomFt)} · ${fmt(s.overlapFt)}' sleeved in · to ${fmtFtIn(s.topFt)}`}
@@ -419,7 +557,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
                 interaction
                   ? (e) => {
                       e.stopPropagation();
-                      interaction.onSelectFace(f.id);
+                      interaction.onSelectFace(f.id, { x: e.clientX, y: e.clientY });
                       beginFaceDrag(e, f.id, 'move', f.topFt);
                     }
                   : undefined
@@ -451,7 +589,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           interaction
             ? (e) => {
                 e.stopPropagation();
-                interaction.onSelectPole();
+                interaction.onSelectPole({ x: e.clientX, y: e.clientY });
               }
             : undefined
         }
@@ -595,25 +733,114 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
           );
         })}
 
-      {/* Extension + dimension lines: OAH right, embed left */}
+      {/* Stage chain, right of the structure: grade → top of the base pole →
+          top of each transition in turn, with the footing embedment carried
+          on the same column below grade. */}
+      {(() => {
+        const drawn = segments.filter((s) => s.section);
+        const stops = [0, ...drawn.map((s) => s.topFt)];
+        return (
+          <g>
+            {stops.map((ft, i) => (
+              <line
+                key={`sx-${i}`}
+                x1={X(maxHalfX)}
+                y1={Y(ft)}
+                x2={stageX + 5}
+                y2={Y(ft)}
+                stroke={p.ext}
+                strokeWidth={1}
+                strokeDasharray="4 3"
+              />
+            ))}
+            {drawn.map((s, i) => {
+              const yA = Y(stops[i]);
+              const yB = Y(stops[i + 1]);
+              return (
+                <g key={`stage-${s.index}`}>
+                  <line x1={stageX} y1={yA} x2={stageX} y2={yB} stroke={p.dim} strokeWidth={1} />
+                  {tick(`t-${s.index}`, stageX, yA)}
+                  {tick(`b-${s.index}`, stageX, yB)}
+                  {chip(
+                    `c-${s.index}`,
+                    stageX,
+                    (yA + yB) / 2,
+                    [fmtFtIn(stops[i + 1] - stops[i]), i === 0 ? 'grade to A' : `${drawn[i - 1].key} to ${s.key}`],
+                    1,
+                    Math.abs(yA - yB),
+                  )}
+                </g>
+              );
+            })}
+            <line
+              x1={X(maxHalfX)}
+              y1={footBotY}
+              x2={stageX + 5}
+              y2={footBotY}
+              stroke={p.ext}
+              strokeWidth={1}
+              strokeDasharray="4 3"
+            />
+            <line x1={stageX} y1={gradeY} x2={stageX} y2={footBotY} stroke={p.dim} strokeWidth={1} />
+            {tick('fb', stageX, footBotY)}
+            {chip('fc', stageX, (gradeY + footBotY) / 2, [fmtFtIn(depth), 'embed'], 1, footBotY - gradeY)}
+          </g>
+        );
+      })()}
+
+      {/* Overall length of each pole piece, stacked to the left. The sleeved
+          foot of a transition is dashed and called out on its own, so the
+          overall reads as sleeve + exposed (base pole: below + above grade). */}
+      {segments
+        .filter((s) => s.section)
+        .map((s, i) => {
+          const x = pieceX(i);
+          const bottomFt = s.spanBottomFt - s.overlapFt;
+          const topY = Y(s.topFt);
+          const botY = Y(bottomFt);
+          // The base pole breaks at grade; a transition breaks at its splice.
+          const breakFt = s.isBase ? 0 : s.spanBottomFt;
+          const breakY = Y(breakFt);
+          const lines = s.isBase
+            ? [
+                `${s.key}  ${fmtFtIn(s.lengthFt)}`,
+                `${fmtFtIn(s.topFt)} above grade`,
+                `${fmtFtIn(Math.max(0, -s.spanBottomFt))} below grade`,
+              ]
+            : [
+                `${s.key}  ${fmtFtIn(s.lengthFt)}`,
+                `${fmtFtIn(s.topFt - s.spanBottomFt)} exposed`,
+                `${fmtFtIn(s.overlapFt)} sleeved in`,
+              ];
+          return (
+            <g key={`len-${s.index}`}>
+              <line x1={x} y1={topY} x2={x} y2={breakY} stroke={p.dim} strokeWidth={1} />
+              <line
+                x1={x}
+                y1={breakY}
+                x2={x}
+                y2={botY}
+                stroke={p.dim}
+                strokeWidth={1}
+                strokeDasharray={s.isBase ? undefined : '4 3'}
+              />
+              {tick(`lt-${s.index}`, x, topY)}
+              {tick(`lb-${s.index}`, x, botY)}
+              {tick(`lm-${s.index}`, x, breakY, 3)}
+              {chip(`lc-${s.index}`, x, (topY + botY) / 2, lines, -1, Math.abs(topY - botY))}
+            </g>
+          );
+        })}
+
+      {/* Overall height, outboard of the stage chain */}
       <line x1={X(widest / 2)} y1={Y(topMax)} x2={dimX + 5} y2={Y(topMax)} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
       <line x1={X(maxHalfX)} y1={gradeY} x2={dimX + 5} y2={gradeY} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
       <g>
         <line x1={dimX} y1={Y(topMax)} x2={dimX} y2={gradeY} stroke={p.dim} strokeWidth={1} />
-        <line x1={dimX - 5} y1={Y(topMax)} x2={dimX + 5} y2={Y(topMax)} stroke={p.dim} strokeWidth={1} />
-        <line x1={dimX - 5} y1={gradeY} x2={dimX + 5} y2={gradeY} stroke={p.dim} strokeWidth={1} />
+        {tick('oah-t', dimX, Y(topMax))}
+        {tick('oah-b', dimX, gradeY)}
         <text x={dimX + 8} y={(Y(topMax) + gradeY) / 2} fill={p.dimLabel} fontSize={12} fontWeight={800} dominantBaseline="middle">
           {fmtFtIn(topMax)} OAH
-        </text>
-      </g>
-
-      <line x1={X(-maxHalfX)} y1={footBotY} x2={dimLX - 5} y2={footBotY} stroke={p.ext} strokeWidth={1} strokeDasharray="4 3" />
-      <g>
-        <line x1={dimLX} y1={gradeY} x2={dimLX} y2={footBotY} stroke={p.dim} strokeWidth={1} />
-        <line x1={dimLX - 5} y1={gradeY} x2={dimLX + 5} y2={gradeY} stroke={p.dim} strokeWidth={1} />
-        <line x1={dimLX - 5} y1={footBotY} x2={dimLX + 5} y2={footBotY} stroke={p.dim} strokeWidth={1} />
-        <text x={dimLX - 8} y={(gradeY + footBotY) / 2} fill={p.dimLabel} fontSize={12} fontWeight={800} textAnchor="end" dominantBaseline="middle">
-          {fmtFtIn(depth)} embed
         </text>
       </g>
 
@@ -666,16 +893,9 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
               {grip('b', cx, botY, 'bottom', 'ns-resize')}
               {grip('l', lx, midY, 'left', 'ew-resize')}
               {grip('r', rx, midY, 'right', 'ew-resize')}
-              <text
-                x={rx + 12}
-                y={midY + 4}
-                fill={p.callout}
-                fontSize={11}
-                fontWeight={800}
-                pointerEvents="none"
-              >
-                {fmtFtIn(f.widthFt)} × {fmtFtIn(f.heightFt)} · top {fmtFtIn(f.topFt)}
-              </text>
+              {numText('nw', 'width', rx + 14, midY - 10, `W ${fmtFtIn(f.widthFt)}`, p.callout, 11, 'start', true)}
+              {numText('nh', 'height', rx + 14, midY + 4, `H ${fmtFtIn(f.heightFt)}`, p.callout, 11, 'start', true)}
+              {numText('nt', 'top', rx + 14, midY + 18, `TOP ${fmtFtIn(f.topFt)}`, p.callout, 11, 'start', true)}
             </g>
           );
         })()}
@@ -734,16 +954,16 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
                 />
               );
             })()}
-            <text
-              x={X(poleXs[poleXs.length - 1]) + pxWidth(editing) / 2 + 58}
-              y={Y(editing.spanBottomFt) + 4}
-              textAnchor="middle"
-              fill={p.keyText}
-              fontSize={11}
-              fontWeight={800}
-            >
-              {fmtFtIn(editing.spanBottomFt)}
-            </text>
+            {numText(
+              'splice-num',
+              'splice',
+              X(poleXs[poleXs.length - 1]) + pxWidth(editing) / 2 + 58,
+              Y(editing.spanBottomFt) + 4,
+              fmtFtIn(editing.spanBottomFt),
+              p.keyText,
+              11,
+              'middle',
+            )}
           </g>
         </g>
       )}

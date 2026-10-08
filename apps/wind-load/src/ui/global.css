@@ -565,24 +565,35 @@ label .unit { color: var(--text-dim); font-weight: 600; }
 .sketch-svg.is-editing .sk-pole-hit { cursor: default; }
 .sk-handle { cursor: ns-resize; touch-action: none; }
 
-.sketch-tools {
+/* Editing popover: opens at the cursor, over the drawing */
+.sketch-stage { position: relative; }
+.sketch-pop {
+  position: absolute;
+  z-index: 4;
+  width: 212px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-  padding: 8px 10px;
+  padding: 10px 11px;
   border: 1px solid var(--border-default);
-  background: var(--surface-sunken);
+  background: var(--surface-raised);
   border-radius: var(--radius-inset);
+  box-shadow: 0 6px 20px rgb(20 20 100 / 14%);
 }
-.sketch-tools__label {
+.sketch-pop__title {
+  margin: 0;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   color: var(--text-mid);
-  margin-right: 2px;
 }
-.sketch-tools .btn-soft { font-size: 11px; padding: 5px 11px; }
+.sketch-pop .hint { margin: 0; }
+.sketch-pop .btn-soft { font-size: 11px; padding: 5px 11px; align-self: flex-start; }
+.pop-field { font-size: 11px; gap: 3px; }
+.pop-field .ftin-part input { padding: 5px 6px; font-size: 12px; }
+/* Measurements that can be typed as well as dragged */
+.sk-num { cursor: text; }
 .sk-face-hit { cursor: pointer; }
 .sk-face-move { cursor: move; }
 
