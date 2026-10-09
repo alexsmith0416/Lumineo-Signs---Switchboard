@@ -267,6 +267,47 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **RECEIVING SITES — DEPLOYED Oct 9** (guide v3.38; BC ext v1.0.0.18 published, flows 1.0.0.2 imported). Left: set each receiver's Site in Settings → Users. A delivery
+      records **Received at** (site: Hutchinson, Wichita, Dodge City, Olathe,
+      Topeka, Lawrence — `services/warehouse-sites.ts`, tested) + its storage
+      spot there: a drop-down for Hutchinson (`STORAGE_SPOTS`; add other sites'
+      spots there when Alex has them), typed elsewhere. Receive defaults to the
+      login's **home site** (Settings → Users → Site; `crfdf_appuser.crfdf_homesite`,
+      `useCurrentUser().homeSite`). Delivery lines edit site + spot in place
+      (`PlacePicker`, receivers). "Stored at" = `deliveryPlace` "Site · Spot".
+      BC ext **v1.0.0.18** adds `Received At` (API `receivedAt`); flows solution
+      **1.0.0.2** sends it. **Order:** (1) ✅ `scripts/add-receiving-site-columns.ps1` (ran Oct 9 —
+      both columns created + published);
+      (2) publish ext v1.0.0.18; (3) import `BCPoReceiving_1_0_0_2.zip` →
+      re-run `scripts/copy-bc-secret-to-flows.ps1` (the import resets the
+      secret); (4) deploy the app; (5) set each receiver's Site.
+    - ✅ **WAREHOUSE MANAGEMENT — phase 3 LIVE Oct 9** (ext v1.0.0.18 + flows on; still to do: one real receive/remove test in BC, then `scripts/backfill-bc-poreceiving.ps1`)
+      (guide v3.37). Receiving mirrored into BC, read-only: BC ext **v1.0.0.17**
+      (compiled, `.app` in `bc/lumineo-planning-ext`) — tables 58420 `LUM PO
+      Receipt` / 58421 `LUM PO Delivery` (InherentPermissions RIMD, no perm set),
+      API pages 58422 `poReceipts` / 58423 `poDeliveries`, parts on the Purchase
+      Order card (Vendor Status + Receiving) and Job Card (PO Receiving + Stored
+      At). Flows **BCPush_PoReceipts / BCPush_PoDeliveries** (Dataverse row
+      trigger → re-read → upsert/delete in BC; `flows/_gen_poreceiving_flows.py`,
+      `_build_poreceiving_solution.py` → `Downloads\BCPoReceiving_1_0_0_1.zip`).
+      Job Purchasing auto-complete was already done in phase 1. **Go-live, in
+      order** (`flows/BCPush_PoReceiving.md`): (1) publish ext v1.0.0.17 to UAT;
+      (2) build with the secret, import, turn both flows on; (3) test one
+      receive + one remove; (4) `scripts/backfill-bc-poreceiving.ps1` dry run,
+      then `-Apply`. Deploy the app (guide v3.37) after (1)–(2). No tour step for
+      the BC parts yet — add an image step once there's a screenshot.
+    - ✅ **WAREHOUSE MANAGEMENT — phase 2 DEPLOYED Oct 9**
+      (guide v3.36). Jobs list **POs** column (`type: "pos"`, chip text rides on
+      the row as `pos` so filter/sort/group work; click → `warehouse/JobPosPopover.tsx`
+      — receive with the Receiving grant, status for full editors), cards show 📦
+      when Materials ready, card + group-member hovers show POs / **Stored at**
+      (`PoRows` in JobCard.tsx), job panel PO section shows Stored at. Tour: 2 new
+      FULL_STEPS (POs column `data-tour="jobs-pos-col"`, Warehouse nav).
+      ⚠️ Saved shared views don't get the new column automatically — only the
+      default *Warehouse Coord.* view lists it; editors add it via Fields → POs.
+      Browser-tested in dev except the card-panel PO section (dev `useJobPOs`
+      reads its own mock, not the receiving store). Next: build + push, then
+      commit + push the branch.
     - ✅ **WAREHOUSE MANAGEMENT — phase 1 DEPLOYED Oct 8** (guide v3.34 §5.18).
       Tables created (`crfdf_poreceipts`, `crfdf_podeliveries` entity sets).
       `create-scheduler-user-role.ps1 -Apply` created the **Lumineo Scheduler

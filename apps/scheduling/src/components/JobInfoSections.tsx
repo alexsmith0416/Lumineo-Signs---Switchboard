@@ -119,9 +119,12 @@ function PurchaseOrders({ jobNo }: { jobNo: string }) {
   if (!pos.length) return <span className="job-info__empty">No purchase orders in BC</span>;
   return (
     <ul className="job-po-list">
-      {summary?.materialsReady && (
+      {(summary?.materialsReady || !!summary?.locations.length) && (
         <li className="job-po job-po--ready">
-          <span className="wh-ready">Materials ready</span>
+          {summary.materialsReady && <span className="wh-ready">Materials ready</span>}
+          {summary.locations.length > 0 && (
+            <span className="job-po__stored">Stored at: {summary.locations.join(", ")}</span>
+          )}
         </li>
       )}
       {pos.map((po) => (

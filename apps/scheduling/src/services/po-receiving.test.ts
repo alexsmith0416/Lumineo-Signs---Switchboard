@@ -25,6 +25,7 @@ const delivery = (poNo: string, date: string, o: Partial<PoDelivery> = {}): PoDe
   poNo,
   jobNo: "J1",
   date,
+  site: "",
   location: "Receiving Shelf",
   receivedBy: "Tester",
   notes: "",
@@ -51,7 +52,10 @@ describe("a PO's Vendor Status", () => {
 describe("a job's PO roll-up", () => {
   const pos = [po("P1", "J1"), po("P2", "J1"), po("P0", "J1", { status: "Archived" })];
   const deliveries: Record<string, PoDelivery[]> = {
-    P1: [delivery("P1", "2026-10-01", { location: "Supply Room" }), delivery("P1", "2026-10-03", { final: true, location: "Vinyl Room" })],
+    P1: [
+      delivery("P1", "2026-10-01", { location: "Supply Room" }),
+      delivery("P1", "2026-10-03", { final: true, site: "Hutchinson", location: "Vinyl Room" }),
+    ],
   };
 
   it("is Materials ready only when every non-archived PO is Received", () => {
@@ -64,7 +68,7 @@ describe("a job's PO roll-up", () => {
 
   it("counts open / partial / received / archived and lists locations newest first", () => {
     const s = jobPoSummary(pos, (n) => (n === "P1" ? "Received" : "Partially Received"), (n) => deliveries[n] ?? []);
-    expect(s).toEqual({ open: 2, received: 1, partial: 1, archived: 1, materialsReady: false, locations: ["Vinyl Room", "Supply Room"] });
+    expect(s).toEqual({ open: 2, received: 1, partial: 1, archived: 1, materialsReady: false, locations: ["Hutchinson · Vinyl Room", "Supply Room"] });
     expect(summaryText(s)).toBe("2 POs · 1 partial · 1 received");
   });
 

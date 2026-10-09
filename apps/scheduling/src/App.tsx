@@ -86,7 +86,7 @@ export default function App() {
 
   // The signed-in user's type drives the landing screen, the sidebar item
   // label, and what's visible ($ values + Monthly Gameplanning = Admin/Ops).
-  const { role, loading: userLoading, fullName, permissions, jobEdit, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser, realType } =
+  const { role, loading: userLoading, fullName, permissions, jobEdit, homeSite, defaultView, installRegion, isImpersonating, viewingAsName, isDemoUser, realType } =
     useCurrentUser();
 
   // Demo sandbox. Demo users boot LOCKED into it (welcome tour shown); anyone
@@ -229,9 +229,9 @@ export default function App() {
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
           {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
-          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} />}
+          {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} userName={fullName ?? ""} homeSite={homeSite} />}
           {view === "warehouse" && showWarehouse && (
-            <WarehouseView canReceive={canReceive} canSetStatus={whEdit.all} userName={fullName ?? ""} />
+            <WarehouseView canReceive={canReceive} canSetStatus={whEdit.all} userName={fullName ?? ""} homeSite={homeSite} />
           )}
           {view === "settings" && <SettingsScreen />}
           {view === "help" && (

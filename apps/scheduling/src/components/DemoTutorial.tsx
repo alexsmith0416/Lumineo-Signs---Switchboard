@@ -128,6 +128,20 @@ const FULL_STEPS: TourStep[] = [
   },
   {
     view: "jobs",
+    target: '[data-tour="jobs-pos-col"]',
+    title: "POs on the Jobs list",
+    body: "The POs column sums up each job's purchase orders (\"3 POs · 1 partial\") and turns green with a ✓ when everything is received — Materials ready. Click it to see each PO's status and deliveries; receivers record a delivery right there. It's in the Warehouse Coord. view, or add it to any view from Fields.",
+    placement: "bottom",
+  },
+  {
+    view: "warehouse",
+    target: '[data-tour="nav-warehouse"]',
+    title: "Warehouse Management — receiving",
+    body: "Look up any PO by PO #, job #, vendor or job name and record each delivery: date, storage location, partial or final. When every PO on a job is received it's Materials ready, cards show a 📦 and hovers show where it's stored. (In the demo it's view only.)",
+    placement: "right",
+  },
+  {
+    view: "jobs",
     target: '[data-tour="jobs-history"]',
     title: "Shop-floor History",
     body: "When someone ticks Task complete on a Business Central punch, the app completes that department and moves the job's status on its own. History lists every one: date, job, who, task, what was completed and where the job moved. Statuses moved this way get an AUTO tag until someone reviews them.",

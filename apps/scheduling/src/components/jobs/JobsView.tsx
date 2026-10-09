@@ -3,6 +3,8 @@ import { useJobTrackingStore } from "../../store/job-tracking-store";
 import { useJobScheduleStore } from "../../store/job-schedule-store";
 import type { JobRow } from "../../services/job-tracking";
 import { useJobRows } from "../../hooks/useJobRows";
+import { summaryOf, usePoReceivingStore } from "../../store/po-receiving-store";
+import { summaryText } from "../../services/po-receiving";
 import JobsGrid from "./JobsGrid";
 import JobsJobPanel from "./JobsJobPanel";
 import { useLeadTimeStore } from "../../store/lead-time-store";
@@ -62,7 +64,19 @@ type Panel = "fields" | "filter" | "sort" | "group" | "history" | null;
 
 const KNOWN_FIELDS = new Set(Object.keys(JOB_FIELDS));
 
-export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; edit: JobEditAccess }) {
+export default function JobsView({
+  canSeeMoney,
+  edit,
+  userName = "",
+  homeSite = "",
+}: {
+  canSeeMoney: boolean;
+  edit: JobEditAccess;
+  /** Who receives / sets a PO status from the POs pop-up. */
+  userName?: string;
+  /** The receiver's site — the POs pop-up's Receive defaults to it. */
+  homeSite?: string;
+}) {
   // Full editors (role) change anything, the list's structure included. Anyone
   // else changes only the fields granted to their login — never views, Fields,
   // field options or custom field definitions.
@@ -99,14 +113,23 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
   }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches, loadFieldOptions]);
 
   const built = useJobRows();
+  // The POs column's text ("3 POs · 1 partial") rides on the row, so search / filter / sort / group work.
+  const poPos = usePoReceivingStore((s) => s.pos);
+  const poReceipts = usePoReceivingStore((s) => s.receipts);
+  const poDeliveries = usePoReceivingStore((s) => s.deliveries);
+  useEffect(() => {
+    void usePoReceivingStore.getState().load();
+  }, []);
   const rows = useMemo(() => {
     // Custom field values ride on each row under the field's key, so search /
     // filter / sort / group treat them like any other column.
     const valuesByJob = new Map(tracks.map((t) => [t.jobNo, t.customValues]));
     // The sketch's file name rides on the row, so "Sketch is empty / not empty" filters work.
     const withSketch = sketches.size ? built.map((r) => ({ ...r, sketch: sketches.get(r.jobNo)?.fileName ?? "" })) : built;
-    return withCustomFields(withSketch, customDefs, (jobNo) => valuesByJob.get(jobNo));
-  }, [built, tracks, customDefs, sketches]);
+    const snap = { pos: poPos, receipts: poReceipts, deliveries: poDeliveries };
+    const withPos = poPos.length ? withSketch.map((r) => ({ ...r, pos: summaryText(summaryOf(snap, r.jobNo)) })) : withSketch;
+    return withCustomFields(withPos, customDefs, (jobNo) => valuesByJob.get(jobNo));
+  }, [built, tracks, customDefs, sketches, poPos, poReceipts, poDeliveries]);
   const [openJob, setOpenJob] = useState<JobRow | null>(null);
   const [addingField, setAddingField] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -358,7 +381,7 @@ export default function JobsView({ canSeeMoney, edit }: { canSeeMoney: boolean; 
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} autoWidths={autoWidths}
-          fieldsByKey={fieldsByKey} editing={gridEditing} orderOf={orderOf}
+          fieldsByKey={fieldsByKey} editing={gridEditing} orderOf={orderOf} userName={userName} homeSite={homeSite}
           // Every column's name can be edited; choice columns also their options.
           canEditField={() => canEdit}
           onEditField={(c) => (c.custom ? setEditingField(c.key) : setEditingOptions({ field: c.key, label: c.label }))}

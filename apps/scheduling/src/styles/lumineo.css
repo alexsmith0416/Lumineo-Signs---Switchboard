@@ -7035,3 +7035,75 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   font-size: 11px;
   padding: 1px 6px;
 }
+/* Jobs list POs column + pop-up. */
+.wh-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+.wh-chip--ready {
+  background: var(--status-green-soft);
+  color: var(--status-green);
+}
+.wh-chip--partial {
+  background: var(--status-amber-soft);
+  color: var(--text-primary);
+}
+.wh-chip--open {
+  color: var(--text-primary);
+}
+.wh-pop__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+}
+.wh-pop {
+  position: fixed;
+  z-index: 301;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  white-space: normal;
+  cursor: default;
+}
+.job-po--ready {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.job-po__stored {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+/* Users admin: home site per login (Warehouse receiving default). */
+.users-admin__site {
+  flex: 0 0 108px;
+  min-width: 0;
+  border-radius: 4px;
+}
+/* A delivery line's site + storage spot, editable in place by receivers. */
+.wh-place {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.wh-place select,
+.wh-place input {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lumineo-navy);
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  max-width: 190px;
+}

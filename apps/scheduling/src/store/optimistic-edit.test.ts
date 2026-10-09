@@ -339,7 +339,7 @@ describe("receiving a PO delivery when the save fails", () => {
 
     await usePoReceivingStore
       .getState()
-      .receive(po, { date: "2026-10-08", location: "Supply Room", notes: "", final: true }, "Tester");
+      .receive(po, { date: "2026-10-08", site: "Hutchinson", location: "Supply Room", notes: "", final: true }, "Tester");
     await flush();
 
     const s = usePoReceivingStore.getState();

@@ -4,7 +4,8 @@
  * The POs come from BC (crfdf_jobpo, BCSync_JobPOs). The app adds, per PO:
  *  - a VENDOR STATUS (the Airtable list + "Partially Received"), set by hand by
  *    Admin / Ops — never automatically from BC (approvals may still be pending);
- *  - DELIVERIES: one line per delivery received (date, storage location, who,
+ *  - DELIVERIES: one line per delivery received (date, the site it came in at and
+ *    the storage spot there, who,
  *    notes). A partial delivery puts the PO in Partially Received; the final
  *    one in Received. A PO split across locations is just another line.
  * Receiving here never posts the receipt in BC — the PO's writer does that.
@@ -13,6 +14,7 @@
  * (archived = BC closed it). Then BC's Job Purchasing step is completed.
  */
 import { ARCHIVED, type JobPO } from "./job-pos";
+import { deliveryPlace } from "./warehouse-sites";
 
 /** Vendor Status options (the Airtable list + Partially Received). */
 export const VENDOR_STATUSES: readonly string[] = [
@@ -42,6 +44,9 @@ export interface PoDelivery {
   jobNo: string;
   /** YYYY-MM-DD. */
   date: string;
+  /** The site it was received at ("Hutchinson"; "" on deliveries from before sites). */
+  site: string;
+  /** The storage spot there. */
   location: string;
   receivedBy: string;
   notes: string;
@@ -76,7 +81,8 @@ export interface JobPoSummary {
   archived: number;
   /** Every non-archived PO Received (and there is at least one). */
   materialsReady: boolean;
-  /** Where the job's received material is stored, newest first, no repeats. */
+  /** Where the job's received material is stored ("Hutchinson · Warehouse - Floor"),
+   *  newest first, no repeats. */
   locations: string[];
 }
 
@@ -91,7 +97,10 @@ export function jobPoSummary(
   const received = statuses.filter(isReceived).length;
   const locations: string[] = [];
   const all = pos.flatMap((p) => deliveriesOf(p.poNo)).sort((a, b) => (a.date < b.date ? 1 : -1));
-  for (const d of all) if (d.location && !locations.includes(d.location)) locations.push(d.location);
+  for (const d of all) {
+    const place = deliveryPlace(d);
+    if (place && !locations.includes(place)) locations.push(place);
+  }
   return {
     open: live.length,
     received,

@@ -40,7 +40,7 @@ interface PoReceivingState {
   /** Record a delivery; `final` = the last one (the PO is Received). */
   receive: (
     po: WarehousePO,
-    d: { date: string; location: string; notes: string; final: boolean },
+    d: { date: string; site: string; location: string; notes: string; final: boolean },
     by: string,
   ) => Promise<void>;
   updateDelivery: (d: PoDelivery) => Promise<void>;
@@ -183,10 +183,23 @@ export function statusIn(s: Snapshot, poNo: string): string {
   return vendorStatusOf(s.receipts.get(poNo), s.deliveries.get(poNo) ?? []);
 }
 
+// Each loaded PO list → its POs by job (one pass, reused by every row / card).
+const byJobCache = new WeakMap<readonly WarehousePO[], Map<string, WarehousePO[]>>();
+/** A job's POs. */
+export function posOf(s: Pick<Snapshot, "pos">, jobNo: string): WarehousePO[] {
+  let m = byJobCache.get(s.pos);
+  if (!m) {
+    m = new Map();
+    for (const p of s.pos) m.set(p.jobNo, [...(m.get(p.jobNo) ?? []), p]);
+    byJobCache.set(s.pos, m);
+  }
+  return m.get(jobNo) ?? [];
+}
+
 /** A job's PO roll-up. */
 export function summaryOf(s: Snapshot, jobNo: string): JobPoSummary {
   return jobPoSummary(
-    s.pos.filter((p) => p.jobNo === jobNo),
+    posOf(s, jobNo),
     (poNo) => statusIn(s, poNo),
     (poNo) => s.deliveries.get(poNo) ?? [],
   );

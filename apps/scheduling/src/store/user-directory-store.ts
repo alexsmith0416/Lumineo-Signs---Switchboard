@@ -29,6 +29,8 @@ export interface DirectoryUser {
   displayName: string;
   /** Jobs-list fields this login may edit (granted in Manage users; [] = view only). */
   jobEditFields: string[];
+  /** Warehouse Management: the site this login receives at ("" = none). */
+  homeSite: string;
 }
 
 interface UserDirectoryState {
@@ -37,6 +39,8 @@ interface UserDirectoryState {
   byEmail: Record<string, UserType>;
   /** Lower-cased email → the Jobs fields granted to that login. */
   jobFieldsByEmail: Record<string, string[]>;
+  /** Lower-cased email → that login's home site (only logins that have one). */
+  homeSiteByEmail: Record<string, string>;
   loaded: boolean;
   loading: boolean;
 
@@ -44,7 +48,7 @@ interface UserDirectoryState {
   addUser: (email: string, userType: UserType, displayName?: string) => Promise<void>;
   updateUser: (
     id: string,
-    changes: { email?: string; userType?: UserType; displayName?: string },
+    changes: { email?: string; userType?: UserType; displayName?: string; homeSite?: string },
   ) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
   /** Grant exactly these Jobs fields to a login (replaces its grants). */
@@ -62,12 +66,22 @@ const indexJobFields = (users: DirectoryUser[]): Record<string, string[]> => {
   for (const u of users) if (u.email && u.jobEditFields.length) m[u.email.toLowerCase()] = u.jobEditFields;
   return m;
 };
-const indexes = (users: DirectoryUser[]) => ({ byEmail: indexByEmail(users), jobFieldsByEmail: indexJobFields(users) });
+const indexHomeSites = (users: DirectoryUser[]): Record<string, string> => {
+  const m: Record<string, string> = {};
+  for (const u of users) if (u.email && u.homeSite) m[u.email.toLowerCase()] = u.homeSite;
+  return m;
+};
+const indexes = (users: DirectoryUser[]) => ({
+  byEmail: indexByEmail(users),
+  jobFieldsByEmail: indexJobFields(users),
+  homeSiteByEmail: indexHomeSites(users),
+});
 
 export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
   users: [],
   byEmail: {},
   jobFieldsByEmail: {},
+  homeSiteByEmail: {},
   loaded: false,
   loading: false,
 
@@ -87,6 +101,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
         userType: r.userType as UserType,
         displayName: r.displayName,
         jobEditFields: parseJobEditFields(r.jobEditFields),
+        homeSite: r.homeSite,
       }));
       set({ users, ...indexes(users), loaded: true, loading: false });
     } catch (e) {
@@ -105,7 +120,7 @@ export const useUserDirectoryStore = create<UserDirectoryState>((set, get) => ({
       await get().updateUser(existing.id, { userType, displayName });
       return;
     }
-    const user: DirectoryUser = { id: newId(), email: clean, userType, displayName, jobEditFields: [] };
+    const user: DirectoryUser = { id: newId(), email: clean, userType, displayName, jobEditFields: [], homeSite: "" };
     const users = [...get().users, user];
     set({ users, ...indexes(users) });
     if (LIVE) {

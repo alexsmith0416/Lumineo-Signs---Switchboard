@@ -131,6 +131,8 @@ export interface JobRow {
   sharepointUrl: string;
   /** The sketch's file name ("" = none) — filled in by the Jobs view from the sketch store. */
   sketch?: string;
+  /** The job's PO roll-up ("3 POs · 1 partial") — filled in by the Jobs view from the PO receiving store. */
+  pos?: string;
   /** "J39571 McPherson CVB" — the primary column. */
   job: string;
   status: string;

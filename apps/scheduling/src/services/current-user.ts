@@ -202,6 +202,9 @@ export interface CurrentUser {
   /** Exactly what this login may change on the Jobs list: everything (editJobs
    *  role), or the fields granted to it in Settings → Users (crfdf_appuser). */
   jobEdit: JobEditAccess;
+  /** Warehouse Management: the site this login receives at (Settings → Users;
+   *  "" = none set). The Receive dialog defaults to it. */
+  homeSite: string;
   /** True when the signed-in login is a demo/trainee account — App boots it
    *  locked into the demo sandbox. */
   isDemoUser: boolean;
@@ -258,6 +261,7 @@ export function useCurrentUser(): CurrentUser {
   const dirByEmail = useUserDirectoryStore((s) => s.byEmail);
   const dirLoaded = useUserDirectoryStore((s) => s.loaded);
   const jobFieldsByEmail = useUserDirectoryStore((s) => s.jobFieldsByEmail);
+  const homeSiteByEmail = useUserDirectoryStore((s) => s.homeSiteByEmail);
   useEffect(() => {
     void useUserDirectoryStore.getState().load();
   }, []);
@@ -299,6 +303,8 @@ export function useCurrentUser(): CurrentUser {
     },
     // Grants belong to the signed-in login; "view as" previews the ROLE only.
     jobEdit: jobEditAccess(cfg.editJobs, active ? [] : jobFieldsByEmail[state.upn?.trim().toLowerCase() ?? ""] ?? []),
+    // The signed-in login's own site, also while previewing another role.
+    homeSite: homeSiteByEmail[state.upn?.trim().toLowerCase() ?? ""] ?? "",
     defaultView: cfg.defaultView,
     installRegion: cfg.installRegion,
     isDemoUser: realType === "demo",

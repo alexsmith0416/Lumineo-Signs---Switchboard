@@ -347,6 +347,7 @@
     <tr><td><span class="chip" style="background:#001238;color:#fff">Job # · Customer</span></td><td>The top line of every card — the BC job number and customer name (pulled live from BC).</td></tr>
     <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation. Don't want it? Switch it off in <em>Settings → Display → Day hours on hover</em>.</td></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">1/2</span> (small badge after the job #)</td><td>This card is <strong>one section of a split task</strong> — part 1 of 2 here. The parts share the task's estimate rather than each booking it in full. See §5.1 <em>Splitting a job into sections</em>.</td></tr>
+    <tr><td>📦 (box)</td><td><strong>Materials ready</strong> &mdash; every open PO on the job has been received. Hover the card to see where it's stored (&sect;5.18).</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
     <tr><td>Pulsing red outline</td><td>The job has a <strong>Red date</strong> — a fixed, drop-dead install date. The outline shows on every board the job appears on so the deadline is never missed.</td></tr>
@@ -907,7 +908,8 @@
     <tr><td>Job flow <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Click <strong>Edit Job Flow</strong>. The company flow: the order jobs move through the shop as <strong>stages</strong> (a department + the Current Status it means), top to bottom &mdash; a department can have several stages, e.g. Vinyl Cut then Vinyl Application. Reorder with ↑ / ↓, change a status, ✕ to remove, <strong>Add a stage</strong>, and set the status once every stage is done. This also sets every job's stepper order. Saved for everyone straight away; <strong>Reset to the original flow</strong> puts it back. Jobs given their own flow (job panel &rarr; ▸ Job flow) keep theirs. See &sect;5.4.</td></tr>
     <tr><td>Business Central <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span></td><td>Catch-up tools &mdash; everyday changes (completing a department, a status change, moving a card) already reach BC as you make them. <strong>Match Steppers</strong> completes the stepper steps each job's Current Status says are done (every step for the Complete statuses, the production steps for the install statuses, the steps before Vinyl for MFG - Vinyl Install); it shows the counts first and changes nothing until you click <strong>Update</strong>. <strong>Sync to BC</strong> brings BC's Project Planning in line with the steppers for every tracked job: <strong>active</strong> departments are marked <strong>Started</strong> (which lists the job in BC's step tiles), finished ones <strong>Complete</strong>, the lifecycle steps (New Order This Week … Complete-Need Paperwork) set to match each job's Current Status, and dates / Assigned To go only to steps on the calendar. It shows how many updates it would send first; only what changed since BC was last updated is sent, and BC receives them over the next while. Run Match Steppers first, then Sync to BC.</td></tr>
     <tr><td>Users <span class="chip" style="background:var(--sage);color:#001238">Admin</span></td><td><strong>Manage users…</strong> — add a login, set its role, or remove it (see Roles below). Each user's
-    <strong>Jobs</strong> button chooses which Jobs-list fields they may edit (&sect;5.17).</td></tr>
+    <strong>Jobs</strong> button chooses which Jobs-list fields they may edit (&sect;5.17), and their <strong>Site</strong>
+    (Hutchinson, Wichita, Dodge City, Olathe, Topeka, Lawrence) is where their PO receiving starts (&sect;5.18).</td></tr>
   </table>
 
   <h3>5.15 &nbsp;The Shipping board — building a load</h3>
@@ -1240,16 +1242,39 @@
     <li>With nothing typed you see the work lists: <strong>Partially received</strong>, <strong>Waiting to
     arrive</strong> (open POs nothing has come in on, oldest order first) and <strong>Recently received</strong> (last 7
     days).</li>
-    <li><strong>Receive</strong> &mdash; enter the date, the storage location and any notes, then pick
+    <li><strong>Receive</strong> &mdash; enter the date, <strong>Received at</strong> (the site it came in at &mdash;
+    it starts on your own site, set by an admin in Settings &rarr; Users), the <strong>storage location</strong> there
+    and any notes, then pick
     <em>Everything on the PO is here</em> (&rarr; <strong>Received</strong>) or <em>Part of it</em> (&rarr;
     <strong>Partially Received</strong>). Each delivery is its own line, so material split across two spots is just
     two lines. This never posts the receipt in BC &mdash; whoever wrote the PO still does that.</li>
+    <li><strong>Storage locations</strong> &mdash; Hutchinson has a drop-down of its spots (Bus Barn, Car Barn,
+    Receiving Shelf, Supply Room, Vinyl Room, Warehouse&hellip;). The other sites don't have spots set up yet, so you
+    type where it went.</li>
+    <li><strong>Fix where something went</strong> &mdash; each delivery line has the site and storage drop-downs right
+    on it; receivers can change them there (e.g. it was moved, or the wrong site was picked). <em>Stored at</em>
+    everywhere reads <em>Site &middot; Spot</em> &mdash; e.g. <em>Hutchinson &middot; Warehouse - Floor</em>.</li>
     <li><strong>Vendor Status</strong> (Ordered, Shipping, Delayed, On Hold&hellip;) is set by hand by Admin / Ops from
     the drop-down on each PO. Admin / Ops can also remove a delivery entered by mistake (&times;).</li>
     <li><strong>Materials ready</strong> &mdash; when every open PO on a job is Received, the job shows a
     <em>Materials ready</em> badge and BC's <strong>Job Purchasing</strong> step is completed automatically.</li>
+    <li><strong>Jobs list &rarr; POs column</strong> &mdash; a compact summary per job (<em>3 POs &middot; 1 partial
+    &middot; 1 received</em>): amber when something has come in, green with a &check; when the job is Materials ready.
+    Click it to see the job's POs with their status and deliveries; receivers can <strong>Receive</strong> right there
+    and Admin / Ops can change the Vendor Status. It's in the <em>Warehouse Coord.</em> view &mdash; add it to any other
+    view from <strong>Fields &rarr; POs</strong>. You can search, filter, sort and group by it like any column (e.g.
+    filter POs <em>contains</em> &ldquo;all received&rdquo;).</li>
+    <li><strong>Scheduler cards</strong> &mdash; a job that is Materials ready shows a 📦 on its card on every board.
+    Hover any card to see its <strong>POs</strong> summary and <strong>Stored at</strong> (every storage location
+    material for the job was received to, newest first).</li>
     <li>The job panel's <strong>Purchase orders</strong> section shows each PO's status and deliveries (date and
-    location).</li>
+    location), with <em>Materials ready</em> and <strong>Stored at</strong> at the top.</li>
+    <li><strong>In Business Central</strong> &mdash; everything received here shows up in BC within a minute or so,
+    read-only. The <strong>Purchase Order</strong> card has <em>Vendor Status (Switchboard)</em> next to Status and a
+    <strong>Receiving (Switchboard)</strong> section under the lines (each delivery: date, location, last delivery,
+    who, notes). The <strong>Job</strong> card has a <strong>PO Receiving (Switchboard)</strong> section under the
+    tasks: each PO's Vendor Status, deliveries, last received and <em>Stored At</em>. To change anything, change it
+    here &mdash; BC follows (a removed delivery disappears from BC too). It still never posts the BC receipt.</li>
     <li><strong>Refresh</strong> re-reads the POs. Stock POs (not tied to a job), expected dates and phone
     scanning come with a later update.</li>
   </ul>
@@ -1432,6 +1457,9 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 9, 2026</td><td><strong>Received at a site</strong> &mdash; receiving now records which site a delivery came in at (Hutchinson, Wichita, Dodge City, Olathe, Topeka, Lawrence), starting on your own site (admins set it per user in Settings &rarr; Users &rarr; Site). Storage is a drop-down for Hutchinson's spots and typed in elsewhere, and each delivery line has the site and storage drop-downs to fix it in place. Stored at shows <em>Site &middot; Spot</em>, in the app and in BC. See &sect;5.18.</td></tr>
+      <tr><td>Oct 8, 2026</td><td><strong>Receiving in Business Central</strong> &mdash; the Vendor Status and every delivery you record now show in BC: on the Purchase Order card (Vendor Status + a Receiving section) and the Job card (a PO Receiving section with Stored At). Read-only there; change it in the app. See &sect;5.18.</td></tr>
+      <tr><td>Oct 8, 2026</td><td><strong>POs everywhere</strong> &mdash; the Jobs list has a <strong>POs</strong> column (summary chip; click it to see, receive and set status on the job's POs), scheduler cards show 📦 when a job is <strong>Materials ready</strong>, and card hovers + the job panel show <strong>Stored at</strong>. The full tour has new steps on the POs column and Warehouse Management. See &sect;5.18.</td></tr>
       <tr><td>Oct 8, 2026</td><td><strong>New name: Lumineo Switchboard</strong> &mdash; the app that began as the Weekly Scheduler now tracks jobs, schedules every board and receives materials, so it's been renamed. Same app, same link, same data.</td></tr>
       <tr><td>Oct 8, 2026</td><td><strong>Warehouse Management</strong> &mdash; a new screen for receiving against purchase orders: search by PO #, job #, vendor or job name, see the job's other POs, and record each delivery (date, storage location, notes; partial or final). Admin / Ops set the Vendor Status. When every PO on a job is received the job is <strong>Materials ready</strong> and BC's Job Purchasing step completes itself. Receivers get the new <strong>Receiving</strong> grant in Settings &rarr; Users. See &sect;5.18.</td></tr>
       <tr><td>Oct 7, 2026</td><td><strong>The Current Status is the job's lifecycle</strong> &mdash; replaces the lifecycle stages on the stepper (the stepper is departments + Install again). Moving a job's status forward moves BC's lifecycle steps (New Order This Week, Upcoming Manufacturing, Manufacturing Ready for Planning, Product Ready for Install Scheduling, Install-Waiting on Product, Install, Complete-Need Paperwork) with <strong>Completed By</strong> = who moved it; <em>Install - Ready for Planning</em> makes Install active; <em>MFG - Vinyl Install</em> makes Vinyl and Install active; completing Install moves the job to Complete-need paperwork; <strong>Date Installed</strong> and <strong>Date to Admin</strong> fill themselves in; Complete to Admin flags the job complete in BC; moving back re-opens. Purchasing is left to the purchaser in BC. See &sect;5.4 and &sect;5.17.</td></tr>
@@ -1553,7 +1581,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.35 · Oct 8, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.38 · Oct 9, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

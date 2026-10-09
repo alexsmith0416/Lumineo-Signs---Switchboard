@@ -12,24 +12,28 @@ import {
   type PoDelivery,
   type WarehousePO,
 } from "../../services/po-receiving";
-import { STORAGE_LOCATIONS } from "../jobs/jobs-editable";
+import { RECEIVING_SITES, deliveryPlace, siteOrBlank, storageSpotsFor } from "../../services/warehouse-sites";
 
 /**
  * Warehouse Management (Oct 8, 2026) — receiving against purchase orders.
  * Receivers (Admin / Ops, or a login granted "Receiving") find a PO by PO #,
  * job #, vendor or job name, see the job's other POs, and record what came
- * in (date, storage location, notes; partial or final). Admin / Ops also set
- * the Vendor Status by hand. Nothing here posts the receipt in BC.
+ * in (date, the site it came in at + its storage spot there, notes; partial
+ * or final). Admin / Ops also set the Vendor Status by hand. Nothing here
+ * posts the receipt in BC.
  */
 export default function WarehouseView({
   canReceive,
   canSetStatus,
   userName,
+  homeSite = "",
 }: {
   canReceive: boolean;
   /** Admin / Ops: set any Vendor Status, remove a delivery. */
   canSetStatus: boolean;
   userName: string;
+  /** The receiver's site (Settings → Users) — Receive defaults to it. */
+  homeSite?: string;
 }) {
   const { pos, receipts, deliveries, loaded, loading, error, loadedAt, load } = usePoReceivingStore();
   const bcJobs = useJobTrackingStore((s) => s.bcJobs);
@@ -73,6 +77,7 @@ export default function WarehouseView({
       onReceive={() => setReceiving(po)}
       onStatus={(st) => void usePoReceivingStore.getState().setStatus(po, st, userName)}
       onRemove={(d) => void usePoReceivingStore.getState().removeDelivery(d)}
+      onEditDelivery={(d) => void usePoReceivingStore.getState().updateDelivery(d)}
       onPickJob={() => setQuery(po.jobNo)}
     />
   );
@@ -177,6 +182,7 @@ export default function WarehouseView({
       {receiving && (
         <ReceiveDialog
           po={receiving}
+          defaultSite={homeSite}
           onCancel={() => setReceiving(null)}
           onSave={(d) => {
             void usePoReceivingStore.getState().receive(receiving, d, userName);
@@ -222,7 +228,7 @@ function WorkList({
   );
 }
 
-function PoRow({
+export function PoRow({
   po,
   status,
   deliveries,
@@ -233,6 +239,7 @@ function PoRow({
   onReceive,
   onStatus,
   onRemove,
+  onEditDelivery,
   onPickJob,
 }: {
   po: WarehousePO;
@@ -246,6 +253,8 @@ function PoRow({
   onReceive: () => void;
   onStatus: (status: string) => void;
   onRemove: (d: PoDelivery) => void;
+  /** Receivers: change where a delivery was received / stored. */
+  onEditDelivery?: (d: PoDelivery) => void;
   onPickJob: () => void;
 }) {
   const archived = po.status === ARCHIVED;
@@ -300,7 +309,16 @@ function PoRow({
           {deliveries.map((d) => (
             <li key={d.id} className="wh-delivery">
               <span className="wh-delivery__date">{formatOrderDate(d.date)}</span>
-              <span className="wh-delivery__loc">{d.location || "No location"}</span>
+              {canReceive && onEditDelivery ? (
+                <PlacePicker
+                  site={d.site}
+                  location={d.location}
+                  compact
+                  onChange={(site, location) => onEditDelivery({ ...d, site, location })}
+                />
+              ) : (
+                <span className="wh-delivery__loc">{deliveryPlace(d) || "No location"}</span>
+              )}
               <span className="wh-delivery__kind">{d.final ? "Final" : "Partial"}</span>
               {d.receivedBy && <span className="wh-delivery__by">{d.receivedBy}</span>}
               {d.notes && <span className="wh-delivery__notes">{d.notes}</span>}
@@ -325,16 +343,20 @@ function PoRow({
   );
 }
 
-function ReceiveDialog({
+export function ReceiveDialog({
   po,
+  defaultSite = "",
   onCancel,
   onSave,
 }: {
   po: WarehousePO;
+  /** The receiver's home site — preselected. */
+  defaultSite?: string;
   onCancel: () => void;
-  onSave: (d: { date: string; location: string; notes: string; final: boolean }) => void;
+  onSave: (d: { date: string; site: string; location: string; notes: string; final: boolean }) => void;
 }) {
   const [date, setDate] = useState(todayYmd());
+  const [site, setSite] = useState(() => siteOrBlank(defaultSite));
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [final, setFinal] = useState(true);
@@ -345,7 +367,7 @@ function ReceiveDialog({
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          onSave({ date, location, notes: notes.trim(), final });
+          onSave({ date, site, location: location.trim(), notes: notes.trim(), final });
         }}
       >
         <h2 className="wh-modal__title">
@@ -358,17 +380,14 @@ function ReceiveDialog({
           <span>Date received</span>
           <input type="date" value={date} required onChange={(e) => setDate(e.target.value)} />
         </label>
-        <label className="wh-field">
-          <span>Storage location</span>
-          <select value={location} onChange={(e) => setLocation(e.target.value)}>
-            <option value="">—</option>
-            {STORAGE_LOCATIONS.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
+        <PlacePicker
+          site={site}
+          location={location}
+          onChange={(s, l) => {
+            setSite(s);
+            setLocation(l);
+          }}
+        />
         <label className="wh-field">
           <span>Notes</span>
           <textarea
@@ -401,7 +420,94 @@ function ReceiveDialog({
   );
 }
 
-function todayYmd(): string {
+/**
+ * Where a delivery is: the site it came in at (required) and the storage spot
+ * there — a drop-down for a site with spots defined (Hutchinson), else typed
+ * in. Changing the site clears a spot that doesn't exist at the new one.
+ * `compact` = the inline version on a delivery line.
+ */
+export function PlacePicker({
+  site,
+  location,
+  compact = false,
+  onChange,
+}: {
+  site: string;
+  location: string;
+  compact?: boolean;
+  onChange: (site: string, location: string) => void;
+}) {
+  const spots = storageSpotsFor(site);
+  // An old / unknown value stays selectable so it isn't silently lost.
+  const siteOptions = site && !RECEIVING_SITES.includes(site) ? [...RECEIVING_SITES, site] : RECEIVING_SITES;
+  const spotOptions = location && spots.length && !spots.includes(location) ? [...spots, location] : spots;
+  const [typed, setTyped] = useState(location);
+  useEffect(() => setTyped(location), [location]);
+
+  const siteSelect = (
+    <select
+      value={site}
+      required={!compact}
+      aria-label="Received at"
+      onChange={(e) => {
+        const next = e.target.value;
+        onChange(next, storageSpotsFor(next).length && !storageSpotsFor(next).includes(location) ? "" : location);
+      }}
+    >
+      <option value="">{compact ? "Site?" : "— pick the site —"}</option>
+      {siteOptions.map((s) => (
+        <option key={s} value={s}>
+          {s}
+        </option>
+      ))}
+    </select>
+  );
+  const storage = spots.length ? (
+    <select value={location} aria-label="Storage location" onChange={(e) => onChange(site, e.target.value)}>
+      <option value="">{compact ? "Spot?" : "—"}</option>
+      {spotOptions.map((l) => (
+        <option key={l} value={l}>
+          {l}
+        </option>
+      ))}
+    </select>
+  ) : (
+    <input
+      type="text"
+      value={typed}
+      maxLength={100}
+      aria-label="Storage location"
+      placeholder={site ? `Where at ${site}?` : "Where it's stored"}
+      onChange={(e) => setTyped(e.target.value)}
+      // The inline one saves when you leave the box; the dialog keeps it live.
+      onBlur={() => compact && typed.trim() !== location && onChange(site, typed.trim())}
+      {...(compact ? {} : { onInput: (e: React.FormEvent<HTMLInputElement>) => onChange(site, e.currentTarget.value) })}
+    />
+  );
+
+  if (compact) {
+    return (
+      <span className="wh-place">
+        {siteSelect}
+        {storage}
+      </span>
+    );
+  }
+  return (
+    <>
+      <label className="wh-field">
+        <span>Received at</span>
+        {siteSelect}
+      </label>
+      <label className="wh-field">
+        <span>Storage location</span>
+        {storage}
+      </label>
+    </>
+  );
+}
+
+export function todayYmd(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

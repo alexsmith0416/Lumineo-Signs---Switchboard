@@ -16,6 +16,8 @@ import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
 import { useJobTargets } from "../hooks/useJobTargets";
 import { useJobListTargets } from "./JobTargets";
+import { useJobPoSummary } from "../store/po-receiving-store";
+import { summaryText } from "../services/po-receiving";
 
 interface JobCardProps {
   line: ScheduleLine;
@@ -197,6 +199,8 @@ export default function JobCard({
   // The context menu opens if there's anything to show: BC links and/or the
   // duplicate/delete actions (present only on editable boards).
   const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onSplit || !!onDelete;
+  // Warehouse: every open PO received → "Materials ready" marker (with where it's stored).
+  const poSum = useJobPoSummary(canOpenLinks ? line.jobNo : undefined);
 
   const open = () => {
     if (suppressTooltip) return; // don't pop up while dragging this card
@@ -349,6 +353,13 @@ export default function JobCard({
         )}
         <div className="job-card__icons">
           {line.isLocked && <span title="Locked">🔒</span>}
+          {poSum?.materialsReady && (
+            <span
+              title={`Materials ready${poSum.locations.length ? ` · Stored at: ${poSum.locations.join(", ")}` : ""}`}
+            >
+              📦
+            </span>
+          )}
           {pastDue && <span title="Past customer due date">⚠</span>}
           {overlap && <span title="Conflict">⚡</span>}
         </div>
@@ -592,6 +603,8 @@ function MemberDetailBody({
         <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-tertiary)" }}>
           {m.estimatedHours > 0 ? `${m.estimatedHours}h` : "—"}
         </div>
+        <PoRows jobNo={m.jobNo || undefined} />
+
         {steps.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div
@@ -838,6 +851,8 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         </>
         )}
 
+        <PoRows jobNo={line.isCustom || line.shipmentLoadId ? undefined : line.jobNo || undefined} />
+
         {steps.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div
@@ -882,6 +897,30 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         )}
       </div>
     </div>
+  );
+}
+
+/** Hover rows for a job's POs (Warehouse Management): roll-up / Materials ready, and where it's stored. */
+function PoRows({ jobNo }: { jobNo: string | undefined }) {
+  const sum = useJobPoSummary(jobNo);
+  if (!sum) return null;
+  const text = summaryText(sum);
+  return (
+    <>
+      {text && (
+        <Row
+          label="POs"
+          value={
+            sum.materialsReady ? (
+              <span style={{ color: "var(--status-green)", fontWeight: 600 }}>Materials ready</span>
+            ) : (
+              text
+            )
+          }
+        />
+      )}
+      {sum.locations.length > 0 && <Row label="Stored at" value={sum.locations.join(", ")} />}
+    </>
   );
 }
 

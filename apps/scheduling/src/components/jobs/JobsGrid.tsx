@@ -18,6 +18,7 @@ import { builtinStyle, splitMulti, type OptionStyle } from "./field-options";
 import { effectiveFrozen, frozenOffsets, lineX, nearestFrozen } from "./freeze-line";
 import { useFieldOptionsStore } from "../../store/field-options-store";
 import { AutoStatusTag } from "./ShopFloorHistory";
+import { JobPosPopover, PosCell } from "../warehouse/JobPosPopover";
 
 const ROW_H = 40;
 const HEADER_H = 40;
@@ -95,6 +96,8 @@ export default function JobsGrid({
   canEditField,
   frozen = 1,
   onFrozenChange,
+  userName = "",
+  homeSite = "",
 }: {
   rows: JobRow[];
   cols: JobFieldDef[];
@@ -125,6 +128,10 @@ export default function JobsGrid({
   frozen?: number;
   /** Editors: the freeze line was dragged to freeze this many columns. Absent = can't drag. */
   onFrozenChange?: (n: number) => void;
+  /** Who receives / sets a PO status from the POs pop-up. */
+  userName?: string;
+  /** The receiver's site — the POs pop-up's Receive defaults to it. */
+  homeSite?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   // Horizontal scroll + visible width, for the freeze line.
@@ -154,6 +161,9 @@ export default function JobsGrid({
   // The row whose stepper is open for editing, and where its cell is on screen.
   const [stepperFor, setStepperFor] = useState<{ row: JobRow; rect: DOMRect } | null>(null);
   const closeStepper = useCallback(() => setStepperFor(null), []);
+  // The row whose POs pop-up is open.
+  const [posFor, setPosFor] = useState<{ row: JobRow; rect: DOMRect } | null>(null);
+  const closePos = useCallback(() => setPosFor(null), []);
   // Right-click menu on a job's name: open it in BC / its SharePoint folder.
   const [menu, setMenu] = useState<{ row: JobRow; x: number; y: number } | null>(null);
   const openMenu = useCallback((row: JobRow, x: number, y: number) => setMenu({ row, x, y }), []);
@@ -289,6 +299,7 @@ export default function JobsGrid({
               return (
                 <th
                   key={c.key}
+                  data-tour={c.type === "pos" ? "jobs-pos-col" : undefined}
                   className={((sortable ? "jobs-th--sortable" : "") + frozenClass(c.key)).trim() || undefined}
                   style={frozenStyle(c.key, true)}
                   onClick={sortable ? () => onToggleSort(c.key) : undefined}
@@ -367,6 +378,7 @@ export default function JobsGrid({
                 onCloseCell={closeCell}
                 editing={editing}
                 onOpenStepper={editing?.canEditField("stepper") ? setStepperFor : undefined}
+                onOpenPos={setPosFor}
                 onJobMenu={openMenu}
                 sticky={sticky}
                 lastFrozen={lastFrozen}
@@ -412,6 +424,18 @@ export default function JobsGrid({
           document.body,
         )}
       {pickerFor && <SketchPicker row={pickerFor} onClose={() => setPickerFor(null)} />}
+      {posFor && (
+        <JobPosPopover
+          jobNo={posFor.row.jobNo}
+          title={posFor.row.name}
+          anchor={posFor.rect}
+          canReceive={!!editing?.canEditField("receiving")}
+          canSetStatus={!!editing?.canEditField("pos")}
+          userName={userName}
+          homeSite={homeSite}
+          onClose={closePos}
+        />
+      )}
       {stepperFor && (
         <StepperPopover
           jobNo={stepperFor.row.jobNo}
@@ -436,6 +460,7 @@ const JobGridRow = memo(function JobGridRow({
   onCloseCell,
   editing,
   onOpenStepper,
+  onOpenPos,
   onJobMenu,
   sticky,
   lastFrozen,
@@ -454,6 +479,8 @@ const JobGridRow = memo(function JobGridRow({
   editing?: GridEditing;
   /** Editors: open this row's stepper for editing, under its cell. */
   onOpenStepper?: (open: { row: JobRow; rect: DOMRect }) => void;
+  /** Open this row's POs pop-up, under its cell. */
+  onOpenPos?: (open: { row: JobRow; rect: DOMRect }) => void;
   /** Right-click on the job name. */
   onJobMenu?: (row: JobRow, x: number, y: number) => void;
 }) {
@@ -475,6 +502,23 @@ const JobGridRow = memo(function JobGridRow({
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenStepper({ row, rect: e.currentTarget.getBoundingClientRect() });
+              }}
+            >
+              <Cell row={row} def={c} />
+            </td>
+          );
+        }
+        // The POs cell opens the job's POs (status + deliveries; receive / set status with permission).
+        if (c.type === "pos" && onOpenPos && row.inBc) {
+          return (
+            <td
+              key={c.key}
+              style={frozenStyle(c.key)}
+              className={`jobs-cell--editable${frozenClass(c.key)}`}
+              title="Click to see the job's POs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenPos({ row, rect: e.currentTarget.getBoundingClientRect() });
               }}
             >
               <Cell row={row} def={c} />
@@ -538,6 +582,7 @@ const JobGridRow = memo(function JobGridRow({
 function Cell({ row, def, canDismissAuto = false }: { row: JobRow; def: JobFieldDef; canDismissAuto?: boolean }) {
   if (def.type === "stepper") return <StepperCell jobNo={row.inBc ? row.jobNo : undefined} />;
   if (def.type === "sketch") return <SketchCell row={row} />;
+  if (def.type === "pos") return <PosCell jobNo={row.inBc ? row.jobNo : undefined} />;
   const v = (row as unknown as Record<string, unknown>)[def.key];
   switch (def.type) {
     case "badge":

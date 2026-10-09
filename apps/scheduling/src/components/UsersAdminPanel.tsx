@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TYPE_CONFIG, USER_DIRECTORY, type UserType } from "../services/current-user";
 import { useUserDirectoryStore, type DirectoryUser } from "../store/user-directory-store";
 import JobEditFieldsDialog from "./JobEditFieldsDialog";
+import { RECEIVING_SITES } from "../services/warehouse-sites";
 
 const TYPE_OPTIONS = Object.keys(TYPE_CONFIG) as UserType[];
 
@@ -14,6 +15,9 @@ const TYPE_OPTIONS = Object.keys(TYPE_CONFIG) as UserType[];
  * "Jobs" per user: Admin / Developer / Ops edit the whole Jobs list by role;
  * anyone else is view only there unless specific fields are granted to them
  * (JobEditFieldsDialog → crfdf_appuser.crfdf_jobeditfields).
+ *
+ * "Site" per user: where they work — Warehouse Management's Receive defaults
+ * its "Received at" to it (crfdf_appuser.crfdf_homesite).
  */
 export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
   const users = useUserDirectoryStore((s) => s.users);
@@ -73,6 +77,10 @@ export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
             only there — click their <em>Jobs</em> button to let them edit specific fields.
           </p>
           <p className="users-admin__note">
+            <strong>Site</strong>: where the person works. When they receive a PO delivery, &ldquo;Received at&rdquo;
+            starts on this site.
+          </p>
+          <p className="users-admin__note">
             Sets each login&apos;s role. Who can open the app at all is controlled by sharing it
             in Power Apps — this only changes what a signed-in user sees. Any login not listed
             defaults to Admin.
@@ -121,6 +129,20 @@ export default function UsersAdminPanel({ onClose }: { onClose: () => void }) {
                     {u.jobEditFields.length ? `Jobs: ${u.jobEditFields.length} field${u.jobEditFields.length === 1 ? "" : "s"}` : "Jobs: view"}
                   </button>
                 )}
+                <select
+                  className="form-field__select users-admin__site"
+                  value={u.homeSite}
+                  title="Home site — Warehouse receiving defaults to it"
+                  aria-label={`Home site for ${u.email}`}
+                  onChange={(e) => void updateUser(u.id, { homeSite: e.target.value })}
+                >
+                  <option value="">Site —</option>
+                  {[...RECEIVING_SITES, ...(u.homeSite && !RECEIVING_SITES.includes(u.homeSite) ? [u.homeSite] : [])].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
                 {roleSelect(u.userType, (t) => void updateUser(u.id, { userType: t }), "users-admin__role")}
                 <button
                   className="users-admin__remove"

@@ -6,7 +6,7 @@ import type { JobRow } from "../../services/job-tracking";
 import type { CustomFieldDef } from "../../services/custom-fields";
 
 export type JobFieldType =
-  | "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper" | "sketch"
+  | "text" | "multiline" | "badge" | "date" | "currency" | "bool" | "days" | "stepper" | "sketch" | "pos"
   // custom fields
   | "number" | "select" | "link";
 
@@ -79,6 +79,7 @@ export const JOB_FIELDS: Record<string, JobFieldDef> = Object.fromEntries(
     F("dateInvoiced", "Date Invoiced", "date", 115),
     F("vendor", "Vendor", "badge", 115),
     F("po", "P.O. #", "text", 85),
+    F("pos", "POs", "pos", 190),
     F("vendorStatus", "Vendor Status", "badge", 115),
     F("storageLocation", "Storage Location", "text", 160),
     F("vendorShipDate", "Vendor Ship Date", "date", 125),
@@ -181,7 +182,7 @@ export const JOB_VIEW_GROUPS: { label: string; views: JobsView[] }[] = [
       { name: "OPS / Install", defaultGroup: "status",
         cols: ["job", "status", "stepper", "installRegion", "location", "installTarget", "scheduledInstall", "redDate", "dateInstalled", "powerlines", "sales", "dip", "actualDip", "notes"] },
       { name: "Warehouse Coord.",
-        cols: ["job", "status", "storageLocation", "vendorStatus", "vendorShipDate", "vendor", "notes"] },
+        cols: ["job", "status", "pos", "storageLocation", "vendorStatus", "vendorShipDate", "vendor", "notes"] },
     ],
   },
   {

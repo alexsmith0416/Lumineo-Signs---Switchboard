@@ -2464,6 +2464,9 @@ export interface AppUserRow {
   /** Jobs-list fields this login may edit (crfdf_jobeditfields, comma-separated
    *  keys; "" = view only). Absent until scripts/add-appuser-jobeditfields-column.ps1. */
   jobEditFields: string;
+  /** Warehouse Management: the site this login receives at (crfdf_homesite;
+   *  "" = none). Absent until scripts/add-appuser-homesite-column.ps1. */
+  homeSite: string;
 }
 
 function mapAppUser(r: Row): AppUserRow {
@@ -2474,6 +2477,7 @@ function mapAppUser(r: Row): AppUserRow {
     userType: s(r.crfdf_usertype).trim().toLowerCase() || "admin",
     displayName: s(r.crfdf_displayname),
     jobEditFields: s(r.crfdf_jobeditfields),
+    homeSite: s(r.crfdf_homesite).trim(),
   };
 }
 
@@ -2487,6 +2491,7 @@ function appUserToRecord(u: Partial<AppUserRow>): Row {
   if (u.userType !== undefined) rec.crfdf_usertype = u.userType;
   if (u.displayName !== undefined) rec.crfdf_displayname = u.displayName;
   if (u.jobEditFields !== undefined) rec.crfdf_jobeditfields = u.jobEditFields;
+  if (u.homeSite !== undefined) rec.crfdf_homesite = u.homeSite;
   return rec;
 }
 
@@ -2495,7 +2500,9 @@ export async function fetchAppUsers(): Promise<AppUserRow[]> {
   return rows.map(mapAppUser).filter((u) => u.email);
 }
 
-export async function createAppUser(u: Omit<AppUserRow, "jobEditFields"> & { jobEditFields?: string }): Promise<void> {
+export async function createAppUser(
+  u: Omit<AppUserRow, "jobEditFields" | "homeSite"> & { jobEditFields?: string; homeSite?: string },
+): Promise<void> {
   const rec = { crfdf_appuserid: u.id, ...appUserToRecord(u) };
   const res = await dvCreate(APPUSER_SET, rec);
   if (!res.success) throw new Error(res.error?.message ?? "createAppUser failed");
@@ -3151,9 +3158,14 @@ export async function savePoReceipt(r: PoReceipt): Promise<void> {
   if (!res.success) throw new Error(res.error?.message ?? "savePoReceipt failed");
 }
 
+const PODELIVERY_COLS = "crfdf_podeliveryid,crfdf_pono,crfdf_jobno,crfdf_receiveddate,crfdf_location,crfdf_receivedby,crfdf_notes,crfdf_final";
+
 export async function fetchPoDeliveries(): Promise<PoDelivery[]> {
-  const rows = await listAll(PODELIVERY_SET, {
-    select: "crfdf_podeliveryid,crfdf_pono,crfdf_jobno,crfdf_receiveddate,crfdf_location,crfdf_receivedby,crfdf_notes,crfdf_final",
+  // crfdf_site (Oct 9) comes from scripts/add-podelivery-site-column.ps1; until it
+  // exists, read without it rather than losing every delivery.
+  const rows = await listAll(PODELIVERY_SET, { select: `${PODELIVERY_COLS},crfdf_site` }).catch((e) => {
+    console.warn("[po-receiving] crfdf_site not readable yet — reading deliveries without the site", e);
+    return listAll(PODELIVERY_SET, { select: PODELIVERY_COLS });
   });
   return rows
     .map((r) => ({
@@ -3161,6 +3173,7 @@ export async function fetchPoDeliveries(): Promise<PoDelivery[]> {
       poNo: s(r.crfdf_pono).trim(),
       jobNo: s(r.crfdf_jobno).trim(),
       date: s(r.crfdf_receiveddate).trim().slice(0, 10),
+      site: s(r.crfdf_site).trim(),
       location: s(r.crfdf_location).trim(),
       receivedBy: s(r.crfdf_receivedby),
       notes: s(r.crfdf_notes),
@@ -3174,6 +3187,7 @@ const deliveryRecord = (d: PoDelivery): Row => ({
   crfdf_pono: d.poNo,
   crfdf_jobno: d.jobNo,
   crfdf_receiveddate: d.date,
+  crfdf_site: d.site,
   crfdf_location: d.location,
   crfdf_receivedby: d.receivedBy,
   crfdf_notes: d.notes,
