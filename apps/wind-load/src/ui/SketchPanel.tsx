@@ -63,16 +63,34 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
     setFocusField(null);
   };
 
-  // Escape backs out of whatever is open, like any other transient surface.
+  /** Apply the edit in progress and step back out of the editor. */
+  const done = () => {
+    commit();
+    setEditingIndex(null);
+    setEditingFaceId(null);
+    setFocusField(null);
+  };
+
+  // Enter applies whatever is staged — a drag that has already landed or a
+  // number just typed — and Escape backs out, like any other transient
+  // surface. Enter on a button is left alone so it still presses the button.
   useEffect(() => {
     if (!selection) return;
+    const editing = editingIndex !== null || editingFaceId !== null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancel();
+      if (e.key === 'Escape') {
+        cancel();
+        return;
+      }
+      if (e.key !== 'Enter' || !editing) return;
+      if ((e.target as HTMLElement | null)?.closest?.('button')) return;
+      e.preventDefault();
+      done();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection]);
+  }, [selection, editingIndex, editingFaceId, preview]);
 
   /** Client point → popover placement inside the drawing. */
   const place = (at: SketchPoint): Anchor | null => {
@@ -207,17 +225,11 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
             onCommit={commit}
             autoFocus={focusField === 'splice'}
           />
-          <p className="hint">Or drag the pill on the pole — snaps to full inches and cabinet bottoms.</p>
-          <button
-            className="btn-soft"
-            onClick={() => {
-              commit();
-              setEditingIndex(null);
-              setFocusField(null);
-            }}
-          >
-            Done
-          </button>
+          <p className="hint">
+            Or drag the pill on the pole — snaps to full inches and cabinet
+            bottoms. Press Enter to apply.
+          </p>
+          <button className="btn-soft" onClick={done}>Done</button>
         </>
       );
     }
@@ -269,17 +281,10 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
           onCommit={commit}
           autoFocus={focusField === 'top'}
         />
-        <p className="hint">Or drag the box and its grips on the sketch.</p>
-        <button
-          className="btn-soft"
-          onClick={() => {
-            commit();
-            setEditingFaceId(null);
-            setFocusField(null);
-          }}
-        >
-          Done
-        </button>
+        <p className="hint">
+          Or drag the box and its grips on the sketch. Press Enter to apply.
+        </p>
+        <button className="btn-soft" onClick={done}>Done</button>
       </>
     );
   };
