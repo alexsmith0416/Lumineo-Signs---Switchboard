@@ -872,6 +872,7 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
               fill={p.keyBg}
               stroke={p.keyText}
               strokeWidth={1}
+              className="sk-grip"
               style={{ cursor }}
               onPointerDown={(e) => beginFaceDrag(e, f.id, handle, f.topFt)}
             />

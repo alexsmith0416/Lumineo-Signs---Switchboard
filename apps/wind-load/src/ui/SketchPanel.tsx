@@ -71,6 +71,30 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
     setFocusField(null);
   };
 
+  /** Keep whatever is staged and put the card away. */
+  const close = () => {
+    done();
+    setSelection(null);
+    setAnchor(null);
+  };
+
+  // Anything the drawing itself handles — picking a new target, grabbing a
+  // handle, clicking a readout — keeps the card up; it is only a click with
+  // nothing under it that dismisses. Capture phase, because those handlers
+  // stop propagation before a bubbling listener would hear them.
+  const HOLDS_CARD = '.sketch-pop, .sk-pole-hit, .sk-face-hit, .sk-face-move, .sk-num, .sk-handle, .sk-grip';
+  useEffect(() => {
+    if (!selection) return;
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (el?.closest?.(HOLDS_CARD)) return;
+      close();
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, editingIndex, editingFaceId, preview]);
+
   // Enter applies whatever is staged — a drag that has already landed or a
   // number just typed — and Escape backs out, like any other transient
   // surface. Enter on a button is left alone so it still presses the button.
@@ -339,7 +363,10 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
                 }}
               >
                 {popBody()}
-                <button className="btn-soft sketch-pop__close" onClick={cancel}>
+                <button
+                  className="btn-soft sketch-pop__close"
+                  onClick={editingIndex === null && editingFaceId === null ? close : cancel}
+                >
                   {editingIndex === null && editingFaceId === null ? 'Close' : 'Cancel'}
                 </button>
               </div>
@@ -349,7 +376,9 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
           <p className="hint sketch-note">
             Click the pole to move a transition, or a cabinet to move and
             resize it — the editing card opens where you click, and any
-            underlined measurement can be typed instead of dragged. Proportions
+            underlined measurement can be typed instead of dragged. Enter or a
+            click off the drawing applies the change and closes the card;
+            Escape discards it. Proportions
             are to scale from the calculated design; very thin poles and
             footings are widened slightly so they stay visible. Elevation view —
             pier length runs perpendicular to the sign face.
