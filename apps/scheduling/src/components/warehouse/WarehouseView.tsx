@@ -259,6 +259,9 @@ export function PoRow({
 }) {
   const archived = po.status === ARCHIVED;
   const tone = isReceived(status) ? "received" : isPartial(status) ? "partial" : status ? "set" : "none";
+  // A PO set to Received by hand has no final delivery yet — it can still get
+  // one, so where it's stored gets recorded.
+  const hasFinal = deliveries.some((d) => d.final);
   return (
     <li className={`wh-po${highlight ? " wh-po--match" : ""}${archived ? " wh-po--archived" : ""}`}>
       <div className="wh-po__top">
@@ -298,9 +301,14 @@ export function PoRow({
         ) : (
           status && <span className={`wh-status wh-status--${tone}`}>{status}</span>
         )}
-        {canReceive && !archived && !isReceived(status) && (
-          <button type="button" className="btn-primary wh-receive" onClick={onReceive}>
-            Receive
+        {canReceive && !archived && (!isReceived(status) || !hasFinal) && (
+          <button
+            type="button"
+            className="btn-primary wh-receive"
+            onClick={onReceive}
+            title={isReceived(status) ? "Marked Received by hand — record the date, site and storage location" : undefined}
+          >
+            {isReceived(status) ? "Record delivery" : "Receive"}
           </button>
         )}
       </div>

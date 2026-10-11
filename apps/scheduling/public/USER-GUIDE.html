@@ -1255,7 +1255,8 @@
     on it; receivers can change them there (e.g. it was moved, or the wrong site was picked). <em>Stored at</em>
     everywhere reads <em>Site &middot; Spot</em> &mdash; e.g. <em>Hutchinson &middot; Warehouse - Floor</em>.</li>
     <li><strong>Vendor Status</strong> (Ordered, Shipping, Delayed, On Hold&hellip;) is set by hand by Admin / Ops from
-    the drop-down on each PO. Admin / Ops can also remove a delivery entered by mistake (&times;).</li>
+    the drop-down on each PO. A PO set to <em>Received</em> this way still shows a <strong>Record delivery</strong>
+    button until a final delivery is recorded &mdash; use it to add the date, site and storage location. Admin / Ops can also remove a delivery entered by mistake (&times;).</li>
     <li><strong>Materials ready</strong> &mdash; when every open PO on a job is Received, the job shows a
     <em>Materials ready</em> badge and BC's <strong>Job Purchasing</strong> step is completed automatically.</li>
     <li><strong>Jobs list &rarr; POs column</strong> &mdash; a compact summary per job (<em>3 POs &middot; 1 partial
@@ -1457,6 +1458,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Record delivery</strong> &mdash; a PO set to Received from the status drop-down (with no final delivery recorded) now keeps a <strong>Record delivery</strong> button, so you can still add when, where and in which storage spot it was received. See &sect;5.18.</td></tr>
       <tr><td>Oct 9, 2026</td><td><strong>Received at a site</strong> &mdash; receiving now records which site a delivery came in at (Hutchinson, Wichita, Dodge City, Olathe, Topeka, Lawrence), starting on your own site (admins set it per user in Settings &rarr; Users &rarr; Site). Storage is a drop-down for Hutchinson's spots and typed in elsewhere, and each delivery line has the site and storage drop-downs to fix it in place. Stored at shows <em>Site &middot; Spot</em>, in the app and in BC. See &sect;5.18.</td></tr>
       <tr><td>Oct 8, 2026</td><td><strong>Receiving in Business Central</strong> &mdash; the Vendor Status and every delivery you record now show in BC: on the Purchase Order card (Vendor Status + a Receiving section) and the Job card (a PO Receiving section with Stored At). Read-only there; change it in the app. See &sect;5.18.</td></tr>
       <tr><td>Oct 8, 2026</td><td><strong>POs everywhere</strong> &mdash; the Jobs list has a <strong>POs</strong> column (summary chip; click it to see, receive and set status on the job's POs), scheduler cards show 📦 when a job is <strong>Materials ready</strong>, and card hovers + the job panel show <strong>Stored at</strong>. The full tour has new steps on the POs column and Warehouse Management. See &sect;5.18.</td></tr>
@@ -1581,7 +1583,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.38 · Oct 9, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.39 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
