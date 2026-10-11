@@ -267,6 +267,32 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **INSTALL PLANNER — Stage 2 (trips) DEPLOYED Oct 11** (guide
+      v3.41 §5.19 + §5.20, tour step). **Plan trip** on a group / "Plan a trip
+      with these" (near-this-job) → Trip tab (`components/planner/TripPanel.tsx`):
+      compares every crew location's SHORTEST LOOP (Held-Karp ≤ 11 stops, else
+      NN + 2-opt — `services/trip-plan.ts`, tested), `planDays` splits into
+      10 h days incl. drive (day trips hold back the drive home; overnights stay
+      near the last stop; a job that doesn't fit continues next day as "part 1
+      of 2"), overnight Auto (> 4 h one-way) / Yes / No, max nights 1–2, leave
+      time, per-job include + hours (BC hours, 4 h when unknown). Road times:
+      openrouteservice matrix + directions (`services/ors-routing.ts`, tested;
+      falls back to estimates and says so). Route drawn with numbered stops
+      (`MapTrip` in PlannerMap). Per-day **Google Maps** links (free URL, ≤ 9
+      waypoints), **Print** (`tripSheetHtml` → `printMarkup`). **Save** →
+      `crfdf_installtrip` (JSON; `store/trip-store.ts`, failing-save case in
+      optimistic-edit.test). Planner **Trips** tab = the week's saved trips
+      (open / change / delete). New sidebar **Install Trips**
+      (`components/planner/TripsView.tsx`): view only, installers' region
+      (`installRegion`), Admin/Ops both. Salina = not a crew base (Alex, Oct 11:
+      its installs go out of Hutchinson).
+      **Go-live:** (1) ✅ `scripts/create-installtrip-table.ps1` (ran Oct 11); (2) ✅ deployed Oct 11. Left: first live check — a trip should say "Road drive times" and draw on the roads.
+      Installers need a non-admin role covering crfdf_installtrip + crfdf_jobgeo
+      (Developer env — see the non-admin rollout note). **Next: Stage 3** —
+      auto-plan the week (locked stay, Must this week first, ready fill; trips
+      by home location; service combine toggle; overnights "+N jobs"
+      comparison; region crossing) → review/Commit to the install board; saved
+      plans + side-by-side compare.
     - ✅ **INSTALL PLANNER — Stage 1 DEPLOYED Oct 11** (guide v3.40
       §5.19, tour step). Sidebar "Install Planner" (Admin/Ops =
       `permissions.editSchedule`). Map = **Leaflet** (bundled) + **OpenStreetMap**

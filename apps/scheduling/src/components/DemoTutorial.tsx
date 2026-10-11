@@ -106,6 +106,13 @@ const FULL_STEPS: TourStep[] = [
     placement: "right",
   },
   {
+    view: "trips",
+    target: '[data-tour="nav-trips"]',
+    title: "Install Trips — planned routes",
+    body: "Trips planned in the Install Planner (Plan trip on a group: the shortest route from the best crew location, split into 10-hour days, overnights over 4 h one-way) are saved here for the installers — view only, with each day's Google Maps directions and a printable sheet.",
+    placement: "right",
+  },
+  {
     view: "shipping",
     target: '[data-tour="nav-shipping"]',
     title: "Shipping loads",

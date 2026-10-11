@@ -1303,10 +1303,40 @@
     <li><strong>Must this week</strong> &mdash; on a job, click <strong>Must this week</strong> to add it to the region's
     &ldquo;Must this week&rdquo; list (the same list shows in the Install Job Queue). The tab lists them; &times; takes one off.
     Clear the list once the week is planned.</li>
-    <li>Drive times are estimates for now (straight line &times; 1.25 at 55 mph); a crew day is 10 hours including driving.
-    Routes with real road times, the trip planner and auto-planning the week are coming next.</li>
+    <li><strong>Plan a trip</strong> &mdash; <strong>Plan trip &rarr;</strong> on a group (or <strong>Plan a trip with
+    these</strong> under &ldquo;What fits near this job&rdquo;) opens the <strong>Trip</strong> tab:
+      <ul>
+        <li><strong>Leaves from</strong> &mdash; each crew location with the drive time of its shortest loop; the shortest is
+        picked. Click another to compare. (Salina isn't a trip start &mdash; its installs go out of Hutchinson.)</li>
+        <li><strong>Overnight</strong> &mdash; <em>Auto</em> makes it an overnight when any job is over 4 hours one-way;
+        or force <em>Yes</em> / <em>No &mdash; day trips</em>. <strong>Max nights</strong> 1 or 2. <strong>Leave at</strong>
+        sets the start time.</li>
+        <li><strong>Jobs</strong> &mdash; untick a job to leave it off; change its on-site crew hours for this trip (a dashed
+        box = BC has no install hours, planned at 4 h &mdash; set it).</li>
+        <li>The trip, day by day: the shortest route, leave time, each drive (time and miles), each job with its start time
+        (a job that doesn't fit the day says <em>part 1 of 2</em> and carries on next morning), and where the day ends &mdash;
+        back home, or a night near the last stop. A crew day is 10 hours including driving. Warnings show when a day can't
+        fit or the trip needs more nights than allowed.</li>
+        <li>The route is drawn on the map with numbered stops. <strong>Google Maps</strong> on each day opens that day's
+        directions (on a phone, in the Maps app).</li>
+        <li><strong>Save trip</strong> (name it, or keep the suggested name) and <strong>Print</strong> a trip sheet.
+        Saved trips are on the <strong>Trips</strong> tab for that week &mdash; click one to change it (<em>Save
+        changes</em>) or &times; to delete it.</li>
+      </ul></li>
+    <li>Drive times are real road times from openrouteservice (straight-line estimates if it can't be reached &mdash; the
+    trip says which). Auto-planning the whole week is coming next.</li>
     <li>Pins start at each job's ZIP center. Once the openrouteservice key is saved in <strong>Settings &rarr; Install
     Planner</strong>, each address is looked up once (in the background) and its pin moves to the street address.</li>
+  </ul>
+
+  <h3>5.20 &nbsp;Install Trips &mdash; the planned trips (installers)</h3>
+  <p>Sidebar &rarr; <strong>Install Trips</strong>. Installers see the trips Admin / Ops saved in the Install Planner for
+  their region (Admin / Ops see both), from last week on, by week. View only.</p>
+  <ul>
+    <li>Click a trip to see its route on the map (numbered stops) and the plan day by day: when you leave, each drive, each
+    job with its address and hours, and where the day ends.</li>
+    <li><strong>Google Maps</strong> on each day opens that day's turn-by-turn directions; <strong>Print</strong> gives the
+    trip sheet.</li>
   </ul>
 
   <!-- ============================================================ -->
@@ -1487,6 +1517,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Trips</strong> &mdash; the Install Planner now plans trips: <strong>Plan trip</strong> on a group finds the shortest route from the best crew location (compare them all), splits it into 10-hour days with real road drive times, makes it an overnight when a job is over 4 hours one-way (max 1 or 2 nights), lets you leave jobs off or change their hours, draws the route, links each day to Google Maps, prints a trip sheet, and saves it. Installers see saved trips on the new <strong>Install Trips</strong> screen (view only). See &sect;5.19 and &sect;5.20.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Install Planner</strong> &mdash; a new screen with every open install and service job on a map (colored by Must this week / locked / ready / scheduled), radius groups of jobs that can share a trip with crew hours, home location, drive and overnight estimates and weather, &ldquo;what fits near this job&rdquo;, and a Must this week list. The full tour has a new step. See &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Record delivery</strong> &mdash; a PO set to Received from the status drop-down (with no final delivery recorded) now keeps a <strong>Record delivery</strong> button, so you can still add when, where and in which storage spot it was received. See &sect;5.18.</td></tr>
       <tr><td>Oct 9, 2026</td><td><strong>Received at a site</strong> &mdash; receiving now records which site a delivery came in at (Hutchinson, Wichita, Dodge City, Olathe, Topeka, Lawrence), starting on your own site (admins set it per user in Settings &rarr; Users &rarr; Site). Storage is a drop-down for Hutchinson's spots and typed in elsewhere, and each delivery line has the site and storage drop-downs to fix it in place. Stored at shows <em>Site &middot; Spot</em>, in the app and in BC. See &sect;5.18.</td></tr>
@@ -1613,7 +1644,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.40 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.41 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

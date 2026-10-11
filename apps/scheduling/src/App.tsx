@@ -22,6 +22,7 @@ import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser, TYPE_CONFIG } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
 import InstallPlannerView from "./components/planner/InstallPlannerView";
+import TripsView from "./components/planner/TripsView";
 import WarehouseView from "./components/warehouse/WarehouseView";
 import { canEditJobField } from "./services/job-edit-access";
 import { useSettingsStore } from "./store/settings-store";
@@ -41,6 +42,7 @@ type View =
   | "jobs"
   | "warehouse"
   | "planner"
+  | "trips"
   | "settings"
   | "help";
 
@@ -54,6 +56,7 @@ const VIEW_TITLES: Record<View, string> = {
   jobs: "Jobs",
   warehouse: "Warehouse Management",
   planner: "Install Planner",
+  trips: "Install Trips",
   settings: "Settings",
   help: "Help & User Guide",
 };
@@ -173,6 +176,8 @@ export default function App() {
   const whEdit = demoMode ? NO_JOB_EDITS : jobEdit;
   const canReceive = canEditJobField(whEdit, "receiving");
   const showWarehouse = permissions.editJobs || canReceive;
+  // Install Trips: installers (their region) and Admin / Ops (both regions).
+  const showTrips = permissions.editSchedule || !!installRegion;
 
   if (view === null) {
     return (
@@ -199,6 +204,7 @@ export default function App() {
           showJobs={permissions.jobs}
           showWarehouse={showWarehouse}
           showPlanner={permissions.editSchedule}
+          showTrips={showTrips}
         />
       )}
 
@@ -234,7 +240,8 @@ export default function App() {
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
           {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
           {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} userName={fullName ?? ""} homeSite={homeSite} />}
-          {view === "planner" && permissions.editSchedule && <InstallPlannerView canEdit={!demoMode} />}
+          {view === "planner" && permissions.editSchedule && <InstallPlannerView canEdit={!demoMode} userName={fullName ?? ""} />}
+          {view === "trips" && showTrips && <TripsView region={permissions.editSchedule ? "both" : installRegion ?? "both"} />}
           {view === "warehouse" && showWarehouse && (
             <WarehouseView canReceive={canReceive} canSetStatus={whEdit.all} userName={fullName ?? ""} homeSite={homeSite} />
           )}
@@ -275,6 +282,7 @@ export default function App() {
         showJobs={permissions.jobs}
           showWarehouse={showWarehouse}
           showPlanner={permissions.editSchedule}
+          showTrips={showTrips}
       />
     </div>
   );

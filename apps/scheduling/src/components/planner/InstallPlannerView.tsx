@@ -1,6 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { addDays, addWeeks, format, startOfWeek } from "date-fns";
-import PlannerMap, { STATE_COLORS, STATE_LABELS } from "./PlannerMap";
+import PlannerMap, { STATE_COLORS, STATE_LABELS, type MapTrip } from "./PlannerMap";
+import TripPanel, { type TripSource } from "./TripPanel";
+import { TripTotals } from "./TripDays";
+import { useTripStore } from "../../store/trip-store";
+import type { SavedTrip, TripStop } from "../../services/saved-trips";
 import WeatherChip from "../WeatherChip";
 import { MUST_COLOR, MUST_THIS_WEEK, usePlannerJobs } from "../../hooks/usePlannerJobs";
 import { useInstallQueueStoreNEK, useInstallQueueStoreWK } from "../../store/job-queue-store";
@@ -18,7 +22,7 @@ import {
 } from "../../services/install-planner";
 
 type RegionPick = Region | "both";
-type Tab = "groups" | "must" | "job";
+type Tab = "groups" | "must" | "trips" | "job" | "trip";
 
 const RADIUS_KEY = "lumineo.planner.radius";
 const readRadius = (): number => {
@@ -42,7 +46,19 @@ const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().t
  * regions' "Must this week" lists. Admin / Ops. Drive figures are estimates
  * until Stage 2's road routes.
  */
-export default function InstallPlannerView({ canEdit }: { canEdit: boolean }) {
+/** A planner job as a trip stop (jobs without a map position can't be routed). */
+const toStop = (j: PlannerJob): TripStop => ({
+  jobNo: j.jobNo,
+  name: j.name,
+  address: j.address,
+  zip: j.zip,
+  kind: j.kind,
+  hours: j.crewHours,
+  lat: j.pos!.lat,
+  lng: j.pos!.lng,
+});
+
+export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit: boolean; userName?: string }) {
   const [weekStart, setWeekStart] = useState(() => planningWeek(new Date()));
   const { jobs, loading, error } = usePlannerJobs(weekStart);
   const [region, setRegion] = useState<RegionPick>("WK");
@@ -53,6 +69,28 @@ export default function InstallPlannerView({ canEdit }: { canEdit: boolean }) {
   const [radius, setRadiusState] = useState(readRadius);
   const [cross, setCross] = useState(false);
   const [tab, setTab] = useState<Tab>("groups");
+  const [tripSource, setTripSource] = useState<TripSource | null>(null);
+  const [mapTrip, setMapTrip] = useState<MapTrip | null>(null);
+  const trips = useTripStore((s) => s.trips);
+  useEffect(() => {
+    void useTripStore.getState().load();
+  }, []);
+  const weekTrips = useMemo(
+    () =>
+      trips
+        .filter((t) => t.weekStart === format(weekStart, "yyyy-MM-dd") && (region === "both" || t.region === region))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [trips, weekStart, region],
+  );
+  const openTrip = (src: TripSource) => {
+    setTripSource(src);
+    setTab("trip");
+  };
+  const closeTrip = () => {
+    setTripSource(null);
+    setMapTrip(null);
+    setTab("groups");
+  };
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const crossing = cross && region === "both";
@@ -141,21 +179,73 @@ export default function InstallPlannerView({ canEdit }: { canEdit: boolean }) {
               Groups <span className="pl-count">{groups.length}</span>
             </TabButton>
             <TabButton on={tab === "must"} onClick={() => setTab("must")}>
-              Must this week <span className="pl-count pl-count--must">{counts.must}</span>
+              Must <span className="pl-count pl-count--must">{counts.must}</span>
+            </TabButton>
+            <TabButton on={tab === "trips"} onClick={() => setTab("trips")}>
+              Trips <span className="pl-count">{weekTrips.length}</span>
             </TabButton>
             <TabButton on={tab === "job"} onClick={() => setTab("job")} disabled={!job}>
               {job ? job.jobNo : "Job"}
             </TabButton>
+            {tripSource && (
+              <TabButton on={tab === "trip"} onClick={() => setTab("trip")}>
+                Trip
+              </TabButton>
+            )}
           </div>
           <div className="pl-panel__body">
             {loading ? (
               <div className="pl-empty">Loading jobs…</div>
+            ) : tab === "trip" && tripSource ? (
+              <TripPanel
+                key={tripSource.kind === "saved" ? tripSource.trip.id : tripSource.label}
+                source={tripSource}
+                weekStart={weekStart}
+                crossing={crossing}
+                canEdit={canEdit}
+                userName={userName}
+                onMapTrip={setMapTrip}
+                onClose={closeTrip}
+              />
+            ) : tab === "trips" ? (
+              <SavedTripList trips={weekTrips} weekStart={weekStart} canEdit={canEdit} onOpen={(t) => openTrip({ kind: "saved", trip: t })} />
             ) : tab === "groups" ? (
-              <GroupList groups={groups} radius={radius} weekStart={weekStart} selected={selectedGroup} onSelectGroup={selectGroup} onSelectJob={selectJob} />
+              <GroupList
+                groups={groups}
+                radius={radius}
+                weekStart={weekStart}
+                selected={selectedGroup}
+                onSelectGroup={selectGroup}
+                onSelectJob={selectJob}
+                onPlanTrip={(g) =>
+                  openTrip({
+                    kind: "group",
+                    label: `Group ${g.id.slice(1)}`,
+                    region: g.home.region,
+                    home: g.home.name,
+                    stops: g.jobs.filter((j) => j.pos).map(toStop),
+                  })
+                }
+              />
             ) : tab === "must" ? (
               <MustList jobs={jobs} region={region} canEdit={canEdit} onSelectJob={selectJob} />
             ) : job ? (
-              <JobDetail job={job} near={near} radius={radius} canEdit={canEdit} onSelectJob={selectJob} />
+              <JobDetail
+                job={job}
+                near={near}
+                radius={radius}
+                canEdit={canEdit}
+                onSelectJob={selectJob}
+                onPlanTrip={() =>
+                  openTrip({
+                    kind: "group",
+                    label: `${job.jobNo} + nearby`,
+                    region: job.region,
+                    home: "",
+                    stops: [job, ...near.map((n) => n.job)].filter((j) => j.pos).map(toStop),
+                  })
+                }
+              />
             ) : null}
             {unplaced.length > 0 && tab === "groups" && (
               <details className="pl-unplaced">
@@ -187,6 +277,7 @@ export default function InstallPlannerView({ canEdit }: { canEdit: boolean }) {
             onSelectJob={selectJob}
             onSelectGroup={selectGroup}
             fitKey={`${region}|${showInstall}|${showService}|${loading}`}
+            trip={tab === "trip" ? mapTrip : null}
           />
           <div className="pl-legend">
             {(Object.keys(STATE_COLORS) as MapState[])
@@ -222,6 +313,7 @@ function GroupList({
   selected,
   onSelectGroup,
   onSelectJob,
+  onPlanTrip,
 }: {
   groups: JobGroup[];
   radius: number;
@@ -229,6 +321,7 @@ function GroupList({
   selected: string | null;
   onSelectGroup: (id: string) => void;
   onSelectJob: (jobNo: string) => void;
+  onPlanTrip: (g: JobGroup) => void;
 }) {
   if (!groups.length) return <div className="pl-empty">No ready or Must-this-week jobs to group.</div>;
   return (
@@ -246,6 +339,9 @@ function GroupList({
             {hrs(g.oneWayHours)} h one-way · ≈ {g.estDays} crew-day{g.estDays === 1 ? "" : "s"}
           </div>
           <WeekWeather zip={g.jobs[0]?.zip ?? ""} weekStart={weekStart} />
+          <button type="button" className="btn-secondary pl-plan" onClick={() => onPlanTrip(g)}>
+            Plan trip →
+          </button>
           {g.id === selected && (
             <ul className="pl-joblist">
               {g.jobs.map((j) => (
@@ -349,12 +445,14 @@ function JobDetail({
   radius,
   canEdit,
   onSelectJob,
+  onPlanTrip,
 }: {
   job: PlannerJob;
   near: Array<{ job: PlannerJob; miles: number }>;
   radius: number;
   canEdit: boolean;
   onSelectJob: (jobNo: string) => void;
+  onPlanTrip: () => void;
 }) {
   const wkGroups = useInstallQueueStoreWK((s) => s.groups);
   const nekGroups = useInstallQueueStoreNEK((s) => s.groups);
@@ -438,15 +536,73 @@ function JobDetail({
         )}
       </h4>
       {near.length ? (
-        <ul className="pl-joblist">
-          {near.map((n) => (
-            <JobRowItem key={n.job.jobNo} job={n.job} miles={n.miles} onSelect={onSelectJob} />
-          ))}
-        </ul>
+        <>
+          <ul className="pl-joblist">
+            {near.map((n) => (
+              <JobRowItem key={n.job.jobNo} job={n.job} miles={n.miles} onSelect={onSelectJob} />
+            ))}
+          </ul>
+          {job.pos && (
+            <button type="button" className="btn-secondary pl-plan" onClick={onPlanTrip}>
+              Plan a trip with these →
+            </button>
+          )}
+        </>
       ) : (
         <div className="pl-empty pl-empty--small">No ready jobs within {radius} mi — try a bigger radius.</div>
       )}
     </div>
+  );
+}
+
+function SavedTripList({
+  trips,
+  weekStart,
+  canEdit,
+  onOpen,
+}: {
+  trips: SavedTrip[];
+  weekStart: Date;
+  canEdit: boolean;
+  onOpen: (t: SavedTrip) => void;
+}) {
+  if (!trips.length) {
+    return (
+      <div className="pl-empty">
+        No trips saved for the week of {format(weekStart, "MMM d")} yet — open a group and <b>Plan trip</b>.
+      </div>
+    );
+  }
+  return (
+    <ul className="pl-groups">
+      {trips.map((t) => (
+        <li key={t.id} className="pl-group">
+          <div className="pl-group__head">
+            <button type="button" className="pl-link" onClick={() => onOpen(t)}>
+              {t.name}
+            </button>
+            <span className="pl-group__region">{t.region}</span>
+            {canEdit && (
+              <button
+                type="button"
+                className="pl-remove"
+                aria-label={`Delete ${t.name}`}
+                title="Delete this trip"
+                onClick={() => {
+                  if (window.confirm(`Delete the trip "${t.name}"?`)) void useTripStore.getState().remove(t.id);
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <TripTotals trip={t} />
+          <div className="pl-hint">
+            {t.stops.length} job{t.stops.length === 1 ? "" : "s"} · from {t.home.name} · saved by {t.savedBy || "—"}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

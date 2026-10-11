@@ -57,6 +57,7 @@ import type { StepPlanningLine } from "./step-queue";
 import { sortJobPOs, type JobPO } from "./job-pos";
 import type { PoDelivery, PoReceipt, WarehousePO } from "./po-receiving";
 import type { GeoQuality, JobGeo } from "./geocode";
+import type { SavedTrip } from "./saved-trips";
 import type { JobDescriptions } from "./job-descriptions";
 import {
   departmentNameForLine,
@@ -3416,4 +3417,44 @@ export async function saveJobGeo(g: JobGeo, rowId?: string): Promise<string> {
   const res = rowId ? await dvUpdate(JOBGEO_SET, id, rec) : await dvCreate(JOBGEO_SET, { crfdf_jobgeoid: id, ...rec });
   if (!res.success) throw new Error(res.error?.message ?? "saveJobGeo failed");
   return id;
+}
+
+// ---------------------------------------------------------------------------
+// Install trips (crfdf_installtrip) — Install Planner Stage 2, Oct 11, 2026.
+// One row per trip Admin / Ops saved; the trip itself is JSON in crfdf_data
+// (services/saved-trips.ts). Created by scripts/create-installtrip-table.ps1.
+// ---------------------------------------------------------------------------
+const TRIP_SET = "crfdf_installtrips";
+
+export async function fetchInstallTrips(): Promise<SavedTrip[]> {
+  const rows = await listAll(TRIP_SET, { select: "crfdf_installtripid,crfdf_data" });
+  const out: SavedTrip[] = [];
+  for (const r of rows) {
+    try {
+      const t = JSON.parse(s(r.crfdf_data)) as SavedTrip;
+      if (t?.plan && Array.isArray(t.stops)) out.push({ ...t, id: s(r.crfdf_installtripid) });
+    } catch {
+      /* skip a damaged row */
+    }
+  }
+  return out;
+}
+
+/** Create or update a trip (its id is the row id). */
+export async function saveInstallTrip(t: SavedTrip, isNew: boolean): Promise<void> {
+  const rec: Row = {
+    crfdf_name: t.name.slice(0, 300),
+    crfdf_region: t.region,
+    crfdf_weekstart: t.weekStart,
+    crfdf_data: JSON.stringify(t),
+    crfdf_savedby: t.savedBy,
+    crfdf_savedat: t.savedAt,
+  };
+  const res = isNew ? await dvCreate(TRIP_SET, { crfdf_installtripid: t.id, ...rec }) : await dvUpdate(TRIP_SET, t.id, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "saveInstallTrip failed");
+}
+
+export async function deleteInstallTrip(id: string): Promise<void> {
+  const res = await dvDelete(TRIP_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? "deleteInstallTrip failed");
 }

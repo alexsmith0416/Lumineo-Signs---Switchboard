@@ -351,3 +351,48 @@ describe("receiving a PO delivery when the save fails", () => {
     expect(enqueueBcPush).not.toHaveBeenCalled();
   });
 });
+
+describe("saving an install trip when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the trip on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveInstallTrip: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { useTripStore } = await import("./trip-store");
+    status.getState().clear();
+    useTripStore.setState({ trips: [], loaded: true });
+    const trip = {
+      id: "t1",
+      name: "WK · Hutchinson → Salina · 1 job",
+      region: "WK" as const,
+      weekStart: "2026-10-12",
+      home: { name: "Hutchinson", address: "1429 W 4th Ave", lat: 38.05, lng: -97.95 },
+      stops: [],
+      plan: { order: [], days: [], overnight: false, nights: 0, driveHours: 0, miles: 0, workHours: 0, warnings: [] },
+      startHour: 7,
+      maxNights: 2,
+      source: "estimate" as const,
+      line: [],
+      savedBy: "Tester",
+      savedAt: "2026-10-11T00:00:00Z",
+    };
+
+    await useTripStore.getState().save(trip);
+    await flush();
+
+    expect(useTripStore.getState().trips.map((t) => t.id)).toEqual(["t1"]);
+    const failed = status.getState().failed;
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.label).toBe("Save trip");
+  });
+});

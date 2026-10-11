@@ -7225,3 +7225,71 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .pl-key__ok { color: var(--status-green); font-size: 12.5px; font-weight: 600; }
 .pl-key__err { color: var(--status-red); font-size: 12.5px; font-weight: 600; }
 .pl-loc--office { background: #4a4f6e; border-color: #8b91a3; }
+
+/* ── Install Planner Stage 2: trips (Oct 11, 2026) ───────────────────────── */
+.pl-plan { margin-top: 8px; font-size: 12.5px; padding: 4px 10px; }
+.tr { display: flex; flex-direction: column; gap: 10px; }
+.tr-head { display: flex; align-items: center; gap: 8px; }
+.tr-head h3 { flex: 1; margin: 0; font-size: 15px; color: var(--lumineo-navy); }
+.tr-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.tr-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-tertiary); }
+.tr-starts { display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-start {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--text-primary);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.tr-start small { font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+.tr-start--on { border-color: var(--lumineo-navy); box-shadow: 0 0 0 1px var(--lumineo-navy); background: var(--accent-brand-soft); }
+.tr-options { display: flex; flex-wrap: wrap; gap: 10px; }
+.tr-options select, .tr-stops input[type="number"] {
+  font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface-raised); color: var(--text-primary);
+}
+.tr-stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.tr-stops li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.tr-stops__job { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-stops input[type="number"] { width: 64px; }
+.tr-stop--off .tr-stops__job { color: var(--text-tertiary); text-decoration: line-through; }
+.tr-hours--guess { border-style: dashed !important; border-color: var(--status-amber) !important; }
+.tr-note { font-size: 12px; color: var(--text-tertiary); min-height: 1em; }
+.tr-totals { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12.5px; color: var(--text-secondary); }
+.tr-totals b { color: var(--text-primary); }
+.tr-source { color: var(--text-tertiary); }
+.tr-warn { font-size: 12.5px; background: var(--status-amber-soft); color: var(--text-primary); border-radius: 6px; padding: 5px 8px; }
+.tr-days { display: flex; flex-direction: column; gap: 8px; }
+.tr-day { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+.tr-day__head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.tr-day__head span { color: var(--text-secondary); font-size: 12px; }
+.tr-day__maps { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--lumineo-navy); }
+.tr-steps { list-style: none; margin: 4px 0 0; padding: 0; }
+.tr-step { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: 12.5px; padding: 2px 0; }
+.tr-step--drive { color: var(--text-tertiary); font-size: 12px; }
+.tr-step--leave, .tr-step--end { font-weight: 600; color: var(--lumineo-navy); }
+.tr-time { flex: 0 0 64px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; font-weight: 400; }
+.tr-stop {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--lumineo-navy); color: var(--text-on-accent); font-size: 10.5px; font-weight: 700;
+}
+.tr-part { color: var(--status-amber); font-weight: 600; }
+.tr-addr { flex-basis: 100%; padding-left: 90px; font-size: 11.5px; color: var(--text-tertiary); }
+.tr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tr-name { flex: 1; min-width: 180px; }
+.tr-num {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: #141464; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); color: #fff; font-size: 11px; font-weight: 800;
+}
+.trv-week + .trv-week { margin-top: 12px; }
+.trv-detail { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+/* Printed trip sheet (printMarkup). */
+.ts { font-size: 12px; color: #111; }
+.ts-meta { margin: 0 0 8px; color: #333; }
+.ts-warn { margin: 0 0 6px; color: #8a4b00; }
+.ts-day { font-size: 13px; margin: 14px 0 4px; }
+.ts-table { width: 100%; border-collapse: collapse; }
+.ts-table th, .ts-table td { border: 1px solid #bbb; padding: 4px 6px; text-align: left; vertical-align: top; }
+.ts-table th { background: #e8eaf5; }
+.ts-table td:first-child { width: 70px; white-space: nowrap; }
+.ts-drive td { color: #555; font-size: 11px; background: #fafafa; }
+.ts-foot { margin-top: 14px; color: #666; font-size: 11px; }
+.pl-tab { flex: 1 1 auto; padding: 9px 5px; font-size: 12.5px; }

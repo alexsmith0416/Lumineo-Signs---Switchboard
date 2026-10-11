@@ -25,6 +25,17 @@ const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" ta
 const KANSAS: L.LatLngExpression = [38.5, -97.5];
 const MILE_METERS = 1609.344;
 
+/** A trip drawn on the map: the road line and the stops numbered in driving order. */
+export interface MapTrip {
+  /** Changes when a different trip / route is shown (zooms to it). */
+  key: string;
+  home: LatLng;
+  /** In driving order. */
+  stops: Array<LatLng & { jobNo: string }>;
+  /** The road route; [] = straight lines between the stops. */
+  line: LatLng[];
+}
+
 /**
  * Spread pins that sit on exactly the same point (several jobs placed at one
  * ZIP's center) in a small ring so each can be seen and clicked.
@@ -91,6 +102,7 @@ export default function PlannerMap({
   onSelectJob,
   onSelectGroup,
   fitKey,
+  trip = null,
 }: {
   jobs: readonly PlannerJob[];
   groups: readonly JobGroup[];
@@ -101,11 +113,14 @@ export default function PlannerMap({
   onSelectGroup: (id: string) => void;
   /** Changes when the map should zoom to fit what's shown (region / filters changed). */
   fitKey: string;
+  /** A trip to draw (route + numbered stops); null = none. */
+  trip?: MapTrip | null;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pinLayer = useRef<L.LayerGroup | null>(null);
   const groupLayer = useRef<L.LayerGroup | null>(null);
+  const tripLayer = useRef<L.LayerGroup | null>(null);
   const handlers = useRef({ onSelectJob, onSelectGroup });
   handlers.current = { onSelectJob, onSelectGroup };
 
@@ -115,6 +130,7 @@ export default function PlannerMap({
     const m = L.map(el.current, { center: KANSAS, zoom: 7, zoomControl: true, preferCanvas: false });
     L.tileLayer(TILES, { maxZoom: 18, attribution: ATTRIBUTION }).addTo(m);
     groupLayer.current = L.layerGroup().addTo(m);
+    tripLayer.current = L.layerGroup().addTo(m);
     pinLayer.current = L.layerGroup().addTo(m);
     for (const loc of LUMINEO_LOCATIONS) {
       L.marker([loc.lat, loc.lng], {
@@ -184,6 +200,36 @@ export default function PlannerMap({
         .addTo(layer);
     }
   }, [groups, selectedGroup, radiusMi]);
+
+  // The trip: road line (or straight legs) + numbered stops.
+  useEffect(() => {
+    const layer = tripLayer.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!trip) return;
+    const path = trip.line.length > 1 ? trip.line : [trip.home, ...trip.stops, trip.home];
+    L.polyline(
+      path.map((p) => [p.lat, p.lng] as [number, number]),
+      { color: "#141464", weight: 4, opacity: 0.8, dashArray: trip.line.length > 1 ? undefined : "8 6" },
+    ).addTo(layer);
+    trip.stops.forEach((st, i) => {
+      L.marker([st.lat, st.lng], {
+        icon: L.divIcon({ className: "pl-pin-wrap", html: `<span class="tr-num">${i + 1}</span>`, iconSize: [22, 22], iconAnchor: [11, 26] }),
+        zIndexOffset: 2000,
+        keyboard: false,
+      })
+        .bindTooltip(`Stop ${i + 1} · ${escapeHtml(st.jobNo)}`, { direction: "top", offset: [0, -24] })
+        .addTo(layer);
+    });
+  }, [trip]);
+
+  // Zoom to a trip when a different one is shown.
+  useEffect(() => {
+    if (!trip || !map.current) return;
+    const pts = [trip.home, ...trip.stops].map((p) => [p.lat, p.lng] as [number, number]);
+    map.current.fitBounds(L.latLngBounds(pts).pad(0.2), { maxZoom: 11 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.key]);
 
   // Zoom to a selected group.
   useEffect(() => {
