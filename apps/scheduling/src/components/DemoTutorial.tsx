@@ -99,6 +99,13 @@ const FULL_STEPS: TourStep[] = [
     placement: "right",
   },
   {
+    view: "planner",
+    target: '[data-tour="nav-planner"]',
+    title: "Install Planner — the jobs map",
+    body: "Every open install and service job on a map: red = Must this week, purple = locked on the board, blue = ready. Drag Radius to group jobs that can share a trip — each group shows crew hours, where the crew leaves from, the drive and the weather. Click a pin to see what fits near it.",
+    placement: "right",
+  },
+  {
     view: "shipping",
     target: '[data-tour="nav-shipping"]',
     title: "Shipping loads",

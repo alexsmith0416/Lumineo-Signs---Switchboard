@@ -75,3 +75,12 @@ export const MOCK_JOB_TRACKS: JobTrack[] = MOCK_BC_JOBS.slice(0, 48).map((j, i) 
     legacyProcess: /Service/.test(status) ? "Service" : "In Process",
   };
 });
+
+/**
+ * Dev only: each sample job's stepper info (live comes from BC planning lines).
+ * Two in three are ready to install (Install is the only step, so it's
+ * active); the rest are still in Paint; every fifth has no install at all.
+ */
+export const MOCK_STEP_INFO: Map<string, { production: string[]; hasInstall: boolean }> = new Map(
+  MOCK_BC_JOBS.map((j, i) => [j.jobNo, { production: i % 3 === 2 ? ["Paint"] : [], hasInstall: i % 5 !== 4 }]),
+);

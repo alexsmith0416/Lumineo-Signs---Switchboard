@@ -267,6 +267,42 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **INSTALL PLANNER — Stage 1 DEPLOYED Oct 11** (guide v3.40
+      §5.19, tour step). Sidebar "Install Planner" (Admin/Ops =
+      `permissions.editSchedule`). Map = **Leaflet** (bundled) + **OpenStreetMap**
+      tiles; free, no Google. Pins for every open install/service job:
+      `classifyPlannerJob` (must / locked-this-week / scheduled / ready /
+      production), `usePlannerJobs(weekStart)` joins Jobs rows + steppers + BC
+      install hours (`installWork`) + both install boards + each region's
+      "Must this week" Install Job Queue group. Radius groups = jobs within R
+      of a center job (NOT touching circles — they chain), `radiusGroups` /
+      `nearbyJobs` / `estimateDays` in `services/install-planner.ts` (tested);
+      distances in `services/geo.ts` (straight line × 1.25 @ 55 mph until
+      Stage 2 road routes). Lumineo locations = each town's ZIP center —
+      **ask Alex for the shops' street addresses**. Positions: ZIP centers
+      (`data/zip-centroids.ts`, Census 2024 ZCTA, lazy chunk) until an address is
+      geocoded by **openrouteservice** (`services/geocode.ts`, `store/job-geo-store.ts`,
+      background, 0.7 s apart, saved in **crfdf_jobgeo**). Key in Settings →
+      Install Planner (`crfdf_jobsviews` "orsApiKey"). Dev: sample stepper info
+      (`MOCK_STEP_INFO`) so dev shows ready jobs.
+      Go-live: ✅ CSP App (code) img-src `https://tile.openstreetmap.org` +
+      connect-src `https://api.openrouteservice.org` (saved Oct 11); ✅
+      `scripts/create-jobgeo-table.ps1` (ran Oct 11); ✅ deployed. Left: Alex
+      pastes the free openrouteservice key in Settings → Install Planner (pins
+      stay at ZIP centers until then); shops' street addresses for
+      LUMINEO_LOCATIONS. crfdf_jobgeo is a NEW table — add it to the Lumineo
+      Scheduler User role before non-admins use the planner.
+      Answers that shape Stages 2–3 (Alex, Oct 11): free maps only; Must this
+      week = a list; locked cards stay; plan TRIPS then assign crews; crews start
+      at their own location; WK/NEK separate with a toggle; 10 h day INCLUDING
+      drive; overnight when one-way > 4 h, max 2 nights (adjustable to 1); no
+      hotel cost; no equipment rules; BC install hours = crew hours (may need
+      per-job tweak); route = shortest loop per group; always review +
+      Commit (sandbox-style); installers get a view-only trips screen; weather
+      yes, time windows no, near-this-job yes, saved plans + compare yes.
+      **Next: Stage 2** (trips/route planner with openrouteservice road
+      routes, day split, overnights, Google Maps link, print, installer view),
+      then **Stage 3** (auto-plan the week + saved plans / compare).
     - ✅ **RECEIVING SITES — DEPLOYED Oct 9** (guide v3.38; BC ext v1.0.0.18 published, flows 1.0.0.2 imported, secret copied Oct 11, both flows ON). Left: set each receiver's Site in Settings → Users. A delivery
       records **Received at** (site: Hutchinson, Wichita, Dodge City, Olathe,
       Topeka, Lawrence — `services/warehouse-sites.ts`, tested) + its storage

@@ -17,6 +17,7 @@ const VIEWS: SbItem[] = [
   { id: "jobs", label: "Jobs", icon: "joblog" },
   { id: "production", label: "Production", icon: "production" },
   { id: "installation", label: "Installation", icon: "installation" },
+  { id: "planner", label: "Install Planner", icon: "map" },
   { id: "shipping", label: "Shipping", icon: "shipping" },
   { id: "warehouse", label: "Warehouse Management", icon: "warehouse" },
   { id: "monthly", label: "Monthly Gameplanning", icon: "monthly" },
@@ -43,6 +44,8 @@ interface SidebarProps {
   showJobs?: boolean;
   /** Warehouse Management — Admin/Ops + logins granted Receiving. */
   showWarehouse?: boolean;
+  /** Install Planner (map, radius groups) — Admin/Ops. */
+  showPlanner?: boolean;
 }
 
 function NavItem({
@@ -70,13 +73,13 @@ function NavItem({
   );
 }
 
-export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true, showScenario = true, showJobs = true, showWarehouse = false }: SidebarProps) {
+export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthly = true, showScenario = true, showJobs = true, showWarehouse = false, showPlanner = false }: SidebarProps) {
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
   const views = VIEWS.filter(
     (v) =>
       (v.id !== "monthly" || showMonthly) && (v.id !== "scenario" || showScenario) && (v.id !== "jobs" || showJobs) &&
-      (v.id !== "warehouse" || showWarehouse),
+      (v.id !== "warehouse" || showWarehouse) && (v.id !== "planner" || showPlanner),
   );
   return (
     <aside className="switchboard-sidebar" aria-label="Switchboard navigation">

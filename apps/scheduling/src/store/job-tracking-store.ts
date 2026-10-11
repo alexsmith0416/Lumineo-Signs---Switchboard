@@ -72,7 +72,7 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
     try {
       if (!LIVE) {
         const m = await import("../data/mock-job-tracking");
-        set({ bcJobs: m.MOCK_BC_JOBS, tracks: m.MOCK_JOB_TRACKS, loaded: true, loading: false });
+        set({ bcJobs: m.MOCK_BC_JOBS, tracks: m.MOCK_JOB_TRACKS, stepInfo: m.MOCK_STEP_INFO, loaded: true, loading: false });
         return;
       }
       const [dv, steps] = await Promise.all([import("../services/dataverse-live"), import("../hooks/useJobSteps")]);

@@ -5,6 +5,7 @@ import { canEditBillingPeriods, isAdminLevel, useCurrentUser } from "../services
 import UsersAdminPanel from "./UsersAdminPanel";
 import BillingPeriodsSection from "./BillingPeriodsSection";
 import LeadTimesSection from "./LeadTimesSection";
+import PlannerSettingsSection from "./planner/PlannerSettingsSection";
 import { JobFlowSettings } from "./JobFlowEditor";
 import BusinessCentralSection from "./BusinessCentralSection";
 
@@ -257,6 +258,7 @@ export default function SettingsScreen() {
       {canEditBillingPeriods(realType) && <LeadTimesSection />}
       {canEditBillingPeriods(realType) && <JobFlowSettings />}
       {canEditBillingPeriods(realType) && <BusinessCentralSection />}
+      {canEditBillingPeriods(realType) && <PlannerSettingsSection />}
 
       {isAdminLevel(realType) && (
         <div className="settings-section">

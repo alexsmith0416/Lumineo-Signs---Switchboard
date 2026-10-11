@@ -1280,6 +1280,34 @@
     scanning come with a later update.</li>
   </ul>
 
+  <h3>5.19 &nbsp;Install Planner &mdash; jobs map and radius groups</h3>
+  <p>Sidebar &rarr; <strong>Install Planner</strong> (Admin / Ops). Every open install and service job on a map, to see what
+  can be done together.</p>
+  <ul>
+    <li><strong>Pins</strong> &mdash; <span style="color:#E8151B">red</span> Must this week,
+    <span style="color:#7C3AED">purple</span> locked on the board this week (stays on its day),
+    <span style="color:#2563EB">blue</span> ready to schedule (production done), grey already on the board, pale = still in
+    production (tick <em>In production</em> to see them). Round = install, diamond = service. A dashed outline means the pin
+    is at the ZIP's center because the street address couldn't be found. The navy labels are the Lumineo locations.</li>
+    <li><strong>Filters</strong> &mdash; the week, <strong>WK / NEK / Both</strong>, Install and Service on or off, Scheduled
+    and In production. Hover a pin for the job, click it to open it.</li>
+    <li><strong>Radius &amp; groups</strong> &mdash; drag <strong>Radius</strong> (5&ndash;150 mi). <strong>Groups</strong>
+    lists every ready / Must-this-week job within that distance of a group's center, with its crew hours, the Lumineo
+    location it would leave from, the estimated one-way drive, about how many crew-days it takes, an
+    <em>Overnight</em> tag when the drive is over 4 hours one-way, and the week's weather. Click a group to see its jobs and
+    zoom to it. WK and NEK are grouped separately; with <strong>Both</strong> picked, <em>Let regions share trips</em>
+    lets them mix.</li>
+    <li><strong>What fits near this job</strong> &mdash; click a pin: the job panel lists every ready job within the radius,
+    nearest first, and their crew hours together. <strong>Google Maps</strong> opens the address.</li>
+    <li><strong>Must this week</strong> &mdash; on a job, click <strong>Must this week</strong> to add it to the region's
+    &ldquo;Must this week&rdquo; list (the same list shows in the Install Job Queue). The tab lists them; &times; takes one off.
+    Clear the list once the week is planned.</li>
+    <li>Drive times are estimates for now (straight line &times; 1.25 at 55 mph); a crew day is 10 hours including driving.
+    Routes with real road times, the trip planner and auto-planning the week are coming next.</li>
+    <li>Pins start at each job's ZIP center. Once the openrouteservice key is saved in <strong>Settings &rarr; Install
+    Planner</strong>, each address is looked up once (in the background) and its pin moves to the street address.</li>
+  </ul>
+
   <!-- ============================================================ -->
   <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
 
@@ -1458,6 +1486,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Install Planner</strong> &mdash; a new screen with every open install and service job on a map (colored by Must this week / locked / ready / scheduled), radius groups of jobs that can share a trip with crew hours, home location, drive and overnight estimates and weather, &ldquo;what fits near this job&rdquo;, and a Must this week list. The full tour has a new step. See &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Record delivery</strong> &mdash; a PO set to Received from the status drop-down (with no final delivery recorded) now keeps a <strong>Record delivery</strong> button, so you can still add when, where and in which storage spot it was received. See &sect;5.18.</td></tr>
       <tr><td>Oct 9, 2026</td><td><strong>Received at a site</strong> &mdash; receiving now records which site a delivery came in at (Hutchinson, Wichita, Dodge City, Olathe, Topeka, Lawrence), starting on your own site (admins set it per user in Settings &rarr; Users &rarr; Site). Storage is a drop-down for Hutchinson's spots and typed in elsewhere, and each delivery line has the site and storage drop-downs to fix it in place. Stored at shows <em>Site &middot; Spot</em>, in the app and in BC. See &sect;5.18.</td></tr>
       <tr><td>Oct 8, 2026</td><td><strong>Receiving in Business Central</strong> &mdash; the Vendor Status and every delivery you record now show in BC: on the Purchase Order card (Vendor Status + a Receiving section) and the Job card (a PO Receiving section with Stored At). Read-only there; change it in the app. See &sect;5.18.</td></tr>
@@ -1583,7 +1612,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.39 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.40 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

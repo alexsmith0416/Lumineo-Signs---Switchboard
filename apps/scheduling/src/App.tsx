@@ -21,6 +21,7 @@ import { useLoadsStore } from "./shipping/loads-store";
 import { hydrateInstallCards } from "./services/install-cards";
 import { useCurrentUser, TYPE_CONFIG } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
+import InstallPlannerView from "./components/planner/InstallPlannerView";
 import WarehouseView from "./components/warehouse/WarehouseView";
 import { canEditJobField } from "./services/job-edit-access";
 import { useSettingsStore } from "./store/settings-store";
@@ -39,6 +40,7 @@ type View =
   | "monthly"
   | "jobs"
   | "warehouse"
+  | "planner"
   | "settings"
   | "help";
 
@@ -51,6 +53,7 @@ const VIEW_TITLES: Record<View, string> = {
   monthly: "Monthly Install Plan",
   jobs: "Jobs",
   warehouse: "Warehouse Management",
+  planner: "Install Planner",
   settings: "Settings",
   help: "Help & User Guide",
 };
@@ -195,6 +198,7 @@ export default function App() {
           showScenario={permissions.scenarios}
           showJobs={permissions.jobs}
           showWarehouse={showWarehouse}
+          showPlanner={permissions.editSchedule}
         />
       )}
 
@@ -230,6 +234,7 @@ export default function App() {
           {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
           {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
           {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} userName={fullName ?? ""} homeSite={homeSite} />}
+          {view === "planner" && permissions.editSchedule && <InstallPlannerView canEdit={!demoMode} />}
           {view === "warehouse" && showWarehouse && (
             <WarehouseView canReceive={canReceive} canSetStatus={whEdit.all} userName={fullName ?? ""} homeSite={homeSite} />
           )}
@@ -269,6 +274,7 @@ export default function App() {
         showScenario={permissions.scenarios}
         showJobs={permissions.jobs}
           showWarehouse={showWarehouse}
+          showPlanner={permissions.editSchedule}
       />
     </div>
   );

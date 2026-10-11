@@ -56,6 +56,7 @@ import type { LastPush } from "./bc-full-sync";
 import type { StepPlanningLine } from "./step-queue";
 import { sortJobPOs, type JobPO } from "./job-pos";
 import type { PoDelivery, PoReceipt, WarehousePO } from "./po-receiving";
+import type { GeoQuality, JobGeo } from "./geocode";
 import type { JobDescriptions } from "./job-descriptions";
 import {
   departmentNameForLine,
@@ -3369,4 +3370,50 @@ export function employeeDeptByResource(): Promise<Map<string, string>> {
       throw e;
     });
   return deptByResourceP;
+}
+
+// ---------------------------------------------------------------------------
+// Job map positions (crfdf_jobgeo) — Install Planner, Oct 11, 2026. One row per
+// job: where its ship-to address is (lat / lng as text), the address it was
+// looked up from, and how ("address" / "zip" / "none"). Written by the app
+// (store/job-geo-store) after an openrouteservice lookup.
+// Created by scripts/create-jobgeo-table.ps1.
+// ---------------------------------------------------------------------------
+const JOBGEO_SET = "crfdf_jobgeos";
+
+export async function fetchJobGeos(): Promise<Array<JobGeo & { rowId: string }>> {
+  const rows = await listAll(JOBGEO_SET, {
+    select: "crfdf_jobgeoid,crfdf_jobno,crfdf_address,crfdf_lat,crfdf_lng,crfdf_quality",
+  });
+  return rows
+    .map((r) => {
+      const lat = parseFloat(s(r.crfdf_lat));
+      const lng = parseFloat(s(r.crfdf_lng));
+      const quality = s(r.crfdf_quality) as GeoQuality;
+      return {
+        rowId: s(r.crfdf_jobgeoid),
+        jobNo: s(r.crfdf_jobno).trim(),
+        address: s(r.crfdf_address),
+        quality: quality === "address" || quality === "zip" ? quality : ("none" as const),
+        ...(Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : {}),
+      };
+    })
+    .filter((g) => g.jobNo);
+}
+
+/** Save a job's position; `rowId` = its existing row (update), else a new one. Returns the row id. */
+export async function saveJobGeo(g: JobGeo, rowId?: string): Promise<string> {
+  const rec: Row = {
+    crfdf_name: g.jobNo,
+    crfdf_jobno: g.jobNo,
+    crfdf_address: g.address.slice(0, 400),
+    crfdf_lat: g.lat != null ? g.lat.toFixed(6) : "",
+    crfdf_lng: g.lng != null ? g.lng.toFixed(6) : "",
+    crfdf_quality: g.quality,
+    crfdf_geocodedat: new Date().toISOString(),
+  };
+  const id = rowId || uuid();
+  const res = rowId ? await dvUpdate(JOBGEO_SET, id, rec) : await dvCreate(JOBGEO_SET, { crfdf_jobgeoid: id, ...rec });
+  if (!res.success) throw new Error(res.error?.message ?? "saveJobGeo failed");
+  return id;
 }
