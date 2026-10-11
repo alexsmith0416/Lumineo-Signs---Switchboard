@@ -35,9 +35,14 @@ while (-not $token -and (Get-Date) -lt $deadline) {
   try {
     $token = (Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/token" `
       -Body @{ grant_type='urn:ietf:params:oauth:grant-type:device_code'; client_id=$clientId; device_code=$dc.device_code }).access_token
-  } catch { $err = ($_.ErrorDetails.Message | ConvertFrom-Json).error; if ($err -ne 'authorization_pending' -and $err -ne 'slow_down') { throw } }
+  } catch {
+    # A non-JSON reply (network hiccup) is treated as "keep waiting", not a crash.
+    $err = try { ($_.ErrorDetails.Message | ConvertFrom-Json).error } catch { 'authorization_pending' }
+    if ($err -eq 'expired_token') { throw "The sign-in code expired - run the script again and sign in within 15 minutes." }
+    if ($err -ne 'authorization_pending' -and $err -ne 'slow_down') { throw }
+  }
 }
-if (-not $token) { throw "Device-code login timed out." }
+if (-not $token) { throw "Device-code login timed out - run the script again and sign in within 15 minutes." }
 Write-Host "Authenticated." -ForegroundColor Green
 $headers = @{ Authorization="Bearer $token"; Accept='application/json'; 'Content-Type'='application/json'; 'OData-MaxVersion'='4.0'; 'OData-Version'='4.0' }
 $api = "$org/api/data/v9.2"
@@ -85,4 +90,4 @@ foreach ($name in $targets) {
 }
 $secret = $null
 Write-Host ""
-Write-Host "Done. Turn both flows on once BC ext v1.0.0.17 is published to UAT." -ForegroundColor Cyan
+Write-Host "Done. The flows need BC ext v1.0.0.18+ published; turn them on if they are Off." -ForegroundColor Cyan

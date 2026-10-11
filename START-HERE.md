@@ -267,7 +267,7 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
-    - ✅ **RECEIVING SITES — DEPLOYED Oct 9** (guide v3.38; BC ext v1.0.0.18 published, flows 1.0.0.2 imported). Left: set each receiver's Site in Settings → Users. A delivery
+    - ✅ **RECEIVING SITES — DEPLOYED Oct 9** (guide v3.38; BC ext v1.0.0.18 published, flows 1.0.0.2 imported, secret copied Oct 11, both flows ON). Left: set each receiver's Site in Settings → Users. A delivery
       records **Received at** (site: Hutchinson, Wichita, Dodge City, Olathe,
       Topeka, Lawrence — `services/warehouse-sites.ts`, tested) + its storage
       spot there: a drop-down for Hutchinson (`STORAGE_SPOTS`; add other sites'
