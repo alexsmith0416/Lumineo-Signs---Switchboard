@@ -287,10 +287,10 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       (`MOCK_STEP_INFO`) so dev shows ready jobs.
       Go-live: ✅ CSP App (code) img-src `https://tile.openstreetmap.org` +
       connect-src `https://api.openrouteservice.org` (saved Oct 11); ✅
-      `scripts/create-jobgeo-table.ps1` (ran Oct 11); ✅ deployed. Left: Alex
-      pastes the free openrouteservice key in Settings → Install Planner (pins
-      stay at ZIP centers until then); shops' street addresses for
-      LUMINEO_LOCATIONS. crfdf_jobgeo is a NEW table — add it to the Lumineo
+      `scripts/create-jobgeo-table.ps1` (ran Oct 11); ✅ deployed. ✅ openrouteservice key
+      saved (Oct 11); ✅ LUMINEO_LOCATIONS at the shops' street addresses
+      (Census-geocoded, Oct 11) — 7 locations incl. **Salina** (WK, `crewBase:
+      false` until Alex confirms it has install crews). crfdf_jobgeo is a NEW table — add it to the Lumineo
       Scheduler User role before non-admins use the planner.
       Answers that shape Stages 2–3 (Alex, Oct 11): free maps only; Must this
       week = a list; locked cards stay; plan TRIPS then assign crews; crews start
