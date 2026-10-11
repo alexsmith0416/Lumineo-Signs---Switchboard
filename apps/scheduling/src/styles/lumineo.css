@@ -7224,3 +7224,4 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .pl-key input { width: 260px; max-width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 .pl-key__ok { color: var(--status-green); font-size: 12.5px; font-weight: 600; }
 .pl-key__err { color: var(--status-red); font-size: 12.5px; font-weight: 600; }
+.pl-loc--office { background: #4a4f6e; border-color: #8b91a3; }

@@ -36,24 +36,31 @@ export type Region = "WK" | "NEK";
 export interface LumineoLocation extends LatLng {
   name: string;
   region: Region;
+  address: string;
+  phone: string;
+  /** Install crews leave from here (a trip's home). Salina: not confirmed yet. */
+  crewBase: boolean;
 }
 
 /**
- * Where crews start. APPROXIMATE — each town's ZIP center until the shops'
- * street addresses are entered (then geocoded like any job).
+ * Lumineo's locations (Alex, Oct 11, 2026) — street addresses, placed by the
+ * US Census geocoder (exact matches). Crews start at their own location.
  */
 export const LUMINEO_LOCATIONS: readonly LumineoLocation[] = [
-  { name: "Hutchinson", region: "WK", lat: 37.9782, lng: -97.9265 },
-  { name: "Wichita", region: "WK", lat: 37.687, lng: -97.3349 },
-  { name: "Dodge City", region: "WK", lat: 37.7301, lng: -100.0601 },
-  { name: "Olathe", region: "NEK", lat: 38.8938, lng: -94.88 },
-  { name: "Topeka", region: "NEK", lat: 39.0575, lng: -95.6747 },
-  { name: "Lawrence", region: "NEK", lat: 39.0329, lng: -95.2091 },
+  { name: "Hutchinson", region: "WK", lat: 38.05716, lng: -97.95798, address: "1429 W 4th Ave, Hutchinson, KS 67501", phone: "(620) 662-2363", crewBase: true },
+  { name: "Wichita", region: "WK", lat: 37.69039, lng: -97.31735, address: "327 N Hydraulic Ave #300, Wichita, KS 67214", phone: "(316) 202-2025", crewBase: true },
+  { name: "Dodge City", region: "WK", lat: 37.75193, lng: -99.98492, address: "2300 E Wyatt Earp Blvd, Dodge City, KS 67801", phone: "(620) 227-2307", crewBase: true },
+  { name: "Salina", region: "WK", lat: 38.78369, lng: -97.62997, address: "1500 W Schilling Rd, Salina, KS 67401", phone: "(785) 823-1789", crewBase: false },
+  { name: "Olathe", region: "NEK", lat: 38.90603, lng: -94.78773, address: "1805 E 123rd St, Olathe, KS 66061", phone: "(913) 780-3330", crewBase: true },
+  { name: "Topeka", region: "NEK", lat: 38.9952, lng: -95.69716, address: "1510 SW 41st St, Topeka, KS 66609", phone: "(785) 267-2625", crewBase: true },
+  { name: "Lawrence", region: "NEK", lat: 38.94265, lng: -95.22554, address: "801 E 23rd St, Lawrence, KS 66046", phone: "(785) 842-4930", crewBase: true },
 ];
 
-/** The nearest Lumineo location (optionally only one region's). */
+/** The nearest Lumineo location crews leave from (optionally only one region's). */
 export function nearestLocation(p: LatLng, region?: Region): LumineoLocation {
-  const pool = region ? LUMINEO_LOCATIONS.filter((l) => l.region === region) : LUMINEO_LOCATIONS;
+  // Only where crews start from.
+  const bases = LUMINEO_LOCATIONS.filter((l) => l.crewBase);
+  const pool = region ? bases.filter((l) => l.region === region) : bases;
   let best = pool[0]!;
   let bestMi = Infinity;
   for (const l of pool) {

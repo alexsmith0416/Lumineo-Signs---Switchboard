@@ -120,14 +120,19 @@ export default function PlannerMap({
       L.marker([loc.lat, loc.lng], {
         icon: L.divIcon({
           className: "pl-loc-wrap",
-          html: `<span class="pl-loc">${escapeHtml(loc.name)}</span>`,
+          html: `<span class="pl-loc${loc.crewBase ? "" : " pl-loc--office"}">${escapeHtml(loc.name)}</span>`,
           iconSize: [0, 0],
         }),
         keyboard: false,
         // Under the job pins, so a job in the shop's own town can still be clicked.
         zIndexOffset: -1000,
-        title: `Lumineo · ${loc.name} (${loc.region})`,
-      }).addTo(m);
+      })
+        .bindTooltip(
+          `<b>Lumineo · ${escapeHtml(loc.name)}</b> (${loc.region})<br>${escapeHtml(loc.address)}<br>${escapeHtml(loc.phone)}` +
+            (loc.crewBase ? "" : "<br><i>Not a crew start for trips</i>"),
+          { direction: "top", offset: [0, -10] },
+        )
+        .addTo(m);
     }
     map.current = m;
     // The panel can change size after layout; keep tiles filling it.

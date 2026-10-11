@@ -35,6 +35,12 @@ describe("geo", () => {
     expect(nearestLocation(olathe, "WK").region).toBe("WK");
   });
 
+  it("never starts a trip from a location without crews (Salina)", () => {
+    const salina = LUMINEO_LOCATIONS.find((l) => l.name === "Salina")!;
+    expect(salina.crewBase).toBe(false);
+    expect(nearestLocation(salina).name).not.toBe("Salina");
+  });
+
   it("parses the ZIP table and looks up ZIP+4", () => {
     const t = parseZipCentroids("\n67501,37.9782,-97.9265\n66061,38.8938,-94.8800\n");
     expect(zipCenter(t, "67501-1234")).toEqual({ lat: 37.9782, lng: -97.9265 });
