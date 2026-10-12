@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useJobGeoStore } from "../../store/job-geo-store";
+import { testOrsKey, type OrsCheck } from "../../services/ors-test";
 
 /**
  * Settings → Install Planner. The openrouteservice key the planner uses to put
@@ -13,6 +14,17 @@ export default function PlannerSettingsSection() {
   const err = useJobGeoStore((s) => s.lookupError);
   const [draft, setDraft] = useState("");
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [testing, setTesting] = useState(false);
+  const [checks, setChecks] = useState<OrsCheck[] | null>(null);
+  const test = async () => {
+    setTesting(true);
+    setChecks(null);
+    const r = await testOrsKey(draft.trim());
+    setChecks(r);
+    setTesting(false);
+    // It works now (key fixed / policy saved): let the planner carry on.
+    if (r.every((c) => c.ok) && draft.trim() === saved) useJobGeoStore.getState().retry();
+  };
   useEffect(() => {
     void useJobGeoStore.getState().load();
   }, []);
@@ -58,8 +70,20 @@ export default function PlannerSettingsSection() {
           <button type="button" className="btn-primary" disabled={!loaded || draft.trim() === saved || state === "saving"} onClick={() => void save()}>
             {state === "saving" ? "Saving…" : "Save"}
           </button>
+          <button type="button" className="btn-secondary" disabled={!draft.trim() || testing} onClick={() => void test()}>
+            {testing ? "Testing…" : "Test"}
+          </button>
           {state === "saved" && <span className="pl-key__ok">Saved</span>}
           {state === "error" && <span className="pl-key__err">Couldn't save</span>}
+          {checks && (
+            <ul className="pl-key__checks">
+              {checks.map((c) => (
+                <li key={c.label} className={c.ok ? "pl-key__ok" : "pl-key__err"}>
+                  {c.ok ? "✓" : "✗"} {c.label}: {c.detail}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

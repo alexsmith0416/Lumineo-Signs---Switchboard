@@ -711,7 +711,16 @@ function GeoStatus({ approx, total }: { approx: number; total: number }) {
   else if (pending) msg = `Placing ${pending} address${pending === 1 ? "" : "es"} on the map…`;
   else if (approx) msg = `${approx} of ${total} pins are at their ZIP's center (address not found).`;
   if (!msg) return null;
-  return <div className={`pl-geostatus${err ? " pl-geostatus--warn" : ""}`}>{msg}</div>;
+  return (
+    <div className={`pl-geostatus${err ? " pl-geostatus--warn" : ""}`}>
+      {msg}
+      {err && (
+        <button type="button" className="pl-link pl-geostatus__retry" onClick={() => useJobGeoStore.getState().retry()}>
+          Try again
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Segmented({

@@ -10,6 +10,7 @@
  */
 import { estimateMatrix, type Matrix } from "./trip-plan";
 import { ORS_ORIGIN } from "./geocode";
+import { orsFetch, orsStatusText } from "./ors-fetch";
 import type { LatLng } from "./geo";
 
 const lngLat = (p: LatLng) => [p.lng, p.lat];
@@ -69,12 +70,12 @@ export function thin<T>(pts: readonly T[], max: number): T[] {
 }
 
 async function post(key: string, path: string, body: unknown): Promise<unknown> {
-  const res = await fetch(`${ORS_ORIGIN}${path}`, {
+  const res = await orsFetch(`${ORS_ORIGIN}${path}`, {
     method: "POST",
     headers: { Authorization: key, "Content-Type": "application/json", Accept: "application/json, application/geo+json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`openrouteservice ${res.status}`);
+  if (!res.ok) throw new Error(orsStatusText(res.status) ?? `openrouteservice ${res.status}`);
   return res.json();
 }
 
@@ -86,7 +87,7 @@ export async function roadMatrix(key: string, points: readonly LatLng[]): Promis
     if (m) return { matrix: m, note: "" };
     return { matrix: estimateMatrix(points), note: "openrouteservice returned no drive times — using estimates." };
   } catch (e) {
-    return { matrix: estimateMatrix(points), note: `Road drive times unavailable (${e instanceof Error ? e.message : "network"}) — using estimates.` };
+    return { matrix: estimateMatrix(points), note: `Using estimated drive times: ${e instanceof Error ? e.message : "openrouteservice couldn't be reached."}` };
   }
 }
 

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { loadZipCentroids, zipCenter, type LatLng } from "../services/geo";
 import { addressKey, orsGeocodeUrl, parseOrsGeocode, type JobGeo } from "../services/geocode";
 import type { ShipTo } from "../services/ship-to";
+import { OrsError, orsFetch, orsStatusText } from "../services/ors-fetch";
 
 /**
  * Install Planner — where each job is on the map (Oct 11, 2026).
@@ -43,9 +44,13 @@ interface JobGeoState {
   setOrsKey: (key: string) => Promise<void>;
   /** Look up, in the background, every job whose position is missing or stale. */
   ensure: (jobs: readonly GeoJob[]) => void;
+  /** Clear a stopped lookup (after fixing the key / policy) and carry on. */
+  retry: () => void;
 }
 
 let queue: GeoJob[] = [];
+/** The last jobs asked for, so retry() can pick up where it stopped. */
+let lastAsked: readonly GeoJob[] = [];
 let running = false;
 let lookedUp = 0;
 const queued = new Set<string>();
@@ -86,9 +91,18 @@ export const useJobGeoStore = create<JobGeoState>((set, get) => ({
     const clean = key.trim();
     set({ orsKey: clean, lookupError: "" });
     if (LIVE) await (await dv()).saveJobsViewConfig(ORS_KEY_SETTING, clean);
+    get().retry();
+  },
+
+  retry: () => {
+    queued.clear();
+    queue = [];
+    set({ lookupError: "" });
+    get().ensure(lastAsked);
   },
 
   ensure: (jobs) => {
+    lastAsked = jobs;
     const { loaded, orsKey, geos, lookupError } = get();
     if (!LIVE || !loaded || !orsKey || lookupError) return;
     for (const j of jobs) {
@@ -131,21 +145,20 @@ async function lookUp(job: GeoJob, key: string, zips: Map<string, LatLng> | null
   const center = zips ? zipCenter(zips, job.shipTo.zip ?? "") : null;
   let res: Response;
   try {
-    res = await fetch(orsGeocodeUrl(key, job.shipTo), { headers: { Accept: "application/json" } });
+    res = await orsFetch(orsGeocodeUrl(key, job.shipTo), { headers: { Accept: "application/json" } });
   } catch (e) {
-    // Blocked (content security policy) or offline — stop for the session.
-    useJobGeoStore.setState({
-      lookupError: "Can't reach openrouteservice — allow https://api.openrouteservice.org (connect-src) in the app's content security policy.",
-    });
-    console.warn("[job-geo] lookup blocked", e);
+    // Blocked by the policy, or a refusal the browser can't read (the key) — stop until retried.
+    useJobGeoStore.setState({ lookupError: e instanceof OrsError ? e.message : "openrouteservice couldn't be reached." });
+    console.warn("[job-geo] lookup failed", e);
+    queued.delete(job.jobNo);
+    queue.unshift(job);
     return;
   }
-  if (res.status === 401 || res.status === 403) {
-    useJobGeoStore.setState({ lookupError: "The openrouteservice key was refused — check it in Settings → Install Planner." });
-    return;
-  }
-  if (res.status === 429) {
-    useJobGeoStore.setState({ lookupError: "openrouteservice's daily limit is used up — lookups continue tomorrow." });
+  const refused = orsStatusText(res.status);
+  if (refused && res.status !== 404) {
+    useJobGeoStore.setState({ lookupError: refused });
+    queued.delete(job.jobNo);
+    queue.unshift(job);
     return;
   }
   const pos = res.ok ? parseOrsGeocode(await res.json().catch(() => null), center) : null;

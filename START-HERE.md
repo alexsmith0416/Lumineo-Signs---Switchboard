@@ -267,6 +267,15 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **openrouteservice diagnosis — DEPLOYED Oct 12** (guide v3.45). Live
+      planner said "Can't reach openrouteservice … content security policy"
+      though CSP was set: the app blamed CSP for ANY failed fetch, but ORS's
+      refusals (403) carry no CORS header, so a refused key looks the same.
+      `services/ors-fetch.ts orsFetch` now tells a real CSP block
+      (securitypolicyviolation event) from an unreadable refusal (key);
+      Settings → Install Planner **Test** (`services/ors-test.ts`: one lookup +
+      one matrix), planner **Try again** (`useJobGeoStore.retry`). Alex's key
+      is the dashboard's "Basic Key" (active). **Open:** what Test says live.
     - ✅ **INSTALLATION TOOLS GROUPED + MONTHLY ↔ PLANNER — DEPLOYED Oct 11**
       (guide v3.44). Sidebar: Installation is one item; its tools (`INSTALL_TOOLS` in
       Sidebar.tsx: Schedule = "installation", Monthly Gameplanning, Install
