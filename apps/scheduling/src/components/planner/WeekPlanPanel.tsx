@@ -8,6 +8,7 @@ import { loadWeekCrews, type WeekCrews } from "../../services/week-plan-data";
 import { planWeek, weekStats, WEEK_DAYS, type Assignment, type PlanCrew, type WeekPlan } from "../../services/week-plan";
 import { comparePlans, type PlanOptions, type SavedPlan } from "../../services/saved-plans";
 import { duration } from "../../services/saved-trips";
+import { money } from "./PlannerMap";
 import type { PlannerJob } from "../../services/install-planner";
 import type { Region } from "../../services/geo";
 
@@ -55,6 +56,8 @@ export default function WeekPlanPanel({
     crossRegions: crossRegions && region === "both",
     startHour: 7,
     region,
+    priority: "dollars",
+    pastDueFirm: false,
   });
   const set = (patch: Partial<PlanOptions>) => {
     setOpts((o) => ({ ...o, ...patch }));
@@ -97,6 +100,8 @@ export default function WeekPlanPanel({
           allowOvernight,
           maxNights: opts.maxNights,
           crossRegions: opts.crossRegions,
+          priority: opts.priority ?? "dollars",
+          pastDueFirm: !!opts.pastDueFirm,
         })
       : null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +123,12 @@ export default function WeekPlanPanel({
     : computed
       ? {
           assignments: computed.assignments,
-          unplaced: computed.unplaced.map((u) => ({ jobNo: u.job.jobNo, name: u.job.name, must: u.job.state === "must", reason: u.reason })),
+          unplaced: computed.unplaced.map((u) => ({
+            jobNo: u.job.jobNo,
+            name: u.job.name,
+            must: u.job.state === "must" || u.job.state === "planned",
+            reason: u.reason,
+          })),
         }
       : null;
 
@@ -133,6 +143,8 @@ export default function WeekPlanPanel({
   // "Didn't fit" is counted below (planner + left off in review), not here.
   const stats = useMemo(() => weekStats(effective, [], regionJobs), [effective, regionJobs]);
   const leftOff = (base?.assignments ?? []).filter((a) => excluded.has(a.trip.id));
+  // Firm jobs (Must / Planned this week) the plan couldn't place.
+  const firmMissed = (base?.unplaced ?? []).filter((u) => u.reason.startsWith("Has to be on this week's schedule"));
 
   const takenDays = (crewId: string, exceptTrip: string) => {
     const t = new Set(crews?.busy.get(crewId) ?? []);
@@ -235,6 +247,17 @@ export default function WeekPlanPanel({
               ))}
             </select>
           </label>
+          <label className="tr-field">
+            <span className="tr-label">Fill free time</span>
+            <select value={opts.priority ?? "dollars"} onChange={(e) => set({ priority: e.target.value as "dollars" | "jobs" })}>
+              <option value="dollars">Dollars first</option>
+              <option value="jobs">Most jobs for the driving</option>
+            </select>
+          </label>
+          <label className="pl-check">
+            <input type="checkbox" checked={!!opts.pastDueFirm} onChange={(e) => set({ pastDueFirm: e.target.checked })} /> Past-due jobs count
+            as firm
+          </label>
           <label className="pl-check">
             <input type="checkbox" checked={opts.combineService} onChange={(e) => set({ combineService: e.target.checked })} /> Combine service with
             install
@@ -284,8 +307,9 @@ export default function WeekPlanPanel({
         ) : (
           <>
             <div className="wp-stats">
+              <Stat label="$ planned" value={money(stats.value)} />
               <Stat label="Jobs planned" value={`${stats.jobs}`} />
-              <Stat label="Must this week" value={`${stats.mustJobs} of ${stats.mustTotal}`} warn={stats.mustJobs < stats.mustTotal} />
+              <Stat label="Must / Planned this week" value={`${stats.mustJobs} of ${stats.mustTotal}`} warn={stats.mustJobs < stats.mustTotal} />
               <Stat label="Crew hours" value={hrs(stats.crewHours)} />
               <Stat label="Driving" value={`${duration(stats.driveHours)} · ${Math.round(stats.miles)} mi`} />
               <Stat label="Nights" value={`${stats.nights}`} />
@@ -303,6 +327,16 @@ export default function WeekPlanPanel({
                 </div>
               )}
             </div>
+
+            {firmMissed.length > 0 && (
+              <div className="wp-firm">
+                <b>
+                  {firmMissed.length} job{firmMissed.length === 1 ? "" : "s"} that {firmMissed.length === 1 ? "has" : "have"} to be on this
+                  week's schedule didn't fit:
+                </b>{" "}
+                {firmMissed.map((u) => u.jobNo).join(", ")}. Free up crew-days on the board, allow overnights, or move the customer's date.
+              </div>
+            )}
 
             <div className="wp-body">
               <div className="wp-grid-wrap">

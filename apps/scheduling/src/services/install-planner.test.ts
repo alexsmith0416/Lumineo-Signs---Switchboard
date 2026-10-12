@@ -15,6 +15,9 @@ const job = (jobNo: string, pos: { lat: number; lng: number } | null, o: Partial
   zip: "",
   crewHours: 4,
   scheduledDate: "",
+  value: 0,
+  neededBy: "",
+  daysLate: 0,
   ...o,
 });
 // About 1 mile of latitude.
@@ -132,6 +135,8 @@ describe("which jobs go on the map", () => {
     expect(classifyPlannerJob({ ...base, steps: steps("active") })).toEqual({ kind: "install", state: "ready" });
     expect(classifyPlannerJob({ ...base, steps: steps("included") })!.state).toBe("production");
     expect(classifyPlannerJob({ ...base, mustThisWeek: true, steps: steps("included") })!.state).toBe("must");
+    expect(classifyPlannerJob({ ...base, plannedThisWeek: true, steps: steps("included") })!.state).toBe("planned");
+    expect(classifyPlannerJob({ ...base, mustThisWeek: true, plannedThisWeek: true, steps: steps("active") })!.state).toBe("must");
     expect(classifyPlannerJob({ ...base, mustThisWeek: true, onBoard: true, steps: steps("active") })!.state).toBe("scheduled");
     expect(classifyPlannerJob({ ...base, onBoard: true, lockedThisWeek: true, steps: steps("active") })!.state).toBe("locked");
   });

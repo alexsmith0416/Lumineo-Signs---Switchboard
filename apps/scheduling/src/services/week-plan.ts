@@ -2,8 +2,11 @@
  * Install Planner — Stage 3: auto-plan a week (pure). Oct 11, 2026.
  *
  * Rules (Alex, Oct 11): jobs locked on the board stay where they are (their
- * crew-days are taken); "Must this week" jobs are planned first, then ready
- * jobs fill what's left; the planner builds TRIPS from each crew location and
+ * crew-days are taken); FIRM jobs are planned first — "Must this week" and
+ * "Planned this week" (its Scheduled install is in the week, e.g. from Monthly
+ * Gameplanning: the customer expects us), plus past-due jobs when that option
+ * is on — then ready jobs fill what's left, DOLLARS FIRST by default (or most
+ * jobs for the driving, as an option); the planner builds TRIPS from each crew location and
  * gives each to a crew AT that location (crews start from their own); a crew
  * day is 10 h including driving; over 4 h one-way = overnight (max nights,
  * adjustable) when overnights are allowed; install and service jobs share
@@ -14,7 +17,7 @@
  * be planned instantly; a trip opened in the Trip panel gets road times.
  */
 import { LUMINEO_LOCATIONS, milesBetween, type LumineoLocation, type Region } from "./geo";
-import { radiusGroups, type PlannerJob } from "./install-planner";
+import { isFirm, radiusGroups, type PlannerJob } from "./install-planner";
 import { estimateMatrix, loopHours, needsOvernight, planDays, shortestLoop, type TripPlan } from "./trip-plan";
 import type { TripStop } from "./saved-trips";
 
@@ -40,6 +43,10 @@ export interface WeekPlanInput {
   allowOvernight: boolean;
   maxNights: number;
   crossRegions: boolean;
+  /** What fills the free time first: billing $ (default) or the most jobs for the driving. */
+  priority?: "dollars" | "jobs";
+  /** Past-due jobs (needed-by date passed) count as firm, like Must. */
+  pastDueFirm?: boolean;
   /** On-site hours when BC has none. */
   unknownHours?: number;
 }
@@ -49,7 +56,10 @@ export interface PlannedTrip {
   home: LumineoLocation;
   stops: TripStop[];
   plan: TripPlan;
+  /** Firm jobs on it (Must / Planned this week / past due when firm). */
   mustCount: number;
+  /** Billing value of its jobs. */
+  value: number;
 }
 
 export interface Assignment {
@@ -73,8 +83,11 @@ export interface WeekPlan {
 
 export interface WeekStats {
   jobs: number;
+  /** Firm jobs planned / all firm jobs (Must + Planned this week). */
   mustJobs: number;
   mustTotal: number;
+  /** Billing value of the jobs planned. */
+  value: number;
   crewHours: number;
   driveHours: number;
   miles: number;
@@ -124,8 +137,14 @@ function tripsForGroup(
   input: WeekPlanInput,
 ): { trips: Array<{ stops: TripStop[]; plan: TripPlan; jobs: PlannerJob[] }>; dropped: Unplaced[] } {
   const unknown = input.unknownHours ?? UNKNOWN;
+  const firm = firmTest(input);
+  // Firm first, then past due, then (dollars) the biggest jobs / (jobs) the nearest.
   const queue = [...jobs].sort(
-    (a, b) => Number(b.state === "must") - Number(a.state === "must") || milesBetween(home, a.pos!) - milesBetween(home, b.pos!),
+    (a, b) =>
+      Number(firm(b)) - Number(firm(a)) ||
+      Number(b.daysLate > 0) - Number(a.daysLate > 0) ||
+      (input.priority === "jobs" ? 0 : b.value - a.value) ||
+      milesBetween(home, a.pos!) - milesBetween(home, b.pos!),
   );
   const trips: Array<{ stops: TripStop[]; plan: TripPlan; jobs: PlannerJob[] }> = [];
   const dropped: Unplaced[] = [];
@@ -150,6 +169,9 @@ function tripsForGroup(
   return { trips, dropped };
 }
 
+/** Is this job firm for this run (Must / Planned this week; past due when that option is on)? */
+const firmTest = (input: Pick<WeekPlanInput, "pastDueFirm">) => (j: PlannerJob) => isFirm(j) || (!!input.pastDueFirm && j.daysLate > 0);
+
 /** Day indexes free for a crew, after what's already planned / on the board. */
 function freeRun(taken: ReadonlySet<number>, days: number): number {
   for (let start = 0; start + days <= WEEK_DAYS; start++) {
@@ -170,6 +192,7 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
   const taken = new Map<string, Set<number>>(input.crews.map((c) => [c.id, new Set(input.busy.get(c.id) ?? [])]));
   const unplaced: Unplaced[] = [];
   const candidates: Array<{ trip: PlannedTrip; jobs: PlannerJob[]; region: Region | "all" }> = [];
+  const firm = firmTest(input);
   let n = 0;
 
   for (const region of regions) {
@@ -179,7 +202,7 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
     );
     for (const kind of kinds) {
       const pool = input.jobs.filter(
-        (j) => j.pos && (j.state === "must" || j.state === "ready") && (region === "all" || j.region === region) && (kind === "all" || j.kind === kind),
+        (j) => j.pos && (isFirm(j) || j.state === "ready") && (region === "all" || j.region === region) && (kind === "all" || j.kind === kind),
       );
       if (!pool.length) continue;
       if (!bases.length) {
@@ -198,7 +221,14 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
         unplaced.push(...dropped);
         for (const t of trips) {
           candidates.push({
-            trip: { id: `t${++n}`, home, stops: t.stops, plan: t.plan, mustCount: t.jobs.filter((j) => j.state === "must").length },
+            trip: {
+              id: `t${++n}`,
+              home,
+              stops: t.stops,
+              plan: t.plan,
+              mustCount: t.jobs.filter(firm).length,
+              value: t.jobs.reduce((s, j) => s + j.value, 0),
+            },
             jobs: t.jobs,
             region,
           });
@@ -207,11 +237,17 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
     }
   }
 
-  // Most Must jobs first, then the most jobs per crew-day.
+  // Most firm jobs first, then past due, then (dollars) the most $ per crew-day
+  // or (jobs) the most jobs per crew-day, then the least driving.
+  const pastDue = (c: (typeof candidates)[number]) => c.jobs.filter((j) => j.daysLate > 0).length;
+  const perDay = (c: (typeof candidates)[number]) =>
+    (input.priority === "jobs" ? c.trip.stops.length : c.trip.value) / c.trip.plan.days.length;
   candidates.sort(
     (a, b) =>
       b.trip.mustCount - a.trip.mustCount ||
-      b.trip.stops.length / b.trip.plan.days.length - a.trip.stops.length / a.trip.plan.days.length,
+      pastDue(b) - pastDue(a) ||
+      perDay(b) - perDay(a) ||
+      a.trip.plan.driveHours - b.trip.plan.driveHours,
   );
 
   const assignments: Assignment[] = [];
@@ -252,16 +288,19 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
     assignments.push(a);
   }
 
+  // A firm job that didn't fit has to be dealt with — say so in its reason.
+  for (const u of unplaced) if (firm(u.job)) u.reason = `Has to be on this week's schedule — ${u.reason.charAt(0).toLowerCase()}${u.reason.slice(1)}`;
   return { assignments, unplaced, stats: weekStats(assignments, unplaced, input.jobs) };
 }
 
 export function weekStats(assignments: readonly Assignment[], unplaced: readonly Unplaced[], jobs: readonly PlannerJob[]): WeekStats {
   const placed = new Set(assignments.flatMap((a) => a.trip.stops.map((s) => s.jobNo)));
-  const must = jobs.filter((j) => j.state === "must");
+  const must = jobs.filter(isFirm);
   return {
     jobs: placed.size,
     mustJobs: must.filter((j) => placed.has(j.jobNo)).length,
     mustTotal: must.length,
+    value: assignments.reduce((t, a) => t + (a.trip.value ?? 0), 0),
     crewHours: assignments.reduce((t, a) => t + a.trip.plan.workHours, 0),
     driveHours: assignments.reduce((t, a) => t + a.trip.plan.driveHours, 0),
     miles: assignments.reduce((t, a) => t + a.trip.plan.miles, 0),

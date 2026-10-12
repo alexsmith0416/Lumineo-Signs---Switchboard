@@ -7,6 +7,7 @@ import type { JobGroup, MapState, PlannerJob } from "../../services/install-plan
 /** Pin colors by state (legend in InstallPlannerView). */
 export const STATE_COLORS: Record<MapState, string> = {
   must: "#E8151B",
+  planned: "#F97316",
   locked: "#7C3AED",
   ready: "#2563EB",
   scheduled: "#8A94A6",
@@ -14,6 +15,7 @@ export const STATE_COLORS: Record<MapState, string> = {
 };
 export const STATE_LABELS: Record<MapState, string> = {
   must: "Must this week",
+  planned: "Planned this week",
   locked: "Locked on the board",
   ready: "Ready to schedule",
   scheduled: "Scheduled",
@@ -81,8 +83,13 @@ function pinIcon(j: PlannerJob, selected: boolean): L.DivIcon {
 const tip = (j: PlannerJob) =>
   `<b>${escapeHtml(j.jobNo)}</b> ${escapeHtml(j.name)}<br>${STATE_LABELS[j.state]} · ${j.kind === "service" ? "Service" : "Install"}` +
   (j.crewHours ? ` · ${j.crewHours} crew h` : "") +
+  (j.value ? ` · ${money(j.value)}` : "") +
+  (j.daysLate ? `<br><span style="color:#E8151B">${j.daysLate} day${j.daysLate === 1 ? "" : "s"} past due</span>` : "") +
   (j.scheduledDate ? `<br>On the board ${escapeHtml(j.scheduledDate)}` : "") +
   (j.approx ? "<br><i>Approximate (ZIP center)</i>" : "");
+
+/** "$12,500". */
+export const money = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);

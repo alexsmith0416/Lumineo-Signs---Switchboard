@@ -25,8 +25,16 @@ import type { PlanStep } from "./gameplan";
 export const DAY_HOURS = 10;
 export const OVERNIGHT_ONE_WAY_HOURS = 4;
 
-/** Where a job stands this week, for the pin color and the planner. */
-export type PlanState = "must" | "locked" | "scheduled" | "ready";
+/**
+ * Where a job stands this week, for the pin color and the planner.
+ * "must" (the region's Must this week list) and "planned" (its Scheduled
+ * install falls in the week — Monthly Gameplanning's commit, or set by hand;
+ * the customer expects us) are FIRM: they have to be on that week's schedule.
+ */
+export type PlanState = "must" | "planned" | "locked" | "scheduled" | "ready";
+
+/** Must this week or Planned this week — has to be on the schedule that week. */
+export const isFirm = (j: Pick<PlannerJob, "state">): boolean => j.state === "must" || j.state === "planned";
 
 export interface PlannerJob {
   jobNo: string;
@@ -44,6 +52,12 @@ export interface PlannerJob {
   crewHours: number;
   /** YYYY-MM-DD of the job's install card(s) on the board, "" when none. */
   scheduledDate: string;
+  /** Billing value: BC remaining balance, else the sales order amount; 0 = unknown. */
+  value: number;
+  /** YYYY-MM-DD it's needed by (RED date, else Scheduled install, else Install target — as Monthly). */
+  neededBy: string;
+  /** Days past neededBy as of today (0 = not late). */
+  daysLate: number;
 }
 
 export interface JobGroup {
@@ -52,7 +66,10 @@ export interface JobGroup {
   /** Nearest first from the center. */
   jobs: PlannerJob[];
   crewHours: number;
+  /** Firm jobs in it (Must + Planned this week). */
   mustCount: number;
+  /** Billing value of its jobs. */
+  value: number;
   /** The crew's start: the nearest Lumineo location (in the group's region unless crossing). */
   home: LumineoLocation;
   /** Estimated one-way drive, home → farthest job, hours. */
@@ -62,8 +79,8 @@ export interface JobGroup {
   estDays: number;
 }
 
-/** Jobs the planner may group: ready + Must this week, placed on the map. */
-export const plannable = (j: PlannerJob): boolean => !!j.pos && (j.state === "ready" || j.state === "must");
+/** Jobs the planner may group: ready + firm (Must / Planned this week), placed on the map. */
+export const plannable = (j: PlannerJob): boolean => !!j.pos && (j.state === "ready" || isFirm(j));
 
 /**
  * Rough crew-days for a trip with this much on-site work and this one-way drive.
@@ -98,7 +115,7 @@ export function radiusGroups(jobs: readonly PlannerJob[], radiusMi: number, cros
       const c = byNo.get(no)!;
       const members = near(c);
       const score = [
-        members.filter((m) => m.state === "must").length,
+        members.filter(isFirm).length,
         members.length,
         members.reduce((s, m) => s + m.crewHours, 0),
       ];
@@ -118,7 +135,8 @@ export function radiusGroups(jobs: readonly PlannerJob[], radiusMi: number, cros
       center: c.pos!,
       jobs: sorted,
       crewHours,
-      mustCount: sorted.filter((m) => m.state === "must").length,
+      mustCount: sorted.filter(isFirm).length,
+      value: sorted.reduce((s, m) => s + m.value, 0),
       home,
       oneWayHours,
       overnight,
@@ -168,6 +186,7 @@ const SERVICE_STEP_KEY = "SE";
  *  locked     — an install card in the planned week is locked (stays on its day)
  *  scheduled  — it has an install card on the board (any date)
  *  must       — in the region's "Must this week" list
+ *  planned    — its Scheduled install is in the planned week (firm, like must)
  *  ready      — production done: Install (or, for a service job, Service) is the active step
  *  production — still being built
  */
@@ -180,6 +199,8 @@ export function classifyPlannerJob(j: {
   lockedThisWeek: boolean;
   onBoard: boolean;
   mustThisWeek: boolean;
+  /** Its Scheduled install falls in the planned week. */
+  plannedThisWeek?: boolean;
 }): { kind: "install" | "service"; state: MapState } | null {
   if (!j.tracked || !j.inBc || COMPLETE_STATUSES.has(j.status)) return null;
   const step = (key: string) => j.steps.find((s) => s.key === key);
@@ -195,7 +216,9 @@ export function classifyPlannerJob(j: {
       ? "scheduled"
       : j.mustThisWeek
         ? "must"
-        : ready
+        : j.plannedThisWeek
+          ? "planned"
+          : ready
           ? "ready"
           : "production";
   return { kind, state };

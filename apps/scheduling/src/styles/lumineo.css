@@ -7357,3 +7357,56 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   .wp-overlay { padding: 0; }
   .wp { border-radius: 0; }
 }
+
+/* ── Installation tools: sidebar group + tab strip (Oct 11, 2026) ───────── */
+.sb-group__items {
+  display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px 16px; padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+.sb-nav__item--sub { padding: 7px 10px; font-size: 12px; font-weight: 500; gap: 10px; }
+.sb-nav__item--open:not(.sb-nav__item--active) { background: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .sb-group__items { border-left-color: rgba(255, 255, 255, 0.1); }
+@media (min-width: 901px) {
+  /* Compact sidebar, closed: the tools line up as plain icons under Installation. */
+  .app-shell--rail > .switchboard-sidebar:not(:hover):not(:has(:focus-visible)) .sb-group__items {
+    margin-left: 0; padding-left: 0; border-left: 0;
+  }
+}
+.install-tabs {
+  display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 10px; border-bottom: 1px solid var(--border);
+}
+.install-tabs__tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; margin-bottom: -1px;
+  background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.install-tabs__tab:hover { color: var(--text-primary); }
+.install-tabs__tab--on { color: var(--lumineo-navy); border-bottom-color: var(--lumineo-navy); font-weight: 700; }
+@media (max-width: 600px) {
+  .install-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .install-tabs__tab { padding: 8px 10px; font-size: 12.5px; }
+}
+/* The tab strip sits above the screen, not stretched into a card like the screens. */
+.app-content > .install-tabs { flex: 0 0 auto; background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; overflow: visible; min-height: auto; }
+
+/* ── Installation tools working together (Oct 11, 2026) ─────────────────── */
+.pl-focus {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px;
+  background: var(--accent-brand-soft); color: var(--lumineo-navy); border-radius: 8px; padding: 6px 10px;
+}
+.pl-money { color: var(--status-green); }
+.pl-late { color: var(--status-red); }
+.pl-must__sub { margin-top: 14px; }
+.wp-firm {
+  font-size: 13px; background: var(--status-red-soft); color: var(--text-primary);
+  border: 1px solid var(--status-red); border-radius: 8px; padding: 8px 12px;
+}
+.wp-firm b { color: var(--status-red); }
+.mp-fit { margin-top: 6px; font-size: 11px; font-weight: 600; }
+.mp-fit--ok { color: var(--status-green); }
+.mp-fit--over { color: var(--status-red); }
+.mp-fit--wait { color: var(--text-tertiary); font-weight: 400; }
+.mp-planweek {
+  margin-top: 6px; background: none; border: 0; padding: 0; font: inherit; font-size: 11.5px; font-weight: 700;
+  color: var(--lumineo-navy); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}

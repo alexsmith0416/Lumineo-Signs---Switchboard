@@ -267,6 +267,31 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **INSTALLATION TOOLS GROUPED + MONTHLY ↔ PLANNER — DEPLOYED Oct 11**
+      (guide v3.44). Sidebar: Installation is one item; its tools (`INSTALL_TOOLS` in
+      Sidebar.tsx: Schedule = "installation", Monthly Gameplanning, Install
+      Planner, Install Trips) show under it only while you're IN one of them
+      (no hover — touch + jumpy list; Alex agreed Oct 11). Same set as tabs at
+      the top (`components/InstallTabs.tsx`, rendered in App for
+      `isInstallTool(view)`). Each filtered by permission. Group header's
+      data-tour = "nav-installation-group"; the Schedule sub-item keeps
+      "nav-installation". Tour: Monthly step moved under Installation.
+      **Integration (Alex, Oct 11: planned = FIRM — "the customer will be
+      expecting us"; dollars first with a toggle; bundled with the regroup):**
+      new PlanState **"planned"** = Sched. Install in the week (Monthly's commit
+      sets it, or by hand) → orange pin, firm like must (`isFirm`). Planner jobs
+      carry `value` (remaining else order $), `neededBy` / `daysLate`
+      (`neededByOf`, as Monthly). `planWeek`: firm first (+ past due when
+      `pastDueFirm`), then past due, then `priority` "dollars" ($ per crew-day)
+      or "jobs" (jobs per crew-day); firm misses get "Has to be on this week's
+      schedule — …" + a red banner; stats.value. Data refactor:
+      `usePlannerInputs(from,to)` + pure `buildPlannerJobs(inputs, weekStart)`
+      shared by the Planner and Monthly. Monthly week cards: fit check
+      (`planWeek` on the week's firm jobs vs `loadWeekCrews`), **Plan this week →**
+      and pool **Show on map** via `store/planner-nav-store.ts` (read on open,
+      cleared in an effect — StrictMode runs initializers twice). Dev: NEK sample
+      crews are in a "NEK Crews" group, so dev NEK jobs say "No NEK crews" (live
+      groups are Olathe / Topeka / Lawrence).
     - ✅ **INSTALL PLANNER — Stage 3 (auto-plan) DEPLOYED Oct 11**
       (guide v3.42 §5.19, tour step). **Auto-plan week** (planner toolbar) →
       `components/planner/WeekPlanPanel.tsx`. `services/week-plan.ts` (pure,

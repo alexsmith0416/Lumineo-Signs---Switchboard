@@ -295,7 +295,10 @@
   <h3>Finding your way around</h3>
   <table>
     <tr><th>Area</th><th>Where</th><th>What it's for</th></tr>
-    <tr><td><strong>Sidebar</strong></td><td>Left edge</td><td>Switch between Production, Installation, Shipping, My Schedule, Monthly Plan, Scenario Sandbox, and Settings.</td></tr>
+    <tr><td><strong>Sidebar</strong></td><td>Left edge</td><td>Switch between Jobs, Production, Installation, Shipping, Warehouse Management, My Schedule, Scenario Sandbox and
+    Settings. <strong>Installation</strong> has four tools &mdash; <em>Schedule</em>, <em>Monthly Gameplanning</em>,
+    <em>Install Planner</em> and <em>Install Trips</em> &mdash; listed under it while you're in any of them, and as tabs at
+    the top of each.</td></tr>
     <tr><td><strong>Top bar</strong></td><td>Top</td><td>Page title, your user chip (top-right), and — for admins — "View as user".</td></tr>
     <tr><td><strong>Week toolbar</strong></td><td>Above the grid</td><td>Prev / Today / Next, the week label, Print, and the Add Job button.</td></tr>
     <tr><td><strong>Week summary</strong></td><td>Above the toolbar</td><td>At-a-glance stats for the week (people scheduled, total value, billing for the week and the billing month vs. its goal), plus Undo/Redo and the Job Queue toggle.</td></tr>
@@ -855,7 +858,8 @@
   <p>Install billing across both regions for the current <strong>billing month</strong>, with a card per week and that
   month's goal. The header shows which installs count — e.g.
   <em>"October 2026 billing · installs ending Sep 25 – Oct 23"</em> — plus what's <strong>Booked</strong>, WK / NEK,
-  progress and the <strong>Gap</strong> to the goal. Admin/Ops only.</p>
+  progress and the <strong>Gap</strong> to the goal. Admin/Ops only. Open it from <strong>Installation &rarr; Monthly
+  Gameplanning</strong> (sidebar or the tabs at the top of the Installation screens).</p>
   <ul>
     <li><strong>Booked</strong> is every job on the WK and NEK install boards, counted <strong>once</strong> at its
     calendar value (BC remaining balance, else the card's invoice amount), in the week its install <strong>ends</strong>
@@ -879,6 +883,13 @@
     <strong>Sched. Install</strong> is set to the Monday of its week (shown on the Jobs list and the job's Install Dates), and
     it's added to a <strong>"Planned · week of …"</strong> group in that region's Install Job Queue, ready to drag onto the
     board for the exact crew and day. Committing needs schedule edit access.</li>
+    <li><strong>It feeds the Install Planner.</strong> A job whose Sched. Install falls in a week is <strong>Planned this
+    week</strong> there (an orange pin) &mdash; the customer is expecting us, so it <em>has</em> to be on that week's
+    schedule, just like Must this week. The Planner's Auto-plan places these first and picks the trip, crew and day.</li>
+    <li>Each week card checks its planned jobs against that week's real crews and drive times: <strong>&check; N planned
+    jobs fit the crews</strong>, or <strong>&#9888; N of M won't fit</strong> &mdash; then move a job's week, free up crews,
+    or plan it with overnights. <strong>Plan this week &rarr;</strong> opens that week's Auto-plan in the Install Planner.</li>
+    <li><strong>Show on map</strong> (next to the pools) opens the Install Planner showing just that pool's jobs.</li>
   </ul>
   <p><strong>Billing months follow the billing cut-off, not the calendar.</strong> A job counts toward the month its
   install <strong>ends</strong> in, and it has to end the <strong>day before</strong> that month's cut-off so the order
@@ -1281,10 +1292,12 @@
   </ul>
 
   <h3>5.19 &nbsp;Install Planner &mdash; jobs map and radius groups</h3>
-  <p>Sidebar &rarr; <strong>Install Planner</strong> (Admin / Ops). Every open install and service job on a map, to see what
+  <p><strong>Installation &rarr; Install Planner</strong> (sidebar or the tabs at the top; Admin / Ops). Every open install and service job on a map, to see what
   can be done together.</p>
   <ul>
     <li><strong>Pins</strong> &mdash; <span style="color:#E8151B">red</span> Must this week,
+    <span style="color:#F97316">orange</span> Planned this week (its Sched. Install is this week &mdash; from Monthly
+    Gameplanning or set by hand; firm like Must),
     <span style="color:#7C3AED">purple</span> locked on the board this week (stays on its day),
     <span style="color:#2563EB">blue</span> ready to schedule (production done), grey already on the board, pale = still in
     production (tick <em>In production</em> to see them). Round = install, diamond = service. A dashed outline means the pin
@@ -1300,6 +1313,9 @@
     lets them mix.</li>
     <li><strong>What fits near this job</strong> &mdash; click a pin: the job panel lists every ready job within the radius,
     nearest first, and their crew hours together. <strong>Google Maps</strong> opens the address.</li>
+    <li><strong>This week</strong> tab &mdash; the jobs that have to be on this week's schedule: <em>Planned this week</em>
+    (from their Sched. Install) and the regions' <em>Must this week</em> lists. A job's panel and hover show its value,
+    needed-by date and how many days past due it is.</li>
     <li><strong>Must this week</strong> &mdash; on a job, click <strong>Must this week</strong> to add it to the region's
     &ldquo;Must this week&rdquo; list (the same list shows in the Install Job Queue). The tab lists them; &times; takes one off.
     Clear the list once the week is planned.</li>
@@ -1329,11 +1345,15 @@
     changes until you Commit:
       <ul>
         <li>Cards already on the install board stay where they are (those crew-days are taken). <strong>Must this
-        week</strong> jobs are planned first, then ready jobs fill what's left.</li>
+        week</strong> and <strong>Planned this week</strong> jobs are planned first (they have to be on this week's
+        schedule), then past-due jobs, then ready jobs fill what's left &mdash; <strong>dollars first</strong> by default.
+        If a job that has to be on the schedule doesn't fit, a red banner names it.</li>
         <li>Jobs are grouped by the radius, turned into trips from the crews' own locations (Salina's installs go out of
         Hutchinson), and each trip goes to the crew at that location that can start it soonest. A crew day is 10 hours
         including driving; over 4 hours one-way is an overnight.</li>
-        <li>Options: <strong>Region</strong>, <strong>Group radius</strong>, <strong>Combine service with install</strong>
+        <li>Options: <strong>Region</strong>, <strong>Group radius</strong>, <strong>Fill free time</strong>
+        (<em>Dollars first</em> or <em>Most jobs for the driving</em>), <strong>Past-due jobs count as firm</strong>,
+        <strong>Combine service with install</strong>
         (off = service and install jobs get separate trips), <strong>Allow overnights</strong> and <strong>Max
         nights</strong>, <strong>Leave at</strong>, and with Both regions, <em>Let regions share trips</em>. The bar shows
         how many more jobs overnights would get done (or how many fewer without).</li>
@@ -1354,7 +1374,7 @@
   </ul>
 
   <h3>5.20 &nbsp;Install Trips &mdash; the planned trips (installers)</h3>
-  <p>Sidebar &rarr; <strong>Install Trips</strong>. Installers see the trips Admin / Ops saved in the Install Planner for
+  <p><strong>Installation &rarr; Install Trips</strong> (sidebar or the tabs at the top). Installers see the trips Admin / Ops saved in the Install Planner for
   their region (Admin / Ops see both), from last week on, by week. View only.</p>
   <ul>
     <li>Click a trip to see its route on the map (numbered stops) and the plan day by day: when you leave, each drive, each
@@ -1541,6 +1561,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Monthly Gameplanning and the Install Planner work together</strong> &mdash; Monthly picks the week (by $ toward the goal); a job whose Sched. Install is in a week is now <strong>Planned this week</strong> in the Planner (orange pin, firm like Must &mdash; the customer is expecting us). Auto-plan places Must and Planned jobs first, then past-due, then fills <strong>dollars first</strong> (or most jobs for the driving), shows $ planned and warns when a must-be-scheduled job won't fit. Monthly's week cards check their planned jobs against the real crews and drive times (fits / won't fit) with <strong>Plan this week &rarr;</strong>, and <strong>Show on map</strong> opens a pool in the Planner. Pins and groups show job $ and past-due days. See &sect;5.12 and &sect;5.19.</td></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Installation tools together</strong> &mdash; Monthly Gameplanning, the Install Planner and Install Trips now live under <strong>Installation</strong>: click Installation in the sidebar and its tools (Schedule, Monthly Gameplanning, Install Planner, Install Trips) show under it, and as tabs at the top of each screen to switch between them. You only see the ones your role can use.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Auto-plan the week</strong> &mdash; the Install Planner's <strong>Auto-plan week</strong> builds trips for every Must-this-week and ready job from the crews' own locations, gives them to crews with free days (around what's already on the board), and shows the plan crew by crew for review: move or leave off trips, see what didn't fit and why, see how many more jobs overnights would add, save plans and compare two side by side. <strong>Commit</strong> puts the cards on the install boards and the trips on Install Trips. The full tour has a new step. See &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Trips</strong> &mdash; the Install Planner now plans trips: <strong>Plan trip</strong> on a group finds the shortest route from the best crew location (compare them all), splits it into 10-hour days with real road drive times, makes it an overnight when a job is over 4 hours one-way (max 1 or 2 nights), lets you leave jobs off or change their hours, draws the route, links each day to Google Maps, prints a trip sheet, and saves it. Installers see saved trips on the new <strong>Install Trips</strong> screen (view only). See &sect;5.19 and &sect;5.20.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Install Planner</strong> &mdash; a new screen with every open install and service job on a map (colored by Must this week / locked / ready / scheduled), radius groups of jobs that can share a trip with crew hours, home location, drive and overnight estimates and weather, &ldquo;what fits near this job&rdquo;, and a Must this week list. The full tour has a new step. See &sect;5.19.</td></tr>
@@ -1669,7 +1691,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.42 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.44 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

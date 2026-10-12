@@ -4,6 +4,7 @@ import type { Assignment, WeekStats } from "./week-plan";
 
 const stats = (o: Partial<WeekStats>): WeekStats => ({
   jobs: 0,
+  value: 0,
   mustJobs: 0,
   mustTotal: 0,
   crewHours: 0,

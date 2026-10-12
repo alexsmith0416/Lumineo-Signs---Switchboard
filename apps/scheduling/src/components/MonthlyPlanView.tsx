@@ -24,13 +24,35 @@ import {
 import { cardMoneyValue } from "./JobCard";
 import { stepOrderFor, useJobFlowStore } from "../store/job-flow-store";
 import { isServiceJob, useServiceJobsStore } from "../store/service-jobs-store";
+import { buildPlannerJobs, usePlannerInputs } from "../hooks/usePlannerJobs";
+import { usePlannerNav } from "../store/planner-nav-store";
+import { isFirm } from "../services/install-planner";
+import { planWeek } from "../services/week-plan";
+import { loadWeekCrews } from "../services/week-plan-data";
 
 /**
  * Monthly Gameplanning — install billing for the current billing month.
  * Booked $ comes from every WK / NEK install card (each job once, in the week
  * its install ends); the pools come from the Jobs list + steppers + BC install
  * planning lines. All the logic is in services/gameplan.ts.
+ *
+ * Tied to the Install Planner (Oct 11, 2026): Monthly decides which WEEK a job
+ * goes in (by $ toward the goal); its Commit sets the Scheduled install, which
+ * makes the job "Planned this week" — firm — in the Planner, whose Auto-plan
+ * picks the trip, crew and day. Each week card checks its firm jobs against
+ * that week's real crews and drive times ("fits" / "won't fit"), and links to
+ * the Planner (Plan this week →, Show on map).
  */
+
+interface FitCheck {
+  /** Must + Planned this week jobs. */
+  firm: number;
+  /** Of those, placed by the Planner's Auto-plan against that week's crews. */
+  fits: number;
+  /** Firm jobs with no map position (can't be checked). */
+  unplaced: number;
+  crewDays: number;
+}
 
 const HOURS_PER_CREW_WEEK = 40;
 const PLANNED_COLOR = { color: "#141464", textColor: "#FFFFFF" };
@@ -62,7 +84,7 @@ const POOLS: Array<{ key: PoolKey; title: string; blurb: string; accent: string 
   },
 ];
 
-export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
+export default function MonthlyPlanView({ canEdit, onNavigate }: { canEdit: boolean; onNavigate?: (view: string) => void }) {
   const [anchorDate] = useState<Date>(new Date());
   const [proposal, setProposal] = useState<AutofillResult | null>(null);
   const [pool, setPool] = useState<PoolKey>("pastDue");
@@ -183,6 +205,66 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
     // flowCompany: a changed company flow re-orders every job's steps.
   }, [rows, stepInfo, completions, overrides, planLines, scheduled, booked, flowCompany, orderTypes]);
 
+  // ── Each week's firm jobs (Must / Planned this week) against that week's crews.
+  const plannerFrom = useMemo(() => addDays(period.start, -42), [period.start]);
+  const plannerTo = useMemo(() => addDays(period.end, 90), [period.end]);
+  const { inputs: plannerInputs, loading: plannerLoading } = usePlannerInputs(plannerFrom, plannerTo);
+  const [checks, setChecks] = useState<Map<string, FitCheck>>(new Map());
+  const slotKeys = slots.map((s) => s.weekStart.getTime()).join(",");
+  useEffect(() => {
+    if (plannerLoading) return;
+    let alive = true;
+    // Debounced: the inputs change as map positions come in.
+    const t = window.setTimeout(async () => {
+      for (const slot of slots) {
+        const jobs = buildPlannerJobs(plannerInputs, slot.weekStart).filter(isFirm);
+        const key = String(slot.weekStart.getTime());
+        if (!jobs.length) {
+          if (alive) setChecks((m) => new Map(m).set(key, { firm: 0, fits: 0, unplaced: 0, crewDays: 0 }));
+          continue;
+        }
+        try {
+          const crews = await loadWeekCrews(slot.weekStart, [
+            { region: "WK", boardKind: "install-wk", ds: wkDs },
+            { region: "NEK", boardKind: "install-nek", ds: nekDs },
+          ]);
+          const p = planWeek({
+            jobs,
+            crews: crews.crews,
+            busy: crews.busy,
+            radiusMi: 30,
+            combineService: false,
+            allowOvernight: true,
+            maxNights: 2,
+            crossRegions: false,
+          });
+          if (alive) {
+            setChecks((m) =>
+              new Map(m).set(key, { firm: jobs.length, fits: p.stats.mustJobs, unplaced: jobs.filter((j) => !j.pos).length, crewDays: p.stats.crewDays }),
+            );
+          }
+        } catch {
+          /* the board couldn't be read — leave the week unchecked */
+        }
+      }
+    }, 600);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plannerInputs, plannerLoading, slotKeys, wkDs, nekDs]);
+
+  const planWeekInPlanner = (weekStart: Date) => {
+    usePlannerNav.getState().go({ weekStart, openAutoPlan: true });
+    onNavigate?.("planner");
+  };
+  const showPoolOnMap = () => {
+    const title = POOLS.find((p) => p.key === pool)!.title;
+    usePlannerNav.getState().go({ focus: { label: `Monthly Gameplanning · ${title}`, jobNos: pools[pool].map((c) => c.jobNo) } });
+    onNavigate?.("planner");
+  };
+
   const runAutofill = () => {
     setProposal(
       autofill({
@@ -278,6 +360,12 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
                 target {formatMoney(weeklyTarget)} · {slot.jobs.length} job{slot.jobs.length === 1 ? "" : "s"} · crew hrs WK{" "}
                 {Math.round(slot.hoursWK)}/{crews.WK * HOURS_PER_CREW_WEEK} · NEK {Math.round(slot.hoursNEK)}/{crews.NEK * HOURS_PER_CREW_WEEK}
               </div>
+              <WeekFit check={checks.get(String(slot.weekStart.getTime()))} />
+              {onNavigate && canEdit && (
+                <button type="button" className="mp-planweek" onClick={() => planWeekInPlanner(slot.weekStart)}>
+                  Plan this week →
+                </button>
+              )}
             </div>
           );
         })}
@@ -287,7 +375,7 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
         <AutofillProposal proposal={proposal} canEdit={canEdit} onClose={() => setProposal(null)} onCommitted={() => void loadBooked()} />
       )}
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
         {POOLS.map((p) => (
           <button
             key={p.key}
@@ -298,6 +386,11 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
             {p.title} · {pools[p.key].length} · {formatMoney(pools[p.key].reduce((n, c) => n + c.value, 0))}
           </button>
         ))}
+        {onNavigate && pools[pool].length > 0 && (
+          <button type="button" className="btn-secondary" style={{ marginLeft: "auto" }} onClick={showPoolOnMap} title="Open these jobs on the Install Planner's map">
+            Show on map
+          </button>
+        )}
       </div>
       <div style={{ color: "var(--text-tertiary)", fontSize: 11, marginBottom: 8 }}>{POOLS.find((p) => p.key === pool)!.blurb}</div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -355,6 +448,26 @@ export default function MonthlyPlanView({ canEdit }: { canEdit: boolean }) {
             ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** A week card's check of its firm jobs against that week's crews (Install Planner Auto-plan). */
+function WeekFit({ check }: { check: FitCheck | undefined }) {
+  if (!check) return <div className="mp-fit mp-fit--wait">Checking against the crews…</div>;
+  if (!check.firm) return null;
+  const missing = check.firm - check.fits;
+  if (!missing) {
+    return (
+      <div className="mp-fit mp-fit--ok" title="Every Must / Planned-this-week job fits that week's crews, with drive time">
+        ✓ {check.firm} planned job{check.firm === 1 ? "" : "s"} fit the crews · {check.crewDays} crew-day{check.crewDays === 1 ? "" : "s"}
+      </div>
+    );
+  }
+  return (
+    <div className="mp-fit mp-fit--over" title="Open the week in the Install Planner to see which and why">
+      ⚠ {missing} of {check.firm} planned job{check.firm === 1 ? "" : "s"} won't fit the crews
+      {check.unplaced ? ` (${check.unplaced} not on the map)` : ""}
     </div>
   );
 }

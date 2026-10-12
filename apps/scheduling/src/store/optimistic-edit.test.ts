@@ -423,7 +423,7 @@ describe("saving a week plan when the save fails", () => {
       options: { radiusMi: 30, combineService: false, allowOvernight: true, maxNights: 2, crossRegions: false, startHour: 7, region: "WK" },
       assignments: [],
       unplaced: [],
-      stats: { jobs: 0, mustJobs: 0, mustTotal: 0, crewHours: 0, driveHours: 0, miles: 0, nights: 0, crewDays: 0, unplaced: 0 },
+      stats: { jobs: 0, value: 0, mustJobs: 0, mustTotal: 0, crewHours: 0, driveHours: 0, miles: 0, nights: 0, crewDays: 0, unplaced: 0 },
       savedBy: "Tester",
       savedAt: "2026-10-11T00:00:00Z",
       committedAt: "",

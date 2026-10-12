@@ -23,6 +23,8 @@ import { useCurrentUser, TYPE_CONFIG } from "./services/current-user";
 import JobsView from "./components/jobs/JobsView";
 import InstallPlannerView from "./components/planner/InstallPlannerView";
 import TripsView from "./components/planner/TripsView";
+import InstallTabs from "./components/InstallTabs";
+import { isInstallTool } from "./components/Sidebar";
 import WarehouseView from "./components/warehouse/WarehouseView";
 import { canEditJobField } from "./services/job-edit-access";
 import { useSettingsStore } from "./store/settings-store";
@@ -218,6 +220,13 @@ export default function App() {
         {!presentationMode && <ImpersonationBanner />}
         {!presentationMode && <DemoBanner />}
         <div className="app-content">
+          {!presentationMode && isInstallTool(view) && (
+            <InstallTabs
+              current={view}
+              onSelect={(id) => setView(id as View)}
+              show={{ monthly: permissions.monthly, planner: permissions.editSchedule, trips: showTrips }}
+            />
+          )}
           {view === "my-schedule" && <MyScheduleScreen />}
           {view === "production" && (
             <ProductionCalendar
@@ -237,7 +246,7 @@ export default function App() {
           )}
           {view === "shipping" && <ShippingBoard readOnly={!canEdit} />}
           {view === "scenario" && permissions.scenarios && <ScenarioSandbox />}
-          {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} />}
+          {view === "monthly" && permissions.monthly && <MonthlyPlanView canEdit={canEdit} onNavigate={(v) => setView(v as View)} />}
           {/* The Jobs list isn't sandboxed (it's the real list), so the demo shows it view only. */}
           {view === "jobs" && permissions.jobs && <JobsView canSeeMoney={permissions.money} edit={demoMode ? NO_JOB_EDITS : jobEdit} userName={fullName ?? ""} homeSite={homeSite} />}
           {view === "planner" && permissions.editSchedule && <InstallPlannerView canEdit={!demoMode} userName={fullName ?? ""} />}

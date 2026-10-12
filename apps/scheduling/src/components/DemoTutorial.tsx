@@ -95,14 +95,21 @@ const FULL_STEPS: TourStep[] = [
     view: "installation",
     target: '[data-tour="nav-installation"]',
     title: "Installation & Service",
-    body: "The Installation board schedules field crews by region (WK / NEK) and location, with crew, truck and dollar details on each card.",
+    body: "The Installation board schedules field crews by region (WK / NEK) and location, with crew, truck and dollar details on each card. Installation has four tools — Schedule, Monthly Gameplanning, Install Planner and Install Trips — under it in the sidebar and as tabs at the top.",
+    placement: "right",
+  },
+  {
+    view: "monthly",
+    target: '[data-tour="nav-monthly"]',
+    title: "Monthly Gameplanning",
+    body: "Roll up the month and auto-fill installs into weeks toward the goal. Committed jobs become Planned this week in the Install Planner; each week card checks they fit the crews (with drive time), and Plan this week → opens that week's Auto-plan.",
     placement: "right",
   },
   {
     view: "planner",
     target: '[data-tour="nav-planner"]',
     title: "Install Planner — the jobs map",
-    body: "Every open install and service job on a map: red = Must this week, purple = locked on the board, blue = ready. Drag Radius to group jobs that can share a trip — each group shows crew hours, where the crew leaves from, the drive and the weather. Click a pin to see what fits near it.",
+    body: "Every open install and service job on a map: red = Must this week, orange = Planned this week (from Monthly), purple = locked on the board, blue = ready. Drag Radius to group jobs that can share a trip — each group shows crew hours, where the crew leaves from, the drive and the weather. Click a pin to see what fits near it.",
     placement: "right",
   },
   {
@@ -124,13 +131,6 @@ const FULL_STEPS: TourStep[] = [
     target: '[data-tour="nav-shipping"]',
     title: "Shipping loads",
     body: "The Shipping board plans truck loads out to each city. Add loads per day and group the items going on each truck.",
-    placement: "right",
-  },
-  {
-    view: "monthly",
-    target: '[data-tour="nav-monthly"]',
-    title: "Monthly Gameplanning",
-    body: "Roll up the month and use the auto-fill to plan installs toward a goal — a big-picture view above the week-by-week boards.",
     placement: "right",
   },
   {

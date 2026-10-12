@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { addDays, addWeeks, format, startOfWeek } from "date-fns";
-import PlannerMap, { STATE_COLORS, STATE_LABELS, type MapTrip } from "./PlannerMap";
+import PlannerMap, { STATE_COLORS, STATE_LABELS, money, type MapTrip } from "./PlannerMap";
+import { usePlannerNav } from "../../store/planner-nav-store";
 import TripPanel, { type TripSource } from "./TripPanel";
 import WeekPlanPanel from "./WeekPlanPanel";
 import { TripTotals } from "./TripDays";
@@ -60,10 +61,21 @@ const toStop = (j: PlannerJob): TripStop => ({
 });
 
 export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit: boolean; userName?: string }) {
-  const [weekStart, setWeekStart] = useState(() => planningWeek(new Date()));
+  // A hand-off from Monthly Gameplanning (a week / Auto-plan / a pool on the map):
+  // read it as the screen opens, clear it once it's open (reading must not
+  // clear — React may run the initializer twice).
+  const [handoff] = useState(() => {
+    const { weekStart, openAutoPlan, focus } = usePlannerNav.getState();
+    return { weekStart, openAutoPlan, focus };
+  });
+  useEffect(() => {
+    usePlannerNav.getState().take();
+  }, []);
+  const [weekStart, setWeekStart] = useState(() => handoff.weekStart ?? planningWeek(new Date()));
   const { jobs, loading, error, reload } = usePlannerJobs(weekStart);
-  const [weekPlanOpen, setWeekPlanOpen] = useState(false);
-  const [region, setRegion] = useState<RegionPick>("WK");
+  const [weekPlanOpen, setWeekPlanOpen] = useState(handoff.openAutoPlan);
+  const [focus, setFocus] = useState(handoff.focus);
+  const [region, setRegion] = useState<RegionPick>(handoff.focus || handoff.openAutoPlan ? "both" : "WK");
   const [showInstall, setShowInstall] = useState(true);
   const [showService, setShowService] = useState(true);
   const [showScheduled, setShowScheduled] = useState(true);
@@ -106,24 +118,27 @@ export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit
     }
   };
 
-  const visible = useMemo(
-    () =>
-      jobs.filter(
-        (j) =>
-          (region === "both" || j.region === region) &&
-          (j.kind === "install" ? showInstall : showService) &&
-          (j.state !== "scheduled" || showScheduled) &&
-          (j.state !== "production" || showProduction),
-      ),
-    [jobs, region, showInstall, showService, showScheduled, showProduction],
-  );
+  const visible = useMemo(() => {
+    // "Show on map" from Monthly: just those jobs, whatever their state.
+    if (focus) {
+      const want = new Set(focus.jobNos);
+      return jobs.filter((j) => want.has(j.jobNo) && (region === "both" || j.region === region));
+    }
+    return jobs.filter(
+      (j) =>
+        (region === "both" || j.region === region) &&
+        (j.kind === "install" ? showInstall : showService) &&
+        (j.state !== "scheduled" || showScheduled) &&
+        (j.state !== "production" || showProduction),
+    );
+  }, [jobs, region, showInstall, showService, showScheduled, showProduction, focus]);
   const onMap = useMemo(() => visible.filter((j) => j.pos), [visible]);
   const unplaced = useMemo(() => visible.filter((j) => !j.pos), [visible]);
   const groups = useMemo(() => radiusGroups(visible, radius, crossing), [visible, radius, crossing]);
   const job = jobs.find((j) => j.jobNo === selectedJob) ?? null;
   const near = useMemo(() => (job ? nearbyJobs(job, visible, radius, crossing) : []), [job, visible, radius, crossing]);
   const counts = useMemo(() => {
-    const c: Record<MapState, number> = { must: 0, locked: 0, ready: 0, scheduled: 0, production: 0 };
+    const c: Record<MapState, number> = { must: 0, planned: 0, locked: 0, ready: 0, scheduled: 0, production: 0 };
     for (const j of visible) c[j.state]++;
     return c;
   }, [visible]);
@@ -197,6 +212,14 @@ export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit
         />
       )}
 
+      {focus && (
+        <div className="pl-focus">
+          Showing {visible.length} of {focus.jobNos.length} jobs from <b>{focus.label}</b>
+          <button type="button" className="pl-link" onClick={() => setFocus(null)}>
+            Show all jobs
+          </button>
+        </div>
+      )}
       <GeoStatus approx={onMap.filter((j) => j.approx).length} total={onMap.length} />
       {error && <div className="pl-error">Couldn't load the install boards: {error}</div>}
 
@@ -207,7 +230,7 @@ export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit
               Groups <span className="pl-count">{groups.length}</span>
             </TabButton>
             <TabButton on={tab === "must"} onClick={() => setTab("must")}>
-              Must <span className="pl-count pl-count--must">{counts.must}</span>
+              This week <span className="pl-count pl-count--must">{counts.must + counts.planned}</span>
             </TabButton>
             <TabButton on={tab === "trips"} onClick={() => setTab("trips")}>
               Trips <span className="pl-count">{weekTrips.length}</span>
@@ -304,7 +327,7 @@ export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit
             selectedGroup={selectedGroup}
             onSelectJob={selectJob}
             onSelectGroup={selectGroup}
-            fitKey={`${region}|${showInstall}|${showService}|${loading}`}
+            fitKey={`${region}|${showInstall}|${showService}|${loading}|${focus ? focus.label : ""}`}
             trip={tab === "trip" ? mapTrip : null}
           />
           <div className="pl-legend">
@@ -358,12 +381,13 @@ function GroupList({
         <li key={g.id} className={`pl-group${g.id === selected ? " pl-group--on" : ""}`}>
           <button type="button" className="pl-group__head" onClick={() => onSelectGroup(g.id)} aria-expanded={g.id === selected}>
             <span className="pl-group__title">Group {g.id.slice(1)}</span>
-            {g.mustCount > 0 && <span className="pl-badge pl-badge--must">{g.mustCount} must</span>}
+            {g.mustCount > 0 && <span className="pl-badge pl-badge--must">{g.mustCount} this week</span>}
             {g.overnight && <span className="pl-badge pl-badge--night">Overnight</span>}
             <span className="pl-group__region">{g.home.region}</span>
           </button>
           <div className="pl-group__stats">
-            {g.jobs.length} job{g.jobs.length === 1 ? "" : "s"} · {hrs(g.crewHours)} crew h · from <b>{g.home.name}</b> · ~
+            {g.jobs.length} job{g.jobs.length === 1 ? "" : "s"}
+            {g.value > 0 && <> · <b className="pl-money">{money(g.value)}</b></>} · {hrs(g.crewHours)} crew h · from <b>{g.home.name}</b> · ~
             {hrs(g.oneWayHours)} h one-way · ≈ {g.estDays} crew-day{g.estDays === 1 ? "" : "s"}
           </div>
           <WeekWeather zip={g.jobs[0]?.zip ?? ""} weekStart={weekStart} />
@@ -395,6 +419,7 @@ function JobRowItem({ job, miles, onSelect }: { job: PlannerJob; miles?: number;
       <span className="pl-jobrow__meta">
         {job.kind === "service" ? "Svc · " : ""}
         {job.crewHours ? `${hrs(job.crewHours)} h` : "— h"}
+        {job.value ? ` · ${money(job.value)}` : ""}
         {miles != null ? ` · ${Math.round(miles)} mi` : ""}
       </span>
     </li>
@@ -416,8 +441,24 @@ function MustList({
   const nek = useInstallQueueStoreNEK((s) => s.groups);
   const regions: Region[] = region === "both" ? ["WK", "NEK"] : [region];
   const byNo = new Map(jobs.map((j) => [j.jobNo, j]));
+  const planned = jobs.filter((j) => j.state === "planned" && (region === "both" || j.region === region));
   return (
     <div className="pl-must">
+      <section>
+        <h3 className="pl-must__head">
+          Planned this week · {planned.length} job{planned.length === 1 ? "" : "s"}
+        </h3>
+        {planned.length ? (
+          <ul className="pl-joblist">
+            {planned.map((j) => (
+              <JobRowItem key={j.jobNo} job={j} onSelect={onSelectJob} />
+            ))}
+          </ul>
+        ) : (
+          <div className="pl-empty pl-empty--small">None — Monthly Gameplanning's Commit (or a Scheduled install date this week) puts jobs here.</div>
+        )}
+      </section>
+      <h3 className="pl-must__head pl-must__sub">Must this week</h3>
       {regions.map((r) => {
         const group = (r === "NEK" ? nek : wk).find((g) => sameName(g.name, MUST_THIS_WEEK));
         const items = group?.items ?? [];
@@ -535,6 +576,13 @@ function JobDetail({
         </dd>
         <dt>Crew hours</dt>
         <dd>{job.crewHours ? `${hrs(job.crewHours)} h (BC install lines)` : "Not in BC yet"}</dd>
+        <dt>Value</dt>
+        <dd>{job.value ? money(job.value) : "—"}</dd>
+        <dt>Needed by</dt>
+        <dd>
+          {job.neededBy ? format(new Date(`${job.neededBy}T00:00:00`), "MMM d") : "—"}
+          {job.daysLate > 0 && <b className="pl-late"> · {job.daysLate} day{job.daysLate === 1 ? "" : "s"} past due</b>}
+        </dd>
       </dl>
       <div className="pl-job__actions">
         {job.address && (

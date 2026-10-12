@@ -17,6 +17,9 @@ const job = (jobNo: string, pos: { lat: number; lng: number }, o: Partial<Planne
   zip: "",
   crewHours: 4,
   scheduledDate: "",
+  value: 0,
+  neededBy: "",
+  daysLate: 0,
   ...o,
 });
 const crew = (id: string, base = "Hutchinson"): PlanCrew => ({ id, name: id, base, region: "WK" });
@@ -60,6 +63,35 @@ describe("auto-plan the week", () => {
     expect(p.assignments.map((a) => a.trip.stops[0]!.jobNo)).toEqual(["M"]);
     expect(p.stats.mustJobs).toBe(1);
     expect(p.unplaced.map((u) => u.job.jobNo)).toEqual(["R"]);
+  });
+
+  it("treats Planned this week like Must and says so when it can't fit", () => {
+    const busy = new Map([["c1", new Set([0, 1, 2, 3, 4])]]);
+    const p = planWeek(input({ jobs: [job("P", away(5), { state: "planned" })], busy }));
+    expect(p.stats.mustTotal).toBe(1);
+    expect(p.unplaced[0]!.reason).toMatch(/^Has to be on this week's schedule/);
+  });
+
+  it("fills free time dollars first — or most jobs, when asked", () => {
+    // One free day: a $50k job far-ish, or two small nearby $1k jobs.
+    const busy = new Map([["c1", new Set([1, 2, 3, 4])]]);
+    const jobs = [
+      job("BIG", away(-60, 40), { crewHours: 5, value: 50_000 }),
+      job("S1", away(5), { crewHours: 3, value: 1_000 }),
+      job("S2", away(6), { crewHours: 3, value: 1_000 }),
+    ];
+    const dollars = planWeek(input({ jobs, busy }));
+    expect(dollars.assignments[0]!.trip.stops.map((s) => s.jobNo)).toEqual(["BIG"]);
+    expect(dollars.stats.value).toBe(50_000);
+    const most = planWeek(input({ jobs, busy, priority: "jobs" }));
+    expect(most.stats.jobs).toBe(2);
+  });
+
+  it("puts past-due jobs first, and makes them firm when asked", () => {
+    const busy = new Map([["c1", new Set([1, 2, 3, 4])]]);
+    const jobs = [job("LATE", away(-60, 40), { crewHours: 5, daysLate: 6 }), job("NEW", away(5), { crewHours: 8, value: 9_000 })];
+    expect(planWeek(input({ jobs, busy })).assignments[0]!.trip.stops[0]!.jobNo).toBe("LATE");
+    expect(planWeek(input({ jobs, busy, pastDueFirm: true })).stats.mustTotal).toBe(0); // firm for the run, not a Must
   });
 
   it("keeps install and service apart unless combining", () => {

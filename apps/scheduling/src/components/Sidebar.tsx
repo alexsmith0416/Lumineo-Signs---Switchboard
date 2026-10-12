@@ -17,13 +17,24 @@ const VIEWS: SbItem[] = [
   { id: "jobs", label: "Jobs", icon: "joblog" },
   { id: "production", label: "Production", icon: "production" },
   { id: "installation", label: "Installation", icon: "installation" },
-  { id: "planner", label: "Install Planner", icon: "map" },
-  { id: "trips", label: "Install Trips", icon: "installation" },
   { id: "shipping", label: "Shipping", icon: "shipping" },
   { id: "warehouse", label: "Warehouse Management", icon: "warehouse" },
-  { id: "monthly", label: "Monthly Gameplanning", icon: "monthly" },
   { id: "scenario", label: "Scenarios", icon: "scenario" },
 ];
+
+/**
+ * The Installation tools (Oct 11, 2026). The sidebar shows one "Installation"
+ * item; its sub-items open while you're in any of them (no hover — that
+ * doesn't exist on touch screens and would make the list jump). The same set
+ * is a tab strip at the top of each (InstallTabs).
+ */
+export const INSTALL_TOOLS: SbItem[] = [
+  { id: "installation", label: "Schedule", icon: "installation" },
+  { id: "monthly", label: "Monthly Gameplanning", icon: "monthly" },
+  { id: "planner", label: "Install Planner", icon: "map" },
+  { id: "trips", label: "Install Trips", icon: "route" },
+];
+export const isInstallTool = (id: string | undefined): boolean => INSTALL_TOOLS.some((t) => t.id === id);
 
 const OTHER: SbItem[] = [
   { id: "settings", label: "Settings", icon: "settings" },
@@ -55,17 +66,24 @@ function NavItem({
   item,
   active,
   onClick,
+  sub = false,
+  open,
 }: {
   item: SbItem;
   active?: boolean;
   onClick?: () => void;
+  /** A tool inside a group (indented, smaller). */
+  sub?: boolean;
+  /** A group header: whether its tools are showing. */
+  open?: boolean;
 }) {
   return (
     <button
       type="button"
-      className={`sb-nav__item${active ? " sb-nav__item--active" : ""}`}
+      className={`sb-nav__item${active ? " sb-nav__item--active" : ""}${sub ? " sb-nav__item--sub" : ""}${open ? " sb-nav__item--open" : ""}`}
+      aria-expanded={open}
       aria-current={active ? "page" : undefined}
-      data-tour={`nav-${item.id}`}
+      data-tour={open !== undefined ? `nav-${item.id}-group` : `nav-${item.id}`}
       onClick={onClick}
     >
       <span className="sb-nav__icon">
@@ -80,11 +98,12 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
   const { theme, toggle } = useTheme();
   const nextIsDark = theme === "light";
   const views = VIEWS.filter(
-    (v) =>
-      (v.id !== "monthly" || showMonthly) && (v.id !== "scenario" || showScenario) && (v.id !== "jobs" || showJobs) &&
-      (v.id !== "warehouse" || showWarehouse) && (v.id !== "planner" || showPlanner) &&
-      (v.id !== "trips" || showTrips),
+    (v) => (v.id !== "scenario" || showScenario) && (v.id !== "jobs" || showJobs) && (v.id !== "warehouse" || showWarehouse),
   );
+  const installTools = INSTALL_TOOLS.filter(
+    (t) => (t.id !== "monthly" || showMonthly) && (t.id !== "planner" || showPlanner) && (t.id !== "trips" || showTrips),
+  );
+  const inInstall = isInstallTool(current);
   return (
     <aside className="switchboard-sidebar" aria-label="Switchboard navigation">
       <div className="sb-brand">
@@ -107,14 +126,23 @@ export default function Sidebar({ current, onSelect, myScheduleLabel, showMonthl
       <div className="sb-divider" />
 
       <nav className="sb-nav">
-        {views.map((i) => (
-          <NavItem
-            key={i.id}
-            item={i}
-            active={current === i.id}
-            onClick={() => onSelect?.(i.id)}
-          />
-        ))}
+        {views.map((i) =>
+          i.id === "installation" && installTools.length > 1 ? (
+            <div key={i.id} className={`sb-group${inInstall ? " sb-group--open" : ""}`}>
+              {/* The header opens the Schedule; its tools show while you're in any of them. */}
+              <NavItem item={i} open={inInstall} onClick={() => onSelect?.("installation")} />
+              {inInstall && (
+                <div className="sb-group__items" role="group" aria-label="Installation tools">
+                  {installTools.map((t) => (
+                    <NavItem key={t.id} item={t} sub active={current === t.id} onClick={() => onSelect?.(t.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <NavItem key={i.id} item={i} active={current === i.id} onClick={() => onSelect?.(i.id)} />
+          ),
+        )}
       </nav>
 
       <div className="sb-spacer" />

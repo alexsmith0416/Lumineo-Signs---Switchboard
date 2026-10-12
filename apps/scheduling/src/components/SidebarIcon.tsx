@@ -10,6 +10,7 @@ export type SidebarIconName =
   | "monthly"
   | "warehouse"
   | "map"
+  | "route"
   | "scenario"
   | "weekly"
   | "sign-builder"
@@ -72,6 +73,13 @@ const PATHS: Record<SidebarIconName, ReactNode> = {
       <path d="M13 9h4.2a1.5 1.5 0 0 1 1.2.6l2.3 3a1.5 1.5 0 0 1 .3.9V15H13z" />
       <circle cx="6" cy="17.5" r="1.7" />
       <circle cx="17" cy="17.5" r="1.7" />
+    </>
+  ),
+  route: (
+    <>
+      <circle cx="6" cy="18" r="2.2" />
+      <circle cx="18" cy="6" r="2.2" />
+      <path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8" />
     </>
   ),
   map: (

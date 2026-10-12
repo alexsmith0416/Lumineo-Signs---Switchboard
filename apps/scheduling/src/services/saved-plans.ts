@@ -14,6 +14,10 @@ export interface PlanOptions {
   startHour: number;
   /** "WK" / "NEK" / "both". */
   region: string;
+  /** What fills the free time first (absent on plans saved before Oct 11 = dollars). */
+  priority?: "dollars" | "jobs";
+  /** Past-due jobs counted as firm. */
+  pastDueFirm?: boolean;
 }
 
 export interface SavedPlan {
@@ -34,8 +38,9 @@ export interface SavedPlan {
 
 /** The figures compared side by side (label, value of A, value of B, higher is better?). */
 export const COMPARE_ROWS: ReadonlyArray<{ key: keyof WeekStats; label: string; better: "more" | "less" }> = [
+  { key: "value", label: "$ planned", better: "more" },
   { key: "jobs", label: "Jobs planned", better: "more" },
-  { key: "mustJobs", label: "Must this week planned", better: "more" },
+  { key: "mustJobs", label: "Must / Planned this week placed", better: "more" },
   { key: "crewHours", label: "Crew hours on site", better: "more" },
   { key: "driveHours", label: "Drive hours", better: "less" },
   { key: "miles", label: "Miles", better: "less" },
@@ -52,8 +57,8 @@ export function comparePlans(
   b: Pick<SavedPlan, "assignments" | "stats">,
 ): { rows: Array<{ label: string; a: number; b: number; winner: "a" | "b" | "" }>; onlyA: string[]; onlyB: string[] } {
   const rows = COMPARE_ROWS.map((r) => {
-    const va = a.stats[r.key];
-    const vb = b.stats[r.key];
+    const va = a.stats[r.key] ?? 0;
+    const vb = b.stats[r.key] ?? 0;
     const diff = Math.abs(va - vb) < 0.05 ? 0 : va - vb;
     const winner: "a" | "b" | "" = diff === 0 ? "" : (diff > 0) === (r.better === "more") ? "a" : "b";
     return { label: r.label, a: va, b: vb, winner };
