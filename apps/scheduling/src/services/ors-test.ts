@@ -3,7 +3,7 @@
  * inside the app? One address lookup (the Hutchinson shop) and one tiny
  * drive-time request, each with a plain answer. Oct 12, 2026.
  */
-import { ORS_ORIGIN, orsGeocodeUrl, parseOrsGeocode } from "./geocode";
+import { ORS_ROUTING, orsGeocodeUrl, orsHeaders, parseOrsGeocode } from "./geocode";
 import { OrsError, orsFetch, orsStatusText } from "./ors-fetch";
 import { LUMINEO_LOCATIONS } from "./geo";
 
@@ -21,8 +21,8 @@ export async function testOrsKey(key: string): Promise<OrsCheck[]> {
   const wichita = LUMINEO_LOCATIONS.find((l) => l.name === "Wichita")!;
 
   try {
-    const res = await orsFetch(orsGeocodeUrl(key, { address: "1429 W 4th Ave", city: "Hutchinson", state: "KS", zip: "67501" }), {
-      headers: { Accept: "application/json" },
+    const res = await orsFetch(orsGeocodeUrl({ address: "1429 W 4th Ave", city: "Hutchinson", state: "KS", zip: "67501" }), {
+      headers: orsHeaders(key),
     });
     const bad = orsStatusText(res.status);
     if (bad) out.push({ label: "Address lookup", ok: false, detail: bad });
@@ -39,9 +39,9 @@ export async function testOrsKey(key: string): Promise<OrsCheck[]> {
   }
 
   try {
-    const res = await orsFetch(`${ORS_ORIGIN}/v2/matrix/driving-car`, {
+    const res = await orsFetch(`${ORS_ROUTING}/matrix/driving-car`, {
       method: "POST",
-      headers: { Authorization: key, "Content-Type": "application/json", Accept: "application/json" },
+      headers: orsHeaders(key, true),
       body: JSON.stringify({ locations: [[hutch.lng, hutch.lat], [wichita.lng, wichita.lat]], metrics: ["duration"], units: "mi" }),
     });
     const bad = orsStatusText(res.status);

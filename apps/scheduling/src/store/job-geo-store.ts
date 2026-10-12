@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { loadZipCentroids, zipCenter, type LatLng } from "../services/geo";
-import { addressKey, orsGeocodeUrl, parseOrsGeocode, type JobGeo } from "../services/geocode";
+import { addressKey, orsGeocodeUrl, orsHeaders, parseOrsGeocode, type JobGeo } from "../services/geocode";
 import type { ShipTo } from "../services/ship-to";
 import { OrsError, orsFetch, orsStatusText } from "../services/ors-fetch";
 
@@ -145,7 +145,7 @@ async function lookUp(job: GeoJob, key: string, zips: Map<string, LatLng> | null
   const center = zips ? zipCenter(zips, job.shipTo.zip ?? "") : null;
   let res: Response;
   try {
-    res = await orsFetch(orsGeocodeUrl(key, job.shipTo), { headers: { Accept: "application/json" } });
+    res = await orsFetch(orsGeocodeUrl(job.shipTo), { headers: orsHeaders(key) });
   } catch (e) {
     // Blocked by the policy, or a refusal the browser can't read (the key) — stop until retried.
     useJobGeoStore.setState({ lookupError: e instanceof OrsError ? e.message : "openrouteservice couldn't be reached." });

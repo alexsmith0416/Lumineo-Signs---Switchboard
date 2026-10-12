@@ -28,7 +28,7 @@ export class OrsError extends Error {
 
 export function orsFailureText(kind: OrsFailure): string {
   return kind === "csp"
-    ? "Blocked by the app's content security policy — add https://api.openrouteservice.org to connect-src (Power Platform admin center → the environment → Settings → Privacy + Security → App (code)), save, then reload the app."
+    ? "Blocked by the app's content security policy — add https://api.heigit.org to connect-src (Power Platform admin center → the environment → Settings → Privacy + Security → App (code)), save, then reload the app."
     : "openrouteservice turned the request down — most often the key isn't right or isn't active yet. Check it in Settings → Install Planner and press Test.";
 }
 

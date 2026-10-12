@@ -275,7 +275,16 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       (securitypolicyviolation event) from an unreadable refusal (key);
       Settings → Install Planner **Test** (`services/ors-test.ts`: one lookup +
       one matrix), planner **Try again** (`useJobGeoStore.retry`). Alex's key
-      is the dashboard's "Basic Key" (active). **Open:** what Test says live.
+      is the dashboard's "Basic Key" (active). **ROOT CAUSE (Oct 12):**
+      openrouteservice moved to **api.heigit.org** (old api.openrouteservice.org
+      switched off Aug 24, 2026 — HeiGIT forum). Geocoding = /pelias/v1,
+      routing = /openrouteservice/v2; key in the Authorization header. Alex's
+      CSP connect-src already = https://api.heigit.org. App switched over
+      (`ORS_GEOCODE` / `ORS_ROUTING` / `orsHeaders` in services/geocode.ts).
+      HeiGIT sends CORS headers even on 401/403, so a bad key now reads as
+      "refused the key". Other red console lines ("Connecting to …
+      powerplatformusercontent.com/…/assets" blocked by connect-src) predate this
+      — the default connect-src was 'none' too — and the app works with them.
     - ✅ **INSTALLATION TOOLS GROUPED + MONTHLY ↔ PLANNER — DEPLOYED Oct 11**
       (guide v3.44). Sidebar: Installation is one item; its tools (`INSTALL_TOOLS` in
       Sidebar.tsx: Schedule = "installation", Monthly Gameplanning, Install

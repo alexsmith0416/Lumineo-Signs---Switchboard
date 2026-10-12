@@ -8,13 +8,13 @@ const feature = (lng: number, lat: number, layer = "address") => ({
 
 describe("geocoding", () => {
   it("builds a structured search with the address parts it has", () => {
-    const url = new URL(orsGeocodeUrl("KEY", { address: " 1 Main St ", city: "Hutchinson", state: "KS", zip: "67501-1234" }));
-    expect(url.origin + url.pathname).toBe("https://api.openrouteservice.org/geocode/search/structured");
-    expect(url.searchParams.get("api_key")).toBe("KEY");
+    const url = new URL(orsGeocodeUrl({ address: " 1 Main St ", city: "Hutchinson", state: "KS", zip: "67501-1234" }));
+    expect(url.origin + url.pathname).toBe("https://api.heigit.org/pelias/v1/search/structured");
+    expect(url.searchParams.has("api_key")).toBe(false); // the key goes in the Authorization header
     expect(url.searchParams.get("address")).toBe("1 Main St");
     expect(url.searchParams.get("postalcode")).toBe("67501");
     expect(url.searchParams.get("country")).toBe("USA");
-    expect(new URL(orsGeocodeUrl("K", { city: "Salina" })).searchParams.has("address")).toBe(false);
+    expect(new URL(orsGeocodeUrl({ city: "Salina" })).searchParams.has("address")).toBe(false);
   });
 
   it("trusts a nearby street-level answer and rejects far or vague ones", () => {

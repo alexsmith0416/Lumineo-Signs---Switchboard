@@ -9,7 +9,7 @@
  * each. Any failure → the caller falls back to estimates (geo.ts).
  */
 import { estimateMatrix, type Matrix } from "./trip-plan";
-import { ORS_ORIGIN } from "./geocode";
+import { ORS_ROUTING, orsHeaders } from "./geocode";
 import { orsFetch, orsStatusText } from "./ors-fetch";
 import type { LatLng } from "./geo";
 
@@ -70,9 +70,9 @@ export function thin<T>(pts: readonly T[], max: number): T[] {
 }
 
 async function post(key: string, path: string, body: unknown): Promise<unknown> {
-  const res = await orsFetch(`${ORS_ORIGIN}${path}`, {
+  const res = await orsFetch(`${ORS_ROUTING}${path}`, {
     method: "POST",
-    headers: { Authorization: key, "Content-Type": "application/json", Accept: "application/json, application/geo+json" },
+    headers: orsHeaders(key, true),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(orsStatusText(res.status) ?? `openrouteservice ${res.status}`);
@@ -83,7 +83,7 @@ async function post(key: string, path: string, body: unknown): Promise<unknown> 
 export async function roadMatrix(key: string, points: readonly LatLng[]): Promise<{ matrix: Matrix; note: string }> {
   if (!key) return { matrix: estimateMatrix(points), note: "No openrouteservice key — drive times are estimates." };
   try {
-    const m = parseMatrix(await post(key, "/v2/matrix/driving-car", matrixBody(points)), points);
+    const m = parseMatrix(await post(key, "/matrix/driving-car", matrixBody(points)), points);
     if (m) return { matrix: m, note: "" };
     return { matrix: estimateMatrix(points), note: "openrouteservice returned no drive times — using estimates." };
   } catch (e) {
@@ -95,7 +95,7 @@ export async function roadMatrix(key: string, points: readonly LatLng[]): Promis
 export async function roadRoute(key: string, points: readonly LatLng[]): Promise<RoadRoute | null> {
   if (!key || points.length < 2) return null;
   try {
-    return parseRoute(await post(key, "/v2/directions/driving-car/geojson", routeBody(points)));
+    return parseRoute(await post(key, "/directions/driving-car/geojson", routeBody(points)));
   } catch {
     return null;
   }

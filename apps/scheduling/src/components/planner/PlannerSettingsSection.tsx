@@ -48,8 +48,8 @@ export default function PlannerSettingsSection() {
           <div className="settings-row__title">openrouteservice key</div>
           <div className="settings-row__desc">
             Places each job's pin at its street address (instead of its ZIP's center) and, later, real drive times.
-            Free at <strong>openrouteservice.org</strong> → sign up → <em>Dashboard</em> → <em>Tokens</em>. The app's content
-            security policy must allow <code>https://api.openrouteservice.org</code> (connect-src).
+            Free at <strong>openrouteservice.org</strong> (HeiGIT) → sign up → <em>Dashboard</em> → your <em>Basic Key</em>. The
+            app's content security policy must allow <code>https://api.heigit.org</code> (connect-src).
             {err && <div className="settings-row__status">{err}</div>}
           </div>
         </div>
