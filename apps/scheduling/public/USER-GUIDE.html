@@ -1324,7 +1324,31 @@
         changes</em>) or &times; to delete it.</li>
       </ul></li>
     <li>Drive times are real road times from openrouteservice (straight-line estimates if it can't be reached &mdash; the
-    trip says which). Auto-planning the whole week is coming next.</li>
+    trip says which).</li>
+    <li><strong>Auto-plan week</strong> (top right) plans the whole week for you and shows it for review &mdash; nothing
+    changes until you Commit:
+      <ul>
+        <li>Cards already on the install board stay where they are (those crew-days are taken). <strong>Must this
+        week</strong> jobs are planned first, then ready jobs fill what's left.</li>
+        <li>Jobs are grouped by the radius, turned into trips from the crews' own locations (Salina's installs go out of
+        Hutchinson), and each trip goes to the crew at that location that can start it soonest. A crew day is 10 hours
+        including driving; over 4 hours one-way is an overnight.</li>
+        <li>Options: <strong>Region</strong>, <strong>Group radius</strong>, <strong>Combine service with install</strong>
+        (off = service and install jobs get separate trips), <strong>Allow overnights</strong> and <strong>Max
+        nights</strong>, <strong>Leave at</strong>, and with Both regions, <em>Let regions share trips</em>. The bar shows
+        how many more jobs overnights would get done (or how many fewer without).</li>
+        <li>The grid shows every crew by location, Monday&ndash;Friday: hatched = already on the board, blue blocks = the
+        planned trips (with must and night counts). Click a trip to see it day by day, move it to another crew at the same
+        location, or <strong>Leave this trip off</strong> (<em>Put back</em> undoes it). <strong>Didn't fit</strong>
+        lists every job left out and why.</li>
+        <li><strong>Save plan</strong> keeps it; saved plans are listed below. <strong>Compare</strong> any two
+        (or the one on screen) side by side &mdash; jobs, Must jobs, crew hours, driving, miles, nights, crew-days and
+        what didn't fit, with the better figure highlighted, and the jobs only one of them plans.</li>
+        <li><strong>Commit</strong> puts the trips on the install boards &mdash; one card per job per day, on the crew's
+        lane, at the time the trip gets there (marked <em>planned trip</em>, &ldquo;day 1 of 2&rdquo; when a job carries
+        over) &mdash; sets each job's Scheduled install date, and saves the trips for the installers' Install Trips
+        screen. Move or change the cards on the board afterwards as usual.</li>
+      </ul></li>
     <li>Pins start at each job's ZIP center. Once the openrouteservice key is saved in <strong>Settings &rarr; Install
     Planner</strong>, each address is looked up once (in the background) and its pin moves to the street address.</li>
   </ul>
@@ -1517,6 +1541,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 11, 2026</td><td><strong>Auto-plan the week</strong> &mdash; the Install Planner's <strong>Auto-plan week</strong> builds trips for every Must-this-week and ready job from the crews' own locations, gives them to crews with free days (around what's already on the board), and shows the plan crew by crew for review: move or leave off trips, see what didn't fit and why, see how many more jobs overnights would add, save plans and compare two side by side. <strong>Commit</strong> puts the cards on the install boards and the trips on Install Trips. The full tour has a new step. See &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Trips</strong> &mdash; the Install Planner now plans trips: <strong>Plan trip</strong> on a group finds the shortest route from the best crew location (compare them all), splits it into 10-hour days with real road drive times, makes it an overnight when a job is over 4 hours one-way (max 1 or 2 nights), lets you leave jobs off or change their hours, draws the route, links each day to Google Maps, prints a trip sheet, and saves it. Installers see saved trips on the new <strong>Install Trips</strong> screen (view only). See &sect;5.19 and &sect;5.20.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Install Planner</strong> &mdash; a new screen with every open install and service job on a map (colored by Must this week / locked / ready / scheduled), radius groups of jobs that can share a trip with crew hours, home location, drive and overnight estimates and weather, &ldquo;what fits near this job&rdquo;, and a Must this week list. The full tour has a new step. See &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Record delivery</strong> &mdash; a PO set to Received from the status drop-down (with no final delivery recorded) now keeps a <strong>Record delivery</strong> button, so you can still add when, where and in which storage spot it was received. See &sect;5.18.</td></tr>
@@ -1644,7 +1669,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.41 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.42 · Oct 11, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

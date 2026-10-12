@@ -106,6 +106,13 @@ const FULL_STEPS: TourStep[] = [
     placement: "right",
   },
   {
+    view: "planner",
+    target: '[data-tour="planner-autoplan"]',
+    title: "Auto-plan the week",
+    body: "Turns every Must-this-week and ready job into trips from the crews' own locations and gives them to crews with free days. Review it crew by crew, move or leave off a trip, compare saved plans — then Commit puts the cards on the install board.",
+    placement: "bottom",
+  },
+  {
     view: "trips",
     target: '[data-tour="nav-trips"]',
     title: "Install Trips — planned routes",

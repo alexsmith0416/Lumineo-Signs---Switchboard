@@ -267,6 +267,32 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **INSTALL PLANNER — Stage 3 (auto-plan) DEPLOYED Oct 11**
+      (guide v3.42 §5.19, tour step). **Auto-plan week** (planner toolbar) →
+      `components/planner/WeekPlanPanel.tsx`. `services/week-plan.ts` (pure,
+      tested): pools by kind (unless Combine service) and region (unless
+      crossing) → `radiusGroups` → each group's best crew location (shortest
+      loop, only locations with crews) → `tripsForGroup` (Must first, then
+      nearest; add while the trip fits ≤ 5 days / ≤ max nights; jobs that can't
+      fit alone are "didn't fit" with why) → trips sorted (most Must, then jobs
+      per crew-day) → each to the crew at that location that can START SOONEST
+      (ties: least busy), else another location in the region. Estimated drive
+      times (instant). "+N jobs with overnights" = a second run with the other
+      setting. Crews + busy days: `services/week-plan-data.ts loadWeekCrews`
+      (install employees minus assist rows and "Additional Jobs", week's roster
+      overrides applied; a day with ANY card is busy). Review: crew × Mon–Fri
+      grid, trip details, move crew (same location), leave off / put back,
+      didn't fit. **Commit** (`store/week-plan-commit.ts`): one card per job per
+      day via `addScheduleLine` (GUID ids, spanDays 1 — a trip day is up to 10 h,
+      longer than the board's 8–4 window; "planned trip" in the description),
+      Scheduled install = first day, trips saved for Install Trips. Saved plans
+      in **crfdf_installplan** (`store/plan-store.ts`) + side-by-side compare
+      (`services/saved-plans.ts comparePlans`, tested). Fixed live install-card
+      create to keep a GUID id (it minted a new one → the card on screen and in
+      Dataverse differed until reload). **Go-live:** (1) ✅
+      `scripts/create-installplan-table.ps1` (ran Oct 11); (2) ✅ deployed Oct 11.
+      Left: first live run — check crews/busy days match the board, then a
+      small Commit.
     - ✅ **INSTALL PLANNER — Stage 2 (trips) DEPLOYED Oct 11** (guide
       v3.41 §5.19 + §5.20, tour step). **Plan trip** on a group / "Plan a trip
       with these" (near-this-job) → Trip tab (`components/planner/TripPanel.tsx`):

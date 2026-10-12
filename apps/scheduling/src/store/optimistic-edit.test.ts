@@ -396,3 +396,40 @@ describe("saving an install trip when the save fails", () => {
     expect(failed[0]!.label).toBe("Save trip");
   });
 });
+
+describe("saving a week plan when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the plan on screen and reports the failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      saveInstallPlan: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { usePlanStore } = await import("./plan-store");
+    status.getState().clear();
+    usePlanStore.setState({ plans: [], loaded: true });
+    await usePlanStore.getState().save({
+      id: "p1",
+      name: "Week of Oct 12",
+      weekStart: "2026-10-12",
+      options: { radiusMi: 30, combineService: false, allowOvernight: true, maxNights: 2, crossRegions: false, startHour: 7, region: "WK" },
+      assignments: [],
+      unplaced: [],
+      stats: { jobs: 0, mustJobs: 0, mustTotal: 0, crewHours: 0, driveHours: 0, miles: 0, nights: 0, crewDays: 0, unplaced: 0 },
+      savedBy: "Tester",
+      savedAt: "2026-10-11T00:00:00Z",
+      committedAt: "",
+    });
+    await flush();
+    expect(usePlanStore.getState().plans.map((p) => p.id)).toEqual(["p1"]);
+    expect(status.getState().failed[0]!.label).toBe("Save week plan");
+  });
+});

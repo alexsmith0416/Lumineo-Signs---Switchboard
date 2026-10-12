@@ -58,6 +58,7 @@ import { sortJobPOs, type JobPO } from "./job-pos";
 import type { PoDelivery, PoReceipt, WarehousePO } from "./po-receiving";
 import type { GeoQuality, JobGeo } from "./geocode";
 import type { SavedTrip } from "./saved-trips";
+import type { SavedPlan } from "./saved-plans";
 import type { JobDescriptions } from "./job-descriptions";
 import {
   departmentNameForLine,
@@ -841,7 +842,10 @@ function createLiveInstallDataSource(
     },
     async createScheduleLine(line: ScheduleLine): Promise<ScheduleLine> {
       regionRead = null; // the next load must see this change
-      const id = uuid();
+      // Keep the caller's id when it's already a GUID (the Install Planner's
+      // commit makes them), so the card on screen and in Dataverse match;
+      // board-made ids ("line-…") get a fresh GUID as before.
+      const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(line.id) ? line.id : uuid();
       const rec = () => ({ crfdf_installcardid: id, ...cardToRecord(line, isNek, true) });
       let res = await dvCreate(SHIP.cards, rec());
       if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
@@ -3457,4 +3461,42 @@ export async function saveInstallTrip(t: SavedTrip, isNew: boolean): Promise<voi
 export async function deleteInstallTrip(id: string): Promise<void> {
   const res = await dvDelete(TRIP_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? "deleteInstallTrip failed");
+}
+
+// ---------------------------------------------------------------------------
+// Install week plans (crfdf_installplan) — Install Planner Stage 3, Oct 11,
+// 2026. One row per auto-planned week Admin / Ops saved; the plan is JSON in
+// crfdf_data (services/saved-plans.ts). Created by scripts/create-installplan-table.ps1.
+// ---------------------------------------------------------------------------
+const PLAN_SET = "crfdf_installplans";
+
+export async function fetchInstallPlans(): Promise<SavedPlan[]> {
+  const rows = await listAll(PLAN_SET, { select: "crfdf_installplanid,crfdf_data" });
+  const out: SavedPlan[] = [];
+  for (const r of rows) {
+    try {
+      const p = JSON.parse(s(r.crfdf_data)) as SavedPlan;
+      if (p?.stats && Array.isArray(p.assignments)) out.push({ ...p, id: s(r.crfdf_installplanid) });
+    } catch {
+      /* skip a damaged row */
+    }
+  }
+  return out;
+}
+
+export async function saveInstallPlan(p: SavedPlan, isNew: boolean): Promise<void> {
+  const rec: Row = {
+    crfdf_name: p.name.slice(0, 300),
+    crfdf_weekstart: p.weekStart,
+    crfdf_data: JSON.stringify(p),
+    crfdf_savedby: p.savedBy,
+    crfdf_savedat: p.savedAt,
+  };
+  const res = isNew ? await dvCreate(PLAN_SET, { crfdf_installplanid: p.id, ...rec }) : await dvUpdate(PLAN_SET, p.id, rec);
+  if (!res.success) throw new Error(res.error?.message ?? "saveInstallPlan failed");
+}
+
+export async function deleteInstallPlan(id: string): Promise<void> {
+  const res = await dvDelete(PLAN_SET, id);
+  if (!res.success) throw new Error(res.error?.message ?? "deleteInstallPlan failed");
 }

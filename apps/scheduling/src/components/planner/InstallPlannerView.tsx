@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { addDays, addWeeks, format, startOfWeek } from "date-fns";
 import PlannerMap, { STATE_COLORS, STATE_LABELS, type MapTrip } from "./PlannerMap";
 import TripPanel, { type TripSource } from "./TripPanel";
+import WeekPlanPanel from "./WeekPlanPanel";
 import { TripTotals } from "./TripDays";
 import { useTripStore } from "../../store/trip-store";
 import type { SavedTrip, TripStop } from "../../services/saved-trips";
@@ -60,7 +61,8 @@ const toStop = (j: PlannerJob): TripStop => ({
 
 export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit: boolean; userName?: string }) {
   const [weekStart, setWeekStart] = useState(() => planningWeek(new Date()));
-  const { jobs, loading, error } = usePlannerJobs(weekStart);
+  const { jobs, loading, error, reload } = usePlannerJobs(weekStart);
+  const [weekPlanOpen, setWeekPlanOpen] = useState(false);
   const [region, setRegion] = useState<RegionPick>("WK");
   const [showInstall, setShowInstall] = useState(true);
   const [showService, setShowService] = useState(true);
@@ -167,7 +169,33 @@ export default function InstallPlannerView({ canEdit, userName = "" }: { canEdit
           <b>{radius} mi</b>
         </label>
         {region === "both" && <Check label="Let regions share trips" checked={cross} onChange={setCross} />}
+        {canEdit && (
+          <button
+            type="button"
+            className="btn-primary pl-autoplan"
+            data-tour="planner-autoplan"
+            disabled={loading}
+            onClick={() => setWeekPlanOpen(true)}
+          >
+            Auto-plan week
+          </button>
+        )}
       </div>
+      {weekPlanOpen && (
+        <WeekPlanPanel
+          jobs={jobs}
+          weekStart={weekStart}
+          region={region}
+          radiusMi={radius}
+          crossRegions={cross}
+          canEdit={canEdit}
+          userName={userName}
+          onClose={() => {
+            setWeekPlanOpen(false);
+            reload();
+          }}
+        />
+      )}
 
       <GeoStatus approx={onMap.filter((j) => j.approx).length} total={onMap.length} />
       {error && <div className="pl-error">Couldn't load the install boards: {error}</div>}
