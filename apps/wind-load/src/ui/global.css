@@ -602,3 +602,12 @@ label .unit { color: var(--text-dim); font-weight: 600; }
 .kpi-row--pieces { grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); }
 .kpi-row--pieces .kpi-caption { display: flex; align-items: center; }
 .kpi-row--pieces .sketch-kpi { font-size: 15px; }
+
+/* Base plate plan: same block treatment as the elevation sketch */
+.plan-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 560px;
+  margin: 0 auto;
+}

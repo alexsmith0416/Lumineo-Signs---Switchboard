@@ -9,8 +9,9 @@ import { jsPDF } from 'jspdf';
 
 import type { DesignInput, DesignResult } from './engine';
 import { EXPOSURE_DESCRIPTIONS, SHAPE_LABELS, SHAPE_SPECS, SPEC_NOTES, isAluminum, isRound, sectionMaxOutsideIn } from '../data/tables';
-import { fmt, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
+import { fmt, fmtFrac, fmtFtIn, fmtInches, fmtInt } from '../ui/fields';
 import { SKETCH_PALETTES, SKETCH_VB_H, SKETCH_VB_W, SketchSvg, sketchAvailable } from '../ui/SketchSvg';
+import { BasePlatePlanSvg, PLAN_VB_H, PLAN_VB_W, planAvailable } from '../ui/BasePlatePlanSvg';
 import { LOGO_ASPECT, LUMINEO_BLUE, LumineoLogo } from '@lumineo/ui';
 
 const PAGE_W = 612; // letter, pt
@@ -31,28 +32,52 @@ const GREEN = '#0f6e56';
 
 async function rasterizeSketch(input: DesignInput, result: DesignResult): Promise<string | null> {
   if (!sketchAvailable(result)) return null;
-  const markup = renderToStaticMarkup(
-    createElement(SketchSvg, {
-      input,
-      result,
-      palette: SKETCH_PALETTES.light,
-      background: '#ffffff',
-      idPrefix: 'pdf-sk',
-    }),
+  return rasterizeSvg(
+    renderToStaticMarkup(
+      createElement(SketchSvg, {
+        input,
+        result,
+        palette: SKETCH_PALETTES.light,
+        background: '#ffffff',
+        idPrefix: 'pdf-sk',
+      }),
+    ),
+    SKETCH_VB_W,
+    SKETCH_VB_H,
   );
+}
+
+/** Plan view of one base plate and its J-bolt pattern, for the sketch page. */
+async function rasterizePlan(input: DesignInput, result: DesignResult): Promise<string | null> {
+  if (!input.basePlate.enabled || !planAvailable(result)) return null;
+  return rasterizeSvg(
+    renderToStaticMarkup(
+      createElement(BasePlatePlanSvg, {
+        input,
+        result,
+        palette: SKETCH_PALETTES.light,
+        background: '#ffffff',
+      }),
+    ),
+    PLAN_VB_W,
+    PLAN_VB_H,
+  );
+}
+
+async function rasterizeSvg(markup: string, vbW: number, vbH: number): Promise<string | null> {
   const blob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const i = new Image();
       i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('sketch rasterization failed'));
+      i.onerror = () => reject(new Error('svg rasterization failed'));
       i.src = url;
     });
     const scale = 2; // 2x for crisp print
     const canvas = document.createElement('canvas');
-    canvas.width = SKETCH_VB_W * scale;
-    canvas.height = SKETCH_VB_H * scale;
+    canvas.width = vbW * scale;
+    canvas.height = vbH * scale;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.fillStyle = '#ffffff';
@@ -441,6 +466,67 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
       y,
     );
     y += 10;
+  }
+
+  // ── Base plate + J-bolts, with the plan under it ──────────────────────────
+  const bp = result.basePlate;
+  if (input.basePlate.enabled && bp) {
+    const nBolts = 2 * input.basePlate.boltsPerLine;
+    sectionTitle('Base plate & anchor bolts');
+    setFont(12, 'bold', BRAND);
+    ensureRoom(16);
+    doc.text(
+      `PL ${fmt(bp.plateBIn, 1)}" x ${fmt(bp.plateNIn, 1)}" x ${fmt(Math.ceil(bp.plateThicknessIn * 8) / 8, 3)}"`,
+      M,
+      y,
+    );
+    y += 16;
+    row(
+      'J-bolts to order',
+      `${nBolts} per plate - dia ${fmtFrac(bp.boltDiaIn)} x ${fmt(bp.boltLengthIn, 0)}" A36 rod - ${fmt(bp.boltHookIn, 2)}" hook` +
+        (input.basePlate.boltDiaIn === null ? ' (auto-sized)' : ''),
+    );
+    row(
+      'Bolt length',
+      `${fmt(bp.embedLengthIn, 1)}" embedded + ${fmt(bp.boltProjectionIn, 2)}" above the concrete for the plate, leveling nut, washer and nut. Minimum diameter by calculation ${fmt(bp.minBoltDiaIn, 3)}".`,
+    );
+    row(
+      'Bolt spacing',
+      `lines at ${fmt(bp.boltLineSpacingIn, 1)}" - in-line ${fmt(bp.boltSpacingIn, 1)}" (no cone overlap needs ${fmt(bp.minBoltSpacingIn, 1)}")`,
+      bp.boltsFitPlate ? 'OK' : 'NG',
+    );
+    row(
+      'Concrete cone',
+      `capacity ${fmtInt(bp.coneCapacityLb)} lb vs ${fmtInt(bp.tensionPerAnchorLb)} lb per anchor, f'c ${fmtInt(input.basePlate.fcPsi)} psi`,
+      bp.coneOk ? 'OK' : 'NG',
+    );
+    row(
+      'Column weld',
+      `${fmt(input.basePlate.weldLegIn, 4)}" fillet - fw ${fmtInt(bp.weldStressPsi)} psi vs 21,000 psi (E70XX)`,
+      bp.weldOk ? 'OK' : 'NG',
+    );
+    if (!bp.boltsFitPlate) {
+      setFont(8, 'normal', MID);
+      const warn = doc.splitTextToSize(
+        'The auto bolt spacing is the distance that keeps the pull-out cones from overlapping, which is wider than this plate. Set the spacing by hand for the template; the cone capacity above drops accordingly.',
+        CONTENT_W,
+      ) as string[];
+      ensureRoom(warn.length * 10 + 6);
+      doc.text(warn, M, y);
+      y += warn.length * 10 + 6;
+    }
+
+    const planPng = await rasterizePlan(input, result);
+    if (planPng) {
+      const planW = 300;
+      const planH = planW * (PLAN_VB_H / PLAN_VB_W);
+      ensureRoom(planH + 10);
+      doc.setDrawColor(BORDER);
+      doc.setLineWidth(0.75);
+      doc.rect(M, y, planW, planH);
+      doc.addImage(planPng, 'JPEG', M, y, planW, planH);
+      y += planH + 10;
+    }
   }
 
   // ── Specifications ────────────────────────────────────────────────────────

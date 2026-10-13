@@ -188,6 +188,15 @@ export function App() {
               onChange={setInput}
               recommendedSizeName={result.column.autoSection?.name ?? null}
               autoDepthFt={result.footing?.depthFt ?? null}
+              autoBolt={
+                result.basePlate
+                  ? {
+                      diaIn: result.basePlate.boltDiaIn,
+                      lengthIn: result.basePlate.boltLengthIn,
+                      hookIn: result.basePlate.boltHookIn,
+                    }
+                  : null
+              }
               resolvedSpliceFt={(id) => {
                 const i = input.transition.segments.findIndex((s) => s.id === id);
                 return i < 0 ? null : (result.poleSegments[i + 1]?.spanBottomFt ?? null);

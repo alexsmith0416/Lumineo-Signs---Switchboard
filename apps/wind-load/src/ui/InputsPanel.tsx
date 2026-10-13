@@ -11,7 +11,7 @@ import {
   type Exposure,
   type SectionShape,
 } from '../data/tables';
-import { FtInField, NumField, fmt, fmtInches } from './fields';
+import { FtInField, NumField, fmt, fmtFrac, fmtInches } from './fields';
 import { IconPlus, IconTrash } from './icons';
 
 interface Props {
@@ -25,6 +25,8 @@ interface Props {
   autoDepthFt?: number | null;
   /** Where the engine actually placed a given transition, for seeding edits. */
   resolvedSpliceFt?: (segmentId: string) => number | null;
+  /** The J-bolt the engine auto-sized, so the blank field can name it. */
+  autoBolt?: { diaIn: number; lengthIn: number; hookIn: number } | null;
 }
 
 let elementSeq = 0;
@@ -93,7 +95,15 @@ function CustomSectionFields({
   );
 }
 
-export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, autoDepthFt, resolvedSpliceFt }: Props) {
+export function InputsPanel({
+  input,
+  onChange,
+  recommendedSizeName,
+  autoPlan,
+  autoDepthFt,
+  resolvedSpliceFt,
+  autoBolt,
+}: Props) {
   const set = (patch: Partial<DesignInput>) => onChange({ ...input, ...patch });
   const setBp = (patch: Partial<DesignInput['basePlate']>) =>
     onChange({ ...input, basePlate: { ...input.basePlate, ...patch } });
@@ -742,7 +752,7 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
               suffix="in"
               value={input.basePlate.boltDiaIn}
               min={0}
-              placeholder="auto"
+              placeholder={autoBolt ? `auto — ${autoBolt.diaIn}` : 'auto'}
               allowEmpty
               onChange={() => undefined}
               onChangeNullable={(v) => setBp({ boltDiaIn: v })}
@@ -755,8 +765,11 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
               onChange={(v) => setBp({ weldLegIn: v })}
             />
             <p className="hint span-2">
-              A36 threaded rod with embedded end nut, two bolt lines front and
-              back. Leave the diameter blank to auto-size to the next 1/8".
+              A36 rod, two bolt lines front and back of the sign face. Leave
+              the diameter blank to auto-size to the next 1/8".
+              {autoBolt
+                ? ` Auto picks Ø ${fmtFrac(autoBolt.diaIn)} × ${fmt(autoBolt.lengthIn, 0)}" with a ${fmt(autoBolt.hookIn, 2)}" hook — see the plan on the Sketch tab.`
+                : ''}
             </p>
           </div>
         )}

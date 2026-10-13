@@ -1,7 +1,7 @@
 import type { DesignInput, DesignResult } from '../lib/engine';
 import { MAX_ORDER_FT, MAX_POLE_FT } from '../lib/engine';
 import { SHAPE_LABELS, isAluminum, sectionIsRound, sectionMaxOutsideIn } from '../data/tables';
-import { fmt, fmtFtIn, fmtInches, fmtInt } from './fields';
+import { fmt, fmtFrac, fmtFtIn, fmtInches, fmtInt } from './fields';
 
 interface Props {
   input: DesignInput;
@@ -317,12 +317,19 @@ export function ResultsPanel({ input, result }: Props) {
                   value={`${fmt(r.basePlate.plateThicknessIn, 3)}" calculated (without gussets), per plate M ${fmtInt(r.basePlate.momentPerPlateLbFt)} lb-ft`}
                 />
                 <Row
-                  label="Anchor bolts"
-                  value={`${2 * input.basePlate.boltsPerLine} per plate · Ø ${fmt(r.basePlate.boltDiaIn, 3)}" A36 rod (min ${fmt(r.basePlate.minBoltDiaIn, 3)}") · embed ${fmt(r.basePlate.embedLengthIn, 1)}"`}
+                  label="J-bolts to order"
+                  value={`${2 * input.basePlate.boltsPerLine} per plate · Ø ${fmtFrac(r.basePlate.boltDiaIn)} × ${fmt(r.basePlate.boltLengthIn, 0)}" A36 rod · ${fmt(r.basePlate.boltHookIn, 2)}" hook${input.basePlate.boltDiaIn === null ? ' (auto-sized)' : ''}`}
+                />
+                <Row
+                  label="Bolt length"
+                  value={`${fmt(r.basePlate.embedLengthIn, 1)}" embedded + ${fmt(r.basePlate.boltProjectionIn, 2)}" above the concrete (plate, leveling nut, washer and nut) · min Ø ${fmt(r.basePlate.minBoltDiaIn, 3)}" by calculation`}
                 />
                 <Row
                   label="Bolt spacing"
-                  value={`lines at ${fmt(r.basePlate.boltLineSpacingIn, 1)}" · in-line ${fmt(r.basePlate.boltSpacingIn, 1)}" (min ${fmt(r.basePlate.minBoltSpacingIn, 1)}") · edge ≥ ${fmt(r.basePlate.minEdgeSpacingIn, 1)}"`}
+                  value={`lines at ${fmt(r.basePlate.boltLineSpacingIn, 1)}" · in-line ${fmt(r.basePlate.boltSpacingIn, 1)}" — ${fmt(r.basePlate.minBoltSpacingIn, 1)}" would keep the pull-out cones clear of each other, ${fmt(r.basePlate.minEdgeSpacingIn, 1)}" from an edge`}
+                  chip={
+                    <Chip ok={r.basePlate.boltsFitPlate} okText="FITS PLATE" badText="OFF THE PLATE" />
+                  }
                 />
                 <Row
                   label="Concrete cone"

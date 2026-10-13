@@ -240,6 +240,20 @@ export interface BasePlateResult {
   minEdgeSpacingIn: number;
   minBoltSpacingIn: number;
   boltSpacingIn: number;
+  /** J hook, measured along the leg — shop standard 3 × diameter. */
+  boltHookIn: number;
+  /** Rod standing above the concrete: plate, leveling nut, washer and nut. */
+  boltProjectionIn: number;
+  /** Straight shank to order: embedment + projection, to the next inch. */
+  boltLengthIn: number;
+  /** Width the bolt pattern needs across the plate (in-line bolts), in. */
+  boltPatternBIn: number;
+  /**
+   * False when the in-line bolts, plus an edge of one diameter each side,
+   * will not land on the plate. The auto spacing is the no-cone-overlap
+   * ideal, which on a plate this size usually has to be set by hand.
+   */
+  boltsFitPlate: boolean;
   coneCapacityLb: number;
   coneOk: boolean;
   shearStressPsi: number;
@@ -1129,6 +1143,12 @@ function roundUpToEighth(x: number): number {
   return Math.ceil(x * 8) / 8;
 }
 
+/**
+ * Rod left standing above the plate for the leveling nut, washer and top nut.
+ * A fabrication allowance, not a code figure — add to the plate thickness.
+ */
+export const BOLT_PROJECTION_IN = 3;
+
 function basePlateCheck(
   input: DesignInput,
   momentAtGradeLbFt: number,
@@ -1167,6 +1187,13 @@ function basePlateCheck(
   const minSpacing = 2 * embed;
   const spacing = bp.boltSpacingIn ?? Math.ceil(minSpacing);
 
+  // J-bolt as it gets ordered: diameter × straight shank, with a hook.
+  const hook = Math.ceil(3 * dia * 4) / 4;
+  const projection = t + BOLT_PROJECTION_IN;
+  const boltLength = Math.ceil(embed + projection);
+  const patternB = (n - 1) * spacing;
+  const boltsFitPlate = patternB + 2 * dia <= plateB;
+
   const overlaps = n > 2 ? 2 : 1;
   const apRevised =
     Math.PI * embed * embed - overlaps * circleOverlapArea(embed, spacing);
@@ -1197,6 +1224,11 @@ function basePlateCheck(
     minEdgeSpacingIn: minEdge,
     minBoltSpacingIn: minSpacing,
     boltSpacingIn: spacing,
+    boltHookIn: hook,
+    boltProjectionIn: projection,
+    boltLengthIn: boltLength,
+    boltPatternBIn: patternB,
+    boltsFitPlate,
     coneCapacityLb: coneCapacity,
     coneOk: coneCapacity > Ta,
     shearStressPsi: fv,

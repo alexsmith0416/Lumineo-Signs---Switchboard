@@ -4,6 +4,7 @@ import { computeDesign, snapSpliceFt, type DesignInput, type DesignResult } from
 import type { EditField, FacePatch, SketchPoint, SketchSelection } from './SketchSvg';
 import { PopFtIn, fmt, fmtFtIn, fmtInches } from './fields';
 import { SHAPE_LABELS } from '../data/tables';
+import { BasePlatePlanSvg, planAvailable } from './BasePlatePlanSvg';
 import { SKETCH_PALETTES, SketchSvg, sketchAvailable } from './SketchSvg';
 import type { Theme } from './useTheme';
 
@@ -385,6 +386,24 @@ export function SketchPanel({ input, result: committed, theme, onChange }: Props
           </p>
         </div>
       </section>
+
+      {input.basePlate.enabled && planAvailable(result) && (
+        <section className="panel">
+          <h2 className="panel-caption">Base Plate &amp; J-Bolt Plan</h2>
+          <div className="panel-body sketch-body">
+            <BasePlatePlanSvg input={shown} result={result} palette={SKETCH_PALETTES[theme]} />
+            <p className="hint sketch-note">
+              One plate, seen from above, drawn to scale from the calculated
+              design. The sign face runs left to right, so the two bolt lines
+              straddle it front and back. Spacing between the bolts in a line
+              is the figure the cone check uses — auto picks the spacing that
+              keeps the pull-out cones from overlapping, which is wider than a
+              plate this size, so set it on the left when you lay the template
+              out.
+            </p>
+          </div>
+        </section>
+      )}
 
       <div className="kpi-row kpi-row--pieces">
         {/* One tile per pole piece, keyed and labelled to match the sketch legend. */}

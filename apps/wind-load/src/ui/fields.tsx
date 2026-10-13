@@ -269,6 +269,24 @@ export function fmtFtIn(ft: number): string {
 }
 
 /**
+ * Inches as a fraction, the way a bolt or a plate actually gets ordered:
+ * 0.875 → `7/8"`, 1.25 → `1-1/4"`. Rounds to `denom`ths, then reduces.
+ */
+export function fmtFrac(inches: number, denom = 16): string {
+  if (!Number.isFinite(inches)) return '—';
+  const whole = Math.floor(inches + 1e-9);
+  let num = Math.round((inches - whole) * denom);
+  let d = denom;
+  if (num === d) return `${whole + 1}"`;
+  if (num === 0) return `${whole}"`;
+  while (num % 2 === 0 && d % 2 === 0) {
+    num /= 2;
+    d /= 2;
+  }
+  return whole === 0 ? `${num}/${d}"` : `${whole}-${num}/${d}"`;
+}
+
+/**
  * Feet → inches, for drilled/augered dimensions that are ordered in inches
  * (a 2.5 ft caisson is a 30" auger). Whole inches print bare; anything else
  * keeps one decimal.
