@@ -28,6 +28,8 @@ import { canEditJobField, hasAnyJobEdits, type JobEditAccess } from "../../servi
 import { applyGrid, type GridPrefs } from "./jobs-grid-state";
 import { ShopFloorHistoryPanel } from "./ShopFloorHistory";
 import { HistoryIcon } from "../HistoryIcon";
+import { useBcCheckStore } from "../../store/bc-check-store";
+import { SYNC_PULLS } from "../../services/sync-request";
 import {
   PRESETS, addSection, addView, deleteSection, deleteView, duplicateView, moveSection, moveView,
   renameSection, renameView, setViewCols, setViewFrozen,
@@ -111,6 +113,10 @@ export default function JobsView({
     void loadSketches();
     void loadFieldOptions();
   }, [load, loadSchedules, loadLeadRules, loadDeptOverrides, loadCustomDefs, loadSketches, loadFieldOptions]);
+
+  // Check BC now: every BC pull at once instead of at its next scheduled run.
+  const bcCheck = useBcCheckStore();
+  const checking = bcCheck.phase === "waiting" || bcCheck.phase === "running";
 
   const built = useJobRows();
   // The POs column's text ("3 POs · 1 partial") rides on the row, so search / filter / sort / group work.
@@ -374,10 +380,42 @@ export default function JobsView({
                 onOpenJob={(r) => { setPanel(null); setOpenJob(r); }} onClose={() => setPanel(null)} />
             )}
           </div>
+          <button
+            type="button"
+            className="jobs-toolbar__btn"
+            onClick={() => void bcCheck.check(me)}
+            disabled={checking}
+            data-tour="jobs-check-bc"
+            title="Bring in what's new in BC now — shop-floor & install ticks, new orders, descriptions, POs and sketches — instead of waiting for the next scheduled check"
+          >
+            {checking ? "Checking BC…" : "Check BC now"}
+          </button>
           <button type="button" className="jobs-toolbar__btn" onClick={() => { void load(true); void loadSchedules(true); void loadSketches(true); }} disabled={loading}>
             Refresh
           </button>
         </div>
+        {bcCheck.phase !== "idle" && (
+          <div className={`jobs-check jobs-check--${bcCheck.phase}`} role="status">
+            <ul className="jobs-check__list">
+              {SYNC_PULLS.filter((p) => bcCheck.pulls[p.kind]).map((p) => {
+                const st = bcCheck.pulls[p.kind]!;
+                return (
+                  <li key={p.kind} className={`jobs-check__pull jobs-check__pull--${st.phase}`}>
+                    <span className="jobs-check__mark" aria-hidden>
+                      {st.phase === "done" ? "✓" : st.phase === "failed" ? "✕" : "…"}
+                    </span>
+                    <strong>{p.label}:</strong> {st.message}
+                  </li>
+                );
+              })}
+            </ul>
+            {(bcCheck.phase === "done" || bcCheck.phase === "failed") && (
+              <button type="button" className="jobs-check__close" onClick={bcCheck.dismiss} aria-label="Dismiss">
+                ×
+              </button>
+            )}
+          </div>
+        )}
         {error && <div className="jobs-error">Couldn't load jobs: {error}</div>}
         <JobsGrid rows={shown} cols={cols} groups={prefs.groups} sorts={prefs.sorts} onToggleSort={toggleSort}
           collapseSignal={collapseSignal} onOpen={setOpenJob} widths={widths} onWidths={setWidths} autoWidths={autoWidths}

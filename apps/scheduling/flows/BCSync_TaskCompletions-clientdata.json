@@ -50,11 +50,21 @@
         }
       },
       "triggers": {
-        "Every_5_minutes": {
-          "type": "Recurrence",
-          "recurrence": {
-            "frequency": "Minute",
-            "interval": 5
+        "When_a_check_is_requested": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_syncrequest",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "crfdf_kind eq 'taskcompletions'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "authentication": "@parameters('$authentication')"
           },
           "runtimeConfiguration": {
             "concurrency": {
@@ -64,92 +74,193 @@
         }
       },
       "actions": {
-        "Last_Copied": {
+        "Mark_Running": {
           "type": "OpenApiConnection",
           "runAfter": {},
           "inputs": {
             "parameters": {
-              "entityName": "crfdf_taskcompletions",
-              "$select": "crfdf_entryno",
-              "$orderby": "crfdf_entryno desc",
-              "$top": 1
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Running",
+              "item/crfdf_result": ""
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
               "connectionName": "shared_commondataserviceforapps",
-              "operationId": "ListRecords"
+              "operationId": "UpdateOnlyRecord"
             }
           }
         },
-        "Since_Entry": {
-          "type": "Compose",
+        "Check_BC": {
+          "type": "Scope",
           "runAfter": {
-            "Last_Copied": [
+            "Mark_Running": [
               "Succeeded"
             ]
-          },
-          "inputs": "@coalesce(first(body('Last_Copied')?['value'])?['crfdf_entryno'], 0)"
-        },
-        "Get_New_Completions": {
-          "type": "Http",
-          "runAfter": {
-            "Since_Entry": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "method": "GET",
-            "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/taskCompletions?$filter=@{encodeUriComponent(concat('entryNo gt ', string(outputs('Since_Entry'))))}&$orderby=entryNo",
-            "headers": {
-              "Accept": "application/json"
-            },
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "authority": "https://login.microsoftonline.com",
-              "tenant": "@parameters('Bc_Tenant')",
-              "audience": "@parameters('Bc_Audience')",
-              "clientId": "@parameters('Bc_ClientId')",
-              "secret": "@parameters('Bc_ClientSecret')"
-            }
-          }
-        },
-        "For_each_completion": {
-          "type": "Foreach",
-          "foreach": "@body('Get_New_Completions')?['value']",
-          "runAfter": {
-            "Get_New_Completions": [
-              "Succeeded"
-            ]
-          },
-          "runtimeConfiguration": {
-            "concurrency": {
-              "repetitions": 1
-            }
           },
           "actions": {
-            "Add_Pending": {
+            "Last_Copied": {
               "type": "OpenApiConnection",
               "runAfter": {},
               "inputs": {
                 "parameters": {
                   "entityName": "crfdf_taskcompletions",
-                  "item/crfdf_name": "@concat('BC ', string(items('For_each_completion')?['entryNo']))",
-                  "item/crfdf_entryno": "@items('For_each_completion')?['entryNo']",
-                  "item/crfdf_jobno": "@coalesce(items('For_each_completion')?['jobNo'], '')",
-                  "item/crfdf_jobtaskno": "@coalesce(items('For_each_completion')?['jobTaskNo'], '')",
-                  "item/crfdf_taskdesc": "@coalesce(items('For_each_completion')?['jobTaskDescription'], '')",
-                  "item/crfdf_resourceno": "@coalesce(items('For_each_completion')?['resourceNo'], '')",
-                  "item/crfdf_resourcename": "@coalesce(items('For_each_completion')?['resourceName'], '')",
-                  "item/crfdf_completedat": "@coalesce(items('For_each_completion')?['completedAt'], '')",
-                  "item/crfdf_source": "@coalesce(items('For_each_completion')?['source'], '')",
-                  "item/crfdf_state": "pending"
+                  "$select": "crfdf_entryno",
+                  "$orderby": "crfdf_entryno desc",
+                  "$top": 1
                 },
                 "host": {
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
                   "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "CreateRecord"
+                  "operationId": "ListRecords"
                 }
               }
+            },
+            "Since_Entry": {
+              "type": "Compose",
+              "runAfter": {
+                "Last_Copied": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": "@coalesce(first(body('Last_Copied')?['value'])?['crfdf_entryno'], 0)"
+            },
+            "Get_New_Completions": {
+              "type": "Http",
+              "runAfter": {
+                "Since_Entry": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "method": "GET",
+                "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/taskCompletions?$filter=@{encodeUriComponent(concat('entryNo gt ', string(outputs('Since_Entry'))))}&$orderby=entryNo",
+                "headers": {
+                  "Accept": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "authority": "https://login.microsoftonline.com",
+                  "tenant": "@parameters('Bc_Tenant')",
+                  "audience": "@parameters('Bc_Audience')",
+                  "clientId": "@parameters('Bc_ClientId')",
+                  "secret": "@parameters('Bc_ClientSecret')"
+                }
+              }
+            },
+            "For_each_completion": {
+              "type": "Foreach",
+              "foreach": "@body('Get_New_Completions')?['value']",
+              "runAfter": {
+                "Get_New_Completions": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              },
+              "actions": {
+                "Add_Pending": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crfdf_taskcompletions",
+                      "item/crfdf_name": "@concat('BC ', string(items('For_each_completion')?['entryNo']))",
+                      "item/crfdf_entryno": "@items('For_each_completion')?['entryNo']",
+                      "item/crfdf_jobno": "@coalesce(items('For_each_completion')?['jobNo'], '')",
+                      "item/crfdf_jobtaskno": "@coalesce(items('For_each_completion')?['jobTaskNo'], '')",
+                      "item/crfdf_taskdesc": "@coalesce(items('For_each_completion')?['jobTaskDescription'], '')",
+                      "item/crfdf_resourceno": "@coalesce(items('For_each_completion')?['resourceNo'], '')",
+                      "item/crfdf_resourcename": "@coalesce(items('For_each_completion')?['resourceName'], '')",
+                      "item/crfdf_completedat": "@coalesce(items('For_each_completion')?['completedAt'], '')",
+                      "item/crfdf_source": "@coalesce(items('For_each_completion')?['source'], '')",
+                      "item/crfdf_state": "pending"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "From_The_Scheduler": {
+          "type": "If",
+          "runAfter": {
+            "Check_BC": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/crfdf_requestedby']",
+              "Scheduler"
+            ]
+          },
+          "actions": {
+            "Remove_Scheduler_Request": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_syncrequests",
+                  "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord"
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Mark_Done": {
+                "type": "OpenApiConnection",
+                "runAfter": {},
+                "inputs": {
+                  "parameters": {
+                    "entityName": "crfdf_syncrequests",
+                    "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+                    "item/crfdf_status": "Done",
+                    "item/crfdf_result": "@if(equals(length(coalesce(body('Get_New_Completions')?['value'], json('[]'))), 0), 'No new shop-floor ticks', concat(string(length(coalesce(body('Get_New_Completions')?['value'], json('[]')))), if(equals(length(coalesce(body('Get_New_Completions')?['value'], json('[]'))), 1), ' new shop-floor tick', ' new shop-floor ticks')))"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "UpdateOnlyRecord"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Mark_Failed": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Check_BC": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Failed",
+              "item/crfdf_result": "@'Could not check BC - see the flow run history.'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
             }
           }
         }

@@ -19,6 +19,10 @@ Every hour it:
 Lists are compared as '^'-delimited strings (one substring search per row), as
 in BCSync_JobPOs.
 
+Since Oct 12, 2026 it runs on a Check BC now request - a crfdf_syncrequest row
+of kind "jobdescriptions", added by BCSync_Scheduler (hourly) or by the app's Check BC
+now button - and writes what it did back on the row (_sync_request.py).
+
 The expressions are long and quote-heavy, so the JSON is GENERATED - edit here:
 
     python _gen_jobdesc_flow.py
@@ -28,6 +32,8 @@ BCSync_JobDescriptions.md.
 """
 import json
 import os
+
+from _sync_request import count_text, request_trigger, with_request
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BCSync_JobDescriptions-clientdata.json")
 
@@ -158,6 +164,9 @@ actions = {
         "else": {"actions": {}}},
 }
 
+# What the run tells Check BC now.
+DONE = count_text("length(coalesce(body('Changed_Jobs'), json('[]')))", "job's descriptions updated", "jobs' descriptions updated", 'Descriptions up to date')
+
 flow = {
     "properties": {
         "connectionReferences": {
@@ -183,10 +192,8 @@ flow = {
                 "Bc_ClientId": {"type": "String", "defaultValue": "<< Postman app registration client id >>"},
                 "Bc_ClientSecret": {"type": "String", "defaultValue": "<< store in Key Vault / secure env var - do NOT commit >>"},
             },
-            "triggers": {"Hourly": {
-                "type": "Recurrence",
-                "recurrence": {"frequency": "Hour", "interval": 1}}},
-            "actions": actions,
+            "triggers": request_trigger("jobdescriptions"),
+            "actions": with_request(actions, DONE),
         },
     },
     "schemaVersion": "1.0.0.0",

@@ -433,3 +433,29 @@ describe("saving a week plan when the save fails", () => {
     expect(status.getState().failed[0]!.label).toBe("Save week plan");
   });
 });
+
+describe("Check BC now when the request can't be saved", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("says so instead of spinning forever, and can be pressed again", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    vi.doMock("../services/dataverse-live", () => ({
+      createSyncRequest: async () => {
+        throw new Error("Failed to fetch");
+      },
+    }));
+    const { useBcCheckStore } = await import("./bc-check-store");
+    await useBcCheckStore.getState().check("Tester");
+    const st = useBcCheckStore.getState();
+    expect(st.phase).toBe("failed");
+    expect(Object.keys(st.pulls)).toHaveLength(5); // every pull was asked
+    expect(st.pulls.taskcompletions?.message).toContain("Failed to fetch");
+    useBcCheckStore.getState().dismiss();
+    expect(useBcCheckStore.getState().phase).toBe("idle");
+  });
+});

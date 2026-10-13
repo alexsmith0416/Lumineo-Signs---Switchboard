@@ -3500,3 +3500,34 @@ export async function deleteInstallPlan(id: string): Promise<void> {
   const res = await dvDelete(PLAN_SET, id);
   if (!res.success) throw new Error(res.error?.message ?? "deleteInstallPlan failed");
 }
+
+// ---------------------------------------------------------------------------
+// "Check BC now" requests (crfdf_syncrequest) — Oct 12, 2026. The app adds a
+// row; the BC pull for that kind (BCSync_NewOrders for "neworders") fires on
+// it and writes Status / Result back. Created by scripts/create-syncrequest-table.ps1.
+// ---------------------------------------------------------------------------
+const SYNC_SET = "crfdf_syncrequests";
+
+/** Ask for a BC pull now. Returns the request's row id. */
+export async function createSyncRequest(kind: string, requestedBy: string): Promise<string> {
+  const id = uuid();
+  const res = await dvCreate(SYNC_SET, {
+    crfdf_syncrequestid: id,
+    crfdf_name: kind,
+    crfdf_kind: kind,
+    crfdf_status: "Requested",
+    crfdf_requestedby: requestedBy.slice(0, 200),
+  });
+  if (!res.success) throw new Error(res.error?.message ?? "createSyncRequest failed");
+  return id;
+}
+
+/** A request's status and result; null once the row is gone. */
+export async function fetchSyncRequest(id: string): Promise<{ status: string; result: string } | null> {
+  const rows = await list(SYNC_SET, {
+    select: "crfdf_status,crfdf_result",
+    filter: `crfdf_syncrequestid eq ${id}`,
+  });
+  const r = rows[0];
+  return r ? { status: s(r.crfdf_status), result: s(r.crfdf_result) } : null;
+}

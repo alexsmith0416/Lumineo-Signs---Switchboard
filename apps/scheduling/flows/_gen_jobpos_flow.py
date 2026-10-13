@@ -24,6 +24,10 @@ Nightly it:
 Large lists are compared as '^'-delimited strings (one substring search per row)
 instead of contains() on arrays, so 10k rows stay fast.
 
+Since Oct 12, 2026 it runs on a Check BC now request - a crfdf_syncrequest row
+of kind "jobpos", added by BCSync_Scheduler (nightly at 5:15) or by the app's Check BC
+now button - and writes what it did back on the row (_sync_request.py).
+
 The expressions are long and quote-heavy, so the JSON is GENERATED - edit here:
 
     python _gen_jobpos_flow.py
@@ -32,6 +36,8 @@ then build the solution with _build_jobpos_solution.py. See BCSync_JobPOs.md.
 """
 import json
 import os
+
+from _sync_request import count_text, request_trigger, with_request
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BCSync_JobPOs-clientdata.json")
 
@@ -218,6 +224,9 @@ actions = {
         "else": {"actions": {}}},
 }
 
+# What the run tells Check BC now.
+DONE = count_text("length(coalesce(body('Changed_Keys'), json('[]')))", 'PO updated', 'POs updated', 'POs up to date')
+
 flow = {
     "properties": {
         "connectionReferences": {
@@ -243,11 +252,8 @@ flow = {
                 "Bc_ClientId": {"type": "String", "defaultValue": "<< Postman app registration client id >>"},
                 "Bc_ClientSecret": {"type": "String", "defaultValue": "<< store in Key Vault / secure env var - do NOT commit >>"},
             },
-            "triggers": {"Nightly": {
-                "type": "Recurrence",
-                "recurrence": {"frequency": "Day", "interval": 1, "timeZone": "Central Standard Time",
-                               "schedule": {"hours": ["5"], "minutes": [15]}}}},
-            "actions": actions,
+            "triggers": request_trigger("jobpos"),
+            "actions": with_request(actions, DONE),
         },
     },
     "schemaVersion": "1.0.0.0",

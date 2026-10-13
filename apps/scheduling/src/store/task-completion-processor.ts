@@ -41,6 +41,7 @@ const EVERY_MS = 2 * 60_000;
 const FIRST_AFTER_MS = 20_000;
 
 let running = false;
+let started = false;
 let warnedOutdated = false;
 
 type Dv = typeof import("../services/dataverse-live");
@@ -164,15 +165,17 @@ async function applyOne(t: TaskCompletionRow): Promise<Outcome> {
   return { state: "done", result: `${what} · status left as ${current}`, detail };
 }
 
-/** Handle every pending tick once (a run already going is left to finish). */
-export async function processTaskCompletions(): Promise<void> {
-  if (!LIVE || running) return;
+/** Handle every pending tick once (a run already going is left to finish).
+ *  Returns how many were handled. */
+export async function processTaskCompletions(): Promise<number> {
+  if (!LIVE || running) return 0;
   running = true;
+  let handled = 0;
   try {
     const dv = await import("../services/dataverse-live");
     const pending = await dv.fetchPendingTaskCompletions();
-    if (!pending.length) return;
-    if (!(await buildIsCurrent(dv))) return;
+    if (!pending.length) return 0;
+    if (!(await buildIsCurrent(dv))) return 0;
     // Fresh stepper + rules state, so another session's clicks are seen.
     await Promise.all([
       useJobDeptCompletionStore.getState().load(true),
@@ -183,6 +186,7 @@ export async function processTaskCompletions(): Promise<void> {
       try {
         const out = await applyOne(t);
         await dv.markTaskCompletion(t.id, out.state, out.result, out.detail);
+        handled++;
       } catch (e) {
         // Left "pending" — the next run tries again (every step is idempotent).
         console.warn(`[task-completions] BC entry ${t.entryNo} (${t.jobNo}) failed; will retry`, e);
@@ -193,17 +197,32 @@ export async function processTaskCompletions(): Promise<void> {
   } finally {
     running = false;
   }
+  return handled;
+}
+
+/**
+ * Check BC now just copied new ticks in: apply them right away instead of at
+ * the next 2-minute pass. Null in a session that doesn't apply ticks (not an
+ * Admin / Ops / Developer) — an open office session picks them up.
+ */
+export async function applyTicksNow(): Promise<number | null> {
+  if (!started) return null;
+  // A pass already going may have started before the new ticks landed.
+  while (running) await new Promise((r) => setTimeout(r, 500));
+  return processTaskCompletions();
 }
 
 /** Start the background loop (once per session). Returns a stop function. */
 export function startTaskCompletionProcessor(): () => void {
   if (!LIVE) return () => {};
+  started = true;
   void import("../services/dataverse-live")
     .then(recordBuild)
     .catch((e) => console.warn("[task-completions] couldn't record this build", e));
   const first = setTimeout(() => void processTaskCompletions(), FIRST_AFTER_MS);
   const every = setInterval(() => void processTaskCompletions(), EVERY_MS);
   return () => {
+    started = false;
     clearTimeout(first);
     clearInterval(every);
   };

@@ -15,6 +15,10 @@ Every 5 minutes, one run at a time:
 Entry numbers only grow, so a row is never copied twice and a missed run is
 caught up by the next.
 
+Since Oct 12, 2026 it runs on a Check BC now request - a crfdf_syncrequest row
+of kind "taskcompletions", added by BCSync_Scheduler (every 5 minutes) or by the app's Check BC
+now button - and writes what it did back on the row (_sync_request.py).
+
 The expressions are quote-heavy, so the JSON is GENERATED - edit here:
 
     python _gen_taskcompletions_flow.py
@@ -24,6 +28,8 @@ BCSync_TaskCompletions.md.
 """
 import json
 import os
+
+from _sync_request import count_text, request_trigger, with_request
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BCSync_TaskCompletions-clientdata.json")
 
@@ -80,6 +86,9 @@ actions = {
         })}},
 }
 
+# What the run tells Check BC now.
+DONE = count_text("length(coalesce(body('Get_New_Completions')?['value'], json('[]')))", 'new shop-floor tick', 'new shop-floor ticks', 'No new shop-floor ticks')
+
 flow = {
     "properties": {
         "connectionReferences": {
@@ -105,12 +114,8 @@ flow = {
                 "Bc_ClientId": {"type": "String", "defaultValue": "<< Postman app registration client id >>"},
                 "Bc_ClientSecret": {"type": "String", "defaultValue": "<< store in Key Vault / secure env var - do NOT commit >>"},
             },
-            "triggers": {"Every_5_minutes": {
-                "type": "Recurrence",
-                "recurrence": {"frequency": "Minute", "interval": 5},
-                # One run at a time, so two runs can't copy the same entries.
-                "runtimeConfiguration": {"concurrency": {"runs": 1}}}},
-            "actions": actions,
+            "triggers": request_trigger("taskcompletions"),
+            "actions": with_request(actions, DONE),
         },
     },
     "schemaVersion": "1.0.0.0",

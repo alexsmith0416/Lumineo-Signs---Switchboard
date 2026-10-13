@@ -50,304 +50,420 @@
         }
       },
       "triggers": {
-        "Hourly": {
-          "type": "Recurrence",
-          "recurrence": {
-            "frequency": "Hour",
-            "interval": 1
-          }
-        }
-      },
-      "actions": {
-        "Get_Descriptions": {
-          "type": "Http",
-          "runAfter": {},
-          "inputs": {
-            "method": "GET",
-            "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/jobDescriptions?$filter=@{encodeUriComponent('status eq ''Open''')}&$select=jobNo,lastModified,fieldDescription,productionDescription,extendedDescription,orderType",
-            "headers": {
-              "Accept": "application/json"
-            },
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "authority": "https://login.microsoftonline.com",
-              "tenant": "@parameters('Bc_Tenant')",
-              "audience": "@parameters('Bc_Audience')",
-              "clientId": "@parameters('Bc_ClientId')",
-              "secret": "@parameters('Bc_ClientSecret')"
-            }
-          }
-        },
-        "List_Existing": {
-          "type": "OpenApiConnection",
-          "runAfter": {},
+        "When_a_check_is_requested": {
+          "type": "OpenApiConnectionWebhook",
           "inputs": {
             "parameters": {
-              "entityName": "crfdf_jobdescs",
-              "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified,crfdf_ordertype"
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_syncrequest",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "crfdf_kind eq 'jobdescriptions'"
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
               "connectionName": "shared_commondataserviceforapps",
-              "operationId": "ListRecords"
-            }
-          },
-          "runtimeConfiguration": {
-            "paginationPolicy": {
-              "minimumItemCount": 100000
-            }
-          }
-        },
-        "Check_Single_Page": {
-          "type": "If",
-          "runAfter": {
-            "Get_Descriptions": [
-              "Succeeded"
-            ]
-          },
-          "expression": {
-            "not": {
-              "equals": [
-                "@empty(coalesce(body('Get_Descriptions')?['@odata.nextLink'], ''))",
-                true
-              ]
-            }
-          },
-          "actions": {
-            "Stop_Paged": {
-              "type": "Terminate",
-              "runAfter": {},
-              "inputs": {
-                "runStatus": "Failed",
-                "runError": {
-                  "code": "Paged",
-                  "message": "BC returned more than one page - add paging to BCSync_JobDescriptions."
-                }
-              }
-            }
-          },
-          "else": {
-            "actions": {}
-          }
-        },
-        "Jobs": {
-          "type": "Query",
-          "runAfter": {
-            "Check_Single_Page": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('Get_Descriptions')?['value']",
-            "where": "@not(empty(trim(coalesce(item()?['jobNo'], ''))))"
-          }
-        },
-        "Existing_Stamps": {
-          "type": "Select",
-          "runAfter": {
-            "List_Existing": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('List_Existing')?['value']",
-            "select": "@concat(trim(coalesce(item()?['crfdf_jobno'], '')), '~', coalesce(item()?['crfdf_bcmodified'], ''), '~', trim(coalesce(item()?['crfdf_ordertype'], '')))"
-          }
-        },
-        "Existing_Stamp_Text": {
-          "type": "Compose",
-          "runAfter": {
-            "Existing_Stamps": [
-              "Succeeded"
-            ]
-          },
-          "inputs": "@concat('^', join(body('Existing_Stamps'), '^'), '^')"
-        },
-        "Changed_Jobs": {
-          "type": "Query",
-          "runAfter": {
-            "Jobs": [
-              "Succeeded"
-            ],
-            "Existing_Stamp_Text": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('Jobs')",
-            "where": "@not(contains(outputs('Existing_Stamp_Text'), concat('^', concat(trim(coalesce(item()?['jobNo'], '')), '~', coalesce(item()?['lastModified'], ''), '~', trim(coalesce(item()?['orderType'], ''))), '^')))"
-          }
-        },
-        "For_each_changed_job": {
-          "type": "Foreach",
-          "foreach": "@body('Changed_Jobs')",
-          "runAfter": {
-            "Changed_Jobs": [
-              "Succeeded"
-            ]
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "authentication": "@parameters('$authentication')"
           },
           "runtimeConfiguration": {
             "concurrency": {
-              "repetitions": 10
+              "runs": 1
             }
+          }
+        }
+      },
+      "actions": {
+        "Mark_Running": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Running",
+              "item/crfdf_result": ""
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
+            }
+          }
+        },
+        "Check_BC": {
+          "type": "Scope",
+          "runAfter": {
+            "Mark_Running": [
+              "Succeeded"
+            ]
           },
           "actions": {
-            "Existing_Row": {
-              "type": "Query",
+            "Get_Descriptions": {
+              "type": "Http",
               "runAfter": {},
               "inputs": {
-                "from": "@body('List_Existing')?['value']",
-                "where": "@equals(trim(coalesce(item()?['crfdf_jobno'], '')), trim(items('For_each_changed_job')?['jobNo']))"
+                "method": "GET",
+                "uri": "@{parameters('Bc_ApiBase')}/lumineo/planning/v1.0/companies(@{parameters('Bc_CompanyId')})/jobDescriptions?$filter=@{encodeUriComponent('status eq ''Open''')}&$select=jobNo,lastModified,fieldDescription,productionDescription,extendedDescription,orderType",
+                "headers": {
+                  "Accept": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "authority": "https://login.microsoftonline.com",
+                  "tenant": "@parameters('Bc_Tenant')",
+                  "audience": "@parameters('Bc_Audience')",
+                  "clientId": "@parameters('Bc_ClientId')",
+                  "secret": "@parameters('Bc_ClientSecret')"
+                }
               }
             },
-            "Row_Exists": {
+            "List_Existing": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_jobdescs",
+                  "$select": "crfdf_jobdescid,crfdf_jobno,crfdf_bcmodified,crfdf_ordertype"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              }
+            },
+            "Check_Single_Page": {
               "type": "If",
               "runAfter": {
-                "Existing_Row": [
+                "Get_Descriptions": [
                   "Succeeded"
                 ]
               },
               "expression": {
-                "greater": [
-                  "@length(body('Existing_Row'))",
-                  0
-                ]
+                "not": {
+                  "equals": [
+                    "@empty(coalesce(body('Get_Descriptions')?['@odata.nextLink'], ''))",
+                    true
+                  ]
+                }
               },
               "actions": {
-                "Update_Descriptions": {
-                  "type": "OpenApiConnection",
+                "Stop_Paged": {
+                  "type": "Terminate",
                   "runAfter": {},
                   "inputs": {
-                    "parameters": {
-                      "entityName": "crfdf_jobdescs",
-                      "recordId": "@first(body('Existing_Row'))?['crfdf_jobdescid']",
-                      "item/crfdf_name": "@trim(items('For_each_changed_job')?['jobNo'])",
-                      "item/crfdf_jobno": "@trim(items('For_each_changed_job')?['jobNo'])",
-                      "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
-                      "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
-                      "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
-                      "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
-                      "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "UpdateOnlyRecord"
+                    "runStatus": "Failed",
+                    "runError": {
+                      "code": "Paged",
+                      "message": "BC returned more than one page - add paging to BCSync_JobDescriptions."
                     }
                   }
                 }
               },
               "else": {
-                "actions": {
-                  "Create_Descriptions": {
-                    "type": "OpenApiConnection",
-                    "runAfter": {},
-                    "inputs": {
-                      "parameters": {
-                        "entityName": "crfdf_jobdescs",
-                        "item/crfdf_name": "@trim(items('For_each_changed_job')?['jobNo'])",
-                        "item/crfdf_jobno": "@trim(items('For_each_changed_job')?['jobNo'])",
-                        "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
-                        "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
-                        "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
-                        "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
-                        "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
-                      },
-                      "host": {
-                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                        "connectionName": "shared_commondataserviceforapps",
-                        "operationId": "CreateRecord"
-                      }
-                    }
-                  }
-                }
+                "actions": {}
               }
-            }
-          }
-        },
-        "Open_Job_Numbers": {
-          "type": "Select",
-          "runAfter": {
-            "Jobs": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('Jobs')",
-            "select": "@trim(coalesce(item()?['jobNo'], ''))"
-          }
-        },
-        "Open_Job_Text": {
-          "type": "Compose",
-          "runAfter": {
-            "Open_Job_Numbers": [
-              "Succeeded"
-            ]
-          },
-          "inputs": "@concat('^', join(body('Open_Job_Numbers'), '^'), '^')"
-        },
-        "Stale_Rows": {
-          "type": "Query",
-          "runAfter": {
-            "Open_Job_Text": [
-              "Succeeded"
-            ],
-            "List_Existing": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('List_Existing')?['value']",
-            "where": "@not(contains(outputs('Open_Job_Text'), concat('^', trim(coalesce(item()?['crfdf_jobno'], '')), '^')))"
-          }
-        },
-        "Any_Jobs": {
-          "type": "If",
-          "runAfter": {
-            "Stale_Rows": [
-              "Succeeded"
-            ],
-            "For_each_changed_job": [
-              "Succeeded"
-            ]
-          },
-          "expression": {
-            "greater": [
-              "@length(body('Jobs'))",
-              0
-            ]
-          },
-          "actions": {
-            "For_each_stale_row": {
+            },
+            "Jobs": {
+              "type": "Query",
+              "runAfter": {
+                "Check_Single_Page": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('Get_Descriptions')?['value']",
+                "where": "@not(empty(trim(coalesce(item()?['jobNo'], ''))))"
+              }
+            },
+            "Existing_Stamps": {
+              "type": "Select",
+              "runAfter": {
+                "List_Existing": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('List_Existing')?['value']",
+                "select": "@concat(trim(coalesce(item()?['crfdf_jobno'], '')), '~', coalesce(item()?['crfdf_bcmodified'], ''), '~', trim(coalesce(item()?['crfdf_ordertype'], '')))"
+              }
+            },
+            "Existing_Stamp_Text": {
+              "type": "Compose",
+              "runAfter": {
+                "Existing_Stamps": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": "@concat('^', join(body('Existing_Stamps'), '^'), '^')"
+            },
+            "Changed_Jobs": {
+              "type": "Query",
+              "runAfter": {
+                "Jobs": [
+                  "Succeeded"
+                ],
+                "Existing_Stamp_Text": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('Jobs')",
+                "where": "@not(contains(outputs('Existing_Stamp_Text'), concat('^', concat(trim(coalesce(item()?['jobNo'], '')), '~', coalesce(item()?['lastModified'], ''), '~', trim(coalesce(item()?['orderType'], ''))), '^')))"
+              }
+            },
+            "For_each_changed_job": {
               "type": "Foreach",
-              "foreach": "@body('Stale_Rows')",
-              "runAfter": {},
+              "foreach": "@body('Changed_Jobs')",
+              "runAfter": {
+                "Changed_Jobs": [
+                  "Succeeded"
+                ]
+              },
               "runtimeConfiguration": {
                 "concurrency": {
                   "repetitions": 10
                 }
               },
               "actions": {
-                "Delete_Descriptions": {
-                  "type": "OpenApiConnection",
+                "Existing_Row": {
+                  "type": "Query",
                   "runAfter": {},
                   "inputs": {
-                    "parameters": {
-                      "entityName": "crfdf_jobdescs",
-                      "recordId": "@items('For_each_stale_row')?['crfdf_jobdescid']"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "DeleteRecord"
+                    "from": "@body('List_Existing')?['value']",
+                    "where": "@equals(trim(coalesce(item()?['crfdf_jobno'], '')), trim(items('For_each_changed_job')?['jobNo']))"
+                  }
+                },
+                "Row_Exists": {
+                  "type": "If",
+                  "runAfter": {
+                    "Existing_Row": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": {
+                    "greater": [
+                      "@length(body('Existing_Row'))",
+                      0
+                    ]
+                  },
+                  "actions": {
+                    "Update_Descriptions": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {},
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crfdf_jobdescs",
+                          "recordId": "@first(body('Existing_Row'))?['crfdf_jobdescid']",
+                          "item/crfdf_name": "@trim(items('For_each_changed_job')?['jobNo'])",
+                          "item/crfdf_jobno": "@trim(items('For_each_changed_job')?['jobNo'])",
+                          "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
+                          "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
+                          "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
+                          "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
+                          "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Create_Descriptions": {
+                        "type": "OpenApiConnection",
+                        "runAfter": {},
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "crfdf_jobdescs",
+                            "item/crfdf_name": "@trim(items('For_each_changed_job')?['jobNo'])",
+                            "item/crfdf_jobno": "@trim(items('For_each_changed_job')?['jobNo'])",
+                            "item/crfdf_fielddesc": "@coalesce(items('For_each_changed_job')?['fieldDescription'], '')",
+                            "item/crfdf_proddesc": "@coalesce(items('For_each_changed_job')?['productionDescription'], '')",
+                            "item/crfdf_extdesc": "@coalesce(items('For_each_changed_job')?['extendedDescription'], '')",
+                            "item/crfdf_bcmodified": "@coalesce(items('For_each_changed_job')?['lastModified'], '')",
+                            "item/crfdf_ordertype": "@trim(coalesce(items('For_each_changed_job')?['orderType'], ''))"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "CreateRecord"
+                          }
+                        }
+                      }
                     }
                   }
+                }
+              }
+            },
+            "Open_Job_Numbers": {
+              "type": "Select",
+              "runAfter": {
+                "Jobs": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('Jobs')",
+                "select": "@trim(coalesce(item()?['jobNo'], ''))"
+              }
+            },
+            "Open_Job_Text": {
+              "type": "Compose",
+              "runAfter": {
+                "Open_Job_Numbers": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": "@concat('^', join(body('Open_Job_Numbers'), '^'), '^')"
+            },
+            "Stale_Rows": {
+              "type": "Query",
+              "runAfter": {
+                "Open_Job_Text": [
+                  "Succeeded"
+                ],
+                "List_Existing": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('List_Existing')?['value']",
+                "where": "@not(contains(outputs('Open_Job_Text'), concat('^', trim(coalesce(item()?['crfdf_jobno'], '')), '^')))"
+              }
+            },
+            "Any_Jobs": {
+              "type": "If",
+              "runAfter": {
+                "Stale_Rows": [
+                  "Succeeded"
+                ],
+                "For_each_changed_job": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "greater": [
+                  "@length(body('Jobs'))",
+                  0
+                ]
+              },
+              "actions": {
+                "For_each_stale_row": {
+                  "type": "Foreach",
+                  "foreach": "@body('Stale_Rows')",
+                  "runAfter": {},
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 10
+                    }
+                  },
+                  "actions": {
+                    "Delete_Descriptions": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {},
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crfdf_jobdescs",
+                          "recordId": "@items('For_each_stale_row')?['crfdf_jobdescid']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          }
+        },
+        "From_The_Scheduler": {
+          "type": "If",
+          "runAfter": {
+            "Check_BC": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/crfdf_requestedby']",
+              "Scheduler"
+            ]
+          },
+          "actions": {
+            "Remove_Scheduler_Request": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_syncrequests",
+                  "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord"
                 }
               }
             }
           },
           "else": {
-            "actions": {}
+            "actions": {
+              "Mark_Done": {
+                "type": "OpenApiConnection",
+                "runAfter": {},
+                "inputs": {
+                  "parameters": {
+                    "entityName": "crfdf_syncrequests",
+                    "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+                    "item/crfdf_status": "Done",
+                    "item/crfdf_result": "@if(equals(length(coalesce(body('Changed_Jobs'), json('[]'))), 0), 'Descriptions up to date', concat(string(length(coalesce(body('Changed_Jobs'), json('[]')))), if(equals(length(coalesce(body('Changed_Jobs'), json('[]'))), 1), ' job''s descriptions updated', ' jobs'' descriptions updated')))"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "UpdateOnlyRecord"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Mark_Failed": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Check_BC": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Failed",
+              "item/crfdf_result": "@'Could not check BC - see the flow run history.'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
+            }
           }
         }
       }

@@ -10,21 +10,25 @@
   Run AFTER importing BCPoReceiving_1_0_0_2.zip. The source is the first of
   BCSync_TaskCompletions / BCSync_JobDescriptions / BCSync_JobPOs /
   BCPush_PlanningSteps whose secret isn't a placeholder (or -SourceFlow).
+  -Targets picks other flows, e.g. after importing BCCheckNow_1_0_0_1.zip:
+      .\copy-bc-secret-to-flows.ps1 -Targets BCSync_NewOrders,BCSync_TaskCompletions,BCSync_JobDescriptions,BCSync_JobPOs
   The secret is never printed or written to disk — only its length is shown.
   Idempotent. The flows' On/Off state is left as it is.
 
   Device-code sign-in as asmith@lumineosigns.com.
 #>
 param(
-  [string]$SourceFlow = ''
+  [string]$SourceFlow = '',
+  [string[]]$Targets = @('BCPush_PoReceipts', 'BCPush_PoDeliveries')
 )
 
 $ErrorActionPreference = 'Stop'
 $tenant   = 'fe0182fa-d183-46ab-8493-9e8ea9c3d0b8'
 $org      = 'https://org8fa22efd.crm.dynamics.com'
 $clientId = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
-$targets  = @('BCPush_PoReceipts', 'BCPush_PoDeliveries')
-$sources  = if ($SourceFlow) { @($SourceFlow) } else { @('BCSync_TaskCompletions', 'BCSync_JobDescriptions', 'BCSync_JobPOs', 'BCPush_PlanningSteps') }
+# Split on commas too: `pwsh -File … -Targets a,b,c` passes "a,b,c" as ONE string.
+$targets  = @($Targets | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$sources  = if ($SourceFlow) { @($SourceFlow) } else { @('BCSync_TaskCompletions', 'BCSync_JobDescriptions', 'BCSync_JobPOs', 'BCPush_PlanningSteps', 'BCPush_PoReceipts') }
 
 $dc = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenant/oauth2/v2.0/devicecode" `
   -Body @{ client_id = $clientId; scope = "$org/.default offline_access" }
@@ -75,7 +79,7 @@ if (-not $secret) { throw "No BC flow with a real Bc_ClientSecret found (tried: 
 
 foreach ($name in $targets) {
   $list = Get-Flow $name
-  if ($list.Count -eq 0) { Write-Host ("{0}: not found - import BCPoReceiving_1_0_0_2.zip first." -f $name) -ForegroundColor Red; continue }
+  if ($list.Count -eq 0) { Write-Host ("{0}: not found - import its solution first (BCPoReceiving / BCCheckNow)." -f $name) -ForegroundColor Red; continue }
   foreach ($wf in $list) {
     $cd = $wf.clientdata | ConvertFrom-Json
     $p = $cd.properties.definition.parameters.Bc_ClientSecret

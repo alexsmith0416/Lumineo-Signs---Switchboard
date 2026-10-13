@@ -12,6 +12,11 @@ const DEV_POS: JobPO[] = [
 // Per session: a job's POs change at most nightly (the sync flow).
 const cache = new Map<string, JobPO[]>();
 
+/** Forget what's been read (Check BC now just refreshed the POs); a panel opened next reads them again. */
+export function clearJobPOsCache(): void {
+  cache.clear();
+}
+
 export interface UseJobPOs {
   pos: JobPO[];
   loading: boolean;

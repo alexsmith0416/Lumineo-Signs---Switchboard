@@ -51,412 +51,519 @@
         }
       },
       "triggers": {
-        "Nightly": {
-          "type": "Recurrence",
-          "recurrence": {
-            "frequency": "Day",
-            "interval": 1,
-            "timeZone": "Central Standard Time",
-            "schedule": {
-              "hours": [
-                "4"
-              ],
-              "minutes": [
-                30
-              ]
+        "When_a_check_is_requested": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_syncrequest",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "crfdf_kind eq 'jobsketches'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
             }
           }
         }
       },
       "actions": {
-        "List_Jobs": {
+        "Mark_Running": {
           "type": "OpenApiConnection",
           "runAfter": {},
           "inputs": {
             "parameters": {
-              "entityName": "crfdf_bcjobs",
-              "$select": "crfdf_jobnumber,crfdf_sharepointurl",
-              "$filter": "@{if(empty(parameters('Only_Job')), 'crfdf_sharepointurl ne null and crfdf_status eq ''Open''', concat('crfdf_jobnumber eq ''', replace(parameters('Only_Job'), '''', ''''''), ''''))}"
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Running",
+              "item/crfdf_result": ""
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
               "connectionName": "shared_commondataserviceforapps",
-              "operationId": "ListRecords"
-            }
-          },
-          "runtimeConfiguration": {
-            "paginationPolicy": {
-              "minimumItemCount": 5000
+              "operationId": "UpdateOnlyRecord"
             }
           }
         },
-        "List_Sketches": {
-          "type": "OpenApiConnection",
-          "runAfter": {},
-          "inputs": {
-            "parameters": {
-              "entityName": "crfdf_jobsketchs",
-              "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion,crfdf_pinned"
-            },
-            "host": {
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-              "connectionName": "shared_commondataserviceforapps",
-              "operationId": "ListRecords"
-            }
-          },
-          "runtimeConfiguration": {
-            "paginationPolicy": {
-              "minimumItemCount": 5000
-            }
-          }
-        },
-        "Removed_Rows": {
-          "type": "Query",
+        "Check_BC": {
+          "type": "Scope",
           "runAfter": {
-            "List_Sketches": [
+            "Mark_Running": [
               "Succeeded"
             ]
-          },
-          "inputs": {
-            "from": "@body('List_Sketches')?['value']",
-            "where": "@equals(coalesce(item()?['crfdf_pinned'], ''), '(removed)')"
-          }
-        },
-        "Removed_Jobs": {
-          "type": "Select",
-          "runAfter": {
-            "Removed_Rows": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('Removed_Rows')",
-            "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"
-          }
-        },
-        "Jobs_In_Site": {
-          "type": "Query",
-          "runAfter": {
-            "List_Jobs": [
-              "Succeeded"
-            ],
-            "Removed_Jobs": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('List_Jobs')?['value']",
-            "where": "@and(startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), toLower(concat(parameters('Sp_Site'), '/'))), not(contains(body('Removed_Jobs'), trim(coalesce(item()?['crfdf_jobnumber'], '')))))"
-          }
-        },
-        "For_each_job": {
-          "type": "Foreach",
-          "foreach": "@body('Jobs_In_Site')",
-          "runAfter": {
-            "Jobs_In_Site": [
-              "Succeeded"
-            ]
-          },
-          "runtimeConfiguration": {
-            "concurrency": {
-              "repetitions": 8
-            }
           },
           "actions": {
-            "Try_Job": {
-              "type": "Scope",
+            "List_Jobs": {
+              "type": "OpenApiConnection",
               "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_bcjobs",
+                  "$select": "crfdf_jobnumber,crfdf_sharepointurl",
+                  "$filter": "@{if(empty(parameters('Only_Job')), 'crfdf_sharepointurl ne null and crfdf_status eq ''Open''', concat('crfdf_jobnumber eq ''', replace(parameters('Only_Job'), '''', ''''''), ''''))}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 5000
+                }
+              }
+            },
+            "List_Sketches": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_jobsketchs",
+                  "$select": "crfdf_jobsketchid,crfdf_jobno,crfdf_fileversion,crfdf_pinned"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 5000
+                }
+              }
+            },
+            "Removed_Rows": {
+              "type": "Query",
+              "runAfter": {
+                "List_Sketches": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('List_Sketches')?['value']",
+                "where": "@equals(coalesce(item()?['crfdf_pinned'], ''), '(removed)')"
+              }
+            },
+            "Removed_Jobs": {
+              "type": "Select",
+              "runAfter": {
+                "Removed_Rows": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('Removed_Rows')",
+                "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"
+              }
+            },
+            "Jobs_In_Site": {
+              "type": "Query",
+              "runAfter": {
+                "List_Jobs": [
+                  "Succeeded"
+                ],
+                "Removed_Jobs": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('List_Jobs')?['value']",
+                "where": "@and(startsWith(toLower(trim(coalesce(item()?['crfdf_sharepointurl'], ''))), toLower(concat(parameters('Sp_Site'), '/'))), not(contains(body('Removed_Jobs'), trim(coalesce(item()?['crfdf_jobnumber'], '')))))"
+              }
+            },
+            "For_each_job": {
+              "type": "Foreach",
+              "foreach": "@body('Jobs_In_Site')",
+              "runAfter": {
+                "Jobs_In_Site": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 8
+                }
+              },
               "actions": {
-                "Server_Relative_Folder": {
-                  "type": "Compose",
+                "Try_Job": {
+                  "type": "Scope",
                   "runAfter": {},
-                  "inputs": "@concat('/', join(skip(split(trim(items('For_each_job')?['crfdf_sharepointurl']), '/'), 3), '/'))"
-                },
-                "List_Body": {
-                  "type": "Compose",
-                  "runAfter": {
-                    "Server_Relative_Folder": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "parameters": {
-                      "RenderOptions": 2,
-                      "FolderServerRelativeUrl": "@{outputs('Server_Relative_Folder')}",
-                      "ViewXml": "<View Scope=\"RecursiveAll\"><Query><Where><Eq><FieldRef Name=\"FSObjType\"/><Value Type=\"Integer\">0</Value></Eq></Where><OrderBy><FieldRef Name=\"Modified\" Ascending=\"FALSE\"/></OrderBy></Query><ViewFields><FieldRef Name=\"FileLeafRef\"/><FieldRef Name=\"FileRef\"/><FieldRef Name=\"File_x0020_Type\"/><FieldRef Name=\"Modified\"/><FieldRef Name=\"UniqueId\"/></ViewFields><RowLimit>1000</RowLimit></View>"
-                    }
-                  }
-                },
-                "List_Files": {
-                  "type": "OpenApiConnection",
-                  "runAfter": {
-                    "List_Body": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "parameters": {
-                      "dataset": "@parameters('Sp_Site')",
-                      "parameters/method": "POST",
-                      "parameters/uri": "@{concat('_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@a1=''', encodeUriComponent(parameters('Sp_Library_Path')), '''')}",
-                      "parameters/headers": {
-                        "Accept": "application/json;odata=nometadata",
-                        "Content-Type": "application/json;odata=nometadata"
-                      },
-                      "parameters/body": "@{outputs('List_Body')}"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
-                      "connectionName": "shared_sharepointonline",
-                      "operationId": "HttpRequest"
-                    }
-                  }
-                },
-                "Sketch_PDFs": {
-                  "type": "Query",
-                  "runAfter": {
-                    "List_Files": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
-                    "where": "@and(equals(toLower(coalesce(item()?['File_x0020_Type'], '')), 'pdf'), startsWith(toLower(coalesce(item()?['FileLeafRef'], '')), toLower(trim(items('For_each_job')?['crfdf_jobnumber']))))"
-                  }
-                },
-                "Images": {
-                  "type": "Query",
-                  "runAfter": {
-                    "List_Files": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
-                    "where": "@contains(createArray('jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'tif', 'tiff'), toLower(coalesce(item()?['File_x0020_Type'], '')))"
-                  }
-                },
-                "Existing_Sketch": {
-                  "type": "Query",
-                  "runAfter": {
-                    "List_Files": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "from": "@body('List_Sketches')?['value']",
-                    "where": "@equals(trim(coalesce(item()?['crfdf_jobno'], '')), trim(items('For_each_job')?['crfdf_jobnumber']))"
-                  }
-                },
-                "Pinned_File": {
-                  "type": "Query",
-                  "runAfter": {
-                    "Existing_Sketch": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": {
-                    "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
-                    "where": "@and(not(empty(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))), equals(toLower(coalesce(item()?['FileRef'], '')), toLower(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))))"
-                  }
-                },
-                "Pick_Sketch": {
-                  "type": "Compose",
-                  "runAfter": {
-                    "Sketch_PDFs": [
-                      "Succeeded"
-                    ],
-                    "Images": [
-                      "Succeeded"
-                    ],
-                    "Pinned_File": [
-                      "Succeeded"
-                    ]
-                  },
-                  "inputs": "@if(greater(length(body('Pinned_File')), 0), first(body('Pinned_File')), if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images'))))"
-                },
-                "Has_Sketch": {
-                  "type": "If",
-                  "runAfter": {
-                    "Pick_Sketch": [
-                      "Succeeded"
-                    ]
-                  },
-                  "expression": {
-                    "not": {
-                      "equals": [
-                        "@empty(outputs('Pick_Sketch'))",
-                        true
-                      ]
-                    }
-                  },
                   "actions": {
-                    "Sketch_Changed": {
-                      "type": "If",
+                    "Server_Relative_Folder": {
+                      "type": "Compose",
                       "runAfter": {},
-                      "expression": {
-                        "or": [
-                          {
-                            "equals": [
-                              "@empty(first(body('Existing_Sketch')))",
-                              true
-                            ]
-                          },
-                          {
-                            "not": {
-                              "equals": [
-                                "@coalesce(first(body('Existing_Sketch'))?['crfdf_fileversion'], '')",
-                                "@concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified'])"
-                              ]
-                            }
-                          }
+                      "inputs": "@concat('/', join(skip(split(trim(items('For_each_job')?['crfdf_sharepointurl']), '/'), 3), '/'))"
+                    },
+                    "List_Body": {
+                      "type": "Compose",
+                      "runAfter": {
+                        "Server_Relative_Folder": [
+                          "Succeeded"
                         ]
                       },
+                      "inputs": {
+                        "parameters": {
+                          "RenderOptions": 2,
+                          "FolderServerRelativeUrl": "@{outputs('Server_Relative_Folder')}",
+                          "ViewXml": "<View Scope=\"RecursiveAll\"><Query><Where><Eq><FieldRef Name=\"FSObjType\"/><Value Type=\"Integer\">0</Value></Eq></Where><OrderBy><FieldRef Name=\"Modified\" Ascending=\"FALSE\"/></OrderBy></Query><ViewFields><FieldRef Name=\"FileLeafRef\"/><FieldRef Name=\"FileRef\"/><FieldRef Name=\"File_x0020_Type\"/><FieldRef Name=\"Modified\"/><FieldRef Name=\"UniqueId\"/></ViewFields><RowLimit>1000</RowLimit></View>"
+                        }
+                      }
+                    },
+                    "List_Files": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "List_Body": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "@parameters('Sp_Site')",
+                          "parameters/method": "POST",
+                          "parameters/uri": "@{concat('_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@a1=''', encodeUriComponent(parameters('Sp_Library_Path')), '''')}",
+                          "parameters/headers": {
+                            "Accept": "application/json;odata=nometadata",
+                            "Content-Type": "application/json;odata=nometadata"
+                          },
+                          "parameters/body": "@{outputs('List_Body')}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "HttpRequest"
+                        }
+                      }
+                    },
+                    "Sketch_PDFs": {
+                      "type": "Query",
+                      "runAfter": {
+                        "List_Files": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
+                        "where": "@and(equals(toLower(coalesce(item()?['File_x0020_Type'], '')), 'pdf'), startsWith(toLower(coalesce(item()?['FileLeafRef'], '')), toLower(trim(items('For_each_job')?['crfdf_jobnumber']))))"
+                      }
+                    },
+                    "Images": {
+                      "type": "Query",
+                      "runAfter": {
+                        "List_Files": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
+                        "where": "@contains(createArray('jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'tif', 'tiff'), toLower(coalesce(item()?['File_x0020_Type'], '')))"
+                      }
+                    },
+                    "Existing_Sketch": {
+                      "type": "Query",
+                      "runAfter": {
+                        "List_Files": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@body('List_Sketches')?['value']",
+                        "where": "@equals(trim(coalesce(item()?['crfdf_jobno'], '')), trim(items('For_each_job')?['crfdf_jobnumber']))"
+                      }
+                    },
+                    "Pinned_File": {
+                      "type": "Query",
+                      "runAfter": {
+                        "Existing_Sketch": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@coalesce(body('List_Files')?['Row'], json('[]'))",
+                        "where": "@and(not(empty(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))), equals(toLower(coalesce(item()?['FileRef'], '')), toLower(coalesce(first(body('Existing_Sketch'))?['crfdf_pinned'], ''))))"
+                      }
+                    },
+                    "Pick_Sketch": {
+                      "type": "Compose",
+                      "runAfter": {
+                        "Sketch_PDFs": [
+                          "Succeeded"
+                        ],
+                        "Images": [
+                          "Succeeded"
+                        ],
+                        "Pinned_File": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": "@if(greater(length(body('Pinned_File')), 0), first(body('Pinned_File')), if(greater(length(body('Sketch_PDFs')), 0), first(body('Sketch_PDFs')), first(body('Images'))))"
+                    },
+                    "Has_Sketch": {
+                      "type": "If",
+                      "runAfter": {
+                        "Pick_Sketch": [
+                          "Succeeded"
+                        ]
+                      },
+                      "expression": {
+                        "not": {
+                          "equals": [
+                            "@empty(outputs('Pick_Sketch'))",
+                            true
+                          ]
+                        }
+                      },
                       "actions": {
-                        "Thumb_Info": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {},
-                          "inputs": {
-                            "parameters": {
-                              "dataset": "@parameters('Sp_Site')",
-                              "parameters/method": "GET",
-                              "parameters/uri": "@{concat('_api/v2.0/drive/root:/', replace(encodeUriComponent(substring(outputs('Pick_Sketch')?['FileRef'], add(length(parameters('Sp_Library_Path')), 1))), '%2F', '/'), ':/thumbnails/0/', parameters('Thumb_Size'))}",
-                              "parameters/headers": {
-                                "Accept": "application/json;odata=nometadata",
-                                "Content-Type": "application/json;odata=nometadata"
-                              }
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
-                              "connectionName": "shared_sharepointonline",
-                              "operationId": "HttpRequest"
-                            }
-                          }
-                        },
-                        "Download_Thumbnail": {
-                          "type": "Http",
-                          "runAfter": {
-                            "Thumb_Info": [
-                              "Succeeded"
-                            ]
-                          },
-                          "inputs": {
-                            "method": "GET",
-                            "uri": "@body('Thumb_Info')?['url']"
-                          }
-                        },
-                        "Save_Sketch": {
+                        "Sketch_Changed": {
                           "type": "If",
-                          "runAfter": {
-                            "Thumb_Info": [
-                              "Succeeded",
-                              "Failed",
-                              "Skipped"
-                            ],
-                            "Download_Thumbnail": [
-                              "Succeeded",
-                              "Failed",
-                              "Skipped"
-                            ]
-                          },
+                          "runAfter": {},
                           "expression": {
-                            "equals": [
-                              "@empty(first(body('Existing_Sketch')))",
-                              true
+                            "or": [
+                              {
+                                "equals": [
+                                  "@empty(first(body('Existing_Sketch')))",
+                                  true
+                                ]
+                              },
+                              {
+                                "not": {
+                                  "equals": [
+                                    "@coalesce(first(body('Existing_Sketch'))?['crfdf_fileversion'], '')",
+                                    "@concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified'])"
+                                  ]
+                                }
+                              }
                             ]
                           },
                           "actions": {
-                            "Create_Sketch": {
+                            "Thumb_Info": {
                               "type": "OpenApiConnection",
                               "runAfter": {},
                               "inputs": {
                                 "parameters": {
-                                  "entityName": "crfdf_jobsketchs",
-                                  "item/crfdf_jobno": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
-                                  "item/crfdf_name": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
-                                  "item/crfdf_fileurl": "@concat(join(take(split(parameters('Sp_Site'), '/'), 3), '/'), replace(replace(replace(outputs('Pick_Sketch')?['FileRef'], '%', '%25'), ' ', '%20'), '#', '%23'))",
-                                  "item/crfdf_filename": "@outputs('Pick_Sketch')?['FileLeafRef']",
-                                  "item/crfdf_fileversion": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), concat(concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), '|no-thumbnail'))",
-                                  "item/crfdf_thumbnail": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('data:', coalesce(body('Download_Thumbnail')?['$content-type'], 'image/jpeg'), ';base64,', body('Download_Thumbnail')?['$content']), concat('error: ', take(concat('Thumb_Info=', coalesce(actions('Thumb_Info')?['status'], ''), ' ', string(coalesce(actions('Thumb_Info')?['outputs']?['body'], actions('Thumb_Info')?['error'], '')), ' || ', 'Download_Thumbnail=', coalesce(actions('Download_Thumbnail')?['status'], ''), ' ', string(coalesce(actions('Download_Thumbnail')?['outputs']?['body'], actions('Download_Thumbnail')?['error'], ''))), 3000)))"
+                                  "dataset": "@parameters('Sp_Site')",
+                                  "parameters/method": "GET",
+                                  "parameters/uri": "@{concat('_api/v2.0/drive/root:/', replace(encodeUriComponent(substring(outputs('Pick_Sketch')?['FileRef'], add(length(parameters('Sp_Library_Path')), 1))), '%2F', '/'), ':/thumbnails/0/', parameters('Thumb_Size'))}",
+                                  "parameters/headers": {
+                                    "Accept": "application/json;odata=nometadata",
+                                    "Content-Type": "application/json;odata=nometadata"
+                                  }
                                 },
                                 "host": {
-                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                                  "connectionName": "shared_commondataserviceforapps",
-                                  "operationId": "CreateRecord"
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                                  "connectionName": "shared_sharepointonline",
+                                  "operationId": "HttpRequest"
+                                }
+                              }
+                            },
+                            "Download_Thumbnail": {
+                              "type": "Http",
+                              "runAfter": {
+                                "Thumb_Info": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "inputs": {
+                                "method": "GET",
+                                "uri": "@body('Thumb_Info')?['url']"
+                              }
+                            },
+                            "Save_Sketch": {
+                              "type": "If",
+                              "runAfter": {
+                                "Thumb_Info": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "Skipped"
+                                ],
+                                "Download_Thumbnail": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "Skipped"
+                                ]
+                              },
+                              "expression": {
+                                "equals": [
+                                  "@empty(first(body('Existing_Sketch')))",
+                                  true
+                                ]
+                              },
+                              "actions": {
+                                "Create_Sketch": {
+                                  "type": "OpenApiConnection",
+                                  "runAfter": {},
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "crfdf_jobsketchs",
+                                      "item/crfdf_jobno": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
+                                      "item/crfdf_name": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
+                                      "item/crfdf_fileurl": "@concat(join(take(split(parameters('Sp_Site'), '/'), 3), '/'), replace(replace(replace(outputs('Pick_Sketch')?['FileRef'], '%', '%25'), ' ', '%20'), '#', '%23'))",
+                                      "item/crfdf_filename": "@outputs('Pick_Sketch')?['FileLeafRef']",
+                                      "item/crfdf_fileversion": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), concat(concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), '|no-thumbnail'))",
+                                      "item/crfdf_thumbnail": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('data:', coalesce(body('Download_Thumbnail')?['$content-type'], 'image/jpeg'), ';base64,', body('Download_Thumbnail')?['$content']), concat('error: ', take(concat('Thumb_Info=', coalesce(actions('Thumb_Info')?['status'], ''), ' ', string(coalesce(actions('Thumb_Info')?['outputs']?['body'], actions('Thumb_Info')?['error'], '')), ' || ', 'Download_Thumbnail=', coalesce(actions('Download_Thumbnail')?['status'], ''), ' ', string(coalesce(actions('Download_Thumbnail')?['outputs']?['body'], actions('Download_Thumbnail')?['error'], ''))), 3000)))"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "connectionName": "shared_commondataserviceforapps",
+                                      "operationId": "CreateRecord"
+                                    }
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "Update_Sketch": {
+                                    "type": "OpenApiConnection",
+                                    "runAfter": {},
+                                    "inputs": {
+                                      "parameters": {
+                                        "entityName": "crfdf_jobsketchs",
+                                        "recordId": "@first(body('Existing_Sketch'))?['crfdf_jobsketchid']",
+                                        "item/crfdf_jobno": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
+                                        "item/crfdf_name": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
+                                        "item/crfdf_fileurl": "@concat(join(take(split(parameters('Sp_Site'), '/'), 3), '/'), replace(replace(replace(outputs('Pick_Sketch')?['FileRef'], '%', '%25'), ' ', '%20'), '#', '%23'))",
+                                        "item/crfdf_filename": "@outputs('Pick_Sketch')?['FileLeafRef']",
+                                        "item/crfdf_fileversion": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), concat(concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), '|no-thumbnail'))",
+                                        "item/crfdf_thumbnail": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('data:', coalesce(body('Download_Thumbnail')?['$content-type'], 'image/jpeg'), ';base64,', body('Download_Thumbnail')?['$content']), concat('error: ', take(concat('Thumb_Info=', coalesce(actions('Thumb_Info')?['status'], ''), ' ', string(coalesce(actions('Thumb_Info')?['outputs']?['body'], actions('Thumb_Info')?['error'], '')), ' || ', 'Download_Thumbnail=', coalesce(actions('Download_Thumbnail')?['status'], ''), ' ', string(coalesce(actions('Download_Thumbnail')?['outputs']?['body'], actions('Download_Thumbnail')?['error'], ''))), 3000)))"
+                                      },
+                                      "host": {
+                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                        "connectionName": "shared_commondataserviceforapps",
+                                        "operationId": "UpdateOnlyRecord"
+                                      }
+                                    }
+                                  }
                                 }
                               }
                             }
                           },
                           "else": {
+                            "actions": {}
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Had_Sketch": {
+                            "type": "If",
+                            "runAfter": {},
+                            "expression": {
+                              "not": {
+                                "equals": [
+                                  "@empty(first(body('Existing_Sketch')))",
+                                  true
+                                ]
+                              }
+                            },
                             "actions": {
-                              "Update_Sketch": {
+                              "Remove_Sketch": {
                                 "type": "OpenApiConnection",
                                 "runAfter": {},
                                 "inputs": {
                                   "parameters": {
                                     "entityName": "crfdf_jobsketchs",
-                                    "recordId": "@first(body('Existing_Sketch'))?['crfdf_jobsketchid']",
-                                    "item/crfdf_jobno": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
-                                    "item/crfdf_name": "@trim(items('For_each_job')?['crfdf_jobnumber'])",
-                                    "item/crfdf_fileurl": "@concat(join(take(split(parameters('Sp_Site'), '/'), 3), '/'), replace(replace(replace(outputs('Pick_Sketch')?['FileRef'], '%', '%25'), ' ', '%20'), '#', '%23'))",
-                                    "item/crfdf_filename": "@outputs('Pick_Sketch')?['FileLeafRef']",
-                                    "item/crfdf_fileversion": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), concat(concat('v4|', outputs('Pick_Sketch')?['UniqueId'], '|', outputs('Pick_Sketch')?['Modified']), '|no-thumbnail'))",
-                                    "item/crfdf_thumbnail": "@if(and(equals(actions('Download_Thumbnail')?['status'], 'Succeeded'), not(empty(body('Download_Thumbnail')?['$content']))), concat('data:', coalesce(body('Download_Thumbnail')?['$content-type'], 'image/jpeg'), ';base64,', body('Download_Thumbnail')?['$content']), concat('error: ', take(concat('Thumb_Info=', coalesce(actions('Thumb_Info')?['status'], ''), ' ', string(coalesce(actions('Thumb_Info')?['outputs']?['body'], actions('Thumb_Info')?['error'], '')), ' || ', 'Download_Thumbnail=', coalesce(actions('Download_Thumbnail')?['status'], ''), ' ', string(coalesce(actions('Download_Thumbnail')?['outputs']?['body'], actions('Download_Thumbnail')?['error'], ''))), 3000)))"
+                                    "recordId": "@first(body('Existing_Sketch'))?['crfdf_jobsketchid']"
                                   },
                                   "host": {
                                     "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
                                     "connectionName": "shared_commondataserviceforapps",
-                                    "operationId": "UpdateOnlyRecord"
+                                    "operationId": "DeleteRecord"
                                   }
                                 }
                               }
+                            },
+                            "else": {
+                              "actions": {}
                             }
                           }
-                        }
-                      },
-                      "else": {
-                        "actions": {}
-                      }
-                    }
-                  },
-                  "else": {
-                    "actions": {
-                      "Had_Sketch": {
-                        "type": "If",
-                        "runAfter": {},
-                        "expression": {
-                          "not": {
-                            "equals": [
-                              "@empty(first(body('Existing_Sketch')))",
-                              true
-                            ]
-                          }
-                        },
-                        "actions": {
-                          "Remove_Sketch": {
-                            "type": "OpenApiConnection",
-                            "runAfter": {},
-                            "inputs": {
-                              "parameters": {
-                                "entityName": "crfdf_jobsketchs",
-                                "recordId": "@first(body('Existing_Sketch'))?['crfdf_jobsketchid']"
-                              },
-                              "host": {
-                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                                "connectionName": "shared_commondataserviceforapps",
-                                "operationId": "DeleteRecord"
-                              }
-                            }
-                          }
-                        },
-                        "else": {
-                          "actions": {}
                         }
                       }
                     }
                   }
                 }
               }
+            }
+          }
+        },
+        "From_The_Scheduler": {
+          "type": "If",
+          "runAfter": {
+            "Check_BC": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/crfdf_requestedby']",
+              "Scheduler"
+            ]
+          },
+          "actions": {
+            "Remove_Scheduler_Request": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_syncrequests",
+                  "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord"
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Mark_Done": {
+                "type": "OpenApiConnection",
+                "runAfter": {},
+                "inputs": {
+                  "parameters": {
+                    "entityName": "crfdf_syncrequests",
+                    "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+                    "item/crfdf_status": "Done",
+                    "item/crfdf_result": "@if(equals(length(coalesce(body('Jobs_In_Site'), json('[]'))), 0), 'No job folders to check', concat(string(length(coalesce(body('Jobs_In_Site'), json('[]')))), if(equals(length(coalesce(body('Jobs_In_Site'), json('[]'))), 1), ' job folder checked', ' job folders checked')))"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "UpdateOnlyRecord"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Mark_Failed": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Check_BC": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "@'Done'",
+              "item/crfdf_result": "@concat(if(equals(length(coalesce(body('Jobs_In_Site'), json('[]'))), 0), 'No job folders to check', concat(string(length(coalesce(body('Jobs_In_Site'), json('[]')))), if(equals(length(coalesce(body('Jobs_In_Site'), json('[]'))), 1), ' job folder checked', ' job folders checked'))), ' (some folders could not be read)')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
             }
           }
         }

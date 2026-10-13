@@ -267,6 +267,21 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
       "file not found"); now takes the decoded path (`sketchFileRef`).
     - 📋 **ORDER OF WORK (Alex, Oct 7):** (1) the lifecycle redesign below,
       (2) **Warehouse Management** (spec below), (3) per-user landing page.
+    - ✅ **Check BC now — DEPLOYED Oct 13** (guide v3.46 §5.17,
+      `flows/CHECK-BC-NOW.md`). Jobs toolbar button → `store/bc-check-store.ts`
+      adds a `crfdf_syncrequest` row per BC pull (task completions — shop floor
+      + install —, new orders, descriptions, POs, sketches) and polls them
+      (`services/sync-request.ts`, tested); as each finishes it reloads what
+      changed and applies new ticks at once (`applyTicksNow`). The five flows
+      now fire on their row (`flows/_sync_request.py`, one run at a time)
+      instead of their own timers; **BCSync_Scheduler** adds rows on the old
+      timings. One solution **BCCheckNow 1.0.0.1** (`_build_syncnow_solution.py`,
+      same workflow ids → updates the flows). Table created Oct 12. ✅ Imported
+      Oct 12 10:44 PM (triggers now on crfdf_syncrequest rows; the real BC secret
+      survived the import — copy-bc-secret-to-flows said "already set", and it
+      now splits a comma-joined `-Targets` from `pwsh -File`). ✅ App deployed.
+      Left: **BCSync_Scheduler On** (if not yet), then press Check BC now once
+      live and watch the five rows finish.
     - ✅ **openrouteservice diagnosis — DEPLOYED Oct 12** (guide v3.45). Live
       planner said "Can't reach openrouteservice … content security policy"
       though CSP was set: the app blamed CSP for ANY failed fetch, but ORS's

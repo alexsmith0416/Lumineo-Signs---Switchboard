@@ -4,7 +4,10 @@ BCSync_NewOrders puts a job on the app's Jobs list as soon as the expeditor
 checks Started on its "New Order This Week" step in BC Project Planning,
 instead of waiting for the nightly syncs, and fills in everything BC knows.
 
-Every 15 minutes it:
+It runs on a Check BC now request - a crfdf_syncrequest row of kind
+"neworders", added by BCSync_Scheduler every 15 minutes or by the app's Check
+BC now button - one run at a time, and writes what it added back on the row
+(_sync_request.py). Each run:
   1. reads our BC web service LumineoProjectPlanning (page 58400,
      bc/lumineo-planning-ext) for rows that are Started and changed in the last
      Lookback_Days. Step_Description is computed on the page (step GUIDs differ
@@ -32,6 +35,8 @@ BCSync_NewOrders.md.
 """
 import json
 import os
+
+from _sync_request import request_trigger, with_request
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BCSync_NewOrders-clientdata.json")
 
@@ -231,16 +236,18 @@ per_job = {
                 "item/crfdf_jobno": f"@{JOB}",
                 "item/crfdf_name": f"@{JOB}",
                 "item/crfdf_statusoverride": "@parameters('New_Order_Status')"}),
+            "Note_Added": {"type": "AppendToArrayVariable", "runAfter": after("Add_To_Jobs_List"),
+                           "inputs": {"name": "Added_Jobs", "value": f"@{JOB}"}},
             # Filling in from BC is best-effort: if a read fails the job is
             # still on the list, and the nightly syncs fill it in.
-            "Fill_In_From_BC": {"type": "Scope", "runAfter": after("Add_To_Jobs_List"), "actions": refresh},
+            "Fill_In_From_BC": {"type": "Scope", "runAfter": after("Note_Added"), "actions": refresh},
         },
         "else": {"actions": {}},
     },
 }
 
 since = "formatDateTime(addDays(utcNow(), mul(-1, int(parameters('Lookback_Days')))), 'yyyy-MM-ddTHH:mm:ssZ')"
-actions = {
+check_bc = {
     "Get_Started_Steps": {
         "type": "Http", "runAfter": {},
         "inputs": {
@@ -277,6 +284,20 @@ actions = {
         "else": {"actions": {}},
     },
 }
+
+# --- what the run tells Check BC now -----------------------------------------
+ADDED = "variables('Added_Jobs')"
+ADDED_TEXT = (f"if(empty({ADDED}), 'No new orders to add - every job Started in BC is already on the Jobs list.', "
+              f"concat('Added ', length({ADDED}), if(equals(length({ADDED}), 1), ' job: ', ' jobs: '), join({ADDED}, ', ')))")
+actions = with_request(
+    check_bc, ADDED_TEXT,
+    # Failed part-way: jobs already added stay added (the nightly syncs fill in
+    # what BC didn't give back); otherwise it failed.
+    failed_status=f"if(empty({ADDED}), 'Failed', 'Done')",
+    failed_text=(f"if(empty({ADDED}), 'Could not check BC - see the BCSync_NewOrders run history.', "
+                 f"concat({ADDED_TEXT}, ' (some details could not be read from BC yet - the nightly sync fills them in)'))"),
+    first={"Initialize_Added_Jobs": {"type": "InitializeVariable", "runAfter": {},
+                                     "inputs": {"variables": [{"name": "Added_Jobs", "type": "array", "value": []}]}}})
 
 flow = {
     "properties": {
@@ -318,9 +339,7 @@ flow = {
                 "New_Order_Status": {"type": "String", "defaultValue": "New Order this week"},
                 "Lookback_Days": {"type": "Int", "defaultValue": 3},
             },
-            "triggers": {"Every_15_minutes": {
-                "type": "Recurrence",
-                "recurrence": {"frequency": "Minute", "interval": 15}}},
+            "triggers": request_trigger("neworders"),
             "actions": actions,
         },
     },

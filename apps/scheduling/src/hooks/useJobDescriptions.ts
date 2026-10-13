@@ -14,6 +14,11 @@ const DEV_DESCRIPTIONS: JobDescriptions = {
 const cache = new Map<string, JobDescriptions>();
 const inflight = new Map<string, Promise<JobDescriptions>>();
 
+/** Forget what's been read (Check BC now just refreshed the descriptions); a panel opened next reads them again. */
+export function clearJobDescriptionsCache(): void {
+  cache.clear();
+}
+
 export interface UseJobDescriptions {
   desc: JobDescriptions;
   loading: boolean;

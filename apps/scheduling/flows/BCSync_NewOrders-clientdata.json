@@ -91,448 +91,301 @@
         }
       },
       "triggers": {
-        "Every_15_minutes": {
-          "type": "Recurrence",
-          "recurrence": {
-            "frequency": "Minute",
-            "interval": 15
+        "When_a_check_is_requested": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crfdf_syncrequest",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "crfdf_kind eq 'neworders'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
           }
         }
       },
       "actions": {
-        "Get_Started_Steps": {
-          "type": "Http",
+        "Initialize_Added_Jobs": {
+          "type": "InitializeVariable",
           "runAfter": {},
           "inputs": {
-            "method": "GET",
-            "uri": "@{parameters('Bc_ODataBase')}/Company('@{encodeUriComponent(parameters('Bc_Company'))}')/@{parameters('Bc_Service')}?$filter=@{encodeUriComponent(concat('Started eq true and SystemModifiedAt gt ', formatDateTime(addDays(utcNow(), mul(-1, int(parameters('Lookback_Days')))), 'yyyy-MM-ddTHH:mm:ssZ')))}&$select=Project_No,Step_Description",
-            "headers": {
-              "Accept": "application/json"
+            "variables": [
+              {
+                "name": "Added_Jobs",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Mark_Running": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Initialize_Added_Jobs": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "Running",
+              "item/crfdf_result": ""
             },
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "authority": "https://login.microsoftonline.com",
-              "tenant": "@parameters('Bc_Tenant')",
-              "audience": "@parameters('Bc_Audience')",
-              "clientId": "@parameters('Bc_ClientId')",
-              "secret": "@parameters('Bc_ClientSecret')"
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
             }
           }
         },
-        "New_Order_Steps": {
-          "type": "Query",
+        "Check_BC": {
+          "type": "Scope",
           "runAfter": {
-            "Get_Started_Steps": [
+            "Mark_Running": [
               "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('Get_Started_Steps')?['value']",
-            "where": "@equals(toLower(trim(coalesce(item()?['Step_Description'], ''))), toLower(trim(parameters('New_Order_Step'))))"
-          }
-        },
-        "New_Order_Job_Numbers": {
-          "type": "Select",
-          "runAfter": {
-            "New_Order_Steps": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "from": "@body('New_Order_Steps')",
-            "select": "@item()?['Project_No']"
-          }
-        },
-        "Any_New_Orders": {
-          "type": "If",
-          "runAfter": {
-            "New_Order_Job_Numbers": [
-              "Succeeded"
-            ]
-          },
-          "expression": {
-            "greater": [
-              "@length(body('New_Order_Job_Numbers'))",
-              0
             ]
           },
           "actions": {
-            "List_Tracked_Jobs": {
-              "type": "OpenApiConnection",
+            "Get_Started_Steps": {
+              "type": "Http",
               "runAfter": {},
               "inputs": {
-                "parameters": {
-                  "entityName": "crfdf_jobtracks",
-                  "$select": "crfdf_jobno"
+                "method": "GET",
+                "uri": "@{parameters('Bc_ODataBase')}/Company('@{encodeUriComponent(parameters('Bc_Company'))}')/@{parameters('Bc_Service')}?$filter=@{encodeUriComponent(concat('Started eq true and SystemModifiedAt gt ', formatDateTime(addDays(utcNow(), mul(-1, int(parameters('Lookback_Days')))), 'yyyy-MM-ddTHH:mm:ssZ')))}&$select=Project_No,Step_Description",
+                "headers": {
+                  "Accept": "application/json"
                 },
-                "host": {
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                  "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "ListRecords"
-                }
-              },
-              "runtimeConfiguration": {
-                "paginationPolicy": {
-                  "minimumItemCount": 5000
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "authority": "https://login.microsoftonline.com",
+                  "tenant": "@parameters('Bc_Tenant')",
+                  "audience": "@parameters('Bc_Audience')",
+                  "clientId": "@parameters('Bc_ClientId')",
+                  "secret": "@parameters('Bc_ClientSecret')"
                 }
               }
             },
-            "Tracked_Job_Numbers": {
-              "type": "Select",
-              "runAfter": {
-                "List_Tracked_Jobs": [
-                  "Succeeded"
-                ]
-              },
-              "inputs": {
-                "from": "@body('List_Tracked_Jobs')?['value']",
-                "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"
-              }
-            },
-            "Untracked_Jobs": {
+            "New_Order_Steps": {
               "type": "Query",
               "runAfter": {
-                "Tracked_Job_Numbers": [
+                "Get_Started_Steps": [
                   "Succeeded"
                 ]
               },
               "inputs": {
-                "from": "@union(body('New_Order_Job_Numbers'), body('New_Order_Job_Numbers'))",
-                "where": "@not(contains(body('Tracked_Job_Numbers'), trim(item())))"
+                "from": "@body('Get_Started_Steps')?['value']",
+                "where": "@equals(toLower(trim(coalesce(item()?['Step_Description'], ''))), toLower(trim(parameters('New_Order_Step'))))"
               }
             },
-            "For_each_new_job": {
-              "type": "Foreach",
-              "foreach": "@body('Untracked_Jobs')",
+            "New_Order_Job_Numbers": {
+              "type": "Select",
               "runAfter": {
-                "Untracked_Jobs": [
+                "New_Order_Steps": [
                   "Succeeded"
                 ]
               },
-              "runtimeConfiguration": {
-                "concurrency": {
-                  "repetitions": 1
-                }
+              "inputs": {
+                "from": "@body('New_Order_Steps')",
+                "select": "@item()?['Project_No']"
+              }
+            },
+            "Any_New_Orders": {
+              "type": "If",
+              "runAfter": {
+                "New_Order_Job_Numbers": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "greater": [
+                  "@length(body('New_Order_Job_Numbers'))",
+                  0
+                ]
               },
               "actions": {
-                "Get_BC_Job": {
+                "List_Tracked_Jobs": {
                   "type": "OpenApiConnection",
                   "runAfter": {},
                   "inputs": {
                     "parameters": {
-                      "bcenvironment": "@parameters('Bc_Environment')",
-                      "company": "@parameters('Bc_CompanyId')",
-                      "dataset": "@parameters('Bc_AnalyticsDataset')",
-                      "table": "jobs",
-                      "$filter": "no eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
+                      "entityName": "crfdf_jobtracks",
+                      "$select": "crfdf_jobno"
                     },
                     "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
-                      "connectionName": "shared_dynamicssmbsaas",
-                      "operationId": "GetItemsV3"
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "paginationPolicy": {
+                      "minimumItemCount": 5000
                     }
                   }
                 },
-                "Job_Is_Open": {
-                  "type": "If",
+                "Tracked_Job_Numbers": {
+                  "type": "Select",
                   "runAfter": {
-                    "Get_BC_Job": [
+                    "List_Tracked_Jobs": [
                       "Succeeded"
                     ]
                   },
-                  "expression": {
-                    "and": [
-                      {
-                        "greater": [
-                          "@length(body('Get_BC_Job')?['value'])",
-                          0
-                        ]
-                      },
-                      {
-                        "equals": [
-                          "@first(body('Get_BC_Job')?['value'])?['status']",
-                          "Open"
-                        ]
-                      },
-                      {
-                        "not": {
-                          "equals": [
-                            "@first(body('Get_BC_Job')?['value'])?['complete']",
-                            true
-                          ]
-                        }
-                      }
+                  "inputs": {
+                    "from": "@body('List_Tracked_Jobs')?['value']",
+                    "select": "@trim(coalesce(item()?['crfdf_jobno'], ''))"
+                  }
+                },
+                "Untracked_Jobs": {
+                  "type": "Query",
+                  "runAfter": {
+                    "Tracked_Job_Numbers": [
+                      "Succeeded"
                     ]
                   },
+                  "inputs": {
+                    "from": "@union(body('New_Order_Job_Numbers'), body('New_Order_Job_Numbers'))",
+                    "where": "@not(contains(body('Tracked_Job_Numbers'), trim(item())))"
+                  }
+                },
+                "For_each_new_job": {
+                  "type": "Foreach",
+                  "foreach": "@body('Untracked_Jobs')",
+                  "runAfter": {
+                    "Untracked_Jobs": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 1
+                    }
+                  },
                   "actions": {
-                    "Add_To_Jobs_List": {
+                    "Get_BC_Job": {
                       "type": "OpenApiConnection",
                       "runAfter": {},
                       "inputs": {
                         "parameters": {
-                          "entityName": "crfdf_jobtracks",
-                          "item/crfdf_jobno": "@items('For_each_new_job')",
-                          "item/crfdf_name": "@items('For_each_new_job')",
-                          "item/crfdf_statusoverride": "@parameters('New_Order_Status')"
+                          "bcenvironment": "@parameters('Bc_Environment')",
+                          "company": "@parameters('Bc_CompanyId')",
+                          "dataset": "@parameters('Bc_AnalyticsDataset')",
+                          "table": "jobs",
+                          "$filter": "no eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
                         },
                         "host": {
-                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                          "connectionName": "shared_commondataserviceforapps",
-                          "operationId": "CreateRecord"
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                          "connectionName": "shared_dynamicssmbsaas",
+                          "operationId": "GetItemsV3"
                         }
                       }
                     },
-                    "Fill_In_From_BC": {
-                      "type": "Scope",
+                    "Job_Is_Open": {
+                      "type": "If",
                       "runAfter": {
-                        "Add_To_Jobs_List": [
+                        "Get_BC_Job": [
                           "Succeeded"
                         ]
                       },
-                      "actions": {
-                        "Get_Release_Date": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {},
-                          "inputs": {
-                            "parameters": {
-                              "bcenvironment": "@parameters('Bc_Environment')",
-                              "company": "@parameters('Bc_CompanyId')",
-                              "dataset": "@parameters('Bc_Sign365Dataset')",
-                              "table": "jobs",
-                              "$filter": "no eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
-                              "connectionName": "shared_dynamicssmbsaas",
-                              "operationId": "GetItemsV3"
-                            }
-                          }
-                        },
-                        "Get_Customer": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {},
-                          "inputs": {
-                            "parameters": {
-                              "entityName": "crfdf_bccustomers",
-                              "$select": "crfdf_customername,crfdf_addressline1,crfdf_city,crfdf_state,crfdf_postalcode",
-                              "$filter": "crfdf_customerno eq '@{replace(coalesce(first(body('Get_BC_Job')?['value'])?['billToCustomerNo'], ''), '''', '''''')}'",
-                              "$top": 1
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                              "connectionName": "shared_commondataserviceforapps",
-                              "operationId": "ListRecords"
-                            }
-                          }
-                        },
-                        "Get_Sales_Lines": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {},
-                          "inputs": {
-                            "parameters": {
-                              "bcenvironment": "@parameters('Bc_Environment')",
-                              "company": "@parameters('Bc_CompanyId')",
-                              "dataset": "@parameters('Bc_AnalyticsDataset')",
-                              "table": "salesLines",
-                              "$filter": "projectNo eq '@{replace(items('For_each_new_job'), '''', '''''')}' and documentType eq 'Order'"
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
-                              "connectionName": "shared_dynamicssmbsaas",
-                              "operationId": "GetItemsV3"
-                            }
-                          }
-                        },
-                        "Get_Sales_Order": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {
-                            "Get_Sales_Lines": [
-                              "Succeeded"
-                            ]
-                          },
-                          "inputs": {
-                            "parameters": {
-                              "bcenvironment": "@parameters('Bc_Environment')",
-                              "company": "@parameters('Bc_CompanyId')",
-                              "dataset": "v2.0",
-                              "table": "salesOrders",
-                              "$filter": "number eq '@{replace(coalesce(first(body('Get_Sales_Lines')?['value'])?['documentNo'], ''), '''', '''''')}'",
-                              "$top": 1
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
-                              "connectionName": "shared_dynamicssmbsaas",
-                              "operationId": "GetItemsV3"
-                            }
-                          }
-                        },
-                        "Find_BC_Job_Row": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {},
-                          "inputs": {
-                            "parameters": {
-                              "entityName": "crfdf_bcjobs",
-                              "$select": "crfdf_bcjobid,crfdf_description,crfdf_billtocustomerno,crfdf_customername,crfdf_status,crfdf_promiseddate,crfdf_releasedate,crfdf_appjobname,crfdf_shiptoaddress,crfdf_shiptocity,crfdf_shiptostate,crfdf_shiptozip,crfdf_saleslinefound,crfdf_salesdocumentno,crfdf_saleslinedescription,crfdf_saleslinesselltono,crfdf_remainingbalance,crfdf_salesorderamount,crfdf_salespersoncode",
-                              "$filter": "crfdf_jobnumber eq '@{replace(items('For_each_new_job'), '''', '''''')}'",
-                              "$top": 1
-                            },
-                            "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                              "connectionName": "shared_commondataserviceforapps",
-                              "operationId": "ListRecords"
-                            }
-                          }
-                        },
-                        "BC_Job_Row_Exists": {
-                          "type": "If",
-                          "runAfter": {
-                            "Get_Release_Date": [
-                              "Succeeded",
-                              "Failed",
-                              "Skipped"
-                            ],
-                            "Get_Customer": [
-                              "Succeeded",
-                              "Failed",
-                              "Skipped"
-                            ],
-                            "Get_Sales_Order": [
-                              "Succeeded",
-                              "Failed",
-                              "Skipped"
-                            ],
-                            "Find_BC_Job_Row": [
-                              "Succeeded"
-                            ]
-                          },
-                          "expression": {
+                      "expression": {
+                        "and": [
+                          {
                             "greater": [
-                              "@length(body('Find_BC_Job_Row')?['value'])",
+                              "@length(body('Get_BC_Job')?['value'])",
                               0
                             ]
                           },
-                          "actions": {
-                            "Update_BC_Job": {
-                              "type": "OpenApiConnection",
-                              "runAfter": {},
-                              "inputs": {
-                                "parameters": {
-                                  "entityName": "crfdf_bcjobs",
-                                  "recordId": "@first(body('Find_BC_Job_Row')?['value'])?['crfdf_bcjobid']",
-                                  "item/crfdf_jobnumber": "@items('For_each_new_job')",
-                                  "item/crfdf_description": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['description'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_description'], first(body('Get_BC_Job')?['value'])?['description'])",
-                                  "item/crfdf_billtocustomerno": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['billToCustomerNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_billtocustomerno'], first(body('Get_BC_Job')?['value'])?['billToCustomerNo'])",
-                                  "item/crfdf_customername": "@if(empty(coalesce(coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_customername'], coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')))",
-                                  "item/crfdf_status": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['status'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_status'], first(body('Get_BC_Job')?['value'])?['status'])",
-                                  "item/crfdf_promiseddate": "@coalesce(if(or(empty(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], '')), startsWith(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], ''), '0001')), null, first(body('Get_BC_Job')?['value'])?['endingDate']), first(body('Find_BC_Job_Row')?['value'])?['crfdf_promiseddate'])",
-                                  "item/crfdf_releasedate": "@coalesce(if(or(empty(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], '')), startsWith(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], ''), '0001')), null, first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate']), first(body('Find_BC_Job_Row')?['value'])?['crfdf_releasedate'])",
-                                  "item/crfdf_appjobname": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToName']), if(empty(first(body('Get_Sales_Order')?['value'])?['customerName']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_appjobname']), coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_appjobname']), first(body('Get_Sales_Order')?['value'])?['customerName']), first(body('Get_Sales_Order')?['value'])?['shipToName'])",
-                                  "item/crfdf_shiptoaddress": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptoaddress']), first(body('Get_Customer')?['value'])?['crfdf_addressline1'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptoaddress']), first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1'])",
-                                  "item/crfdf_shiptocity": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToCity']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptocity']), first(body('Get_Customer')?['value'])?['crfdf_city'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptocity']), first(body('Get_Sales_Order')?['value'])?['shipToCity'])",
-                                  "item/crfdf_shiptostate": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToState']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptostate']), first(body('Get_Customer')?['value'])?['crfdf_state'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptostate']), first(body('Get_Sales_Order')?['value'])?['shipToState'])",
-                                  "item/crfdf_shiptozip": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToPostCode']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptozip']), first(body('Get_Customer')?['value'])?['crfdf_postalcode'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptozip']), first(body('Get_Sales_Order')?['value'])?['shipToPostCode'])",
-                                  "item/crfdf_saleslinefound": "@or(greater(length(coalesce(body('Get_Sales_Lines')?['value'], json('[]'))), 0), equals(first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinefound'], true))",
-                                  "item/crfdf_salesdocumentno": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['documentNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_salesdocumentno'], first(body('Get_Sales_Lines')?['value'])?['documentNo'])",
-                                  "item/crfdf_saleslinedescription": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['description'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinedescription'], first(body('Get_Sales_Lines')?['value'])?['description'])",
-                                  "item/crfdf_saleslinesselltono": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinesselltono'], first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo'])",
-                                  "item/crfdf_remainingbalance": "@coalesce(first(body('Get_Sales_Lines')?['value'])?['outstandingAmountLCY'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_remainingbalance'])",
-                                  "item/crfdf_salesorderamount": "@coalesce(first(body('Get_Sales_Order')?['value'])?['totalAmountExcludingTax'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_salesorderamount'])",
-                                  "item/crfdf_salespersoncode": "@if(empty(coalesce(if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson']), '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_salespersoncode'], if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson']))"
-                                },
-                                "host": {
-                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                                  "connectionName": "shared_commondataserviceforapps",
-                                  "operationId": "UpdateOnlyRecord"
-                                }
-                              }
-                            }
+                          {
+                            "equals": [
+                              "@first(body('Get_BC_Job')?['value'])?['status']",
+                              "Open"
+                            ]
                           },
-                          "else": {
-                            "actions": {
-                              "Create_BC_Job": {
-                                "type": "OpenApiConnection",
-                                "runAfter": {},
-                                "inputs": {
-                                  "parameters": {
-                                    "entityName": "crfdf_bcjobs",
-                                    "item/crfdf_jobnumber": "@items('For_each_new_job')",
-                                    "item/crfdf_description": "@first(body('Get_BC_Job')?['value'])?['description']",
-                                    "item/crfdf_billtocustomerno": "@first(body('Get_BC_Job')?['value'])?['billToCustomerNo']",
-                                    "item/crfdf_customername": "@coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job'))",
-                                    "item/crfdf_status": "@first(body('Get_BC_Job')?['value'])?['status']",
-                                    "item/crfdf_promiseddate": "@if(or(empty(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], '')), startsWith(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], ''), '0001')), null, first(body('Get_BC_Job')?['value'])?['endingDate'])",
-                                    "item/crfdf_releasedate": "@if(or(empty(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], '')), startsWith(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], ''), '0001')), null, first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'])",
-                                    "item/crfdf_appjobname": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToName']), if(empty(first(body('Get_Sales_Order')?['value'])?['customerName']), coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), first(body('Get_Sales_Order')?['value'])?['customerName']), first(body('Get_Sales_Order')?['value'])?['shipToName'])",
-                                    "item/crfdf_shiptoaddress": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1']), first(body('Get_Customer')?['value'])?['crfdf_addressline1'], first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1'])",
-                                    "item/crfdf_shiptocity": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToCity']), first(body('Get_Customer')?['value'])?['crfdf_city'], first(body('Get_Sales_Order')?['value'])?['shipToCity'])",
-                                    "item/crfdf_shiptostate": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToState']), first(body('Get_Customer')?['value'])?['crfdf_state'], first(body('Get_Sales_Order')?['value'])?['shipToState'])",
-                                    "item/crfdf_shiptozip": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToPostCode']), first(body('Get_Customer')?['value'])?['crfdf_postalcode'], first(body('Get_Sales_Order')?['value'])?['shipToPostCode'])",
-                                    "item/crfdf_saleslinefound": "@greater(length(coalesce(body('Get_Sales_Lines')?['value'], json('[]'))), 0)",
-                                    "item/crfdf_salesdocumentno": "@first(body('Get_Sales_Lines')?['value'])?['documentNo']",
-                                    "item/crfdf_saleslinedescription": "@first(body('Get_Sales_Lines')?['value'])?['description']",
-                                    "item/crfdf_saleslinesselltono": "@first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo']",
-                                    "item/crfdf_remainingbalance": "@first(body('Get_Sales_Lines')?['value'])?['outstandingAmountLCY']",
-                                    "item/crfdf_salesorderamount": "@first(body('Get_Sales_Order')?['value'])?['totalAmountExcludingTax']",
-                                    "item/crfdf_salespersoncode": "@if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson'])"
-                                  },
-                                  "host": {
-                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                                    "connectionName": "shared_commondataserviceforapps",
-                                    "operationId": "CreateRecord"
-                                  }
-                                }
-                              }
+                          {
+                            "not": {
+                              "equals": [
+                                "@first(body('Get_BC_Job')?['value'])?['complete']",
+                                true
+                              ]
                             }
                           }
-                        },
-                        "Get_Planning_Lines": {
+                        ]
+                      },
+                      "actions": {
+                        "Add_To_Jobs_List": {
                           "type": "OpenApiConnection",
                           "runAfter": {},
                           "inputs": {
                             "parameters": {
-                              "bcenvironment": "@parameters('Bc_Environment')",
-                              "company": "@parameters('Bc_CompanyId')",
-                              "dataset": "@parameters('Bc_AnalyticsDataset')",
-                              "table": "jobPlanningLines",
-                              "$filter": "jobNo eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
+                              "entityName": "crfdf_jobtracks",
+                              "item/crfdf_jobno": "@items('For_each_new_job')",
+                              "item/crfdf_name": "@items('For_each_new_job')",
+                              "item/crfdf_statusoverride": "@parameters('New_Order_Status')"
                             },
                             "host": {
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
-                              "connectionName": "shared_dynamicssmbsaas",
-                              "operationId": "GetItemsV3"
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "CreateRecord"
                             }
                           }
                         },
-                        "Keep_Resource_Lines": {
-                          "type": "Query",
+                        "Note_Added": {
+                          "type": "AppendToArrayVariable",
                           "runAfter": {
-                            "Get_Planning_Lines": [
+                            "Add_To_Jobs_List": [
                               "Succeeded"
                             ]
                           },
                           "inputs": {
-                            "from": "@body('Get_Planning_Lines')?['value']",
-                            "where": "@or(equals(item()?['lineType'], 'Billable'), equals(item()?['jobType'], 'Resource'))"
+                            "name": "Added_Jobs",
+                            "value": "@items('For_each_new_job')"
                           }
                         },
-                        "For_each_line": {
-                          "type": "Foreach",
-                          "foreach": "@body('Keep_Resource_Lines')",
+                        "Fill_In_From_BC": {
+                          "type": "Scope",
                           "runAfter": {
-                            "Keep_Resource_Lines": [
+                            "Note_Added": [
                               "Succeeded"
                             ]
                           },
                           "actions": {
-                            "Find_Line": {
+                            "Get_Release_Date": {
                               "type": "OpenApiConnection",
                               "runAfter": {},
                               "inputs": {
                                 "parameters": {
-                                  "entityName": "crfdf_bcplanninglines",
-                                  "$select": "crfdf_bcplanninglineid",
-                                  "$top": 1,
-                                  "$filter": "crfdf_jobno eq '@{replace(items('For_each_new_job'), '''', '''''')}' and crfdf_jobtaskno eq '@{replace(coalesce(items('For_each_line')?['jobTaskNo'], ''), '''', '''''')}' and crfdf_lineno eq @{items('For_each_line')?['lineNo']}"
+                                  "bcenvironment": "@parameters('Bc_Environment')",
+                                  "company": "@parameters('Bc_CompanyId')",
+                                  "dataset": "@parameters('Bc_Sign365Dataset')",
+                                  "table": "jobs",
+                                  "$filter": "no eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                                  "connectionName": "shared_dynamicssmbsaas",
+                                  "operationId": "GetItemsV3"
+                                }
+                              }
+                            },
+                            "Get_Customer": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {},
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crfdf_bccustomers",
+                                  "$select": "crfdf_customername,crfdf_addressline1,crfdf_city,crfdf_state,crfdf_postalcode",
+                                  "$filter": "crfdf_customerno eq '@{replace(coalesce(first(body('Get_BC_Job')?['value'])?['billToCustomerNo'], ''), '''', '''''')}'",
+                                  "$top": 1
                                 },
                                 "host": {
                                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -541,38 +394,119 @@
                                 }
                               }
                             },
-                            "Line_Exists": {
+                            "Get_Sales_Lines": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {},
+                              "inputs": {
+                                "parameters": {
+                                  "bcenvironment": "@parameters('Bc_Environment')",
+                                  "company": "@parameters('Bc_CompanyId')",
+                                  "dataset": "@parameters('Bc_AnalyticsDataset')",
+                                  "table": "salesLines",
+                                  "$filter": "projectNo eq '@{replace(items('For_each_new_job'), '''', '''''')}' and documentType eq 'Order'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                                  "connectionName": "shared_dynamicssmbsaas",
+                                  "operationId": "GetItemsV3"
+                                }
+                              }
+                            },
+                            "Get_Sales_Order": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {
+                                "Get_Sales_Lines": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "inputs": {
+                                "parameters": {
+                                  "bcenvironment": "@parameters('Bc_Environment')",
+                                  "company": "@parameters('Bc_CompanyId')",
+                                  "dataset": "v2.0",
+                                  "table": "salesOrders",
+                                  "$filter": "number eq '@{replace(coalesce(first(body('Get_Sales_Lines')?['value'])?['documentNo'], ''), '''', '''''')}'",
+                                  "$top": 1
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                                  "connectionName": "shared_dynamicssmbsaas",
+                                  "operationId": "GetItemsV3"
+                                }
+                              }
+                            },
+                            "Find_BC_Job_Row": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {},
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crfdf_bcjobs",
+                                  "$select": "crfdf_bcjobid,crfdf_description,crfdf_billtocustomerno,crfdf_customername,crfdf_status,crfdf_promiseddate,crfdf_releasedate,crfdf_appjobname,crfdf_shiptoaddress,crfdf_shiptocity,crfdf_shiptostate,crfdf_shiptozip,crfdf_saleslinefound,crfdf_salesdocumentno,crfdf_saleslinedescription,crfdf_saleslinesselltono,crfdf_remainingbalance,crfdf_salesorderamount,crfdf_salespersoncode",
+                                  "$filter": "crfdf_jobnumber eq '@{replace(items('For_each_new_job'), '''', '''''')}'",
+                                  "$top": 1
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "ListRecords"
+                                }
+                              }
+                            },
+                            "BC_Job_Row_Exists": {
                               "type": "If",
                               "runAfter": {
-                                "Find_Line": [
+                                "Get_Release_Date": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "Skipped"
+                                ],
+                                "Get_Customer": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "Skipped"
+                                ],
+                                "Get_Sales_Order": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "Skipped"
+                                ],
+                                "Find_BC_Job_Row": [
                                   "Succeeded"
                                 ]
                               },
                               "expression": {
                                 "greater": [
-                                  "@length(body('Find_Line')?['value'])",
+                                  "@length(body('Find_BC_Job_Row')?['value'])",
                                   0
                                 ]
                               },
                               "actions": {
-                                "Update_Line": {
+                                "Update_BC_Job": {
                                   "type": "OpenApiConnection",
                                   "runAfter": {},
                                   "inputs": {
                                     "parameters": {
-                                      "entityName": "crfdf_bcplanninglines",
-                                      "recordId": "@first(body('Find_Line')?['value'])?['crfdf_bcplanninglineid']",
-                                      "item/crfdf_description": "@items('For_each_line')?['description']",
-                                      "item/crfdf_jobno": "@items('For_each_new_job')",
-                                      "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
-                                      "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
-                                      "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
-                                      "item/crfdf_name": "@items('For_each_line')?['description']",
-                                      "item/crfdf_planningdate": "@if(or(empty(coalesce(items('For_each_line')?['planningDate'], '')), startsWith(coalesce(items('For_each_line')?['planningDate'], ''), '0001')), null, items('For_each_line')?['planningDate'])",
-                                      "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
-                                      "item/crfdf_resourceno": "@items('For_each_line')?['no']",
-                                      "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
-                                      "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                                      "entityName": "crfdf_bcjobs",
+                                      "recordId": "@first(body('Find_BC_Job_Row')?['value'])?['crfdf_bcjobid']",
+                                      "item/crfdf_jobnumber": "@items('For_each_new_job')",
+                                      "item/crfdf_description": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['description'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_description'], first(body('Get_BC_Job')?['value'])?['description'])",
+                                      "item/crfdf_billtocustomerno": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['billToCustomerNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_billtocustomerno'], first(body('Get_BC_Job')?['value'])?['billToCustomerNo'])",
+                                      "item/crfdf_customername": "@if(empty(coalesce(coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_customername'], coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')))",
+                                      "item/crfdf_status": "@if(empty(coalesce(first(body('Get_BC_Job')?['value'])?['status'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_status'], first(body('Get_BC_Job')?['value'])?['status'])",
+                                      "item/crfdf_promiseddate": "@coalesce(if(or(empty(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], '')), startsWith(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], ''), '0001')), null, first(body('Get_BC_Job')?['value'])?['endingDate']), first(body('Find_BC_Job_Row')?['value'])?['crfdf_promiseddate'])",
+                                      "item/crfdf_releasedate": "@coalesce(if(or(empty(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], '')), startsWith(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], ''), '0001')), null, first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate']), first(body('Find_BC_Job_Row')?['value'])?['crfdf_releasedate'])",
+                                      "item/crfdf_appjobname": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToName']), if(empty(first(body('Get_Sales_Order')?['value'])?['customerName']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_appjobname']), coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_appjobname']), first(body('Get_Sales_Order')?['value'])?['customerName']), first(body('Get_Sales_Order')?['value'])?['shipToName'])",
+                                      "item/crfdf_shiptoaddress": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptoaddress']), first(body('Get_Customer')?['value'])?['crfdf_addressline1'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptoaddress']), first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1'])",
+                                      "item/crfdf_shiptocity": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToCity']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptocity']), first(body('Get_Customer')?['value'])?['crfdf_city'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptocity']), first(body('Get_Sales_Order')?['value'])?['shipToCity'])",
+                                      "item/crfdf_shiptostate": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToState']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptostate']), first(body('Get_Customer')?['value'])?['crfdf_state'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptostate']), first(body('Get_Sales_Order')?['value'])?['shipToState'])",
+                                      "item/crfdf_shiptozip": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToPostCode']), if(empty(first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptozip']), first(body('Get_Customer')?['value'])?['crfdf_postalcode'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_shiptozip']), first(body('Get_Sales_Order')?['value'])?['shipToPostCode'])",
+                                      "item/crfdf_saleslinefound": "@or(greater(length(coalesce(body('Get_Sales_Lines')?['value'], json('[]'))), 0), equals(first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinefound'], true))",
+                                      "item/crfdf_salesdocumentno": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['documentNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_salesdocumentno'], first(body('Get_Sales_Lines')?['value'])?['documentNo'])",
+                                      "item/crfdf_saleslinedescription": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['description'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinedescription'], first(body('Get_Sales_Lines')?['value'])?['description'])",
+                                      "item/crfdf_saleslinesselltono": "@if(empty(coalesce(first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo'], '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_saleslinesselltono'], first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo'])",
+                                      "item/crfdf_remainingbalance": "@coalesce(first(body('Get_Sales_Lines')?['value'])?['outstandingAmountLCY'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_remainingbalance'])",
+                                      "item/crfdf_salesorderamount": "@coalesce(first(body('Get_Sales_Order')?['value'])?['totalAmountExcludingTax'], first(body('Find_BC_Job_Row')?['value'])?['crfdf_salesorderamount'])",
+                                      "item/crfdf_salespersoncode": "@if(empty(coalesce(if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson']), '')), first(body('Find_BC_Job_Row')?['value'])?['crfdf_salespersoncode'], if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson']))"
                                     },
                                     "host": {
                                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -584,23 +518,31 @@
                               },
                               "else": {
                                 "actions": {
-                                  "Create_Line": {
+                                  "Create_BC_Job": {
                                     "type": "OpenApiConnection",
                                     "runAfter": {},
                                     "inputs": {
                                       "parameters": {
-                                        "entityName": "crfdf_bcplanninglines",
-                                        "item/crfdf_description": "@items('For_each_line')?['description']",
-                                        "item/crfdf_jobno": "@items('For_each_new_job')",
-                                        "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
-                                        "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
-                                        "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
-                                        "item/crfdf_name": "@items('For_each_line')?['description']",
-                                        "item/crfdf_planningdate": "@if(or(empty(coalesce(items('For_each_line')?['planningDate'], '')), startsWith(coalesce(items('For_each_line')?['planningDate'], ''), '0001')), null, items('For_each_line')?['planningDate'])",
-                                        "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
-                                        "item/crfdf_resourceno": "@items('For_each_line')?['no']",
-                                        "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
-                                        "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                                        "entityName": "crfdf_bcjobs",
+                                        "item/crfdf_jobnumber": "@items('For_each_new_job')",
+                                        "item/crfdf_description": "@first(body('Get_BC_Job')?['value'])?['description']",
+                                        "item/crfdf_billtocustomerno": "@first(body('Get_BC_Job')?['value'])?['billToCustomerNo']",
+                                        "item/crfdf_customername": "@coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job'))",
+                                        "item/crfdf_status": "@first(body('Get_BC_Job')?['value'])?['status']",
+                                        "item/crfdf_promiseddate": "@if(or(empty(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], '')), startsWith(coalesce(first(body('Get_BC_Job')?['value'])?['endingDate'], ''), '0001')), null, first(body('Get_BC_Job')?['value'])?['endingDate'])",
+                                        "item/crfdf_releasedate": "@if(or(empty(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], '')), startsWith(coalesce(first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'], ''), '0001')), null, first(body('Get_Release_Date')?['value'])?['icgSgpOrderReleasedDate'])",
+                                        "item/crfdf_appjobname": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToName']), if(empty(first(body('Get_Sales_Order')?['value'])?['customerName']), coalesce(first(body('Get_Customer')?['value'])?['crfdf_customername'], items('For_each_new_job')), first(body('Get_Sales_Order')?['value'])?['customerName']), first(body('Get_Sales_Order')?['value'])?['shipToName'])",
+                                        "item/crfdf_shiptoaddress": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1']), first(body('Get_Customer')?['value'])?['crfdf_addressline1'], first(body('Get_Sales_Order')?['value'])?['shipToAddressLine1'])",
+                                        "item/crfdf_shiptocity": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToCity']), first(body('Get_Customer')?['value'])?['crfdf_city'], first(body('Get_Sales_Order')?['value'])?['shipToCity'])",
+                                        "item/crfdf_shiptostate": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToState']), first(body('Get_Customer')?['value'])?['crfdf_state'], first(body('Get_Sales_Order')?['value'])?['shipToState'])",
+                                        "item/crfdf_shiptozip": "@if(empty(first(body('Get_Sales_Order')?['value'])?['shipToPostCode']), first(body('Get_Customer')?['value'])?['crfdf_postalcode'], first(body('Get_Sales_Order')?['value'])?['shipToPostCode'])",
+                                        "item/crfdf_saleslinefound": "@greater(length(coalesce(body('Get_Sales_Lines')?['value'], json('[]'))), 0)",
+                                        "item/crfdf_salesdocumentno": "@first(body('Get_Sales_Lines')?['value'])?['documentNo']",
+                                        "item/crfdf_saleslinedescription": "@first(body('Get_Sales_Lines')?['value'])?['description']",
+                                        "item/crfdf_saleslinesselltono": "@first(body('Get_Sales_Lines')?['value'])?['sellToCustomerNo']",
+                                        "item/crfdf_remainingbalance": "@first(body('Get_Sales_Lines')?['value'])?['outstandingAmountLCY']",
+                                        "item/crfdf_salesorderamount": "@first(body('Get_Sales_Order')?['value'])?['totalAmountExcludingTax']",
+                                        "item/crfdf_salespersoncode": "@if(empty(first(body('Get_Sales_Order')?['value'])?['salesperson']), first(body('Get_Sales_Lines')?['value'])?['salespersonCode'], first(body('Get_Sales_Order')?['value'])?['salesperson'])"
                                       },
                                       "host": {
                                         "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -611,21 +553,224 @@
                                   }
                                 }
                               }
+                            },
+                            "Get_Planning_Lines": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {},
+                              "inputs": {
+                                "parameters": {
+                                  "bcenvironment": "@parameters('Bc_Environment')",
+                                  "company": "@parameters('Bc_CompanyId')",
+                                  "dataset": "@parameters('Bc_AnalyticsDataset')",
+                                  "table": "jobPlanningLines",
+                                  "$filter": "jobNo eq '@{replace(items('For_each_new_job'), '''', '''''')}'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicssmbsaas",
+                                  "connectionName": "shared_dynamicssmbsaas",
+                                  "operationId": "GetItemsV3"
+                                }
+                              }
+                            },
+                            "Keep_Resource_Lines": {
+                              "type": "Query",
+                              "runAfter": {
+                                "Get_Planning_Lines": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "inputs": {
+                                "from": "@body('Get_Planning_Lines')?['value']",
+                                "where": "@or(equals(item()?['lineType'], 'Billable'), equals(item()?['jobType'], 'Resource'))"
+                              }
+                            },
+                            "For_each_line": {
+                              "type": "Foreach",
+                              "foreach": "@body('Keep_Resource_Lines')",
+                              "runAfter": {
+                                "Keep_Resource_Lines": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "actions": {
+                                "Find_Line": {
+                                  "type": "OpenApiConnection",
+                                  "runAfter": {},
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "crfdf_bcplanninglines",
+                                      "$select": "crfdf_bcplanninglineid",
+                                      "$top": 1,
+                                      "$filter": "crfdf_jobno eq '@{replace(items('For_each_new_job'), '''', '''''')}' and crfdf_jobtaskno eq '@{replace(coalesce(items('For_each_line')?['jobTaskNo'], ''), '''', '''''')}' and crfdf_lineno eq @{items('For_each_line')?['lineNo']}"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "connectionName": "shared_commondataserviceforapps",
+                                      "operationId": "ListRecords"
+                                    }
+                                  }
+                                },
+                                "Line_Exists": {
+                                  "type": "If",
+                                  "runAfter": {
+                                    "Find_Line": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "expression": {
+                                    "greater": [
+                                      "@length(body('Find_Line')?['value'])",
+                                      0
+                                    ]
+                                  },
+                                  "actions": {
+                                    "Update_Line": {
+                                      "type": "OpenApiConnection",
+                                      "runAfter": {},
+                                      "inputs": {
+                                        "parameters": {
+                                          "entityName": "crfdf_bcplanninglines",
+                                          "recordId": "@first(body('Find_Line')?['value'])?['crfdf_bcplanninglineid']",
+                                          "item/crfdf_description": "@items('For_each_line')?['description']",
+                                          "item/crfdf_jobno": "@items('For_each_new_job')",
+                                          "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
+                                          "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
+                                          "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
+                                          "item/crfdf_name": "@items('For_each_line')?['description']",
+                                          "item/crfdf_planningdate": "@if(or(empty(coalesce(items('For_each_line')?['planningDate'], '')), startsWith(coalesce(items('For_each_line')?['planningDate'], ''), '0001')), null, items('For_each_line')?['planningDate'])",
+                                          "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
+                                          "item/crfdf_resourceno": "@items('For_each_line')?['no']",
+                                          "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
+                                          "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                                        },
+                                        "host": {
+                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                          "connectionName": "shared_commondataserviceforapps",
+                                          "operationId": "UpdateOnlyRecord"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "else": {
+                                    "actions": {
+                                      "Create_Line": {
+                                        "type": "OpenApiConnection",
+                                        "runAfter": {},
+                                        "inputs": {
+                                          "parameters": {
+                                            "entityName": "crfdf_bcplanninglines",
+                                            "item/crfdf_description": "@items('For_each_line')?['description']",
+                                            "item/crfdf_jobno": "@items('For_each_new_job')",
+                                            "item/crfdf_jobtaskno": "@items('For_each_line')?['jobTaskNo']",
+                                            "item/crfdf_lineno": "@items('For_each_line')?['lineNo']",
+                                            "item/crfdf_linetype": "@items('For_each_line')?['lineType']",
+                                            "item/crfdf_name": "@items('For_each_line')?['description']",
+                                            "item/crfdf_planningdate": "@if(or(empty(coalesce(items('For_each_line')?['planningDate'], '')), startsWith(coalesce(items('For_each_line')?['planningDate'], ''), '0001')), null, items('For_each_line')?['planningDate'])",
+                                            "item/crfdf_quantity": "@items('For_each_line')?['quantity']",
+                                            "item/crfdf_resourceno": "@items('For_each_line')?['no']",
+                                            "item/crfdf_totalprice": "@items('For_each_line')?['totalPriceLCY']",
+                                            "item/crfdf_type": "@items('For_each_line')?['jobType']"
+                                          },
+                                          "host": {
+                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                            "connectionName": "shared_commondataserviceforapps",
+                                            "operationId": "CreateRecord"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
                             }
                           }
                         }
+                      },
+                      "else": {
+                        "actions": {}
                       }
                     }
-                  },
-                  "else": {
-                    "actions": {}
                   }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          }
+        },
+        "From_The_Scheduler": {
+          "type": "If",
+          "runAfter": {
+            "Check_BC": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/crfdf_requestedby']",
+              "Scheduler"
+            ]
+          },
+          "actions": {
+            "Remove_Scheduler_Request": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "parameters": {
+                  "entityName": "crfdf_syncrequests",
+                  "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord"
                 }
               }
             }
           },
           "else": {
-            "actions": {}
+            "actions": {
+              "Mark_Done": {
+                "type": "OpenApiConnection",
+                "runAfter": {},
+                "inputs": {
+                  "parameters": {
+                    "entityName": "crfdf_syncrequests",
+                    "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+                    "item/crfdf_status": "Done",
+                    "item/crfdf_result": "@if(empty(variables('Added_Jobs')), 'No new orders to add - every job Started in BC is already on the Jobs list.', concat('Added ', length(variables('Added_Jobs')), if(equals(length(variables('Added_Jobs')), 1), ' job: ', ' jobs: '), join(variables('Added_Jobs'), ', ')))"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "UpdateOnlyRecord"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Mark_Failed": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Check_BC": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "inputs": {
+            "parameters": {
+              "entityName": "crfdf_syncrequests",
+              "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
+              "item/crfdf_status": "@if(empty(variables('Added_Jobs')), 'Failed', 'Done')",
+              "item/crfdf_result": "@if(empty(variables('Added_Jobs')), 'Could not check BC - see the BCSync_NewOrders run history.', concat(if(empty(variables('Added_Jobs')), 'No new orders to add - every job Started in BC is already on the Jobs list.', concat('Added ', length(variables('Added_Jobs')), if(equals(length(variables('Added_Jobs')), 1), ' job: ', ' jobs: '), join(variables('Added_Jobs'), ', '))), ' (some details could not be read from BC yet - the nightly sync fills them in)'))"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
+            }
           }
         }
       }

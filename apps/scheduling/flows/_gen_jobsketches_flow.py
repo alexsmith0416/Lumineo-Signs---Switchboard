@@ -22,6 +22,10 @@ Nightly (and on Run), for every open BC job whose SharePoint folder
      whose sketch disappeared has its row removed.
 An unchanged sketch costs no thumbnail call, so re-runs are cheap.
 
+Since Oct 12, 2026 it runs on a Check BC now request - a crfdf_syncrequest row
+of kind "jobsketches", added by BCSync_Scheduler (nightly at 4:30) or by the app's Check BC
+now button - and writes what it did back on the row (_sync_request.py).
+
 The expressions are long and quote-heavy, so the JSON is GENERATED - edit here:
 
     python _gen_jobsketches_flow.py
@@ -30,6 +34,8 @@ then build with _build_jobsketches_solution.py. See BCSync_JobSketches.md.
 """
 import json
 import os
+
+from _sync_request import count_text, request_trigger, with_request
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BCSync_JobSketches-clientdata.json")
 
@@ -230,6 +236,10 @@ actions = {
     },
 }
 
+# What the run tells Check BC now.
+DONE = count_text("length(coalesce(body('Jobs_In_Site'), json('[]')))", 'job folder checked', 'job folders checked', 'No job folders to check')
+FAILED = "concat({done}, ' (some folders could not be read)')".format(done=DONE)
+
 flow = {
     "properties": {
         "connectionReferences": {
@@ -258,11 +268,9 @@ flow = {
                 # Set to a job number to run for that job only (testing).
                 "Only_Job": {"type": "String", "defaultValue": ""},
             },
-            "triggers": {"Nightly": {
-                "type": "Recurrence",
-                "recurrence": {"frequency": "Day", "interval": 1, "timeZone": "Central Standard Time",
-                               "schedule": {"hours": ["4"], "minutes": [30]}}}},
-            "actions": actions,
+            "triggers": request_trigger("jobsketches"),
+            "actions": with_request(actions, DONE, failed_status="'Done'",
+                                    failed_text=FAILED),
         },
     },
     "schemaVersion": "1.0.0.0",

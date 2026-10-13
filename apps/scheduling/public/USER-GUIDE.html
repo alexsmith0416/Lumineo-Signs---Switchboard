@@ -1089,6 +1089,13 @@
     formula: the modified date when there is one that differs, otherwise Mfg Target.</li>
   </ul>
   <ul>
+    <li><strong>Check BC now</strong> &mdash; the app picks up what changes in BC on its own: shop-floor and install
+    <em>Task complete</em> ticks every 5 minutes, new orders (a job's <em>New Order This Week</em> step Started) every
+    15 minutes, descriptions hourly, POs and sketches nightly. Don't want to wait? Press <strong>Check BC now</strong> in
+    the toolbar: it asks for all of them at once and lists each as it finishes (usually within a minute) &mdash;
+    e.g. <em>Shop-floor &amp; install ticks: 2 new shop-floor ticks &mdash; 2 applied</em>, <em>New orders: Added 1
+    job: 24-1234</em> &mdash; and reloads what changed. <strong>Refresh</strong> only re-reads what the app already
+    has &mdash; it doesn't ask BC.</li>
     <li><strong>Views</strong> on the left &mdash; <em>All Jobs</em>, <em>Not tracked yet</em> (new BC jobs nobody
     has set up), team views (OPS / MFG, OPS / Install, Warehouse Coord.) and <em>WK Expeditor</em>, which matches the
     Airtable columns. Change them: <strong>+ Add view</strong> under any section, <strong>double-click</strong>
@@ -1564,6 +1571,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 12, 2026</td><td><strong>Check BC now</strong> &mdash; a new button on the Jobs list toolbar brings in what's new in BC right away instead of at the next scheduled check: shop-floor and install task completions (applied at once), jobs just released (<em>New Order This Week</em> Started), descriptions, POs and sketches. Each one says what it found, and the list reloads. See &sect;5.17.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Monthly Gameplanning and the Install Planner work together</strong> &mdash; Monthly picks the week (by $ toward the goal); a job whose Sched. Install is in a week is now <strong>Planned this week</strong> in the Planner (orange pin, firm like Must &mdash; the customer is expecting us). Auto-plan places Must and Planned jobs first, then past-due, then fills <strong>dollars first</strong> (or most jobs for the driving), shows $ planned and warns when a must-be-scheduled job won't fit. Monthly's week cards check their planned jobs against the real crews and drive times (fits / won't fit) with <strong>Plan this week &rarr;</strong>, and <strong>Show on map</strong> opens a pool in the Planner. Pins and groups show job $ and past-due days. See &sect;5.12 and &sect;5.19.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Installation tools together</strong> &mdash; Monthly Gameplanning, the Install Planner and Install Trips now live under <strong>Installation</strong>: click Installation in the sidebar and its tools (Schedule, Monthly Gameplanning, Install Planner, Install Trips) show under it, and as tabs at the top of each screen to switch between them. You only see the ones your role can use.</td></tr>
       <tr><td>Oct 11, 2026</td><td><strong>Auto-plan the week</strong> &mdash; the Install Planner's <strong>Auto-plan week</strong> builds trips for every Must-this-week and ready job from the crews' own locations, gives them to crews with free days (around what's already on the board), and shows the plan crew by crew for review: move or leave off trips, see what didn't fit and why, see how many more jobs overnights would add, save plans and compare two side by side. <strong>Commit</strong> puts the cards on the install boards and the trips on Install Trips. The full tour has a new step. See &sect;5.19.</td></tr>
@@ -1694,7 +1702,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.45 · Oct 12, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.46 · Oct 12, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
