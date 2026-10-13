@@ -10,7 +10,7 @@ lists each one's answer as it finishes:
 | New orders | BCSync_NewOrders | every 15 min | reloads the Jobs list |
 | Descriptions | BCSync_JobDescriptions | hourly | re-reads them when a job panel opens |
 | Purchase orders | BCSync_JobPOs | nightly 5:15 | re-reads the job panel POs + Warehouse |
-| Sketches | BCSync_JobSketches | nightly 4:30 | reloads the Sketch column |
+| _(not on the button — Oct 13)_ Sketches | BCSync_JobSketches | nightly 4:30 | — (pick a sketch by hand from the job's Sketch cell) |
 
 Install ticks are task completions too (install labor → the Install step), so
 "Shop-floor & install ticks" covers both.

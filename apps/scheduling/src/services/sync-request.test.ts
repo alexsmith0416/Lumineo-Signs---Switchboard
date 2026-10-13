@@ -33,6 +33,10 @@ describe("reading a Check BC now request", () => {
     expect(new Set(SYNC_PULLS.map((p) => p.kind)).size).toBe(SYNC_PULLS.length);
   });
 
+  it("leaves sketches off the button (too slow; picked per job instead)", () => {
+    expect(SYNC_PULLS.map((p) => p.kind)).not.toContain("jobsketches");
+  });
+
   it("is busy while any pull is, then failed if any failed", () => {
     expect(overallPhase([])).toBe("idle");
     expect(overallPhase(["done", "running"])).toBe("running");

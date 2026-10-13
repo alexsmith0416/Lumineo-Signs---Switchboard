@@ -453,7 +453,7 @@ describe("Check BC now when the request can't be saved", () => {
     await useBcCheckStore.getState().check("Tester");
     const st = useBcCheckStore.getState();
     expect(st.phase).toBe("failed");
-    expect(Object.keys(st.pulls)).toHaveLength(5); // every pull was asked
+    expect(Object.keys(st.pulls)).toHaveLength(4); // every pull on the button was asked (not sketches)
     expect(st.pulls.taskcompletions?.message).toContain("Failed to fetch");
     useBcCheckStore.getState().dismiss();
     expect(useBcCheckStore.getState().phase).toBe("idle");

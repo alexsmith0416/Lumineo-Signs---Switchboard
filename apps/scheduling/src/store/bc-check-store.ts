@@ -4,14 +4,13 @@ import {
 } from "../services/sync-request";
 import { useJobTrackingStore } from "./job-tracking-store";
 import { useJobScheduleStore } from "./job-schedule-store";
-import { useSketchStore } from "./sketch-store";
 import { useJobDeptCompletionStore } from "./job-dept-completion-store";
 import { usePoReceivingStore } from "./po-receiving-store";
 
 /**
  * "Check BC now" on the Jobs list (Oct 12, 2026): asks every BC pull to run
- * right away (shop-floor & install ticks, new orders, descriptions, POs,
- * sketches) instead of at its next scheduled time, watches each request, and
+ * right away (shop-floor & install ticks, new orders, descriptions, POs —
+ * not sketches, Oct 13: too slow) instead of at its next scheduled time, watches each request, and
  * as each finishes reloads what it changed — new ticks are also applied at
  * once in a session that applies them. Keeps watching if you leave the Jobs
  * list. Pressing it again only re-asks the pulls that have finished.
@@ -60,9 +59,8 @@ async function afterPull(kind: SyncKind): Promise<string> {
       (await import("../hooks/useJobPOs")).clearJobPOsCache();
       await usePoReceivingStore.getState().load(true);
       return "";
-    case "jobsketches":
-      await useSketchStore.getState().load(true);
-      return "";
+    default:
+      return ""; // jobsketches: never asked by the button (scheduler only)
   }
 }
 

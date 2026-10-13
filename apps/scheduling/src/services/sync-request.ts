@@ -17,13 +17,17 @@ export interface SyncPull {
   flow: string;
 }
 
-/** Every pull Check BC now runs, in the order the results are listed. */
+/**
+ * Every pull Check BC now runs, in the order the results are listed. Sketches
+ * ("jobsketches") are left out (Alex, Oct 13: slow, rarely needed — pick a
+ * job's sketch by hand from its Sketch cell); BCSync_Scheduler still asks for
+ * them nightly.
+ */
 export const SYNC_PULLS: SyncPull[] = [
   { kind: "taskcompletions", label: "Shop-floor & install ticks", flow: "BCSync_TaskCompletions" },
   { kind: "neworders", label: "New orders", flow: "BCSync_NewOrders" },
   { kind: "jobdescriptions", label: "Descriptions", flow: "BCSync_JobDescriptions" },
   { kind: "jobpos", label: "Purchase orders", flow: "BCSync_JobPOs" },
-  { kind: "jobsketches", label: "Sketches", flow: "BCSync_JobSketches" },
 ];
 
 export type SyncPhase = "waiting" | "running" | "done" | "failed";

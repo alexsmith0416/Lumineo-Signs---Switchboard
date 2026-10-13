@@ -386,7 +386,7 @@ export default function JobsView({
             onClick={() => void bcCheck.check(me)}
             disabled={checking}
             data-tour="jobs-check-bc"
-            title="Bring in what's new in BC now — shop-floor & install ticks, new orders, descriptions, POs and sketches — instead of waiting for the next scheduled check"
+            title="Bring in what's new in BC now — shop-floor & install ticks, new orders, descriptions and POs — instead of waiting for the next scheduled check"
           >
             {checking ? "Checking BC…" : "Check BC now"}
           </button>
