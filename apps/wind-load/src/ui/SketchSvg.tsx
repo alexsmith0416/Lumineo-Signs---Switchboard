@@ -1,4 +1,4 @@
-import type { DesignInput, DesignResult } from '../lib/engine';
+import type { DesignInput, DesignResult, PoleLayout } from '../lib/engine';
 import { useRef } from 'react';
 import { snapSpliceFt } from '../lib/engine';
 import { SHAPE_LABELS } from '../data/tables';
@@ -96,9 +96,21 @@ const PIECE_GAP = 34;
 const PAD_R = 184;
 const FONT = "'Open Sans', Helvetica, Arial, sans-serif";
 
-/** Even pole/footing positions across the widest face (centered strips). */
-function layoutXs(count: number, widthFt: number): number[] {
+/**
+ * Pole/footing centrelines across the widest face.
+ *
+ * 'center' spreads them evenly behind the face, each on the middle of its own
+ * strip. 'edge' is post and panel: the outer pair runs up the outside edges of
+ * the cabinet, inset by `insetFt` — half a pole — so the pole's outer face
+ * lines up with the cabinet instead of hanging past it. Any poles beyond the
+ * outer pair are spread evenly between them.
+ */
+function layoutXs(count: number, widthFt: number, layout: PoleLayout, insetFt = 0): number[] {
   if (count <= 1) return [0];
+  if (layout === 'edge') {
+    const half = Math.max(widthFt / 2 - insetFt, 0);
+    return Array.from({ length: count }, (_, i) => -half + (2 * half * i) / (count - 1));
+  }
   return Array.from({ length: count }, (_, i) => -widthFt / 2 + (widthFt * (i + 0.5)) / count);
 }
 
@@ -176,8 +188,11 @@ export function SketchSvg({ input, result, palette: p, background, idPrefix = 's
   const depth = footing.depthFt;
   const footWFt = input.footingType === 'round' ? footing.diameterFt : footing.planWidthFt;
 
-  const poleXs = layoutXs(input.numColumns, widest);
-  const footXs = layoutXs(input.numFootings, widest);
+  // Post and panel lines the pole faces up with the cabinet, so the inset is
+  // half the base pole; the transitions stay plumb on that same centreline.
+  const poleInsetFt = section.odIn / 24;
+  const poleXs = layoutXs(input.numColumns, widest, input.poleLayout, poleInsetFt);
+  const footXs = layoutXs(input.numFootings, widest, input.poleLayout, poleInsetFt);
 
   const mowPad = input.mowPad.enabled ? result.mowPad : null;
 

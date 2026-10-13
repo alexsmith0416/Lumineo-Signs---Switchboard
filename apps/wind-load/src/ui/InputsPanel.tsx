@@ -247,6 +247,25 @@ export function InputsPanel({ input, onChange, recommendedSizeName, autoPlan, au
             step={1}
             onChange={(v) => set({ numColumns: Math.max(1, Math.round(v)) })}
           />
+          <label>
+            <span>Layout</span>
+            <select
+              value={input.poleLayout}
+              // Post and panel takes at least two posts, so a single-pole
+              // design picks up its second one when you switch.
+              onChange={(e) => {
+                const poleLayout = e.target.value as DesignInput['poleLayout'];
+                set(
+                  poleLayout === 'edge' && input.numColumns < 2
+                    ? { poleLayout, numColumns: 2 }
+                    : { poleLayout },
+                );
+              }}
+            >
+              <option value="center">Centered behind cabinet</option>
+              <option value="edge">Post &amp; panel — on the outside edges</option>
+            </select>
+          </label>
           <label className="span-2">
             <span>Pole type</span>
             <div className="seg full" role="tablist" aria-label="Pole type">

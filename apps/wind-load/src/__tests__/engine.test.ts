@@ -185,6 +185,7 @@ function baseInput(): DesignInput {
       { id: 'a', label: 'Cabinet', widthFt: 20, heightFt: 10, topFt: 25 },
     ],
     numColumns: 2,
+    poleLayout: 'center',
     columnType: 'P',
     columnSizing: 'auto',
     columnSizeName: null,

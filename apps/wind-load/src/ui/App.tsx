@@ -20,6 +20,7 @@ function defaultInput(): DesignInput {
     seismicZone: 3,
     elements: [{ ...newElement(), label: 'Sign cabinet', widthFt: 10, heightFt: 5, topFt: 20 }],
     numColumns: 1,
+    poleLayout: 'center',
     columnType: 'P',
     columnSizing: 'auto',
     columnSizeName: null,

@@ -86,6 +86,8 @@ export interface BasePlateInput {
   weldLegIn: number;
 }
 
+export type PoleLayout = 'center' | 'edge';
+
 export interface DesignInput {
   projectName: string;
   description: string;
@@ -99,6 +101,13 @@ export interface DesignInput {
   elements: SignElementInput[];
 
   numColumns: number;
+  /**
+   * Where the poles stand relative to the sign face. 'center' spreads them
+   * evenly behind it (a pylon or single-post sign); 'edge' is post and panel,
+   * with the outer poles run up the outside edges of the cabinet. Positions
+   * only — each pole still carries the same share of the wind load.
+   */
+  poleLayout: PoleLayout;
   columnType: SectionShape;
   /**
    * 'auto' sizes the base pole from the wind moment, 'manual' picks a stocked

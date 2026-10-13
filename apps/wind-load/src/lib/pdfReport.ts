@@ -275,6 +275,9 @@ export async function exportPdfReport(input: DesignInput, result: DesignResult):
       y,
     );
     y += 16;
+    if (input.poleLayout === 'edge') {
+      row('Layout', 'Post and panel — poles on the outside edges of the cabinet.');
+    }
     if (c.mode === 'manual' && c.autoSection) {
       row(
         'Sizing',
