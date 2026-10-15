@@ -19,7 +19,9 @@ import type { ResourceAdminInput, ScheduleDataSource } from "./data-source";
 import { isLaneEmployeeId, laneEmployeeId } from "./department-lane";
 import {
   WRITE_ATTEMPTS,
+  isDuplicateKeyError,
   isRetryableWriteError,
+  primaryIdOf,
   writeErrorMessage,
   writeRetryDelay,
 } from "./dv-write";
@@ -217,10 +219,18 @@ async function dvUpdate(set: string, id: string, rec: Row): Promise<SdkResult> {
   });
 }
 async function dvCreate(set: string, rec: Row): Promise<SdkResult> {
-  return writeWithRetry(async () => {
+  const res = await writeWithRetry(async () => {
     const { S, org } = await sdk();
     return S.CreateRecordWithOrganization(PREFER_WRITE, ACCEPT, org, set, rec);
   });
+  if (res.success || !isDuplicateKeyError(res.error?.message ?? "")) return res;
+  // An earlier attempt (or an earlier Retry) already created this row — the
+  // bridge just never told us. Apply this payload to it instead of failing.
+  const key = primaryIdOf(set, rec);
+  if (!key) return res;
+  const { [key]: id, ...rest } = rec;
+  console.info(`[dv] ${set} ${String(id)} already exists — updating it instead`);
+  return dvUpdate(set, String(id), rest);
 }
 async function dvDelete(set: string, id: string): Promise<SdkResult> {
   return writeWithRetry(async () => {

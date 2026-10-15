@@ -10,7 +10,7 @@ import { shipmentCardDesc, shipmentSummary } from "../shipping/types";
 import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
-import { bcJobUrl, sharepointJobUrl } from "../services/job-links";
+import { bcJobUrl, isBcJobNo, sharepointJobUrl } from "../services/job-links";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
@@ -196,6 +196,8 @@ export default function JobCard({
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   // Right-click links are only meaningful for a real BC job card.
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
+  // Open Project only for a real BC number — a card with no job number carries its title.
+  const canOpenProject = canOpenLinks && isBcJobNo(line.jobNo);
   // The context menu opens if there's anything to show: BC links and/or the
   // duplicate/delete actions (present only on editable boards).
   const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onSplit || !!onDelete;
@@ -429,16 +431,18 @@ export default function JobCard({
             >
               <MemberDetailBody m={memberView.m} deptStyle={style} deptName={department?.name} />
               <div style={{ padding: "0 10px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    window.open(bcJobUrl(memberView.m.jobNo), "_blank", "noopener");
-                    setMemberView(null);
-                  }}
-                >
-                  Open Project
-                </button>
+                {isBcJobNo(memberView.m.jobNo) && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      window.open(bcJobUrl(memberView.m.jobNo), "_blank", "noopener");
+                      setMemberView(null);
+                    }}
+                  >
+                    Open Project
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary"
@@ -487,15 +491,17 @@ export default function JobCard({
               <div className="job-context-menu__head">{line.jobNo || cardTitle}</div>
               {canOpenLinks && (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(bcJobUrl(line.jobNo), "_blank", "noopener");
-                      setMenu(null);
-                    }}
-                  >
-                    Open Project
-                  </button>
+                  {canOpenProject && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(bcJobUrl(line.jobNo), "_blank", "noopener");
+                        setMenu(null);
+                      }}
+                    >
+                      Open Project
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

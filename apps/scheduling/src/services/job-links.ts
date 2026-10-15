@@ -5,6 +5,17 @@ const BC_ORIGIN = "https://businesscentral.dynamics.com";
 const BC_COMPANY = "Luminous Neon";
 const BC_JOB_PAGE = 88; // Job / Project card
 
+/**
+ * True when `jobNo` can be a BC project number (J38696 style). Install cards
+ * with no job number carry their title in `jobNo` ("EDUCATION CENTER-Olathe
+ * Schools"); BC rejects a filter over 20 characters, and a short name opens
+ * BC's blank new-project card. A real number has no spaces and has digits.
+ */
+export function isBcJobNo(jobNo: string | null | undefined): boolean {
+  const v = (jobNo ?? "").trim();
+  return v.length > 0 && v.length <= 20 && !/\s/.test(v) && /\d/.test(v);
+}
+
 /** BC Job/Project card, filtered to this job number (opens that job). */
 export function bcJobUrl(jobNo: string): string {
   const filter = `'No.' IS '${jobNo}'`;

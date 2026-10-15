@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   WRITE_ATTEMPTS,
+  isDuplicateKeyError,
   isRetryableWriteError,
+  primaryIdOf,
   writeErrorMessage,
   writeRetryDelay,
 } from "./dv-write";
@@ -85,5 +87,20 @@ describe("writeRetryDelay", () => {
     for (let i = 1; i < WRITE_ATTEMPTS; i++) total += writeRetryDelay(i);
     expect(total).toBeGreaterThan(2000);
     expect(total).toBeLessThan(6000);
+  });
+});
+
+describe("duplicate key on create", () => {
+  it("recognises Dataverse's duplicate-key answer", () => {
+    expect(isDuplicateKeyError('{"error":{"code":"0x80040237","message":"A record with matching key values already exists."}}')).toBe(true);
+    expect(isDuplicateKeyError("Cannot insert duplicate key")).toBe(true);
+    expect(isDuplicateKeyError("503 Service Unavailable")).toBe(false);
+  });
+
+  it("finds the primary id the record carries", () => {
+    expect(primaryIdOf("crfdf_shipmentitems", { crfdf_shipmentitemid: "a", crfdf_name: "x" })).toBe("crfdf_shipmentitemid");
+    expect(primaryIdOf("crfdf_jobsketchs", { crfdf_jobsketchid: "a" })).toBe("crfdf_jobsketchid");
+    expect(primaryIdOf("crfdf_podeliveries", { crfdf_podeliveryid: "a" })).toBe("crfdf_podeliveryid");
+    expect(primaryIdOf("crfdf_bcpushqueues", { crfdf_name: "x", crfdf_sourcelineid: "a" })).toBeNull();
   });
 });

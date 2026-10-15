@@ -71,3 +71,30 @@ export const WRITE_ATTEMPTS = 5;
 export function writeRetryDelay(attempt: number): number {
   return Math.min(200 * 2 ** (attempt - 1), 2000);
 }
+
+// ---------------------------------------------------------------------------
+// Duplicate-key on create = the row is already there.
+//
+// Most creates send their own primary id (the GUID the board already shows).
+// When the host bridge drops the reply to a create that DID land, the retry —
+// or the user's Retry in SaveStatus — sends the same id again and Dataverse
+// answers 0x80040237 "A record with matching key values already exists". The
+// work was saved; reporting it as a failure (forever, since every retry hits
+// the same wall) is wrong. dvCreate turns it into an update of that row.
+// ---------------------------------------------------------------------------
+
+export function isDuplicateKeyError(message: string): boolean {
+  return /0x80040237|matching key values already exists|duplicate key/i.test(message);
+}
+
+/** The primary-id column a create record carries for its entity set
+ *  (`crfdf_shipmentitems` → `crfdf_shipmentitemid`), or null when the record
+ *  doesn't carry one — then nothing can be said about which row collided. */
+export function primaryIdOf(entitySet: string, rec: Record<string, unknown>): string | null {
+  const stems = [entitySet.replace(/ies$/, "y"), entitySet.replace(/es$/, ""), entitySet.replace(/s$/, "")];
+  for (const stem of stems) {
+    const key = `${stem}id`;
+    if (typeof rec[key] === "string" && rec[key]) return key;
+  }
+  return null;
+}

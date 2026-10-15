@@ -36,6 +36,20 @@ and a per-user "My Schedule" view.
 > ⚠️ This working copy (`lumineo-scheduling-port`) is **not** the OneDrive
 > "Lumineo Signs — Switchboard" repo. All scheduling work happens here.
 
+### 🔌 Business Central & outside connections → `BC-CONNECTIONS.md`
+
+Everything about BC lives in **`BC-CONNECTIONS.md`** (repo root): environments
+(UAT / Production install matrix), auth + permissions, Infotech objects and
+their limits, our AL extensions + object IDs, every BCSync_/BCPush_ flow, the
+Dataverse tables in the path, how-tos, and open items. **Don't duplicate BC
+detail here.**
+
+- **At session start:** read its **§15 Changelog** — anything dated after this
+  file's latest "Next up" entry is news; fold any Switchboard-facing follow-ups
+  into "Next up" below.
+- **When a change touches BC** (extension, flow, permission, Production
+  promotion): update `BC-CONNECTIONS.md` in the same change, per its §0 rules.
+
 ### Source layout (`apps/scheduling/src/`)
 
 ```
@@ -90,6 +104,11 @@ The rules now, in force:
   - `services/dv-write.test.ts` — retry classification, incl. "unknown error ⇒ retry".
   - `store/optimistic-edit.test.ts` — a failing write keeps the edit on screen
     (verified to FAIL against the old reload behaviour).
+- **Creates are idempotent (Oct 15):** a create that carries its own primary id
+  and gets 0x80040237 "matching key values already exists" means an earlier
+  attempt landed but the bridge lost the reply — `dvCreate` updates that row
+  instead of reporting a failure (`isDuplicateKeyError` / `primaryIdOf` in
+  `dv-write.ts`). New creates should send their own GUID id so they get this.
 - When adding a NEW editable action, persist via `persistOrReport` and add a case
   to `optimistic-edit.test.ts`.
 
