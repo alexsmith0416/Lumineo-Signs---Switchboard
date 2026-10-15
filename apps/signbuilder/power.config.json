@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "appId": "",
+  "appDisplayName": "Lumineo Sign Builder",
+  "region": "prod",
+  "environmentId": "484cdd3c-4409-e741-bbd5-7c210e00310e",
+  "description": " ",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5175",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "ec5ec654-0747-430f-b0f6-3a050957bf74": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": "Oauth",
+      "dataSets": {}
+    },
+    "c6d89607-1d3e-472d-a32d-2d0a24cf8137": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "displayName": "SharePoint",
+      "dataSources": [
+        "documents"
+      ],
+      "dataSets": {
+        "https://luminousneon.sharepoint.com/sites/JobFiles": {
+          "dataSources": {
+            "documents": {
+              "tableName": "Documents"
+            }
+          }
+        }
+      }
+    }
+  },
+  "databaseReferences": {}
+}

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lumineo Sign Builder — User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---- Lumineo brand tokens (sampled from lumineosigns.com) ---------------- */
+  :root{
+    --navy:#001238;        /* primary brand ink */
+    --navy-2:#001e61;      /* secondary deep blue */
+    --hero:#171a63;        /* indigo hero band — matches the logo lettering */
+    --slate:#4d5974;
+    --red:#e10600;         /* Lumineo red — CTAs, accents */
+    --rust:#c02b0a;
+    --green:#479766;
+    --sage:#cedecc;        /* soft section accent */
+    --cream:#eeece9;       /* soft section background */
+    --taupe:#7a7664;       /* eyebrow / muted labels */
+    --amber:#f2994a;
+    --page:#ffffff;
+    --card:#ffffff;
+    --ink:#001238;
+    --body:#2b3149;
+    --mid:#4d5974;
+    --border:#e6e4e0;
+    --grid:#d7d4ce;
+    --display:'Archivo','Segoe UI',system-ui,sans-serif;
+    --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--page);color:var(--body);
+    font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 26px 110px}
+
+  /* Eyebrow — the site's signature uppercase letter-spaced kicker */
+  .eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.22em;
+    font-size:.72rem;font-weight:700;color:var(--taupe)}
+
+  /* ---- Cover: white topbar + indigo hero band ---- */
+  .cover{background:#fff}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    max-width:1120px;margin:0 auto;padding:22px 34px}
+  .brand-logo{height:34px;width:auto;display:block}
+  .topbar__right{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+  .topbar__eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.16em;
+    font-size:.66rem;font-weight:700;color:var(--hero)}
+  .topbar__badge{background:var(--red);color:#fff;font-family:var(--display);font-weight:700;
+    text-transform:uppercase;letter-spacing:.12em;font-size:.66rem;padding:6px 13px;border-radius:4px}
+  .hero{background:var(--hero);color:#fff}
+  .hero__inner{max-width:920px;margin:0 auto;padding:60px 30px 66px}
+  .hero .eyebrow{color:#9aa2e6}
+  .hero h1{font-family:var(--display);font-weight:900;font-size:3.3rem;line-height:.98;
+    letter-spacing:-.02em;margin:.16em 0 .16em;color:#fff}
+  .hero__tag{font-family:var(--display);font-weight:700;font-size:1.3rem;color:#a9b0ec;
+    line-height:1.15;margin:.1em 0 .7em}
+  .hero__lead{font-size:1.06rem;color:rgba(255,255,255,.82);max-width:660px}
+  /* Wordmark (footer) */
+  .wordmark{font-family:var(--display);font-weight:900;letter-spacing:.02em;line-height:.9}
+  .wordmark b{display:block;font-size:1rem;color:var(--hero)}
+  .wordmark span{display:block;font-size:.55rem;letter-spacing:.42em;font-weight:600;color:var(--taupe);padding-left:2px}
+  .heritage{color:var(--taupe);font-family:var(--display);font-weight:700;letter-spacing:.02em}
+
+  /* ---- Headings ---- */
+  h2{font-family:var(--display);color:var(--ink);font-weight:800;font-size:1.85rem;
+    letter-spacing:-.015em;margin:60px 0 6px;line-height:1.05}
+  h2 .num{color:var(--red);font-weight:900;margin-right:.35em}
+  h2 + .rule{height:3px;width:64px;background:var(--red);border-radius:3px;margin:2px 0 14px}
+  h3{font-family:var(--display);color:var(--navy);font-weight:700;font-size:1.22rem;margin:34px 0 6px}
+  h4{font-family:var(--display);color:var(--ink);font-weight:700;font-size:1.02rem;margin:22px 0 4px}
+  p{margin:.55em 0}
+  .lead{font-size:1.14rem;color:var(--mid)}
+  a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--sage)}
+  a:hover{border-color:var(--red);color:var(--red)}
+  strong{color:var(--ink)}
+  ul,ol{padding-left:22px}
+  li{margin:.3em 0}
+  code{background:var(--cream);color:var(--navy);padding:.12em .45em;border-radius:5px;font-size:.86em;
+    font-family:"SFMono-Regular",Consolas,Menlo,monospace}
+  .kbd{display:inline-block;background:#fff;border:1px solid var(--grid);border-bottom-width:2px;
+    border-radius:6px;padding:1px 8px;font-size:.82rem;font-family:monospace;color:var(--navy);white-space:nowrap}
+
+  /* ---- Table of contents ---- */
+  .toc{background:var(--cream);border-radius:14px;padding:26px 30px;margin-top:40px}
+  .toc .eyebrow{display:block;margin-bottom:10px}
+  .toc h2{margin:0 0 14px;font-size:1.3rem}
+  .toc ol{columns:2;column-gap:40px;margin:0;font-size:.96rem;list-style:none;padding:0;counter-reset:t}
+  .toc li{counter-increment:t;margin:.36em 0}
+  .toc li::before{content:counter(t,decimal-leading-zero);color:var(--red);font-family:var(--display);
+    font-weight:800;font-size:.78rem;margin-right:.6em}
+  .toc a{border:none;color:var(--navy);font-weight:500}
+  .toc a:hover{color:var(--red)}
+
+  /* ---- Callouts ---- */
+  .box{border-radius:12px;padding:16px 20px;margin:20px 0;border-left:5px solid}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box__label{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+    font-size:.72rem;display:block;margin-bottom:5px}
+  .tip{background:#eef4ec;border-color:var(--green)} .tip .box__label{color:var(--green)}
+  .note{background:var(--cream);border-color:var(--navy)} .note .box__label{color:var(--navy)}
+  .warn{background:#fdf2e3;border-color:var(--amber)} .warn .box__label{color:#b9691a}
+  .danger{background:#ffe9e8;border-color:var(--red)} .danger .box__label{color:var(--red)}
+
+  /* ---- Steps ---- */
+  ol.steps{counter-reset:step;list-style:none;padding-left:0;margin:16px 0}
+  ol.steps>li{counter-increment:step;position:relative;padding:10px 10px 10px 50px;margin:8px 0;
+    background:var(--card);border:1px solid var(--border);border-radius:10px}
+  ol.steps>li::before{content:counter(step);position:absolute;left:11px;top:9px;width:28px;height:28px;
+    background:var(--navy);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-size:.85rem;font-weight:800}
+
+  /* ---- Tables ---- */
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:.93rem;background:var(--card);
+    border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  th{background:var(--navy);color:#fff;text-align:left;padding:11px 13px;font-family:var(--display);
+    font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:10px 13px;border-top:1px solid var(--border);vertical-align:top}
+  tr:nth-child(even) td{background:#faf9f7}
+
+  /* Scrollable "What's New" log — fixed height, scroll through all entries.
+     The header row stays pinned while the list scrolls. */
+  .changelog{max-height:528px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin:18px 0}
+  .changelog table{margin:0;border:none;border-radius:0;overflow:visible}
+  .changelog th{position:sticky;top:0;z-index:1}
+
+  /* ---- Feature cards ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+  .fcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;
+    border-top:4px solid var(--red)}
+  .fcard h4{margin:0 0 4px;color:var(--navy)}
+  .fcard p{margin:0;font-size:.92rem;color:var(--mid)}
+
+  .chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:600;white-space:nowrap;font-family:var(--sans)}
+
+  /* ---- Board sketch ---- */
+  .sketch{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:18px 0;font-size:.8rem}
+  .sketch__top{background:var(--navy);color:#fff;padding:9px 13px;display:flex;gap:10px;align-items:center;
+    justify-content:space-between;font-family:var(--display);font-weight:600;font-size:.8rem}
+  .sketch__row{display:flex;border-top:1px solid var(--grid)}
+  .sketch__name{width:132px;padding:9px 11px;background:#faf9f7;border-right:1px solid var(--grid);
+    font-weight:600;font-family:var(--display)}
+  .sketch__days{flex:1;display:flex;position:relative;background:
+    repeating-linear-gradient(90deg,#fff,#fff calc(100%/7 - 1px),var(--grid) calc(100%/7 - 1px),var(--grid) calc(100%/7))}
+  .sketch__bar{position:absolute;top:7px;height:28px;border-radius:5px;color:#fff;font-size:.72rem;
+    display:flex;align-items:center;padding:0 9px;font-weight:600}
+
+  /* ---- Red CTA band (site's signature) ---- */
+  .cta{background:var(--red);color:#fff;border-radius:16px;padding:34px 36px;margin:44px 0 0;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .cta .eyebrow{color:rgba(255,255,255,.75)}
+  .cta h3{color:#fff;font-size:1.7rem;margin:6px 0 4px}
+  .cta p{margin:0;color:rgba(255,255,255,.9)}
+  .cta a{background:#fff;color:var(--red);border:none;font-family:var(--display);font-weight:700;
+    text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;padding:12px 20px;border-radius:8px;white-space:nowrap}
+  .cta a:hover{background:var(--navy);color:#fff}
+
+  /* Floating "Download PDF" button (hidden when embedded in the app + in print) */
+  .dl{position:fixed;right:22px;bottom:22px;z-index:50;background:var(--red);color:#fff;border:none;
+    font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;
+    padding:13px 20px;border-radius:10px;cursor:pointer;box-shadow:0 8px 22px rgba(225,6,0,.35);
+    display:inline-flex;align-items:center;gap:8px}
+  .dl:hover{background:var(--hero)}
+  .embedded .dl{display:none}
+
+  .footer{margin-top:56px;padding:26px 0 0;border-top:2px solid var(--red);color:var(--taupe);font-size:.85rem}
+  .footer .wordmark b{font-size:1rem;color:var(--navy)}
+  .footer .wordmark span{color:var(--taupe)}
+
+  @media (max-width:640px){
+    .toc ol{columns:1}.grid{grid-template-columns:1fr}
+    .hero h1{font-size:2.2rem}.hero__inner{padding:44px 22px 48px}
+    .topbar{flex-direction:column;align-items:flex-start;gap:14px}
+    .topbar__right{align-items:flex-start}
+    .cta{flex-direction:column;align-items:flex-start}
+  }
+  @media print{
+    body{font-size:12.5px}
+    .hero{background:var(--hero)!important}
+    .hero,.topbar__badge,.box,th,.sketch__top,ol.steps>li::before,.cta,.toc,.fcard,.footer,
+    .heritage,h2 .num,.toc li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{break-after:avoid}h3{break-after:avoid}.fcard,ol.steps>li,table,.cta,.box{break-inside:avoid}
+    a{border:none;color:var(--navy)}
+    .cta a{border:1px solid #fff}
+    .dl{display:none!important}
+    /* Print the whole log, not just the on-screen scroll window. */
+    .changelog{max-height:none!important;overflow:visible!important;border:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="topbar">
+    <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7028.23 1463.38" role="img" aria-label="Lumineo Signs">
+      <path fill="#EE0800" fill-rule="nonzero" d="M1463.38 577.87l-1143.99 566.09 1143.99 -386.57 0 -179.52zm0 -439.94l-1143.99 1006.03 1143.99 -762.1 0 -243.93zm-1143.99 1006.03l229.18 -1143.96 -548.56 0 0 1463.38 1463.38 0 0 -548.6 -1143.99 229.18zm386.57 -1143.96l-386.57 1143.96 566.12 -1143.96 -179.55 0zm619.46 0l-1006.03 1143.96 762.13 -1143.96 243.9 0z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M6847.49 509.58c0,-114.71 -82.56,-179.87 -216.34,-179.87 -132.96,0 -216.37,65.16 -216.37,179.87 0,114.71 82.55,179.84 216.37,179.84 133.78,0 216.34,-65.13 216.34,-179.84zm-612.54 0c0,-205.93 155.52,-324.1 396.21,-324.1 240.65,0 397.07,118.16 397.07,324.1 0,205.94 -156.42,324.1 -397.07,324.1 -240.69,0 -396.21,-118.16 -396.21,-324.1zm-40.9 168.58l0 135.52 -649.05 0 0 -608.19 639.5 0 0 135.52 -464.87 0 0 99.93 383.21 0 0 129.47 -383.21 0 0 107.76 474.42 0zm-1786.47 -472.67l177.23 0 0 608.19 -177.23 0 0 -608.19zm-125.16 0l0 608.19 -176.37 0 0 -388.4 -242.4 297.19 -8.7 0 -242.43 -297.19 0 388.4 -171.18 0 0 -608.19 193.77 0 228.53 291.94 230.24 -291.94 188.53 0zm1134.81 608.19l0 -321.49c0,-185.03 -126.01,-306.7 -352.75,-306.7 -226.78,0 -353.64,121.67 -353.64,306.7l0 109.31 0 87.72 0 124.47 176.94 0 0 -482.22 176.7 0c117.28,0 175.49,68.67 175.49,174.64l0 307.58 177.26 0zm-2796.97 -608.19l0 321.49c0,185.03 125.97,306.7 352.77,306.7 226.78,0 353.61,-121.67 353.61,-306.7l0 -109.3 0 -87.72 0 -124.47 -176.95 0 0 482.23 -176.66 0c-117.33,0 -175.53,-68.67 -175.53,-174.64l0 -307.59 -177.24 0zm-57.4 465.72l0 142.47 -574.69 0 0 -608.19 177.23 0 0 465.72 397.47 0z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M2357.64 1239.06c0,64.26 -59.36,108 -172.68,108 -80.32,0 -147.72,-21.87 -196.79,-61.14l47.73 -56.22c37.02,31.23 88.36,48.63 150.84,48.63 53.54,0 80.33,-9.8 80.33,-30.33 0,-20.09 -25.01,-26.79 -89.27,-32.16 -92.8,-8.01 -177.15,-28.53 -177.15,-98.16 0,-66.91 72.27,-103.53 171.34,-103.53 66.95,0 128.52,16.1 171.38,46.41l-45.97 56.67c-34.8,-24.55 -76.76,-34.35 -125.41,-34.8 -36.58,0 -80.74,5.82 -80.74,28.13 0,20.98 36.15,23.62 91.92,28.09 102.18,8.49 174.46,28.57 174.46,100.41z"/>
+      <path fill="#171A63" fill-rule="nonzero" d="M3861.9 1239.06c0,64.26 -59.35,108 -172.68,108 -80.32,0 -147.72,-21.87 -196.78,-61.14l47.73 -56.22c37.03,31.23 88.36,48.63 150.84,48.63 53.54,0 80.32,-9.8 80.32,-30.33 0,-20.09 -24.99,-26.79 -89.26,-32.16 -92.8,-8.01 -177.15,-28.53 -177.15,-98.16 0,-66.91 72.28,-103.53 171.34,-103.53 66.95,0 128.53,16.1 171.38,46.41l-45.98 56.67c-34.79,-24.55 -76.74,-34.35 -125.4,-34.8 -36.59,0 -80.73,5.82 -80.73,28.13 0,20.98 36.14,23.62 91.91,28.09 102.19,8.49 174.46,28.57 174.46,100.41z"/>
+      <polygon fill="#171A63" fill-rule="nonzero" points="2426.8,1024.43 2517.81,1024.43 2517.81,1336.79 2426.8,1336.79 "/>
+      <path fill="#171A63" fill-rule="nonzero" d="M2977.44 1277.88c-33.45,41.51 -95.04,69.18 -178.49,69.18 -128.05,0 -207.48,-60.69 -207.48,-166.46 0,-105.78 79.43,-166.45 207.48,-166.45 77.2,0 132.96,27.23 165.57,57.59l-66.51 49.06c-26.79,-24.11 -54.87,-34.79 -96.83,-34.79 -75.85,0 -117.35,33.45 -117.35,94.59 0,61.58 42.85,95.04 118.69,95.04 38.38,0 68.7,-7.56 90.57,-27.64l0 -28.13 -103.49 0 0 -63.82 187.83 0 0 121.83z"/>
+      <polygon fill="#171A63" fill-rule="nonzero" points="3422.78,1024.43 3422.78,1336.77 3342.91,1336.77 3141.2,1131.54 3141.2,1336.77 3053.32,1336.77 3053.32,1024.43 3149.71,1024.43 3334.86,1215.4 3334.86,1024.43 "/>
+    </svg>
+    <div class="topbar__right">
+      <div class="topbar__eyebrow">Lumineo Sign Builder</div>
+      <span class="topbar__badge">User Guide</span>
+    </div>
+  </div>
+  <div class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Lumineo Sign Builder</div>
+      <h1>Build. Spec.<br>Deliver.</h1>
+      <div class="hero__tag">Lumens for brightness. Lumineo for brilliance.</div>
+      <p class="hero__lead">Spec every sign from the opportunity to the job — this guide shows sales, project
+      managers, artists and estimators how to build a spec, read the descriptions and find signs built the same way.</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <span class="eyebrow">Contents</span>
+    <h2>What's inside</h2>
+    <ol>
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#start">Getting Started</a></li>
+      <li><a href="#overview">Dashboard Overview</a></li>
+      <li><a href="#legend">Visual Aids &amp; Tooltips</a></li>
+      <li><a href="#features">Features &amp; How to Use Them</a></li>
+      <li><a href="#walkthroughs">Step-by-Step Walkthroughs</a></li>
+      <li><a href="#roles">Roles &amp; Permissions</a></li>
+      <li><a href="#shortcuts">Shortcuts &amp; Efficiency Tips</a></li>
+      <li><a href="#best">Best Practices</a></li>
+      <li><a href="#trouble">Troubleshooting</a></li>
+      <li><a href="#faq">FAQs &amp; Tips</a></li>
+      <li><a href="#support">Contact &amp; Support</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#changelog">What's New</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <h2 id="intro"><span class="num">01</span>Introduction</h2><div class="rule"></div>
+  <p class="lead">The <strong>Lumineo Sign Builder</strong> is where every sign on a job gets spec'd — step by step,
+  from the first conversation on the <strong>opportunity</strong> to everything the shop needs before the order is
+  released on the <strong>job</strong>.</p>
+  <p>You pick a sign's category and answer the questions as they appear. The Sign Builder picks the exact sign type
+  from your first answers, only asks what applies, and writes the job's <strong>Production Description</strong> and
+  <strong>Field Description</strong> for you in the shop's job-ticket format.</p>
+
+  <div class="grid">
+    <div class="fcard"><h4>Only the questions that apply</h4><p>Each answer brings up the next questions — nothing that doesn't fit the sign.</p></div>
+    <div class="fcard"><h4>Descriptions write themselves</h4><p>Production and Field Descriptions, built from the answers, ready for the BC job.</p></div>
+    <div class="fcard"><h4>A code for every sign</h4><p>The Spec Code sums up how a sign is built — find signs built the same way on past jobs.</p></div>
+    <div class="fcard"><h4>Opportunity to job</h4><p>Sales answers the core questions; the PM, artist or estimator finishes the job details.</p></div>
+  </div>
+
+  <div class="note box"><span class="box__label">Who this guide is for</span>
+  Sales, project managers, artists, estimators and operations — anyone who specs signs or reads the descriptions.
+  See <a href="#roles">Roles &amp; Permissions</a> for what your login can do.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="start"><span class="num">02</span>Getting Started</h2><div class="rule"></div>
+  <ol class="steps">
+    <li><strong>Open the Sign Builder</strong> — from its link, the Switchboard app launcher, or a job/opportunity link (it opens that spec directly).</li>
+    <li><strong>Start a spec</strong> — Dashboard → <strong>+ New Spec</strong> (or Builder → <strong>+ New</strong>). Fill in the customer and, if you have them, the opportunity or job number.</li>
+    <li><strong>Add a sign</strong> — under Signs click <strong>+ Add sign</strong> and pick its category (Channel Letters, Wall Cabinet, Monument…).</li>
+    <li><strong>Answer the questions</strong> — the highlighted card is the next one. Answer it and the page moves on.</li>
+    <li><strong>Preview the descriptions</strong> — <strong>Preview Descriptions</strong> shows the Production and Field Descriptions.</li>
+  </ol>
+  <div class="tip box"><span class="box__label">Try it safely first</span>
+  Help → <strong>▶ Launch demo &amp; tutorial</strong> opens a practice copy with sample specs and a guided tour. Nothing you do there is saved.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="overview"><span class="num">03</span>Dashboard Overview</h2><div class="rule"></div>
+  <p>The Dashboard opens with <strong>+ New Spec</strong> and a link to the <strong>Sign Library</strong>, then four totals:
+  <strong>Signs Built</strong>, <strong>Specs</strong>, <strong>Total Units</strong> and <strong>Approved</strong>.
+  Below them, your <strong>Recent Specs</strong> (with how complete each one is and its status) and your
+  <strong>Projects</strong>. Click any spec to open it in the Builder.</p>
+  <p>The sidebar switches between <strong>Dashboard</strong>, <strong>Builder</strong>, <strong>Projects</strong> and
+  <strong>Sign Library</strong>; <strong>Setup</strong> (admins) and <strong>Help</strong> sit at the bottom with the
+  light/dark switch.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="legend"><span class="num">04</span>Visual Aids &amp; Tooltips</h2><div class="rule"></div>
+  <table>
+    <tr><th>You see</th><th>It means</th></tr>
+    <tr><td><strong>Highlighted question card</strong> (blue outline)</td><td>The next question to answer. The form waits here.</td></tr>
+    <tr><td><span class="chip" style="background:#d8efe7;color:#0f6e56">new</span></td><td>The question appeared because of your last answer.</td></tr>
+    <tr><td><span class="chip" style="background:#eef0f4;color:#4a4f5e">limited</span></td><td>On this sign only some answers apply, so only those are offered.</td></tr>
+    <tr><td>Card with an <strong>orange left edge</strong></td><td>Answered <em>Needs Survey</em> or <em>Open for design</em> — it still needs a real answer.</td></tr>
+    <tr><td><strong>*</strong> after a question</td><td>Required.</td></tr>
+    <tr><td><strong>Progress bar</strong> with %</td><td>How many of the required questions are answered (at the spec's detail level). Green at 100%.</td></tr>
+    <tr><td><code>WC-IL-EXT-SF-PX</code></td><td>The sign's <strong>Spec Code</strong> — built up as you answer. The one at the top right is the selected sign's.</td></tr>
+    <tr><td>Status pills: Draft · Submitted · Approved · Built</td><td>Where the spec is in its life.</td></tr>
+    <tr><td>Red “changes haven't saved” bar</td><td>A save didn't go through. Your change is still on screen — click <strong>Try again</strong>.</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="features"><span class="num">05</span>Features &amp; How to Use Them</h2><div class="rule"></div>
+
+  <h3>5.1 Specs</h3>
+  <p>A spec holds every sign of one opportunity or job. Its header has the description, customer, contact, opportunity
+  and job numbers, design reference and project. The bar at the top right shows how complete the whole spec is; open
+  site surveys are counted next to it.</p>
+  <p><strong>Opportunity details / Job details</strong> — Opportunity details asks only the core questions sales needs
+  (category, type, size, colors, install basics…). Job details asks everything the shop needs before the order is
+  released. Switch any time; answers are kept. Specs started on a job open at Job details.</p>
+
+  <h3>5.2 Signs and categories</h3>
+  <p>Each sign is a card under <strong>Signs</strong> showing its name, quantity, type, how complete it is and its Spec
+  Code. <strong>+ Add sign</strong> asks for the category; the sign then starts with <strong>Quantity</strong> and a few
+  first questions (for example <em>Lighted?</em> and <em>New cabinet or new faces?</em>). Those answers pick the exact
+  sign type behind the scenes — the type shows on the card once they're answered.</p>
+  <p>On the selected sign you can name it (used as its heading when a job has several signs), change the quantity,
+  <strong>Copy Sign</strong> (handy for another size of the same sign), <strong>Refresh</strong> it to the latest
+  questions, or delete it.</p>
+
+  <h3>5.3 Answering questions</h3>
+  <ul>
+    <li><strong>Choices</strong> — click an answer. Long lists show as a drop-down. Some questions also take a typed answer (<em>Other…</em>).</li>
+    <li><strong>Sizes</strong> — fill in feet and inches for each part (Height, Width, Depth). It saves once every part is filled.</li>
+    <li><strong>Text and numbers</strong> — type and press Enter, or click away.</li>
+    <li><strong>Vinyl colors</strong> — <em>Pick colors</em> opens the 3M color list; search and tick every color needed.</li>
+  </ul>
+  <p>After each answer the page scrolls to the next question, and any question your answer brought up is tagged
+  <strong>new</strong>. If a change means an earlier answer no longer applies, it's cleared and a note tells you what was
+  cleared. Tick <strong>Only open questions</strong> to hide the answered ones.</p>
+
+  <h3>5.4 Needs Survey and Open for design</h3>
+  <p>Some questions offer <strong>Needs Survey</strong> (wall type, electrical…) or <strong>Open for design</strong>
+  (reveals…). Use them when the real answer isn't known yet. They print at the top of the descriptions as
+  <em>*** SURVEY NEEDED: … ***</em> / <em>*** OPEN FOR DESIGN: … ***</em> until the real answer is filled in.</p>
+
+  <h3>5.5 Descriptions</h3>
+  <p><strong>Preview Descriptions</strong> shows the <strong>Production Description</strong> (section by section: SIGN
+  OVERVIEW, ROUTING, FABRICATION, PAINT, VINYL &amp; GRAPHICS, ASSEMBLY…) and the <strong>Field Description</strong>
+  (install sentences). With several signs each gets a <em>SIGN n OF m</em> heading. <strong>Job Detail Notes</strong>
+  (under the questions) print at the end of the Production Description. <em>Copy text</em> copies the description shown.</p>
+
+  <h3>5.6 Spec reference page</h3>
+  <p>The panel on the right shows the <strong>Sign Specification Reference</strong> page that matches the sign once its
+  type is known. Click it (or <strong>View Full Size</strong>) to see the whole page full screen — <strong>Zoom in</strong>,
+  <strong>Print</strong> (one letter page) or <strong>Download</strong> it. <strong>SharePoint</strong> opens the reference folder.</p>
+
+  <h3>5.7 Status and approval</h3>
+  <p>A spec starts as <strong>Draft</strong>. <strong>Submit</strong> sends it for review; Operations can
+  <strong>Approve</strong> it, then <strong>Mark Built</strong> when the signs are done.</p>
+
+  <h3>5.8 Print Spec</h3>
+  <p><strong>Print Spec</strong> prints a spec sheet: the header, every sign's answers and both descriptions.</p>
+
+  <h3>5.9 Projects</h3>
+  <p>Group specs that belong together — a multi-site rollout or a campus. Create a project under
+  <strong>Projects</strong>, then pick it in a spec's <strong>Project</strong> field. The project shows its specs, signs
+  and total units.</p>
+
+  <h3>5.10 Sign Library</h3>
+  <p>Every sign ever spec'd. Type the start of a <strong>Spec Code</strong> (e.g. <code>WC-IL</code>), pick a category
+  or search by customer, sign name, spec or job number. <strong>Same code</strong> finds signs built exactly the same
+  way; <strong>Same type</strong> finds the same category and type. Click a row to open its spec.</p>
+
+  <h3>5.11 Setup (admins)</h3>
+  <p>Setup shows the categories, sign types, questions, rules and reference pages in use. The one-time
+  <strong>Import from Business Central</strong> brings the whole setup over from the BC extension. The tools to edit
+  questions, answers, rules and sign types are coming next (see What's New).</p>
+
+  <h3>5.12 Demo &amp; guided tour</h3>
+  <p>Help → <strong>▶ Launch demo &amp; tutorial</strong> opens a practice copy with sample specs (the real questions)
+  and offers a <strong>Builder tour</strong> (~2 minutes) or a <strong>Full tour</strong>. A banner shows while you're in
+  the demo; <strong>Exit demo</strong> goes back to the real specs. Nothing in the demo is saved.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="walkthroughs"><span class="num">06</span>Step-by-Step Walkthroughs</h2><div class="rule"></div>
+  <h3>Spec a lighted wall cabinet</h3>
+  <ol class="steps">
+    <li>Open or start the spec and click <strong>+ Add sign</strong> → <strong>Wall Cabinet</strong>.</li>
+    <li>Check <strong>Quantity</strong>, answer <strong>Lighted? → Yes</strong> and <strong>New cabinet or new faces? → New cabinet</strong>. The card now says <em>Wall Sign Cabinet – Lighted</em>.</li>
+    <li>Answer the highlighted questions: sides, cabinet size (feet and inches), face type, mounting…</li>
+    <li>Not sure of the wall yet? Answer <strong>Needs Survey</strong> — it'll show under SURVEY NEEDED until you fill it in.</li>
+    <li>Click <strong>Preview Descriptions</strong> to check the Production and Field Descriptions.</li>
+  </ol>
+  <h3>Finish an opportunity spec on the job</h3>
+  <ol class="steps">
+    <li>Open the spec (from the job, or the Builder's Recent Specs).</li>
+    <li>Switch to <strong>Job details</strong> — the remaining job questions appear.</li>
+    <li>Answer them until each sign's bar reaches 100% and replace any Needs Survey / Open for design answers.</li>
+    <li><strong>Submit</strong> for approval.</li>
+  </ol>
+  <h3>Find a similar sign from a past job</h3>
+  <ol class="steps">
+    <li>Note the sign's Spec Code (top right of the Builder).</li>
+    <li>Open the <strong>Sign Library</strong> and type the code — or click <strong>Same code</strong> / <strong>Same type</strong> on a row.</li>
+    <li>Click a result to open that spec.</li>
+  </ol>
+
+  <!-- ============================================================ -->
+  <h2 id="roles"><span class="num">07</span>Roles &amp; Permissions</h2><div class="rule"></div>
+  <p>Your role comes from the same user list as Switchboard.</p>
+  <table>
+    <tr><th>Role</th><th>Specs</th><th>Approve</th><th>Setup</th></tr>
+    <tr><td>Admin / Developer</td><td>Create &amp; edit</td><td>✓</td><td>✓</td></tr>
+    <tr><td>Operations</td><td>Create &amp; edit</td><td>✓</td><td>—</td></tr>
+    <tr><td>Project Manager</td><td>Create &amp; edit</td><td>—</td><td>—</td></tr>
+    <tr><td>Sales</td><td>Create &amp; edit (opportunity level)</td><td>—</td><td>—</td></tr>
+    <tr><td>Production</td><td>Create &amp; edit</td><td>—</td><td>—</td></tr>
+    <tr><td>Installation</td><td>View</td><td>—</td><td>—</td></tr>
+    <tr><td>Demo</td><td>Practice sandbox only</td><td>—</td><td>—</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="shortcuts"><span class="num">08</span>Shortcuts &amp; Efficiency Tips</h2><div class="rule"></div>
+  <ul>
+    <li><span class="kbd">Enter</span> saves a typed answer and moves on.</li>
+    <li><span class="kbd">Esc</span> closes a pop-up or the full-screen reference page.</li>
+    <li><strong>Copy Sign</strong> for a second size of the same sign — then change only the size.</li>
+    <li>Click the full-screen reference page to zoom in and out.</li>
+  </ul>
+
+  <!-- ============================================================ -->
+  <h2 id="best"><span class="num">09</span>Best Practices</h2><div class="rule"></div>
+  <ul>
+    <li>Give each sign a <strong>name</strong> when a job has more than one — it heads its block in the descriptions.</li>
+    <li>Use <strong>Needs Survey</strong> instead of guessing — it reminds everyone what the survey must confirm.</li>
+    <li>Keep the opportunity spec short; finish the details on the job.</li>
+    <li>Put job-wide notes in <strong>Job Detail Notes</strong>, not in a sign's answers.</li>
+  </ul>
+
+  <!-- ============================================================ -->
+  <h2 id="trouble"><span class="num">10</span>Troubleshooting</h2><div class="rule"></div>
+  <table>
+    <tr><th>Problem</th><th>Try this</th></tr>
+    <tr><td>“Changes haven't saved” bar</td><td>Click <strong>Try again</strong>. Your change is still on screen; if it keeps failing, note what you changed and contact support.</td></tr>
+    <tr><td>An answer won't take (“isn't offered”)</td><td>On this sign only some answers apply — pick one of the choices listed.</td></tr>
+    <tr><td>The sign type didn't change</td><td>Answer all the first questions. If a note says no sign type is set up for those answers, ask an admin.</td></tr>
+    <tr><td>A question disappeared</td><td>An earlier answer changed so it no longer applies; the note under the sign lists what was cleared.</td></tr>
+    <tr><td>No reference page</td><td>It appears once the first questions pick the sign type.</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="faq"><span class="num">11</span>FAQs &amp; Tips</h2><div class="rule"></div>
+  <h4>Do I have to answer everything on the opportunity?</h4>
+  <p>No — Opportunity details only asks the core questions. The rest is finished on the job.</p>
+  <h4>What happens to my answers if I switch the detail level?</h4>
+  <p>Nothing — they're kept; questions outside the level are just hidden.</p>
+  <h4>Why did the type change when I changed “Lighted?”</h4>
+  <p>The first questions pick the sign type. Your other answers carry over where the new type asks the same question.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="support"><span class="num">12</span>Contact &amp; Support</h2><div class="rule"></div>
+  <p>Questions, a wrong question or answer, or an idea? Contact <strong>Alex Smith</strong> (asmith@lumineosigns.com).
+  Admins can change questions and answers in Setup.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="glossary"><span class="num">13</span>Glossary</h2><div class="rule"></div>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Spec</td><td>All the signs of one opportunity or job, with their answers.</td></tr>
+    <tr><td>Category</td><td>The kind of sign you pick first (Channel Letters, Wall Cabinet, Monument…).</td></tr>
+    <tr><td>Sign type</td><td>The exact sign, picked by the first answers (e.g. Wall Sign Cabinet – Lighted).</td></tr>
+    <tr><td>Spec Code</td><td>A short code built from the sign's key answers; same code = built the same way.</td></tr>
+    <tr><td>Opportunity / Job details</td><td>How much of the form is asked: the core questions, or everything.</td></tr>
+    <tr><td>Needs Survey</td><td>Placeholder answer until a site survey confirms the detail.</td></tr>
+    <tr><td>Open for design</td><td>Placeholder answer until the artist decides; must be answered before release.</td></tr>
+    <tr><td>Production Description</td><td>The shop's job-ticket text for the BC job.</td></tr>
+    <tr><td>Field Description</td><td>The install crew's text for the BC job.</td></tr>
+    <tr><td>Spec Reference page</td><td>The Sign Specification Reference sheet for the sign type.</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2 id="changelog"><span class="num">14</span>What's New</h2><div class="rule"></div>
+  <div class="changelog">
+    <table>
+      <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Help, user guide, demo &amp; tour</strong> — this guide in the app (Download PDF), and a practice sandbox with a Builder tour and a Full tour.</td></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>First version of the Sign Builder app</strong> — Dashboard, Builder (step-by-step questions with auto-scroll, new tags, live Spec Code, Opportunity/Job details, Needs Survey / Open for design, spec reference viewer, Preview Descriptions, Print Spec, Submit/Approve/Built), Projects, Sign Library, and the one-time import of the setup from Business Central.</td></tr>
+    </table>
+  </div>
+
+  <div class="note box"><span class="box__label">Coming next</span>
+  Setup tools (edit categories, sign types, questions, answers and rules; per-answer description wording), then the
+  Business Central link: start specs from opportunities and jobs, and <strong>Generate to Project</strong> to write the
+  descriptions into the BC job.</div>
+
+  <div class="footer">
+    <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
+    <p><strong>Lumineo Sign Builder — User Guide v0.1 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
+    Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
+  </div>
+
+</div>
+
+<button class="dl" type="button" onclick="window.print()" title="Save as PDF via your browser's print dialog">⬇ Download PDF</button>
+<script>
+  // Hide the floating button when embedded in the app (the Help screen has its own controls).
+  if (window.self !== window.top) document.documentElement.classList.add('embedded');
+  // Auto-open the print dialog when opened with ?print=1 (the Help screen's Download button).
+  if (/[?&]print=1/.test(location.search)) {
+    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 450); });
+  }
+</script>
+</body>
+</html>

@@ -15,7 +15,11 @@
     "build:scheduling": "npm run build --workspace apps/scheduling",
     "dev:scheduling": "npm run dev --workspace apps/scheduling",
     "test:scheduling": "npm test --workspace apps/scheduling",
-    "typecheck:scheduling": "npm run typecheck --workspace apps/scheduling"
+    "typecheck:scheduling": "npm run typecheck --workspace apps/scheduling",
+    "dev:signbuilder": "npm run dev --workspace apps/signbuilder",
+    "build:signbuilder": "npm run build --workspace apps/signbuilder",
+    "test:signbuilder": "npm test --workspace apps/signbuilder",
+    "typecheck:signbuilder": "npm run typecheck --workspace apps/signbuilder"
   },
   "engines": {
     "node": ">=20"
