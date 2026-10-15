@@ -20,5 +20,7 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Runs in Node (reads the BC export from disk); vitest transpiles it without type checks.
+  "exclude": ["src/engine/real-setup.test.ts"]
 }

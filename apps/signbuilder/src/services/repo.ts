@@ -135,9 +135,41 @@ interface MockState {
   projects: Project[];
 }
 
-/** A repo in the browser. With a storage key it survives a reload (dev mock);
- *  without one it lives in memory only (the demo sandbox). */
-export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: MockSeed): SignBuilderRepo {
+type RefImages = Pick<SpecReference, "thumbnail" | "fullImage">;
+
+/** The dev mock keeps reference images in IndexedDB — the real setup's are
+ *  ~10 MB, more than localStorage holds. */
+const IMAGE_DB = "signbuilder.mock.images";
+
+function imageStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest | void): Promise<T | undefined> {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open(IMAGE_DB, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("images");
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction("images", mode);
+      const req = fn(tx.objectStore("images"));
+      tx.oncomplete = () => {
+        db.close();
+        resolve(req ? (req.result as T) : undefined);
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    };
+  });
+}
+
+const hasImages = (r: SpecReference) => !!(r.thumbnail || r.fullImage);
+const stripImages = ({ thumbnail: _t, fullImage: _f, ...rest }: SpecReference): SpecReference => rest;
+
+/** A repo in the browser. With a storage key it survives a reload (dev mock —
+ *  images in IndexedDB); without one it lives in memory only (the demo
+ *  sandbox). `imagesFrom` supplies reference images the seed doesn't carry. */
+export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: MockSeed, imagesFrom?: SignBuilderRepo): SignBuilderRepo {
+  const persistent = !!storageKey && !seed;
   const load = (): MockState => {
     if (seed) return { docs: [...setupToDocs(seed.setup)], references: seed.setup.references, specs: seed.specs, lines: seed.lines, projects: seed.projects };
     try {
@@ -150,12 +182,23 @@ export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: Mock
   };
   let state = load();
   const save = () => {
-    if (!storageKey) return;
+    if (!persistent || !storageKey) return;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify({ ...state, references: state.references.map(stripImages) }));
     } catch (e) {
       console.warn("[mock] couldn't save to localStorage (too big?)", e);
     }
+  };
+  /** Persistent: images go to IndexedDB and the in-memory list keeps the rest. */
+  const keepReferences = async (refs: SpecReference[]): Promise<SpecReference[]> => {
+    if (!persistent) return refs;
+    const withImages = refs.filter(hasImages);
+    if (withImages.length > 0) {
+      await imageStore("readwrite", (store) => {
+        for (const r of withImages) store.put({ thumbnail: r.thumbnail, fullImage: r.fullImage } satisfies RefImages, r.code);
+      });
+    }
+    return refs.map(stripImages);
   };
   const delay = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 40));
   const upsert = <T extends { id: string }>(list: T[], item: T) => {
@@ -173,23 +216,31 @@ export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: Mock
     },
     async saveSetup(setup) {
       state.docs = [...setupToDocs(setup)];
-      state.references = setup.references;
+      state.references = await keepReferences(setup.references);
       save();
       return delay(undefined);
     },
     async loadReferenceImages(code) {
       const r = state.references.find((x) => x.code === code);
-      return delay({ thumbnail: r?.thumbnail, fullImage: r?.fullImage });
+      if (r && hasImages(r)) return delay({ thumbnail: r.thumbnail, fullImage: r.fullImage });
+      if (persistent) {
+        const stored = await imageStore<RefImages>("readonly", (store) => store.get(code));
+        if (stored) return stored;
+      }
+      if (imagesFrom) return imagesFrom.loadReferenceImages(code);
+      return delay({});
     },
     async saveReference(ref) {
+      const [kept] = await keepReferences([ref]);
       const i = state.references.findIndex((x) => x.code === ref.code);
-      if (i >= 0) state.references[i] = ref;
-      else state.references.push(ref);
+      if (i >= 0) state.references[i] = kept!;
+      else state.references.push(kept!);
       save();
       return delay(undefined);
     },
     async deleteReference(code) {
       state.references = state.references.filter((x) => x.code !== code);
+      if (persistent) await imageStore("readwrite", (store) => store.delete(code));
       save();
       return delay(undefined);
     },

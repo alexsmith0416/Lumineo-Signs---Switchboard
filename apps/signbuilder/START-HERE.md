@@ -150,6 +150,18 @@ generated/   Dataverse connector client (copied from Switchboard; same connector
 - Launch parameters (from Switchboard tile / BC Job Card / links):
   `?specId=…`, `?jobId=J…`, `?opportunityId=…` → opens (or starts) that spec.
 
+### The real setup (BC export)
+- File: `SignBuilderSetup_20261015.json` (exported from UAT Oct 15, 2026, in Alex's
+  Downloads). **Not in git** — it's company data and 10 MB (mostly reference images).
+- Contents: 11 categories, 32 sign types, 0 blocks, 1,348 questions, 2,641 answers,
+  1,108 Spec Rules, 467 Field Description template lines, 64 reference rules,
+  30 reference pages, 159 vinyl colors, 125 checklist lines.
+- Sizes vs Dataverse's 1 MB multiline limit: largest `type:` doc ≈ 116K chars
+  (MON-ROUTED), largest image ≈ 500K chars (ST-22) → fits. **But** a whole-setup
+  copy is ≈ 2 MB, so `crfdf_sbversion` must store versions per document (or
+  chunked), not as one JSON — design Undo/Versions that way.
+- Re-export from BC and re-import any time before go-live (Setup → Import).
+
 ## 4. Run it locally
 
 ```powershell
@@ -161,8 +173,23 @@ npm run typecheck:signbuilder
 npm run build:signbuilder      # → apps/signbuilder/dist
 ```
 
-Mock mode keeps data in the browser (`localStorage` key `signbuilder.mock.v1` —
-clear it to start over). `VITE_DATA_SOURCE=live` (or a prod build) uses Dataverse.
+Mock mode keeps data in the browser (`localStorage` key `signbuilder.mock.v1`;
+reference images in IndexedDB `signbuilder.mock.images` because the real ones
+don't fit in localStorage — clear both to start over). To run on the real setup,
+open Setup → Import and pick the BC export. `VITE_DATA_SOURCE=live` (or a prod
+build) uses Dataverse.
+
+**Real-setup check** — answers every sign type in the BC export end to end and
+builds both descriptions (skipped unless the file is given):
+
+```powershell
+$env:SB_SETUP_FILE="C:\Users\Alex\Downloads\SignBuilderSetup_20261015.json"
+$env:SB_SETUP_OUT="C:\temp\sb-desc"   # optional: writes each type's descriptions to review
+npm run test:signbuilder
+```
+
+A failure here is usually a setup problem (a type no answer can reach, an answer
+missing from a type-picking question) — the same thing would happen in BC.
 
 ## 5. Commit + deploy
 
@@ -252,9 +279,29 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Step 1 built (app foundation) + project docs.**
+**Last session: Oct 15, 2026 — real setup imported from BC + checked end to end.**
 
-**Recap**
+**Recap (latest)**
+- Alex exported the setup from BC UAT (v0.11.1 Export Setup JSON). Imported it in
+  the browser: all 11 categories show; Channel Letters → New → Front lit picks the
+  type, fills defaults, builds `CL-FL-EXT-WH` and shows reference ST-12 (image
+  survives a reload).
+- Dev mock now keeps reference images in IndexedDB (10 MB didn't fit in
+  localStorage); the demo sandbox borrows images from the real store.
+- New `src/engine/real-setup.test.ts`: answers every sign type and builds both
+  descriptions. **28 of 32 types pass**; the descriptions match the BC
+  job-ticket format.
+- ⚠️ **Setup problems found (fix in the setup — BC has the same issue):**
+  - **Monument** — "Construction" (BUILD) only offers *Single cabinet* on every
+    monument type, so **MON-DIR** (BUILD=Directional) and **MON-ROUTED**
+    (BUILD=Pole cover / reveal / topper…) can never be selected. Add those
+    answers to BUILD.
+  - **Wall Cabinet** — **WALL-CAB-NI** has Selected When `LIT=Yes; WORK=New
+    cabinet` (same as WALL-CAB-LIT — probably meant `LIT=No`); **WALL-CAB-I/I**
+    and **WALL-CAB-N/I** have no Selected When, so they're unreachable
+    (deactivate if they're old, or give them their answers).
+
+**Earlier the same day**
 - Created `apps/signbuilder` (worktree branch `claude/sign-builder-app`): shell
   matching Switchboard, data model, engine ported from the BC extension
   (7 tests passing), Dashboard / Builder / Projects / Sign Library / Setup
@@ -269,8 +316,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Not done yet / waiting on Alex**
 - ⏳ Run `scripts/create-signbuilder-tables.ps1` (needs Alex's OK — writes to the env).
 - ⏳ First deploy (`pac code init` → build → `pac code push`).
-- ⏳ Publish BC extension v0.11.1 to UAT → Export Setup (JSON) → import into the
-  app (or drop the file in the repo so mock mode runs on the real setup).
+- ✅ BC v0.11.1 published to UAT, setup exported and imported (Oct 15).
+- ⏳ Fix the Monument / Wall Cabinet setup problems above (in BC now and
+  re-export, or in the app once the Sign Types tool exists).
 
 **Next (in order)**
 1. **Setup tools**: Categories, Sign Types (Selected When, Duplicate), Decision
@@ -286,8 +334,12 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
    mobile nav drawer, Switchboard App Launcher tile.
 
 **Suggestions**
-- Do the BC export + table script first so Step 2 is built and tested against
-  your real setup instead of the sample Wall Cabinet.
+- Run the table script next — the real setup is in hand, so the first deploy
+  can be tested on real data straight away.
+- Build **Check Setup** early in the Setup tools: it would have flagged the
+  unreachable sign types automatically (the real-setup check is the start of it).
+- Undo/Versions: store per document (a whole-setup copy is ~2 MB, over the
+  1 MB column limit — see §3 "The real setup").
 - Decide early whether the dev environment's apps can be opened by the people
   testing (Developer env = owner/admins only) — a Sandbox env avoids surprises.
 - Keep the BC extension in UAT read-only for specs once the app is live, so
@@ -295,6 +347,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### Session log (newest first)
 
+- **Oct 15, 2026 (later)** — Imported the real BC setup export (11 categories,
+  32 types, 1,348 questions). Mock images → IndexedDB. Added the real-setup
+  check (28/32 types pass; Monument BUILD answers and Wall Cabinet Selected When
+  need fixing in the setup).
 - **Oct 15, 2026** — Planned the move from the BC extension to a Power Apps code
   app (Alex's answers: repo = Switchboard monorepo, Dataverse master, `crfdf_`,
   opportunity sync, reuse roles, keep prototype extras + BC templates with

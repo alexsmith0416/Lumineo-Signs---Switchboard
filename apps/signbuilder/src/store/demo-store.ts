@@ -8,7 +8,7 @@
  */
 import { create } from "zustand";
 import { makeDemoSeed } from "../demo/demo-data";
-import { createMockRepo, setRepoOverride } from "../services/repo";
+import { createMockRepo, repo, setRepoOverride } from "../services/repo";
 import { useSetupStore } from "./setup-store";
 import { useSpecStore } from "./spec-store";
 import { DEMO_SETUP } from "../data/demo-setup";
@@ -46,7 +46,8 @@ export const useDemoStore = create<DemoState>((set, get) => ({
   enterDemo: async ({ locked = false, welcome = false } = {}) => {
     if (!get().demoMode) {
       const setup = useSetupStore.getState().setup ?? DEMO_SETUP;
-      setRepoOverride(createMockRepo(null, makeDemoSeed(setup)));
+      // Reference images aren't copied — the sandbox reads them from the real repo.
+      setRepoOverride(createMockRepo(null, makeDemoSeed(setup), repo()));
       await reloadAll();
     }
     set({ demoMode: true, locked, tutorialPhase: welcome ? "welcome" : get().tutorialPhase });
