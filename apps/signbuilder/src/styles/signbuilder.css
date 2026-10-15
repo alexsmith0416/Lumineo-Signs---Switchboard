@@ -766,3 +766,143 @@
   font-size: 13px;
   padding: 4px 0;
 }
+
+/* ---- Questions (decision tree) / Rules ------------------------------------ */
+
+.sbp-tree {
+  max-height: 70vh;
+  overflow: auto;
+  margin-top: 4px;
+}
+
+.sbp-tree__section {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 10px 4px 4px;
+}
+
+.sbp-tree__q {
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.sbp-tree__q:hover {
+  background: var(--bg-tertiary);
+}
+
+.sbp-tree__q--on,
+.sbp-tree__q--on:hover {
+  background: var(--accent-brand-soft);
+  border-color: var(--accent-brand);
+}
+
+.sbp-editor-group {
+  border-top: 1px solid var(--border-default);
+  padding: 10px 0;
+}
+
+.sbp-editor-group > summary {
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.sbp-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+}
+
+.sbp-answers td {
+  padding: 4px;
+}
+
+.sbp-icon-btn {
+  font: inherit;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin: 0 2px;
+  cursor: pointer;
+  color: var(--text-mid);
+}
+
+.sbp-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.sbp-rule-block {
+  margin-bottom: 14px;
+}
+
+.sbp-rule-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.sbp-rule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.sbp-rule .sbp-icon-btn {
+  margin-left: auto;
+}
+
+.sbp-rule-add {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.sbp-matrix-wrap {
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.sbp-matrix th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  max-width: 110px;
+  white-space: normal;
+  text-align: center;
+}
+
+.sbp-matrix th:first-child {
+  text-align: left;
+  left: 0;
+  z-index: 2;
+}
+
+.sbp-matrix td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--bg-primary);
+  min-width: 240px;
+}
+
+.sbp-matrix__cell {
+  text-align: center;
+}
+
+.sbp-matrix__always td {
+  color: var(--text-dim);
+}
+
+.sbp-undo {
+  align-self: center;
+}

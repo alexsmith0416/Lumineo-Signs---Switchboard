@@ -76,12 +76,17 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              check-setup.ts — Check Setup (port of BC's LSB Setup Check + "can this type be
                               reached?" by answering its Selected When)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
+             question-ops.ts — questions / answers / Spec Rules / Default Rules edits
+                              (rename propagates within the type), Shown-when text
+             item-match.ts, item-ops.ts — BC item matching + links, clean wording
 services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv* writes),
              dv-write.ts (retry policy — from Switchboard), current-user.ts, print.ts
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
-             Projects, Library, SetupHome (tabs: Overview, Sign Types, Check Setup —
-             screens/setup/SignTypes.tsx, CheckSetup.tsx), Help
+             Projects, Library, SetupHome (tabs: Overview, Sign Types, Questions, Rules,
+             Materials & Items, Check Setup + ↶ Undo —
+             screens/setup/SignTypes, DecisionTree, RuleMatrix, MaterialsItems, CheckSetup,
+             setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
 styles/      lumineo.css (copied from Switchboard — keep in step) + signbuilder.css (tokens only)
@@ -289,7 +294,28 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup tools (Sign Types, Check Setup, Materials & Items), Default Rules, BC item links.**
+**Last session: Oct 15, 2026 — Setup: Questions (decision tree), Rules (show + defaults matrix), Undo; BC item links.**
+
+**Recap (latest — Questions / Rules / Undo)**
+- **Questions tab** (`DecisionTree.tsx`): type picker, questions by section with
+  plain-English "shown when" + if/type/default tags; editor: every question field,
+  answers (↑↓, rename → propagates to the type's rules/defaults/conditions/Selected
+  When, Prints as, Own line, BC item, Spec Code, remove), rules (Shown when /
+  Answers offered / Defaults — add + remove), + Add question (after selected), Delete.
+- **Rules tab** (`RuleMatrix.tsx`): Shown-when grid (later questions × trigger
+  answers + Any); Defaults grid (trigger answers → target's start value) + **Copy
+  to other sign types** that have both questions (`copyDefaults`).
+- **Undo** (`setup-store.undoStack`, 50 steps, this session only; saves the
+  restored setup). Saved Versions still to come (per document — see §3).
+- Engine: a Default Rule for a specific answer now beats an "any answer" one.
+- Tests: `setup/question-ops.test.ts`. Browser-tested on the real setup (PAN-WALL):
+  editor, defaults grid change + Undo, shown-when grid.
+- No tour step (Setup is admin-only; Demo logins can't open it). Guide v0.4.
+- Parking post renamed to 2” x 2” x .125” Aluminum Square Tube (#25035) in the fix
+  script (Alex). ⏳ **Alex: re-import the regenerated `_fixed.json` in the live app
+  before editing setup there** (the import replaces the whole setup).
+
+**Earlier the same day: Setup tools (Sign Types, Check Setup, Materials & Items), Default Rules, BC item links.**
 
 **Recap (latest — Setup tools, step 1)**
 - **Setup → Sign Types**: edit a type (description, {TYPE} name, variant, Spec Code
@@ -396,11 +422,11 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
 **Next (in order)**
-1. **Setup tools** (✅ Sign Types, ✅ Check Setup): **Decision Tree + Rule Matrix
-   with Default Rules editing (Alex asked)**, Categories, Decision
-   Tree, Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo &
-   Versions, Test Category, Stage Checklist, Spec References
-   (import images), Vinyl Colors — plus editing **per-answer print text / format**.
+1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
+   incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
+   next **Field Description template editor** (fixes the 8 warnings), Categories,
+   saved Versions (per document), Show Path / Test Category, Question Blocks,
+   Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
    → BCPush flow → writable API page in the BC extension writes 60214 / 60215
@@ -422,6 +448,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (questions & rules)** — Setup → Questions (decision tree editor:
+  details, answers incl. print text / own line / BC item, rules incl. defaults),
+  Rules (show grid + defaults grid with copy to other types), session Undo. Parking
+  post → .125 wall (25035). Guide v0.4.
 - **Oct 15, 2026 (BC items)** — Read BC items (probe), matcher, answers + vinyl
   colors linked to items (197 + 98 auto; 17 wordings to pick), Setup → Materials &
   Items, part # toggle (setting + Preview). Vinyl label double-series bug fixed.

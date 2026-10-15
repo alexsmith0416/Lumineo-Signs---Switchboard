@@ -6,17 +6,26 @@ import { parseBcSetupExport, type ImportSummary } from "../setup/import-bc";
 import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
 import CheckSetup from "./setup/CheckSetup";
+import DecisionTree from "./setup/DecisionTree";
 import MaterialsItems from "./setup/MaterialsItems";
+import RuleMatrix from "./setup/RuleMatrix";
 import SignTypes from "./setup/SignTypes";
 
-type SetupTab = "overview" | "types" | "materials" | "check";
+type SetupTab = "overview" | "types" | "questions" | "rules" | "materials" | "check";
 
 /** Setup hub: Overview (+ the one-time import from Business Central), Sign
- *  Types and Check Setup. More tools (Decision Tree, Show Path, Rule Matrix,
- *  Blocks, Versions…) join as tabs. */
+ *  Types, Questions (decision tree), Rules (matrix), Materials & Items and
+ *  Check Setup. Undo steps back through this session's changes. */
 export default function SetupHome() {
   const [tab, setTab] = useState<SetupTab>("overview");
   const [openType, setOpenType] = useState<string | undefined>();
+  // Shared by Questions and Rules, so switching tabs keeps your place.
+  const [typeCode, setTypeCode] = useState("");
+  const [trigger, setTrigger] = useState("");
+  const [target, setTarget] = useState("");
+  const [ruleMode, setRuleMode] = useState<"show" | "defaults">("show");
+  const undoStack = useSetupStore((s) => s.undoStack);
+  const undo = useSetupStore((s) => s.undo);
   const demoMode = useDemoStore((s) => s.demoMode);
   const setup = useSetupStore((s) => s.setup);
   const importSetup = useSetupStore((s) => s.importSetup);
@@ -65,15 +74,58 @@ export default function SetupHome() {
         <button type="button" className={`sbp-tab${tab === "types" ? " sbp-tab--on" : ""}`} onClick={() => setTab("types")}>
           Sign Types
         </button>
+        <button type="button" className={`sbp-tab${tab === "questions" ? " sbp-tab--on" : ""}`} onClick={() => setTab("questions")}>
+          Questions
+        </button>
+        <button type="button" className={`sbp-tab${tab === "rules" ? " sbp-tab--on" : ""}`} onClick={() => setTab("rules")}>
+          Rules
+        </button>
         <button type="button" className={`sbp-tab${tab === "materials" ? " sbp-tab--on" : ""}`} onClick={() => setTab("materials")}>
           Materials &amp; Items
         </button>
         <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
           Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
         </button>
+        <div className="sbp-spacer" />
+        <button
+          type="button"
+          className="btn-secondary sbp-undo"
+          disabled={undoStack.length === 0}
+          title={undoStack.length ? `Undo: ${undoStack[undoStack.length - 1]!.label}` : "Nothing to undo this session"}
+          onClick={undo}
+          data-tour="setup-undo"
+        >
+          ↶ Undo{undoStack.length ? ` (${undoStack.length})` : ""}
+        </button>
       </div>
 
       {tab === "types" && <SignTypes key={openType ?? ""} initialCode={openType} />}
+      {tab === "questions" && (
+        <DecisionTree
+          typeCode={typeCode}
+          setTypeCode={setTypeCode}
+          onOpenMatrix={(trig, tgt) => {
+            setTrigger(trig);
+            if (tgt) {
+              setTarget(tgt);
+              setRuleMode("defaults");
+            } else setRuleMode("show");
+            setTab("rules");
+          }}
+        />
+      )}
+      {tab === "rules" && (
+        <RuleMatrix
+          typeCode={typeCode}
+          setTypeCode={setTypeCode}
+          trigger={trigger}
+          setTrigger={setTrigger}
+          target={target}
+          setTarget={setTarget}
+          mode={ruleMode}
+          setMode={setRuleMode}
+        />
+      )}
       {tab === "materials" && <MaterialsItems />}
       {tab === "check" && (
         <CheckSetup

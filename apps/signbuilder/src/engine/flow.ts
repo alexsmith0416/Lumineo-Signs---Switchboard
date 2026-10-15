@@ -113,11 +113,12 @@ export function evaluate(idx: SetupIndex, input: SignLine, detail: DetailLevel, 
   };
 
   // The question's default right now: the first Default Rule whose trigger
-  // answer is given, else its own Default Value.
+  // answer is given — rules for a specific answer before "any answer" ones —
+  // else its own Default Value.
   const defaultFor = (q: Question): string => {
-    for (const r of idx.defaultRulesTo(line.signTypeCode, q.code)) {
-      if (triggerActive(r.triggerQuestion, r.triggerAnswer)) return r.value;
-    }
+    const rules = idx.defaultRulesTo(line.signTypeCode, q.code);
+    for (const r of rules) if (r.triggerAnswer !== "" && triggerActive(r.triggerQuestion, r.triggerAnswer)) return r.value;
+    for (const r of rules) if (r.triggerAnswer === "" && triggerActive(r.triggerQuestion, "")) return r.value;
     return q.defaultValue ?? "";
   };
 

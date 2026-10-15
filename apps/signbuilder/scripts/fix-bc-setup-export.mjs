@@ -195,6 +195,7 @@ function removeAnswer(value) {
 renameAnswer("1”x1”x.187” Aluminum Angle", "1”x1”x.125” Aluminum Angle", "20005");
 renameAnswer("3”x3”x.187” Aluminum Angle", "3”x3”x.125” Aluminum Angle", "20059");
 renameAnswer("2”x1”x.187” Aluminum Angle", "2”x1.5”x.125” Aluminum Angle", "20030");
+renameAnswer("2” x 2” x .187” Aluminum Square Tube", "2” x 2” x .125” Aluminum Square Tube", "25035"); // Parking post — BC stocks the .125 wall
 removeAnswer(".375” Matte Clear Plex"); // not stocked
 // Alex's picks (Oct 15).
 const PICKED = {
