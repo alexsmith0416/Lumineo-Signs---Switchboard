@@ -160,7 +160,10 @@ generated/   Dataverse connector client (copied from Switchboard; same connector
   (MON-ROUTED), largest image ≈ 500K chars (ST-22) → fits. **But** a whole-setup
   copy is ≈ 2 MB, so `crfdf_sbversion` must store versions per document (or
   chunked), not as one JSON — design Undo/Versions that way.
-- Re-export from BC and re-import any time before go-live (Setup → Import).
+- **Import `SignBuilderSetup_20261015_fixed.json`**, not the raw export — it has
+  the agreed setup fixes (`scripts/fix-bc-setup-export.mjs`). A fresh re-export
+  from BC before go-live must go through the script again:
+  `node apps/signbuilder/scripts/fix-bc-setup-export.mjs <export.json> <fixed.json>`.
 
 ## 4. Run it locally
 
@@ -291,15 +294,20 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - New `src/engine/real-setup.test.ts`: answers every sign type and builds both
   descriptions. **28 of 32 types pass**; the descriptions match the BC
   job-ticket format.
-- ⚠️ **Setup problems found (fix in the setup — BC has the same issue):**
-  - **Monument** — "Construction" (BUILD) only offers *Single cabinet* on every
-    monument type, so **MON-DIR** (BUILD=Directional) and **MON-ROUTED**
-    (BUILD=Pole cover / reveal / topper…) can never be selected. Add those
-    answers to BUILD.
-  - **Wall Cabinet** — **WALL-CAB-NI** has Selected When `LIT=Yes; WORK=New
-    cabinet` (same as WALL-CAB-LIT — probably meant `LIT=No`); **WALL-CAB-I/I**
-    and **WALL-CAB-N/I** have no Selected When, so they're unreachable
-    (deactivate if they're old, or give them their answers).
+- ✅ **Setup problems found and fixed** (Alex agreed) with
+  `scripts/fix-bc-setup-export.mjs` → `SignBuilderSetup_20261015_fixed.json`
+  (Downloads), imported into the dev app. Now **30 of 30 active types pass**:
+  - **Monument** — "Construction" (BUILD) offered only *Single cabinet*, so
+    MON-DIR / MON-ROUTED were unreachable → added *Directional* and *Pole cover
+    / reveal / topper (routed faces)* to BUILD on all 4 monument types.
+  - **Wall Cabinet** — WALL-CAB-NI Selected When → `LIT=No; WORK=New cabinet`
+    (was the lighted type's); **WALL-CAB-I/I** (duplicate of WALL-CAB-LIT) and
+    **WALL-CAB-N/I** (3-question stub) **deactivated**, not deleted.
+  - ⚠️ **BC UAT still has the old setup.** Import the `_fixed` file (not the raw
+    export) when the tables exist; a fresh re-export must go through the
+    script again.
+- Setup → Import is blocked while the demo sandbox is open (it only replaced
+  the sandbox's copy — found when the demo was open during testing).
 
 **Earlier the same day**
 - Created `apps/signbuilder` (worktree branch `claude/sign-builder-app`): shell
@@ -317,8 +325,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - ⏳ Run `scripts/create-signbuilder-tables.ps1` (needs Alex's OK — writes to the env).
 - ⏳ First deploy (`pac code init` → build → `pac code push`).
 - ✅ BC v0.11.1 published to UAT, setup exported and imported (Oct 15).
-- ⏳ Fix the Monument / Wall Cabinet setup problems above (in BC now and
-  re-export, or in the app once the Sign Types tool exists).
+- ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
 **Next (in order)**
 1. **Setup tools**: Categories, Sign Types (Selected When, Duplicate), Decision
@@ -349,8 +356,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 - **Oct 15, 2026 (later)** — Imported the real BC setup export (11 categories,
   32 types, 1,348 questions). Mock images → IndexedDB. Added the real-setup
-  check (28/32 types pass; Monument BUILD answers and Wall Cabinet Selected When
-  need fixing in the setup).
+  check (28/32 types passed). Fixed the setup (Monument BUILD answers, Wall
+  Cabinet Selected When, 2 old types deactivated) via
+  `scripts/fix-bc-setup-export.mjs` → 30/30 pass. Import blocked in demo mode.
 - **Oct 15, 2026** — Planned the move from the BC extension to a Power Apps code
   app (Alex's answers: repo = Switchboard monorepo, Dataverse master, `crfdf_`,
   opportunity sync, reuse roles, keep prototype extras + BC templates with

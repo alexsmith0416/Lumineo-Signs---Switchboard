@@ -43,7 +43,12 @@ function fill(idx: SetupIndex, start: SignLine, pick: Record<string, string>): {
   let asked = 0;
   for (let guard = 0; guard < 400; guard++) {
     const ev = evaluate(idx, line, "full");
-    const q = idx.questions(line.signTypeCode).find((x) => ev.states[x.code]?.nextStep);
+    // A type-picking answer that's showing with a different (e.g. default)
+    // value is changed first — what a person does when "Lighted?" says Yes.
+    const change = idx
+      .questions(line.signTypeCode)
+      .find((x) => pick[x.code] && ev.states[x.code]?.visible && ev.states[x.code]!.value !== pick[x.code]);
+    const q = change ?? idx.questions(line.signTypeCode).find((x) => ev.states[x.code]?.nextStep);
     if (!q) break;
     const st = ev.states[q.code]!;
     let value = pick[q.code] ?? "";

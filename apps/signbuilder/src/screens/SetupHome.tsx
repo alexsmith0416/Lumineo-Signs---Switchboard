@@ -2,11 +2,13 @@ import { useRef, useState } from "react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import type { SetupData } from "../domain/types";
 import { parseBcSetupExport, type ImportSummary } from "../setup/import-bc";
+import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
 
 /** Setup hub. Step 1: the one-time import from Business Central. The setup
  *  tools (Decision Tree, Show Path, Rule Matrix, Blocks, Versions…) follow. */
 export default function SetupHome() {
+  const demoMode = useDemoStore((s) => s.demoMode);
   const setup = useSetupStore((s) => s.setup);
   const importSetup = useSetupStore((s) => s.importSetup);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -106,7 +108,12 @@ export default function SetupHome() {
           block, question, answer, Spec Rule, Field Description template, spec reference page (with images), vinyl color and the stage checklist. It <b>replaces</b> the
           setup in the app — use it before go-live; after that the app is where the setup is edited.
         </p>
-        <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => void onFile(e.target.files?.[0])} />
+        {demoMode ? (
+          // An import here would only replace the sandbox's copy — easy to mistake for the real thing.
+          <div className="sbp-banner sbp-banner--warn">You're in the demo sandbox — exit the demo (banner at the top) to import the setup.</div>
+        ) : (
+          <input ref={fileRef} type="file" accept=".json,application/json" onChange={(e) => void onFile(e.target.files?.[0])} />
+        )}
         {error && <div className="sbp-banner sbp-banner--error" style={{ marginTop: 10 }}>{error}</div>}
         {done && <div className="sbp-banner sbp-banner--ok" style={{ marginTop: 10 }}>{done}</div>}
       </div>
