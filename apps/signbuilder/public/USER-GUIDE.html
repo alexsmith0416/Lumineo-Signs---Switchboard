@@ -367,10 +367,24 @@
   way; <strong>Same type</strong> finds the same category and type. Click a row to open its spec.</p>
 
   <h3>5.11 Setup (admins)</h3>
-  <p>Setup shows the categories, sign types, questions, rules and reference pages in use. The one-time
-  <strong>Import from Business Central</strong> brings the whole setup over from the BC extension (exit the demo
-  first — the import isn't available in the sandbox). The tools to edit
-  questions, answers, rules and sign types are coming next (see What's New).</p>
+  <p>Setup has three tabs. Changes save as soon as you click <strong>Save</strong>.</p>
+  <ul>
+    <li><strong>Overview</strong> — what's in the setup, and the one-time <strong>Import from Business Central</strong>
+    (exit the demo first — the import isn't available in the sandbox).</li>
+    <li><strong>Sign Types</strong> — pick a category, then a sign type. Edit its description, the name printed in the
+    descriptions (<code>{TYPE}</code>), its Spec Code segment, sort order and whether it's <strong>Active</strong>.
+    <strong>Selected when</strong> shows the category's first questions (e.g. <em>Lighted?</em>,
+    <em>New cabinet or new faces?</em>) with their answers as buttons — click the answers that pick this sign type
+    (two answers on one question = either one). The <strong>Check</strong> box underneath updates as you click, so a
+    clash with another sign type shows before you save. <strong>Duplicate</strong> copies a sign type with all its
+    questions, answers, rules and Field Description lines; the copy starts inactive with no Selected When.</li>
+    <li><strong>Check Setup</strong> — every problem in the setup, by category and sign type, with what to do about it.
+    <strong>Problems</strong> stop something working (a sign type nobody can pick, a question that's never asked);
+    <strong>Warnings</strong> are worth a look (a Field Description line that gets skipped). The red number on the tab is
+    the problem count. <strong>Open sign type</strong> jumps to the sign type to fix it.</li>
+  </ul>
+  <p>Still to come: Categories, the Decision Tree (questions and answers, including how each answer prints),
+  Show Path, Spec Rule Matrix, Question Blocks, Undo &amp; Versions and the rest — see What's New.</p>
 
   <h3>5.12 Demo &amp; guided tour</h3>
   <p>Help → <strong>▶ Launch demo &amp; tutorial</strong> opens a practice copy with sample specs (the real questions)
@@ -479,6 +493,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Setup: Sign Types &amp; Check Setup</strong> — edit sign types and what picks them (Selected When, as answer buttons), Duplicate a sign type with everything under it, and Check Setup lists every problem in the setup — including any sign type nobody can pick — with a live check while you edit.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Clearer outlines</strong> — darker borders around question cards, inputs and panels (same as the Switchboard calendar grid), so each question stands apart.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>The real Lumineo setup is in</strong> — every category, sign type, question, rule, Field Description template and spec reference page brought over from Business Central and checked sign type by sign type. Fixes along the way: Monument <em>Construction</em> now offers <strong>Directional</strong> and <strong>Pole cover / reveal / topper (routed faces)</strong>; a non-lighted Wall Cabinet (<em>Lighted? No</em> → <em>New cabinet</em>) now picks the Non-Lighted type; two old duplicate Wall Cabinet types were retired.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Help, user guide, demo &amp; tour</strong> — this guide in the app (Download PDF), and a practice sandbox with a Builder tour and a Full tour.</td></tr>
@@ -493,7 +508,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v0.1 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v0.2 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>

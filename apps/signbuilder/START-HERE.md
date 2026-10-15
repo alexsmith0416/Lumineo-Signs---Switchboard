@@ -73,11 +73,15 @@ engine/      pure TS, no React / no I/O — fully unit-tested
              setup-index.ts   fast lookups over the setup
              values.ts        rule matching, feet-and-inches parsing/formatting
 setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
+             check-setup.ts — Check Setup (port of BC's LSB Setup Check + "can this type be
+                              reached?" by answering its Selected When)
+             sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
 services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv* writes),
              dv-write.ts (retry policy — from Switchboard), current-user.ts, print.ts
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
-             Projects, Library, SetupHome, Help
+             Projects, Library, SetupHome (tabs: Overview, Sign Types, Check Setup —
+             screens/setup/SignTypes.tsx, CheckSetup.tsx), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
 styles/      lumineo.css (copied from Switchboard — keep in step) + signbuilder.css (tokens only)
@@ -284,7 +288,35 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — real setup imported from BC + checked end to end.**
+**Last session: Oct 15, 2026 — deployed; Setup tools started (Sign Types + Check Setup).**
+
+**Recap (latest — Setup tools, step 1)**
+- **Setup → Sign Types**: edit a type (description, {TYPE} name, variant, Spec Code
+  segment, category, sort, Active) and its **Selected When** as answer buttons from
+  the category's type-picking questions (+ raw text); live Check under the form
+  (e.g. "same as MON-CAB-LIT" shows before Save). **Duplicate** copies questions,
+  answers, rules (new ids), templates, reference rules, blocks used — copy starts
+  inactive, no Selected When. Edits save via `setup-store.replace` (changed docs only).
+- **Setup → Check Setup**: all of BC's checks + reachability; red problem count on
+  the tab; Open sign type jumps to the editor. Tests: `setup/setup-tools.test.ts`;
+  the real-setup check now also runs Check Setup (report in SB_SETUP_OUT).
+- Browser-tested on the fixed real setup (mock) + Duplicate in the demo sandbox.
+- No tour step: Setup is admin-only and Demo logins can't open it (the tour would
+  land on a blank page). Guide v0.2 documents both tabs.
+- **Check Setup findings still open in the real setup (need Alex's call):**
+  - Empty category **TENANTPANELS "Tenant Panel"** (active, no types — it's first in
+    the Builder's category list and leads nowhere). Deactivate it?
+  - **MON-DIR / MON-ROUTED**: 3 rules (Retainer, Flex frame material, Flex face) on
+    the answer "Flex Face" of "Top cabinet face type", which those types don't
+    offer — dead rules. Remove them?
+  - **PAN-WALL**: "Face frame material" / "Mounting frame material" (FACE_FRAME_X,
+    MOUNT_FRAME_X) are Conditional with no rule — never asked. Which answer should
+    show them (or make them Global)?
+  - 8 warnings: Field Description lines using questions the type doesn't have
+    (ADA {Q:EQUIPMENT}; WIREWAY, EMC-WALL-FRAME, FLAT-ALUM {Q:MOUNTING}; EMC PS_LOC;
+    CUT-VINYL REMOVE_EXIST / {LQ:REMOVE_DISPOSE}) — those lines are skipped.
+
+**Earlier: real setup imported from BC + checked end to end.**
 
 **Recap (latest)**
 - Alex exported the setup from BC UAT (v0.11.1 Export Setup JSON). Imported it in
@@ -331,9 +363,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
 **Next (in order)**
-1. **Setup tools**: Categories, Sign Types (Selected When, Duplicate), Decision
+1. **Setup tools** (✅ Sign Types, ✅ Check Setup): Categories, Decision
    Tree, Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo &
-   Versions, Test Category, Check Setup, Stage Checklist, Spec References
+   Versions, Test Category, Stage Checklist, Spec References
    (import images), Vinyl Colors — plus editing **per-answer print text / format**.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
@@ -357,6 +389,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### Session log (newest first)
 
+- **Oct 15, 2026 (setup tools 1)** — Setup tabs: Sign Types (edit, Selected When
+  buttons, Duplicate, live check) + Check Setup (BC checks + reachability). Found
+  open setup issues (empty Tenant Panel category, MON dead rules, PAN-WALL never-asked
+  questions, 8 template warnings). Guide v0.2.
 - **Oct 15, 2026 (deploy)** — Created the 6 `crfdf_sb*` tables (Alex ran the script
   here with device-code sign-in) and pushed the app: `ab0a4994-727d-4255-b399-efaf864c501a`.
   Darker outlines (Switchboard `--grid-line`). Role privileges deferred to the env move.

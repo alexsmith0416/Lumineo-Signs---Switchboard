@@ -1,13 +1,21 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import type { SetupData } from "../domain/types";
+import { checkSetup } from "../setup/check-setup";
 import { parseBcSetupExport, type ImportSummary } from "../setup/import-bc";
 import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
+import CheckSetup from "./setup/CheckSetup";
+import SignTypes from "./setup/SignTypes";
 
-/** Setup hub. Step 1: the one-time import from Business Central. The setup
- *  tools (Decision Tree, Show Path, Rule Matrix, Blocks, Versions…) follow. */
+type SetupTab = "overview" | "types" | "check";
+
+/** Setup hub: Overview (+ the one-time import from Business Central), Sign
+ *  Types and Check Setup. More tools (Decision Tree, Show Path, Rule Matrix,
+ *  Blocks, Versions…) join as tabs. */
 export default function SetupHome() {
+  const [tab, setTab] = useState<SetupTab>("overview");
+  const [openType, setOpenType] = useState<string | undefined>();
   const demoMode = useDemoStore((s) => s.demoMode);
   const setup = useSetupStore((s) => s.setup);
   const importSetup = useSetupStore((s) => s.importSetup);
@@ -46,8 +54,33 @@ export default function SetupHome() {
   };
 
   const types = setup?.signTypes.filter((t) => !t.isBlock) ?? [];
+  const problemCount = useMemo(() => (setup ? checkSetup(setup).filter((i) => i.severity === "error").length : 0), [setup]);
   return (
     <div className="sbp-page">
+      <div className="sbp-tabs" data-tour="setup-tabs">
+        <button type="button" className={`sbp-tab${tab === "overview" ? " sbp-tab--on" : ""}`} onClick={() => setTab("overview")}>
+          Overview
+        </button>
+        <button type="button" className={`sbp-tab${tab === "types" ? " sbp-tab--on" : ""}`} onClick={() => setTab("types")}>
+          Sign Types
+        </button>
+        <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
+          Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
+        </button>
+      </div>
+
+      {tab === "types" && <SignTypes key={openType ?? ""} initialCode={openType} />}
+      {tab === "check" && (
+        <CheckSetup
+          onOpenType={(code) => {
+            setOpenType(code);
+            setTab("types");
+          }}
+        />
+      )}
+
+      {tab === "overview" && (
+      <>
       <div className="sbp-card">
         <div className="sbp-caption">Current setup</div>
         <div className="sbp-kpis">
@@ -121,10 +154,12 @@ export default function SetupHome() {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          Categories, Sign Types, Decision Tree, Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo & Versions, Test Category, Check Setup, Stage Checklist and
-          Spec References — coming in the next build.
+          <b>Sign Types</b> and <b>Check Setup</b> are ready (tabs above). Coming next: Categories, Decision Tree (questions &amp; answers, with how each answer prints),
+          Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo &amp; Versions, Test Category, Stage Checklist and Spec References.
         </p>
       </div>
+      </>
+      )}
 
       {parsed && (
         <ConfirmDialog

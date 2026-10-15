@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SignLine, Spec } from "../domain/types";
+import { checkSetup } from "../setup/check-setup";
 import { parseBcSetupExport } from "../setup/import-bc";
 import { buildFromTemplates, buildProduction } from "./descriptions";
 import { answerQuestion, evaluate, newSignLine } from "./flow";
@@ -81,6 +82,21 @@ const { setup, summary } = present
 describe.skipIf(!setup)("real BC setup", () => {
   // The body is still collected when skipped, so nothing here may assume a setup.
   const idx = setup ? new SetupIndex(setup) : (null as unknown as SetupIndex);
+
+  // Reports everything (SB_SETUP_OUT/_check-setup.txt); fails only when a sign
+  // type can't be picked — other findings are for Setup → Check Setup.
+  it("Check Setup: every sign type can be picked", () => {
+    const issues = checkSetup(setup!);
+    if (outDir) {
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(
+        join(outDir, "_check-setup.txt"),
+        issues.map((i) => `${i.severity.toUpperCase()}  ${i.categoryCode}/${i.signTypeCode}  ${i.questionCode}\n  ${i.text}\n  → ${i.fix}`).join("\n\n") || "No issues.",
+      );
+    }
+    const unreachable = issues.filter((i) => i.severity === "error" && i.signTypeCode && /Selected When|nobody can pick/.test(i.text));
+    expect(unreachable.map((i) => `${i.signTypeCode}: ${i.text}`)).toEqual([]);
+  });
 
   it("imports everything", () => {
     expect(summary!.categories).toBeGreaterThan(0);
