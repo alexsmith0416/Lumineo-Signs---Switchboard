@@ -196,6 +196,10 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
   const categories = setup.categories.filter((c) => !only?.categoryCode || c.code === only.categoryCode);
   for (const c of categories) {
     if (!c.active) continue;
+    const twin = setup.categories.find((o) => o.active && o.code < c.code && c.codePrefix && o.codePrefix.trim().toUpperCase() === c.codePrefix.trim().toUpperCase());
+    if (twin && !only?.signTypeCode) {
+      issues.push({ severity: "warning", categoryCode: c.code, signTypeCode: "", questionCode: "", text: `Its Spec Code prefix (${c.codePrefix}) is the same as ${twin.description}'s, so their Spec Codes can look alike.`, fix: "Give one of them its own prefix on the Categories tab." });
+    }
     const types = idx.typesOfCategory(c.code);
     if (types.length === 0) {
       if (!only?.signTypeCode) {

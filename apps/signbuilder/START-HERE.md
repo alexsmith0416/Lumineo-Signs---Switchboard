@@ -78,6 +78,7 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             category-ops.ts — categories: add / edit / move / delete, new type from a copy
              template-ops.ts — Field / Extended template lines: edits, line problems,
                               replacement suggestions, sampleSign() for the preview
              item-match.ts, item-ops.ts — BC item matching + links, clean wording
@@ -85,9 +86,9 @@ services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv
              dv-write.ts (retry policy — from Switchboard), current-user.ts, print.ts
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
-             Projects, Library, SetupHome (tabs: Overview, Sign Types, Questions, Rules,
+             Projects, Library, SetupHome (tabs: Overview, Categories, Sign Types, Questions, Rules,
              Descriptions, Materials & Items, Check Setup + ↶ Undo —
-             screens/setup/SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup,
+             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -296,9 +297,22 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Descriptions (Field / Extended template editor).**
+**Last session: Oct 15, 2026 — Setup: Categories (after Descriptions).**
 
-**Recap (latest — Descriptions)**
+**Recap (latest — Categories)**
+- **Categories tab** (`screens/setup/Categories.tsx`, ops in `setup/category-ops.ts`):
+  list in offer order with ↑↓ (sort orders rewritten 10, 20…), name / Spec Code
+  prefix (CommitInput) / Active; + Add (code fixed forever — sign lines store
+  `categoryCode`; starts inactive); **+ New sign type…** = `duplicateSignType` from
+  any type into this category (inactive, no Selected When) → opens on Sign Types;
+  Delete only when no sign types (incl. blocks), removes its checklist lines.
+- Check Setup: new warning for two active categories sharing a prefix; category
+  issues get **Open category** (`onOpenCategory` → Categories with `initialCode`).
+- Tests: `setup/category-ops.test.ts` (4); all 66 pass incl. the real setup (its
+  prefixes are all distinct). Guide v0.6. ⚠️ Not browser-tested (dev server not
+  restarted — see below).
+
+**Earlier the same day: Descriptions**
 - Alex re-imported the `_fixed.json` in the live app (Oct 15) — **the live setup is
   now the master; don't regenerate/re-import the file over Alex's edits.**
 - **Descriptions tab** (`screens/setup/Descriptions.tsx`, ops in
@@ -459,7 +473,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Next (in order)**
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
-   ✅ Descriptions (template editor); next Categories,
+   ✅ Descriptions (template editor), ✅ Categories; next
    saved Versions (per document), Show Path / Test Category, Question Blocks,
    Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
@@ -483,6 +497,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (categories)** — Setup → Categories (add / edit / reorder /
+  activate / delete-when-empty, new sign type from a copy), prefix-clash check.
+  Guide v0.6.
 - **Oct 15, 2026 (descriptions)** — Setup → Descriptions: Field / Extended template
   editor (lines, conditions, token insert, reorder, copy from another type), line
   problems with quick fixes (shared with Check Setup), live preview on a sample sign.

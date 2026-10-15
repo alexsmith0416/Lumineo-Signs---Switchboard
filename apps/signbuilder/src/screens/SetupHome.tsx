@@ -5,6 +5,7 @@ import { checkSetup } from "../setup/check-setup";
 import { parseBcSetupExport, type ImportSummary } from "../setup/import-bc";
 import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
+import Categories from "./setup/Categories";
 import CheckSetup from "./setup/CheckSetup";
 import DecisionTree from "./setup/DecisionTree";
 import Descriptions from "./setup/Descriptions";
@@ -12,15 +13,16 @@ import MaterialsItems from "./setup/MaterialsItems";
 import RuleMatrix from "./setup/RuleMatrix";
 import SignTypes from "./setup/SignTypes";
 
-type SetupTab = "overview" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check";
+type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check";
 
-/** Setup hub: Overview (+ the one-time import from Business Central), Sign
- *  Types, Questions (decision tree), Rules (matrix), Descriptions (Field /
- *  Extended templates), Materials & Items and
- *  Check Setup. Undo steps back through this session's changes. */
+/** Setup hub: Overview (+ the one-time import from Business Central),
+ *  Categories, Sign Types, Questions (decision tree), Rules (matrix),
+ *  Descriptions (Field / Extended templates), Materials & Items and Check
+ *  Setup. Undo steps back through this session's changes. */
 export default function SetupHome() {
   const [tab, setTab] = useState<SetupTab>("overview");
   const [openType, setOpenType] = useState<string | undefined>();
+  const [openCategory, setOpenCategory] = useState<string | undefined>();
   // Shared by Questions and Rules, so switching tabs keeps your place.
   const [typeCode, setTypeCode] = useState("");
   const [trigger, setTrigger] = useState("");
@@ -73,6 +75,9 @@ export default function SetupHome() {
         <button type="button" className={`sbp-tab${tab === "overview" ? " sbp-tab--on" : ""}`} onClick={() => setTab("overview")}>
           Overview
         </button>
+        <button type="button" className={`sbp-tab${tab === "categories" ? " sbp-tab--on" : ""}`} onClick={() => setTab("categories")}>
+          Categories
+        </button>
         <button type="button" className={`sbp-tab${tab === "types" ? " sbp-tab--on" : ""}`} onClick={() => setTab("types")}>
           Sign Types
         </button>
@@ -104,6 +109,16 @@ export default function SetupHome() {
         </button>
       </div>
 
+      {tab === "categories" && (
+        <Categories
+          key={openCategory ?? ""}
+          initialCode={openCategory}
+          onOpenType={(code) => {
+            setOpenType(code);
+            setTab("types");
+          }}
+        />
+      )}
       {tab === "types" && <SignTypes key={openType ?? ""} initialCode={openType} />}
       {tab === "questions" && (
         <DecisionTree
@@ -135,6 +150,10 @@ export default function SetupHome() {
       {tab === "materials" && <MaterialsItems />}
       {tab === "check" && (
         <CheckSetup
+          onOpenCategory={(code) => {
+            setOpenCategory(code);
+            setTab("categories");
+          }}
           onOpenType={(code, area) => {
             if (area === "descriptions") {
               setTypeCode(code);
@@ -222,8 +241,8 @@ export default function SetupHome() {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b> and <b>Check Setup</b> are ready (tabs above). Coming
-          next: Categories, Saved Versions, Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
+          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b> and <b>Check Setup</b> are ready (tabs above). Coming
+          next: Saved Versions, Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
         </p>
       </div>
       </>

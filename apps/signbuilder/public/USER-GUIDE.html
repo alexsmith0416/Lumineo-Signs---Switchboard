@@ -373,6 +373,13 @@
   <ul>
     <li><strong>Overview</strong> — what's in the setup, and the one-time <strong>Import from Business Central</strong>
     (exit the demo first — the import isn't available in the sandbox).</li>
+    <li><strong>Categories</strong> — what people pick first when they add a sign (Channel Letters, Monument…), in the
+    order they're offered; <strong>↑ ↓</strong> reorders them. Click one to change its name, its <strong>Spec Code
+    prefix</strong> (the first part of every Spec Code in it — changing it changes the code of signs already spec'd the next
+    time they're opened) and whether it's <strong>Active</strong>. <strong>+ Add</strong> makes a new category (it starts
+    inactive); <strong>+ New sign type…</strong> creates a sign type in it as a copy of any existing one — questions, answers,
+    rules and descriptions — and opens it on Sign Types to finish. <strong>Delete</strong> works only on a category with no
+    sign types (move or deactivate them first).</li>
     <li><strong>Sign Types</strong> — pick a category, then a sign type. Edit its description, the name printed in the
     descriptions (<code>{TYPE}</code>), its Spec Code segment, sort order and whether it's <strong>Active</strong>.
     <strong>Selected when</strong> shows the category's first questions (e.g. <em>Lighted?</em>,
@@ -426,11 +433,11 @@
     <li><strong>Check Setup</strong> — every problem in the setup, by category and sign type, with what to do about it.
     <strong>Problems</strong> stop something working (a sign type nobody can pick, a question that's never asked);
     <strong>Warnings</strong> are worth a look (a Field Description line that gets skipped). The red number on the tab is
-    the problem count. <strong>Open sign type</strong> jumps to the sign type to fix it; <strong>Open its descriptions</strong> jumps to the
+    the problem count. <strong>Open sign type</strong> / <strong>Open category</strong> jump to it to fix it; <strong>Open its descriptions</strong> jumps to the
     Descriptions tab for description warnings.</li>
     <li><strong>Materials &amp; Items</strong> — links each material answer to its <strong>BC item</strong> (Item List). The same wording is the same part, so one link covers every sign type that uses it. <strong>Pick one</strong> rows have several equally good items (sheet sizes, or an angle whose answer doesn't give the wall thickness) — choose from the list. <strong>Show part numbers in the descriptions</strong> turns the <em>(#20050)</em> part numbers on for everyone. <strong>BC items no answer offers yet</strong> lists items of the kinds of material the answers use; <strong>Add as answer…</strong> words it like the existing answers (edit it if you like) and adds it, linked, to the questions you tick.</li>
   </ul>
-  <p>Still to come: Categories, saved Versions, Show Path / Test Category, Question Blocks,
+  <p>Still to come: saved Versions, Show Path / Test Category, Question Blocks,
   Copy/Paste and the rest — see What's New.</p>
 
   <h3>5.12 Demo &amp; guided tour</h3>
@@ -540,6 +547,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Setup: Categories</strong> — add, rename, reorder and switch categories on or off, set each one's Spec Code prefix, and start a new sign type in a category from a copy of any existing one. Check Setup warns when two categories share a prefix and its category problems open straight to the Categories tab.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Descriptions</strong> — edit the Field Description sentences of every sign type: wording, answer boxes, when each line prints, paragraphs and order, with a live preview on a sample sign whose answers you can change. Lines that use a question the sign type doesn't have are marked with a one-click fix, and Check Setup's description warnings open straight to them.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Questions, Rules &amp; Undo</strong> — edit every question, its answers (order, wording, how each prints, its own Production line, BC item) and its rules (shown when, answers offered, defaults). The Rules tab has the Shown-when grid and a Defaults grid (e.g. Face material → Face frame material) that copies to the other sign types. ↶ Undo steps back through this session's changes. Also: the Parking post is now the 2” x 2” x .125” square tube we stock (#25035).</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Materials match what we stock</strong> — 1”x1”, 3”x3” and 2”x1.5” angles are now the .125” wall we stock (#20005, #20059, #20030), .375” matte clear plex is gone, and the 2” square tube is linked (#25035).</td></tr>
@@ -560,7 +568,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v0.5 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v0.6 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>
