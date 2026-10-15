@@ -51,7 +51,7 @@ History (why it looks the way it does):
 | This file (the map + session log) | `apps/signbuilder/START-HERE.md` |
 | Quick overview | `apps/signbuilder/README.md` |
 | Source | `apps/signbuilder/src/` |
-| Deploy config (appId, env, buildPath) | `apps/signbuilder/power.config.json` (appId blank until `pac code init`) |
+| Deploy config (appId, env, buildPath) | `apps/signbuilder/power.config.json` (appId `ab0a4994-727d-4255-b399-efaf864c501a`) |
 | Dataverse table scripts | `apps/signbuilder/scripts/*.ps1` |
 | **User guide** (in-app Help + send to users — keep updated every change) | `apps/signbuilder/public/USER-GUIDE.html` |
 | Interactive tour | `apps/signbuilder/src/components/DemoTutorial.tsx` |
@@ -106,7 +106,7 @@ generated/   Dataverse connector client (copied from Switchboard; same connector
   open apps → Sandbox/Production env before rollout). Tenant `fe0182fa-d183-46ab-8493-9e8ea9c3d0b8`.
 - Connector: **Microsoft Dataverse** (`shared_commondataserviceforapps`), plus
   SharePoint (JobFiles) reserved for photos later.
-- Tables (prefix `crfdf_`, created by `scripts/create-signbuilder-tables.ps1` — ⏳ **not run yet**):
+- Tables (prefix `crfdf_`, created by `scripts/create-signbuilder-tables.ps1` — ✅ **created Oct 15, 2026**; entity sets `crfdf_sbsetupdocs`, `crfdf_sbreferences`, `crfdf_sbversions`, `crfdf_sbprojects`, `crfdf_sbspecs`, `crfdf_sbsignlines`):
 
 | Table (entity set) | What | Key columns |
 |---|---|---|
@@ -208,10 +208,12 @@ $env:NODE_OPTIONS="--use-system-ca"; pac code push
 
 - `--use-system-ca` avoids `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
 - pac profile **`LumineoFoundation-Dev`** (asmith@lumineosigns.com) → `pac auth list`.
-- **First deploy only:** run `scripts/create-signbuilder-tables.ps1`, add role
-  privileges, `pac code init` here (fills `appId` in `power.config.json`), build,
-  push, then **Setup → Import** the BC export. Record the appId + play link below.
-- Play link (fill in after first push): `https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/a/<appId>?hideNavBar=true`
+- **First deploy — done Oct 15, 2026:** tables created, `pac code push` created the
+  app (no `pac code init` needed — the config was already filled in). **Role
+  privileges NOT added yet** — only admins can open apps in this Developer env; add
+  Read/Create/Write/Delete/Append/AppendTo on the 6 `crfdf_sb*` tables to "Lumineo
+  Scheduler User" when moving to a Sandbox/Production env.
+- Play link: `https://apps.powerapps.com/play/e/484cdd3c-4409-e741-bbd5-7c210e00310e/app/ab0a4994-727d-4255-b399-efaf864c501a?tenantId=fe0182fa-d183-46ab-8493-9e8ea9c3d0b8`
 
 ### Git workflow
 - Branch: **`claude/sign-builder-app`** (this worktree). PR base / origin HEAD:
@@ -322,8 +324,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - Added this START-HERE, the User Guide (v0.1), demo sandbox + guided tour.
 
 **Not done yet / waiting on Alex**
-- ⏳ Run `scripts/create-signbuilder-tables.ps1` (needs Alex's OK — writes to the env).
-- ⏳ First deploy (`pac code init` → build → `pac code push`).
+- ✅ Tables created (Oct 15).
+- ✅ First deploy (Oct 15) — app `ab0a4994-…`.
+- ⏳ **Setup → Import `SignBuilderSetup_20261015_fixed.json` in the deployed app** (live Dataverse is empty until then).
 - ✅ BC v0.11.1 published to UAT, setup exported and imported (Oct 15).
 - ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
@@ -341,8 +344,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
    mobile nav drawer, Switchboard App Launcher tile.
 
 **Suggestions**
-- Run the table script next — the real setup is in hand, so the first deploy
-  can be tested on real data straight away.
+- Import the fixed setup in the deployed app, spec a sign or two, then start
+  the Setup tools (Check Setup + Sign Types first).
 - Build **Check Setup** early in the Setup tools: it would have flagged the
   unreachable sign types automatically (the real-setup check is the start of it).
 - Undo/Versions: store per document (a whole-setup copy is ~2 MB, over the
@@ -354,6 +357,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### Session log (newest first)
 
+- **Oct 15, 2026 (deploy)** — Created the 6 `crfdf_sb*` tables (Alex ran the script
+  here with device-code sign-in) and pushed the app: `ab0a4994-727d-4255-b399-efaf864c501a`.
+  Darker outlines (Switchboard `--grid-line`). Role privileges deferred to the env move.
 - **Oct 15, 2026 (later)** — Imported the real BC setup export (11 categories,
   32 types, 1,348 questions). Mock images → IndexedDB. Added the real-setup
   check (28/32 types passed). Fixed the setup (Monument BUILD answers, Wall

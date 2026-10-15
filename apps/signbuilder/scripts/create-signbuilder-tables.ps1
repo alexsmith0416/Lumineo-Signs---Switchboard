@@ -203,4 +203,10 @@ try {
   Write-Host "Published all customizations." -ForegroundColor Green
 } catch { Write-Host "Publish step skipped." -ForegroundColor Yellow }
 
+# Read-only check: the entity set names services/repo.ts uses.
+foreach ($t in 'crfdf_sbsetupdoc','crfdf_sbreference','crfdf_sbversion','crfdf_sbproject','crfdf_sbspec','crfdf_sbsignline') {
+  $set = (Invoke-RestMethod -Headers $headers -Uri "$base/EntityDefinitions(LogicalName='$t')?`$select=EntitySetName").EntitySetName
+  Write-Host ("  {0} -> {1}" -f $t, $set)
+}
+
 Write-Host "Done." -ForegroundColor Cyan
