@@ -5,7 +5,7 @@ import { useSetupStore } from "../../store/setup-store";
 /** Setup → Check Setup: every problem in the setup, worst first, grouped by
  *  category and sign type. Runs on the current setup each time it's opened or
  *  changed. */
-export default function CheckSetup({ onOpenType }: { onOpenType: (signTypeCode: string) => void }) {
+export default function CheckSetup({ onOpenType }: { onOpenType: (signTypeCode: string, area?: SetupIssue["area"]) => void }) {
   const setup = useSetupStore((s) => s.setup);
   const [categoryCode, setCategoryCode] = useState("");
   const [errorsOnly, setErrorsOnly] = useState(false);
@@ -79,7 +79,12 @@ export default function CheckSetup({ onOpenType }: { onOpenType: (signTypeCode: 
                 )}
               </div>
               <div className="sbp-spacer" />
-              {type && (
+              {type && list.some((i) => i.area === "descriptions") && (
+                <button type="button" className="btn-secondary" onClick={() => onOpenType(type, "descriptions")}>
+                  Open its descriptions
+                </button>
+              )}
+              {type && list.some((i) => !i.area) && (
                 <button type="button" className="btn-secondary" onClick={() => onOpenType(type)}>
                   Open sign type
                 </button>

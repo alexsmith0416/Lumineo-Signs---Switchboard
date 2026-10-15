@@ -7,14 +7,16 @@ import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
 import CheckSetup from "./setup/CheckSetup";
 import DecisionTree from "./setup/DecisionTree";
+import Descriptions from "./setup/Descriptions";
 import MaterialsItems from "./setup/MaterialsItems";
 import RuleMatrix from "./setup/RuleMatrix";
 import SignTypes from "./setup/SignTypes";
 
-type SetupTab = "overview" | "types" | "questions" | "rules" | "materials" | "check";
+type SetupTab = "overview" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check";
 
 /** Setup hub: Overview (+ the one-time import from Business Central), Sign
- *  Types, Questions (decision tree), Rules (matrix), Materials & Items and
+ *  Types, Questions (decision tree), Rules (matrix), Descriptions (Field /
+ *  Extended templates), Materials & Items and
  *  Check Setup. Undo steps back through this session's changes. */
 export default function SetupHome() {
   const [tab, setTab] = useState<SetupTab>("overview");
@@ -80,6 +82,9 @@ export default function SetupHome() {
         <button type="button" className={`sbp-tab${tab === "rules" ? " sbp-tab--on" : ""}`} onClick={() => setTab("rules")}>
           Rules
         </button>
+        <button type="button" className={`sbp-tab${tab === "descriptions" ? " sbp-tab--on" : ""}`} onClick={() => setTab("descriptions")}>
+          Descriptions
+        </button>
         <button type="button" className={`sbp-tab${tab === "materials" ? " sbp-tab--on" : ""}`} onClick={() => setTab("materials")}>
           Materials &amp; Items
         </button>
@@ -126,10 +131,16 @@ export default function SetupHome() {
           setMode={setRuleMode}
         />
       )}
+      {tab === "descriptions" && <Descriptions typeCode={typeCode} setTypeCode={setTypeCode} />}
       {tab === "materials" && <MaterialsItems />}
       {tab === "check" && (
         <CheckSetup
-          onOpenType={(code) => {
+          onOpenType={(code, area) => {
+            if (area === "descriptions") {
+              setTypeCode(code);
+              setTab("descriptions");
+              return;
+            }
             setOpenType(code);
             setTab("types");
           }}
@@ -211,8 +222,8 @@ export default function SetupHome() {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          <b>Sign Types</b> and <b>Check Setup</b> are ready (tabs above). Coming next: Categories, Decision Tree (questions &amp; answers, with how each answer prints),
-          Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo &amp; Versions, Test Category, Stage Checklist and Spec References.
+          <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b> and <b>Check Setup</b> are ready (tabs above). Coming
+          next: Categories, Saved Versions, Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
         </p>
       </div>
       </>

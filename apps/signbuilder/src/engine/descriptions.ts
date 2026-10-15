@@ -7,7 +7,7 @@
 //              answer's own format / print text.
 //  Field / Extended: the sign type's sentence templates.
 // Several signs on one spec each get their own "SIGN n OF m" block.
-import type { OutputType, Question, SignLine, Spec } from "../domain/types";
+import type { OutputType, Question, SignLine, Spec, TemplateLine } from "../domain/types";
 import type { SetupIndex } from "./setup-index";
 import { evaluate, printedAnswer } from "./flow";
 import { conditionMet, isOpenDesignValue, isPendingValue, isSurveyValue, vinylLabel } from "./values";
@@ -154,14 +154,20 @@ function productionLine(idx: SetupIndex, spec: Spec, line: SignLine, q: Question
 function templateForSign(idx: SetupIndex, spec: Spec, line: SignLine, outputType: OutputType, pn: boolean): string {
   let out = outputType === "field" ? pendingBlock(idx, line, false) : "";
   for (const t of idx.templates(line.signTypeCode, outputType)) {
-    if (t.conditionQuestion && !conditionMet(printedAnswer(line, t.conditionQuestion), t.conditionValues)) continue;
-    if (t.andConditionQuestion && !conditionMet(printedAnswer(line, t.andConditionQuestion), t.andConditionValues)) continue;
-    const sentence = resolveTemplate(idx, spec, line, t.text, pn);
+    const sentence = templateSentence(idx, spec, line, t, pn);
     if (sentence === null) continue;
     if (out !== "") out += t.newParagraph ? NL + NL : " ";
     out += sentence;
   }
   return out;
+}
+
+/** One template line for a sign: its sentence, or null when it doesn't print
+ *  (its conditions aren't met, or a token is blank). */
+export function templateSentence(idx: SetupIndex, spec: Spec, line: SignLine, t: TemplateLine, pn = false): string | null {
+  if (t.conditionQuestion && !conditionMet(printedAnswer(line, t.conditionQuestion), t.conditionValues)) return null;
+  if (t.andConditionQuestion && !conditionMet(printedAnswer(line, t.andConditionQuestion), t.andConditionValues)) return null;
+  return resolveTemplate(idx, spec, line, t.text, pn);
 }
 
 /** Replaces every {TOKEN}; null (skip the sentence) when any token is empty. */

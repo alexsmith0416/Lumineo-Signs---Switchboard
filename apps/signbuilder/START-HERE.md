@@ -78,14 +78,16 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             template-ops.ts — Field / Extended template lines: edits, line problems,
+                              replacement suggestions, sampleSign() for the preview
              item-match.ts, item-ops.ts — BC item matching + links, clean wording
 services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv* writes),
              dv-write.ts (retry policy — from Switchboard), current-user.ts, print.ts
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
              Projects, Library, SetupHome (tabs: Overview, Sign Types, Questions, Rules,
-             Materials & Items, Check Setup + ↶ Undo —
-             screens/setup/SignTypes, DecisionTree, RuleMatrix, MaterialsItems, CheckSetup,
+             Descriptions, Materials & Items, Check Setup + ↶ Undo —
+             screens/setup/SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -294,9 +296,42 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Questions (decision tree), Rules (show + defaults matrix), Undo; BC item links.**
+**Last session: Oct 15, 2026 — Setup: Descriptions (Field / Extended template editor).**
 
-**Recap (latest — Questions / Rules / Undo)**
+**Recap (latest — Descriptions)**
+- Alex re-imported the `_fixed.json` in the live app (Oct 15) — **the live setup is
+  now the master; don't regenerate/re-import the file over Alex's edits.**
+- **Descriptions tab** (`screens/setup/Descriptions.tsx`, ops in
+  `setup/template-ops.ts`): Field / Extended toggle; lines in order with "When …"
+  in plain words, ¶ / "not printed" tags and the {…} tokens as chips; click to edit:
+  sentence + **Insert an answer at the cursor** ({Q:}/{LQ:} + QTY/TYPE/SIGN/DESIGNREF/JOB),
+  Print only when / …and when (question + is answered / is / is not + answer ticks),
+  new paragraph, ↑↓, + Add line below, Delete. Lines numbered 10000 apart; inserts
+  go halfway, renumber when there's no room. **Copy from another sign type…**
+  replaces the lines.
+- Problems per line (`templateLineProblems`, also used by Check Setup — one source):
+  missing question (with **Use instead:** suggestions / any question / Delete the
+  line), unknown token, condition answer that isn't one of the answers (new —
+  found **PP-WOOD** "Base plate / anchor bolts"). Check Setup issues carry
+  `area: "descriptions"` → **Open its descriptions** button.
+- **Preview**: `sampleSign()` answers every question that comes up (default /
+  first offered answer / "[Label]"), **Try other answers** pickers for the
+  questions the template looks at; Part #s switch. `templateSentence()` exported
+  from descriptions.ts (per-line result).
+- Tests: `setup/template-ops.test.ts` (4); all 62 pass incl. the real setup. Real
+  setup: 9 description warnings (the 8 known + PP-WOOD).
+- ⚠️ **Not browser-tested**: the dev server was stopped by Claude Code for low
+  memory and not restarted (typecheck + build + unit tests only). Try it first
+  thing next session.
+- No tour step (Setup is admin-only — see below). Guide v0.5.
+- Suggested fixes for Alex (in the app): ADA "Equipment" line → delete; WIREWAY +
+  EMC-WALL-FRAME "Mounting: {Q:MOUNTING}" → delete (their Hardware line already
+  prints); FLAT-ALUM → Use instead **Mounting hardware**; EMC-CAB + EMC-WALL-FRAME
+  PS_LOC line → delete (or add a power-supply location question); CUT-VINYL
+  "Remove existing sign…" → delete (the REMOVE_OLD line covers it); PP-WOOD → tick
+  the right Installation method answer.
+
+**Earlier the same day: Questions / Rules / Undo**
 - **Questions tab** (`DecisionTree.tsx`): type picker, questions by section with
   plain-English "shown when" + if/type/default tags; editor: every question field,
   answers (↑↓, rename → propagates to the type's rules/defaults/conditions/Selected
@@ -417,14 +452,14 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Not done yet / waiting on Alex**
 - ✅ Tables created (Oct 15).
 - ✅ First deploy (Oct 15) — app `ab0a4994-…`.
-- ⏳ **Setup → Import `SignBuilderSetup_20261015_fixed.json` in the deployed app** (live Dataverse is empty until then).
+- ✅ Fixed setup imported in the deployed app (Oct 15) — edit it there from now on.
 - ✅ BC v0.11.1 published to UAT, setup exported and imported (Oct 15).
 - ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
 **Next (in order)**
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
-   next **Field Description template editor** (fixes the 8 warnings), Categories,
+   ✅ Descriptions (template editor); next Categories,
    saved Versions (per document), Show Path / Test Category, Question Blocks,
    Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
@@ -448,6 +483,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (descriptions)** — Setup → Descriptions: Field / Extended template
+  editor (lines, conditions, token insert, reorder, copy from another type), line
+  problems with quick fixes (shared with Check Setup), live preview on a sample sign.
+  Guide v0.5.
 - **Oct 15, 2026 (questions & rules)** — Setup → Questions (decision tree editor:
   details, answers incl. print text / own line / BC item, rules incl. defaults),
   Rules (show grid + defaults grid with copy to other types), session Undo. Parking

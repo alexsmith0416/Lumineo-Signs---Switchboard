@@ -6,6 +6,7 @@ import type { Question, SetupData, SignType } from "../domain/types";
 import { answerQuestion, evaluate, newSignLine } from "../engine/flow";
 import { SetupIndex } from "../engine/setup-index";
 import { isPendingValue } from "../engine/values";
+import { templateLineProblems } from "./template-ops";
 
 export type IssueSeverity = "error" | "warning";
 
@@ -16,6 +17,8 @@ export interface SetupIssue {
   questionCode: string;
   text: string;
   fix: string;
+  /** Which Setup tab fixes it (default: Sign Types). */
+  area?: "descriptions";
 }
 
 const isList = (q: Question) => q.answerType === "option" || q.answerType === "yesno";
@@ -39,8 +42,8 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
   const optionExists = (typeCode: string, questionCode: string, value: string) =>
     !!idx.option(typeCode, questionCode, value) || isPendingValue(value);
 
-  const add = (severity: IssueSeverity, t: SignType, questionCode: string, text: string, fix: string) =>
-    issues.push({ severity, categoryCode: t.categoryCode, signTypeCode: t.code, questionCode, text, fix });
+  const add = (severity: IssueSeverity, t: SignType, questionCode: string, text: string, fix: string, area?: SetupIssue["area"]) =>
+    issues.push({ severity, categoryCode: t.categoryCode, signTypeCode: t.code, questionCode, text, fix, ...(area ? { area } : {}) });
 
   // Typed answers are allowed on some questions, so a rule on an answer that
   // isn't in the list is only a warning there.
@@ -111,16 +114,11 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
         add("warning", t, q.code, `The default of "${q.prompt}" (${q.defaultValue}) is not one of its answers.`, "Change the default or add it as an answer.");
       }
     }
-    // Field Description template lines.
+    // Field / Extended Description template lines.
     for (const line of setup.templates.filter((x) => x.signTypeCode === t.code)) {
-      if (line.conditionQuestion && !idx.question(t.code, line.conditionQuestion)) {
-        add("warning", t, line.conditionQuestion, `A Field Description line depends on question ${line.conditionQuestion}, which this sign type doesn't have: "${line.text}"`, "Fix the line in the Field Description template.");
-      }
-      for (const m of line.text.matchAll(/\{(L?Q):([^}]*)\}/gi)) {
-        const code = m[2]!.toUpperCase();
-        if (!idx.question(t.code, code)) {
-          add("warning", t, "", `A Field Description line uses {${m[1]!.toUpperCase()}:${code}}, a question this sign type doesn't have: "${line.text}"`, "Fix the line in the Field Description template (the line is skipped as it is).");
-        }
+      const where = line.outputType === "extended" ? "Extended" : "Field";
+      for (const p of templateLineProblems(idx, line)) {
+        add("warning", t, p.kind === "missingQuestion" ? "" : p.code, `A ${where} Description line ${p.text} "${line.text}"`, "Fix the line on the Descriptions tab.", "descriptions");
       }
     }
     for (const rule of idx.referenceRules(t.code)) {

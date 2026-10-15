@@ -906,3 +906,89 @@
 .sbp-undo {
   align-self: center;
 }
+
+/* ---- Descriptions (Field / Extended templates) ---------------------------- */
+
+.sbp-tpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sbp-tpl {
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-raised);
+}
+
+.sbp-tpl--on {
+  border-color: var(--accent-brand);
+  box-shadow: 0 0 0 1px var(--accent-brand);
+}
+
+.sbp-tpl--bad {
+  border-left: 4px solid var(--status-amber);
+}
+
+.sbp-tpl__head {
+  cursor: pointer;
+}
+
+.sbp-tpl__when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.sbp-tpl__text {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.sbp-tpl__tok {
+  display: inline-block;
+  padding: 0 6px;
+  margin: 0 1px;
+  border-radius: 5px;
+  background: var(--accent-brand-soft);
+  border: 1px solid var(--accent-brand);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.sbp-tpl__tok--fixed {
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+
+.sbp-tpl__tok--bad {
+  background: var(--status-red-soft);
+  border-color: var(--status-red);
+}
+
+.sbp-tpl__editor {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.sbp-tpl__cond {
+  margin-top: 10px;
+}
+
+.sbp-tpl-preview {
+  position: sticky;
+  top: 10px;
+}
+
+.sbp-tpl-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
