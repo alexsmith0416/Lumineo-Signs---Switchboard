@@ -221,6 +221,27 @@ export interface SetupData {
   settings: SetupSettings;
 }
 
+/** APP: a saved copy of the whole setup (Setup → Versions). */
+export interface SetupVersion {
+  id: string;
+  label: string;
+  note: string;
+  /** Saved by hand, or automatically before an import / a restore. */
+  kind: "manual" | "auto";
+  createdAt: string;
+  createdBy: string;
+  stats: SetupStats;
+}
+
+export interface SetupStats {
+  categories: number;
+  signTypes: number;
+  questions: number;
+  answers: number;
+  rules: number;
+  templates: number;
+}
+
 // ---------------------------------------------------------------------------
 // Specs
 // ---------------------------------------------------------------------------

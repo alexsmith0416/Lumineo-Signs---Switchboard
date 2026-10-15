@@ -7,14 +7,16 @@
  *    (scripts/create-signbuilder-tables.ps1).
  *
  * The setup is stored as JSON documents — "core" plus one "type:<CODE>" per
- * sign type or question block — so editing a sign type is one write, and an
- * undo step / version is just a copy of a document.
+ * sign type or question block — so editing a sign type is one write, and a
+ * saved version is a copy of the documents (one row each — a whole setup is
+ * ~2 MB, over Dataverse's 1 MB column limit) plus a header row.
  */
 import { DEMO_SETUP } from "../data/demo-setup";
 import type {
   DetailLevel,
   Project,
   SetupData,
+  SetupVersion,
   SignLine,
   Spec,
   SpecPurpose,
@@ -44,6 +46,12 @@ export interface SignBuilderRepo {
   loadProjects(): Promise<Project[]>;
   saveProject(project: Project): Promise<void>;
   deleteProject(id: string): Promise<void>;
+  /** Saved setup versions, newest first (headers only). */
+  listVersions(): Promise<SetupVersion[]>;
+  /** Saves a copy of the setup; `onProgress(done, total)` while writing. */
+  saveVersion(header: SetupVersion, setup: SetupData, onProgress?: (done: number, total: number) => void): Promise<void>;
+  loadVersion(id: string): Promise<SetupData>;
+  deleteVersion(id: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,15 +153,22 @@ type RefImages = Pick<SpecReference, "thumbnail" | "fullImage">;
  *  ~10 MB, more than localStorage holds. */
 const IMAGE_DB = "signbuilder.mock.images";
 
+/** …and saved versions in their own IndexedDB (2 MB each). */
+const VERSION_DB = "signbuilder.mock.versions";
+
 function imageStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest | void): Promise<T | undefined> {
+  return idbStore(IMAGE_DB, "images", mode, fn);
+}
+
+function idbStore<T>(dbName: string, storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest | void): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
-    const open = indexedDB.open(IMAGE_DB, 1);
-    open.onupgradeneeded = () => open.result.createObjectStore("images");
+    const open = indexedDB.open(dbName, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(storeName);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const db = open.result;
-      const tx = db.transaction("images", mode);
-      const req = fn(tx.objectStore("images"));
+      const tx = db.transaction(storeName, mode);
+      const req = fn(tx.objectStore(storeName));
       tx.oncomplete = () => {
         db.close();
         resolve(req ? (req.result as T) : undefined);
@@ -205,6 +220,10 @@ export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: Mock
     return refs.map(stripImages);
   };
   const delay = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 40));
+  // Versions: IndexedDB when persistent, else memory (the demo sandbox).
+  type StoredVersion = { header: SetupVersion; docs: [string, string][] };
+  const memVersions = new Map<string, StoredVersion>();
+  const versionStore = <T,>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest | void) => idbStore<T>(VERSION_DB, "versions", mode, fn);
   const upsert = <T extends { id: string }>(list: T[], item: T) => {
     const i = list.findIndex((x) => x.id === item.id);
     if (i >= 0) list[i] = item;
@@ -288,6 +307,27 @@ export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: Mock
       save();
       return delay(undefined);
     },
+    async listVersions() {
+      const all = persistent ? ((await versionStore<StoredVersion[]>("readonly", (st) => st.getAll())) ?? []) : [...memVersions.values()];
+      return delay(all.map((v) => v.header).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    },
+    async saveVersion(header, setup, onProgress) {
+      const v: StoredVersion = { header, docs: [...setupToDocs(setup)] };
+      if (persistent) await versionStore("readwrite", (st) => st.put(v, header.id));
+      else memVersions.set(header.id, v);
+      onProgress?.(v.docs.length, v.docs.length);
+      return delay(undefined);
+    },
+    async loadVersion(id) {
+      const v = persistent ? await versionStore<StoredVersion>("readonly", (st) => st.get(id)) : memVersions.get(id);
+      if (!v) throw new Error("That version no longer exists.");
+      return delay(docsToSetup(new Map(v.docs)));
+    },
+    async deleteVersion(id) {
+      if (persistent) await versionStore("readwrite", (st) => st.delete(id));
+      else memVersions.delete(id);
+      return delay(undefined);
+    },
   };
 }
 
@@ -297,6 +337,7 @@ export function createMockRepo(storageKey: string | null = MOCK_KEY, seed?: Mock
 
 const SET = {
   doc: "crfdf_sbsetupdocs",
+  version: "crfdf_sbversions",
   reference: "crfdf_sbreferences",
   project: "crfdf_sbprojects",
   spec: "crfdf_sbspecs",
@@ -506,6 +547,50 @@ function createLiveRepo(): SignBuilderRepo {
     async deleteProject(id) {
       await dvDelete(SET.project, id);
       known.delete(id);
+    },
+    // Versions: rows with Scope "v:<id>" — Kind 1 = one setup document (Name = its
+    // key), Kind 0 = the header (written last, so a half-saved version never lists).
+    async listVersions() {
+      const rows = await listAll(SET.version, { select: "crfdf_json", filter: "crfdf_kind eq 0" });
+      const out: SetupVersion[] = [];
+      for (const r of rows) {
+        try {
+          out.push(JSON.parse(s(r.crfdf_json)) as SetupVersion);
+        } catch {
+          /* skip a damaged header */
+        }
+      }
+      return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+    async saveVersion(header, setup, onProgress) {
+      const scope = `v:${header.id}`;
+      const docs = [...setupToDocs(setup)];
+      let done = 0;
+      try {
+        for (const [key, json] of docs) {
+          await dvCreate(SET.version, { crfdf_sbversionid: crypto.randomUUID(), crfdf_name: key, crfdf_scope: scope, crfdf_kind: 1, crfdf_json: json, crfdf_createdbyname: header.createdBy });
+          onProgress?.(++done, docs.length + 1);
+        }
+        await dvCreate(SET.version, {
+          crfdf_sbversionid: crypto.randomUUID(), crfdf_name: header.label.slice(0, 100), crfdf_scope: scope, crfdf_kind: 0, crfdf_json: JSON.stringify(header), crfdf_createdbyname: header.createdBy,
+        });
+        onProgress?.(docs.length + 1, docs.length + 1);
+      } catch (e) {
+        // Don't leave half a version behind.
+        await this.deleteVersion(header.id).catch(() => undefined);
+        throw e;
+      }
+    },
+    async loadVersion(id) {
+      const rows = await listAll(SET.version, { select: "crfdf_name,crfdf_json", filter: `crfdf_scope eq '${odataLit(`v:${id}`)}' and crfdf_kind eq 1` });
+      if (rows.length === 0) throw new Error("That version no longer exists.");
+      return docsToSetup(new Map(rows.map((r) => [s(r.crfdf_name), s(r.crfdf_json)])));
+    },
+    async deleteVersion(id) {
+      const rows = await listAll(SET.version, { select: "crfdf_sbversionid,crfdf_kind", filter: `crfdf_scope eq '${odataLit(`v:${id}`)}'` });
+      // Header first, so a half-deleted version doesn't show in the list.
+      rows.sort((a, b) => n(a.crfdf_kind) - n(b.crfdf_kind));
+      for (const r of rows) await dvDelete(SET.version, s(r.crfdf_sbversionid));
     },
   };
 }

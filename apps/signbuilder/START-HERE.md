@@ -78,6 +78,7 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             version-ops.ts — saved versions: stats, header, diff between two setups
              category-ops.ts — categories: add / edit / move / delete, new type from a copy
              template-ops.ts — Field / Extended template lines: edits, line problems,
                               replacement suggestions, sampleSign() for the preview
@@ -87,8 +88,8 @@ services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
              Projects, Library, SetupHome (tabs: Overview, Categories, Sign Types, Questions, Rules,
-             Descriptions, Materials & Items, Check Setup + ↶ Undo —
-             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup,
+             Descriptions, Materials & Items, Check Setup, Versions + ↶ Undo —
+             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup, Versions,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -124,7 +125,7 @@ generated/   Dataverse connector client (copied from Switchboard; same connector
 |---|---|---|
 | `crfdf_sbsetupdoc` (`crfdf_sbsetupdocs`) | Setup as JSON documents: `core` (sections, categories, settings, checklist, vinyl colors, reference list) + one `type:<CODE>` per sign type / block (questions, answers, Spec Rules, templates, reference rules, blocks used) | `crfdf_name` (doc key), `crfdf_kind`, `crfdf_json` (1 MB) |
 | `crfdf_sbreference` | Spec reference pages + images (data: URIs, loaded on view) | `crfdf_name` (code), description, file name, SharePoint URL, thumbnail, full image |
-| `crfdf_sbversion` | Setup versions / undo steps | scope, kind, json, created by |
+| `crfdf_sbversion` | Saved setup versions: per version one row per document (Kind 1, Name = doc key) + a header (Kind 0, JSON = SetupVersion) | `crfdf_scope` = `v:<id>`, kind, json, created by |
 | `crfdf_sbproject` | Projects | name, customer, notes |
 | `crfdf_sbspec` | Spec header | number (`crfdf_name`), purpose/status/detail level (ints), opportunity no, job no, project id, customer, contact, design ref, job detail notes, approved by/at |
 | `crfdf_sbsignline` | One sign | spec id, line no, category, sign type, qty, **answers JSON**, spec code, reference, type decided, completed % |
@@ -297,9 +298,30 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Categories (after Descriptions).**
+**Last session: Oct 15, 2026 — Setup: Versions (after Descriptions, Categories).**
 
-**Recap (latest — Categories)**
+**Recap (latest — Versions)**
+- **Storage** (`services/repo.ts`): `crfdf_sbversion` rows with Scope `v:<id>` —
+  Kind 1 = one setup document (Name = doc key, JSON = the doc), Kind 0 = header
+  (Name = label, JSON = `SetupVersion`), **header written last** (a half-saved
+  version never lists; a failed save deletes what it wrote); delete removes the
+  header first. Mock: IndexedDB `signbuilder.mock.versions`; demo sandbox: memory.
+  Reference images aren't versioned (restore keeps the loaded ones).
+- `setup/version-ops.ts`: `setupStats`, `newVersionHeader`, `diffSetups` (setup-wide
+  parts + sign types added / removed / changed by part, order-insensitive).
+- Store: `restoreVersion` (saves "Before restoring …" auto version, then
+  `replace` → Undo works); `importSetup(next, by)` saves "Before import…" first.
+  SetupHome now gets `userName` from App.
+- **Versions tab** (`screens/setup/Versions.tsx`): save (name, note, progress n of
+  m), list (automatic tag, saved at/by, counts), Changes since, Restore, Delete.
+- Tests: `setup/version-ops.test.ts` (4, incl. store restore + undo); real-setup
+  test checks every doc < 1 MB and round-trips. 71 pass. Guide v0.7.
+- ⚠️ Not browser-tested (dev server not restarted) — Versions also never ran
+  against Dataverse yet: first live save is the real test (≈35 row writes).
+- Role privileges: `crfdf_sbversion` needs Read/Write/Delete in the non-admin
+  role too, with the other crfdf_sb* tables (env move).
+
+**Earlier the same day: Categories**
 - **Categories tab** (`screens/setup/Categories.tsx`, ops in `setup/category-ops.ts`):
   list in offer order with ↑↓ (sort orders rewritten 10, 20…), name / Spec Code
   prefix (CommitInput) / Active; + Add (code fixed forever — sign lines store
@@ -473,8 +495,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Next (in order)**
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
-   ✅ Descriptions (template editor), ✅ Categories; next
-   saved Versions (per document), Show Path / Test Category, Question Blocks,
+   ✅ Descriptions (template editor), ✅ Categories, ✅ Versions; next Show Path / Test Category, Question Blocks,
    Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
@@ -497,6 +518,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (versions)** — Setup → Versions (save / changes since / restore /
+  delete; automatic before import + restore), stored per document in
+  crfdf_sbversion. Guide v0.7.
 - **Oct 15, 2026 (categories)** — Setup → Categories (add / edit / reorder /
   activate / delete-when-empty, new sign type from a copy), prefix-clash check.
   Guide v0.6.

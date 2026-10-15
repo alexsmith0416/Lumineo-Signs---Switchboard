@@ -12,14 +12,15 @@ import Descriptions from "./setup/Descriptions";
 import MaterialsItems from "./setup/MaterialsItems";
 import RuleMatrix from "./setup/RuleMatrix";
 import SignTypes from "./setup/SignTypes";
+import Versions from "./setup/Versions";
 
-type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check";
+type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check" | "versions";
 
 /** Setup hub: Overview (+ the one-time import from Business Central),
  *  Categories, Sign Types, Questions (decision tree), Rules (matrix),
- *  Descriptions (Field / Extended templates), Materials & Items and Check
- *  Setup. Undo steps back through this session's changes. */
-export default function SetupHome() {
+ *  Descriptions (Field / Extended templates), Materials & Items, Check
+ *  Setup and Versions. Undo steps back through this session's changes. */
+export default function SetupHome({ userName }: { userName: string }) {
   const [tab, setTab] = useState<SetupTab>("overview");
   const [openType, setOpenType] = useState<string | undefined>();
   const [openCategory, setOpenCategory] = useState<string | undefined>();
@@ -56,7 +57,7 @@ export default function SetupHome() {
     if (!parsed) return;
     setBusy(true);
     try {
-      await importSetup(parsed.setup);
+      await importSetup(parsed.setup, userName);
       const s = parsed.summary;
       setDone(`Imported ${s.categories} categories, ${s.signTypes} sign types, ${s.blocks} blocks, ${s.questions} questions, ${s.rules} rules, ${s.templates} template lines and ${s.references} reference pages.`);
       setParsed(null);
@@ -95,6 +96,9 @@ export default function SetupHome() {
         </button>
         <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
           Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
+        </button>
+        <button type="button" className={`sbp-tab${tab === "versions" ? " sbp-tab--on" : ""}`} onClick={() => setTab("versions")}>
+          Versions
         </button>
         <div className="sbp-spacer" />
         <button
@@ -148,6 +152,7 @@ export default function SetupHome() {
       )}
       {tab === "descriptions" && <Descriptions typeCode={typeCode} setTypeCode={setTypeCode} />}
       {tab === "materials" && <MaterialsItems />}
+      {tab === "versions" && <Versions userName={userName} />}
       {tab === "check" && (
         <CheckSetup
           onOpenCategory={(code) => {
@@ -226,7 +231,7 @@ export default function SetupHome() {
         <p style={{ fontSize: 13 }}>
           In Business Central open <b>Sign Builder Setup → Export Setup (JSON)</b>, then pick the downloaded file here. It brings over every category, sign type, question
           block, question, answer, Spec Rule, Field Description template, spec reference page (with images), vinyl color and the stage checklist. It <b>replaces</b> the
-          setup in the app — use it before go-live; after that the app is where the setup is edited.
+          setup in the app (a version of the current setup is saved first) — use it before go-live; after that the app is where the setup is edited.
         </p>
         {demoMode ? (
           // An import here would only replace the sandbox's copy — easy to mistake for the real thing.
@@ -241,8 +246,8 @@ export default function SetupHome() {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b> and <b>Check Setup</b> are ready (tabs above). Coming
-          next: Saved Versions, Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
+          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b>, <b>Check Setup</b> and <b>Versions</b> are ready (tabs above).
+          Coming next: Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
         </p>
       </div>
       </>

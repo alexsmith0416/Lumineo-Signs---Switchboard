@@ -13,7 +13,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SignLine, Spec } from "../domain/types";
+import { docsToSetup, setupToDocs } from "../services/repo";
 import { checkSetup } from "../setup/check-setup";
+import { diffSetups, isSameSetup } from "../setup/version-ops";
 import { parseBcSetupExport } from "../setup/import-bc";
 import { buildFromTemplates, buildProduction } from "./descriptions";
 import { answerQuestion, evaluate, newSignLine } from "./flow";
@@ -82,6 +84,15 @@ const { setup, summary } = present
 describe.skipIf(!setup)("real BC setup", () => {
   // The body is still collected when skipped, so nothing here may assume a setup.
   const idx = setup ? new SetupIndex(setup) : (null as unknown as SetupIndex);
+
+  // A saved version is one row per document: each must fit Dataverse's 1 MB
+  // column, and reading them back must give the same setup.
+  it("versions: every document fits a row and round-trips", () => {
+    const docs = setupToDocs(setup!);
+    const biggest = Math.max(...[...docs.values()].map((j) => j.length));
+    expect(biggest).toBeLessThan(1_048_576);
+    expect(isSameSetup(diffSetups(setup!, docsToSetup(docs)))).toBe(true);
+  });
 
   // Reports everything (SB_SETUP_OUT/_check-setup.txt); fails only when a sign
   // type can't be picked — other findings are for Setup → Check Setup.

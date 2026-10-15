@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { SetupData, SpecReference } from "../domain/types";
 import { SetupIndex } from "../engine/setup-index";
 import { repo } from "../services/repo";
+import { newVersionHeader } from "../setup/version-ops";
 import { persistOrReport } from "./write-status-store";
 
 interface SetupState {
@@ -15,8 +16,11 @@ interface SetupState {
   /** This session's setup changes, newest last (Undo steps back one). */
   undoStack: { label: string; setup: SetupData }[];
   undo: () => void;
-  /** One-time move from Business Central (Setup → Import). */
-  importSetup: (next: SetupData) => Promise<void>;
+  /** One-time move from Business Central (Setup → Import). Saves a version of
+   *  the setup it replaces first (when there is one). */
+  importSetup: (next: SetupData, by: string) => Promise<void>;
+  /** Puts a saved version back (saving the current setup as a version first). Undo can step back. */
+  restoreVersion: (id: string, label: string, by: string, onProgress?: (done: number, total: number) => void) => Promise<void>;
   /** Spec reference images are fetched on demand (they're big). */
   referenceImages: (code: string) => Promise<Pick<SpecReference, "thumbnail" | "fullImage">>;
 }
@@ -58,13 +62,29 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     void persistOrReport(`Undo: ${last.label}`, () => repo().saveSetup(last.setup));
   },
 
-  importSetup: async (next) => {
+  importSetup: async (next, by) => {
+    const prev = get().setup;
+    if (prev && prev.signTypes.length > 0) {
+      await repo().saveVersion(newVersionHeader(prev, "Before import from Business Central", "Saved automatically before the import replaced the setup.", "auto", by), prev);
+    }
     imageCache.clear();
     set({ setup: next, idx: new SetupIndex(next), undoStack: [] });
     await repo().saveSetup(next);
     if (repo().kind === "live") {
       for (const ref of next.references) await repo().saveReference(ref);
     }
+  },
+
+  restoreVersion: async (id, label, by, onProgress) => {
+    const current = get().setup;
+    const restored = await repo().loadVersion(id);
+    if (current) {
+      await repo().saveVersion(newVersionHeader(current, `Before restoring “${label}”`, "Saved automatically before a version was restored.", "auto", by), current, onProgress);
+      // Reference images aren't versioned — keep the ones already loaded.
+      const images = new Map(current.references.map((r) => [r.code, r]));
+      restored.references = restored.references.map((r) => ({ ...r, thumbnail: images.get(r.code)?.thumbnail, fullImage: images.get(r.code)?.fullImage }));
+    }
+    get().replace(restored, `Restore version “${label}”`);
   },
 
   referenceImages: async (code) => {

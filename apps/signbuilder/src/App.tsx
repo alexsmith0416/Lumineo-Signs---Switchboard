@@ -143,7 +143,7 @@ export default function App() {
           )}
           {view === "projects" && <Projects onOpenSpec={openSpec} canEdit={user.permissions.editSpecs} />}
           {view === "library" && <Library onOpenSpec={openSpec} />}
-          {view === "setup" && user.permissions.setup && <SetupHome />}
+          {view === "setup" && user.permissions.setup && <SetupHome userName={user.fullName || user.email} />}
           {view === "help" && <Help onLaunchDemo={() => void enterDemo({ locked: false, welcome: true })} />}
         </div>
       </main>
