@@ -334,8 +334,14 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
     → Add as answer with clean wording to ticked questions).
   - Descriptions: `buildProduction/buildFromTemplates(…, { partNumbers })` print
     "… (#20050)"; Preview Descriptions has a **Part #s** switch (default = setting).
-  - Not in BC at all (matcher finds nothing): e.g. 1”x1”x.187”, 3”x3”x.187”,
-    2”x1”x.187” aluminum angle, .375” matte clear plex, aluminum square tube.
+  - **Round 4 (Alex's answers, fix script):** answers with no BC item renamed to
+    the stocked item + linked everywhere (defaults, default rules, rules, conditions):
+    1”x1”x.187” → 1”x1”x.125” (#20005); 3”x3”x.187” → 3”x3”x.125” (#20059);
+    2”x1”x.187” → 2”x1.5”x.125” (#20030). ".375” Matte Clear Plex" removed (not
+    stocked; 8 answers + 16 rules). Picks: 2” Sq Tube Aluminum → #25035,
+    2”x2”x.187” Aluminum Angle → #20050. Categories confirmed by Alex (24).
+  - ⏳ Ask: Parking post "2” x 2” x .187” Aluminum Square Tube" — BC only has
+    .125 wall (#25035); rename like the angles?
   - ⏳ Later: **BCSync_Items** flow → `crfdf_bcitem` (keeps the snapshot current);
     **(c)** item numbers into the BC job (planning lines / BOM) with Generate to
     Project.

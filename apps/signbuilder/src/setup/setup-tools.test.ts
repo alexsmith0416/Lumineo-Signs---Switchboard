@@ -41,6 +41,11 @@ describe("BC item matching", () => {
     expect(top("3mm ACM")).toBe("13085"); // not Sintra
     expect(top("3630-20 White vinyl")).toBe("15456"); // the 48" roll
   });
+  it("reads a square tube given by one size", () => {
+    const tube: BcItem = { no: "25035", name: "2 x .125 ArchAl Sq Tube 24'", category: "ALUTUB", uom: "EA" };
+    expect(suggestItems("2” Sq Tube Aluminum", [tube])[0]?.item.no).toBe("25035");
+    expect(suggestItems("2” x 2” x .187” Aluminum Square Tube", [tube])).toEqual([]); // .187 wall ≠ .125
+  });
   it("tells steel from aluminum by the BC category", () => {
     expect(top("2” x 2” x .187” Angle Iron")).toBe("28050");
     expect(top("2” x 2” x .187” Aluminum Square Tube")).toBe(""); // BC only has it in steel

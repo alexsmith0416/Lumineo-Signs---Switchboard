@@ -120,6 +120,14 @@ export function describeMaterial(text: string, category = ""): Material {
   else if (has(/\bplex\b|acrylic/)) d.family = "plex";
   else if (has(/\balum|\balm\b|\bal\b|aluminum/) && (d.thick !== null || has(/\bmil\b/))) d.family = "al-sheet";
   if (d.family === "al-sheet" || d.family === "plex" || d.family === "poly") d.dims = []; // "4 x 8" is a sheet size
+  // Square tube by one size: "2” Sq Tube" = 2x2; BC's "2 x .125 Sq Tube" = 2x2, .125 wall.
+  if ((d.family === "al-tube" || d.family === "steel-tube") && has(/\bsq(uare)?\b/)) {
+    if (d.dims.length === 2 && d.dims[1]! < 1 && d.dims[0]! >= 1) d.dims = [d.dims[0]!, d.dims[0]!, d.dims[1]!];
+    else if (d.dims.length === 0) {
+      const one = t.match(/\s(\d+(?:\.\d+)?)\s+(?:sq|square)\b/) ?? t.match(/\s(\d+(?:\.\d+)?)\s/);
+      if (one) d.dims = [+one[1]!, +one[1]!];
+    }
+  }
 
   if (d.family === "vinyl") {
     const code = t.match(/\b(3630|3635|7725|680|8500|7125)-(\d+)/);

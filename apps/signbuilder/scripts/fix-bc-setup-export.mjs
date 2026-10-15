@@ -138,6 +138,71 @@ for (const [general, prefix] of [["FACE_FRAME_X", "FACE_FRAME_"], ["MOUNT_FRAME_
   }
 }
 
+// --- Round 4 (Alex, Oct 15): answers that had no BC item --------------------------
+// Renamed to the stocked item (and linked), everywhere the wording is used:
+// answers, question defaults, default rules, Spec Rules, template / reference /
+// "also requires" conditions and Selected When.
+const splitVals = (s) => String(s ?? "").split("|");
+const swapIn = (s, from, to) => {
+  const v = String(s ?? "");
+  const not = v.startsWith("!");
+  const parts = splitVals(not ? v.slice(1) : v).map((x) => (x.trim().toLowerCase() === from.toLowerCase() ? to : x));
+  return (not ? "!" : "") + parts.join("|");
+};
+function renameAnswer(from, to, itemNo) {
+  let n = 0;
+  const seen = new Set(setup.options.filter((o) => o.Value === to).map((o) => `${o["Sign Type Code"]}|${o["Question Code"]}`));
+  setup.options = setup.options.filter((o) => {
+    if (o.Value !== from) return true;
+    n++;
+    const k = `${o["Sign Type Code"]}|${o["Question Code"]}`;
+    if (seen.has(k)) return false; // the question already offers the new wording
+    seen.add(k);
+    o.Value = to;
+    if (itemNo) o["Item No."] = itemNo;
+    return true;
+  });
+  for (const q of setup.questions) {
+    if (q["Default Value"] === from) q["Default Value"] = to;
+    if (q["And Show If Values"]) q["And Show If Values"] = swapIn(q["And Show If Values"], from, to);
+  }
+  for (const r of setup.defaultRules ?? []) {
+    if (r["Default Value"] === from) r["Default Value"] = to;
+    if (r["Trigger Answer"] === from) r["Trigger Answer"] = to;
+  }
+  for (const r of setup.rules) {
+    if (r["Trigger Answer"] === from) r["Trigger Answer"] = to;
+    if (r["Target Answer"] === from) r["Target Answer"] = to;
+  }
+  for (const t of [...setup.templates, ...(setup.referenceRules ?? [])]) {
+    if (t["Condition Values"]) t["Condition Values"] = swapIn(t["Condition Values"], from, to);
+    if (t["And Condition Values"]) t["And Condition Values"] = swapIn(t["And Condition Values"], from, to);
+  }
+  for (const st of setup.signTypes) {
+    if (st["Selected When"]) st["Selected When"] = st["Selected When"].split(";").map((p) => { const i = p.indexOf("="); return i < 0 ? p : p.slice(0, i + 1) + swapIn(p.slice(i + 1).trim(), from, to); }).join(";");
+  }
+  if (n) log(`renamed "${from}" → "${to}"${itemNo ? ` (#${itemNo})` : ""} on ${n} answers`);
+}
+function removeAnswer(value) {
+  const before = setup.options.length;
+  setup.options = setup.options.filter((o) => o.Value !== value);
+  const rules = setup.rules.length;
+  setup.rules = setup.rules.filter((r) => r["Trigger Answer"] !== value && r["Target Answer"] !== value);
+  setup.defaultRules = (setup.defaultRules ?? []).filter((r) => r["Default Value"] !== value && r["Trigger Answer"] !== value);
+  for (const q of setup.questions) if (q["Default Value"] === value) q["Default Value"] = "";
+  if (before !== setup.options.length) log(`removed "${value}" (${before - setup.options.length} answers, ${rules - setup.rules.length} rules)`);
+}
+renameAnswer("1”x1”x.187” Aluminum Angle", "1”x1”x.125” Aluminum Angle", "20005");
+renameAnswer("3”x3”x.187” Aluminum Angle", "3”x3”x.125” Aluminum Angle", "20059");
+renameAnswer("2”x1”x.187” Aluminum Angle", "2”x1.5”x.125” Aluminum Angle", "20030");
+removeAnswer(".375” Matte Clear Plex"); // not stocked
+// Alex's picks (Oct 15).
+const PICKED = {
+  "2” Sq Tube Aluminum": "25035", // 2 x .125 ArchAl Sq Tube
+  "2”x2”x.187” Aluminum Angle": "20050", // his own example: … Aluminum Angle (#20050)
+};
+for (const o of setup.options) if (PICKED[o.Value] && !o["Item No."]) o["Item No."] = PICKED[o.Value];
+
 // --- Round 3 (Alex, Oct 15): link materials to BC items ------------------------
 // Optional 3rd argument: items.csv from scripts/bc-items-probe.ps1. Adds the
 // item snapshot (sign material categories only) and links every answer whose
