@@ -4,6 +4,21 @@
  * parts and always uses the tokens (never raw hex), so light / dark both work.
  */
 
+/* Darker outlines everywhere (Alex, Oct 15 2026): the default border was too
+ * faint to separate one question card from the next. Same fix as Switchboard's
+ * calendar grid — outlines use --grid-line (#cdd0da light / #3c4575 dark), and
+ * the soft row dividers move up to the old default border. */
+:root,
+[data-theme="dark"] {
+  --border-default: var(--grid-line);
+}
+:root {
+  --border-soft: #e4e5ea;
+}
+[data-theme="dark"] {
+  --border-soft: #2a3056;
+}
+
 .sbp-page {
   padding: 20px 24px 48px;
   max-width: 1500px;
