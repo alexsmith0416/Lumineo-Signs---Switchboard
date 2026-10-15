@@ -112,8 +112,17 @@ export function evaluate(idx: SetupIndex, input: SignLine, detail: DetailLevel, 
     return !idx.option(line.signTypeCode, q.code, value);
   };
 
+  // The question's default right now: the first Default Rule whose trigger
+  // answer is given, else its own Default Value.
+  const defaultFor = (q: Question): string => {
+    for (const r of idx.defaultRulesTo(line.signTypeCode, q.code)) {
+      if (triggerActive(r.triggerQuestion, r.triggerAnswer)) return r.value;
+    }
+    return q.defaultValue ?? "";
+  };
+
   const applyDefault = (q: Question, a: StoredAnswer) => {
-    a.v = q.defaultValue ?? "";
+    a.v = defaultFor(q);
     a.s = undefined;
     if (a.v && q.answerType === "dimension") {
       try {
@@ -156,6 +165,17 @@ export function evaluate(idx: SetupIndex, input: SignLine, detail: DetailLevel, 
         applyDefault(q, a);
         if (a.v !== "" && !answerAllowed(q, a.v)) clear(a);
         changed = true;
+      }
+      // Default Rules: an answer the person didn't pick follows its trigger
+      // (Pan depth 2” → 2”x2”; change the depth and the default changes too).
+      if (a.e && !a.u && idx.defaultRulesTo(line.signTypeCode, q.code).length > 0) {
+        const next: StoredAnswer = { ...a };
+        applyDefault(q, next);
+        if (next.v !== a.v && (next.v === "" || answerAllowed(q, next.v))) {
+          a.v = next.v;
+          a.s = next.s;
+          changed = true;
+        }
       }
     }
     if (!changed) break;

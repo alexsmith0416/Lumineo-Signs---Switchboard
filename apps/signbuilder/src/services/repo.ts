@@ -77,6 +77,7 @@ export function setupToDocs(setup: SetupData): SetupDocs {
         rules: by(setup.rules),
         templates: by(setup.templates),
         referenceRules: by(setup.referenceRules),
+        defaultRules: by(setup.defaultRules ?? []),
         blockUsages: by(setup.blockUsages),
       }),
     );
@@ -86,7 +87,7 @@ export function setupToDocs(setup: SetupData): SetupDocs {
 
 export function docsToSetup(docs: SetupDocs): SetupData {
   const setup: SetupData = {
-    sections: [], categories: [], signTypes: [], questions: [], options: [], rules: [], templates: [],
+    sections: [], categories: [], signTypes: [], questions: [], options: [], rules: [], defaultRules: [], templates: [],
     blockUsages: [], references: [], referenceRules: [], vinylColors: [], checklist: [],
     settings: { specReferenceFolderUrl: "", checkSpecsOnRelease: true },
   };
@@ -110,6 +111,7 @@ export function docsToSetup(docs: SetupDocs): SetupData {
     setup.templates.push(...(d.templates ?? []));
     setup.referenceRules.push(...(d.referenceRules ?? []));
     setup.blockUsages.push(...(d.blockUsages ?? []));
+    setup.defaultRules.push(...(d.defaultRules ?? []));
   }
   return setup;
 }

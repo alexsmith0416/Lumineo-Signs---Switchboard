@@ -117,6 +117,15 @@ export function parseBcSetupExport(text: string): { setup: SetupData; summary: I
       targetQuestion: str(r, "Target Question Code"),
       targetAnswer: str(r, "Target Answer"),
     })),
+    // APP rows (not exported by BC) — added by scripts/fix-bc-setup-export.mjs.
+    defaultRules: rows(root, "defaultRules").map((r) => ({
+      id: crypto.randomUUID(),
+      signTypeCode: str(r, "Sign Type Code"),
+      triggerQuestion: str(r, "Trigger Question Code"),
+      triggerAnswer: str(r, "Trigger Answer"),
+      targetQuestion: str(r, "Target Question Code"),
+      value: str(r, "Default Value"),
+    })),
     templates: rows(root, "templates").map((r) => ({
       signTypeCode: str(r, "Sign Type Code"),
       outputType: pick(OUTPUT_TYPES, r, "Output Type", "field"),

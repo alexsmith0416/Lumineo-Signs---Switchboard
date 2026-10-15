@@ -303,18 +303,27 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - Browser-tested on the fixed real setup (mock) + Duplicate in the demo sandbox.
 - No tour step: Setup is admin-only and Demo logins can't open it (the tour would
   land on a blank page). Guide v0.2 documents both tabs.
-- **Check Setup findings still open in the real setup (need Alex's call):**
-  - Empty category **TENANTPANELS "Tenant Panel"** (active, no types — it's first in
-    the Builder's category list and leads nowhere). Deactivate it?
-  - **MON-DIR / MON-ROUTED**: 3 rules (Retainer, Flex frame material, Flex face) on
-    the answer "Flex Face" of "Top cabinet face type", which those types don't
-    offer — dead rules. Remove them?
-  - **PAN-WALL**: "Face frame material" / "Mounting frame material" (FACE_FRAME_X,
-    MOUNT_FRAME_X) are Conditional with no rule — never asked. Which answer should
-    show them (or make them Global)?
-  - 8 warnings: Field Description lines using questions the type doesn't have
-    (ADA {Q:EQUIPMENT}; WIREWAY, EMC-WALL-FRAME, FLAT-ALUM {Q:MOUNTING}; EMC PS_LOC;
-    CUT-VINYL REMOVE_EXIST / {LQ:REMOVE_DISPOSE}) — those lines are skipped.
+- **Default Rules (new, app-only — `DefaultRule` in domain/types.ts, `defaultRules`
+  in each `type:` doc):** when Trigger = answer, the target question starts as
+  Value; follows the trigger until the person picks an answer (`u` flag). Engine:
+  `flow.ts` defaultFor/applyDefault + "follow" step; Check Setup validates them;
+  test in flow.test.ts. **No editor yet** — comes with the Decision Tree / Rule
+  Matrix (Alex wants to tune face-material → frame-material defaults per type).
+- **Setup round 2 (Alex agreed, in `fix-bc-setup-export.mjs` → `_fixed.json`):**
+  TENANTPANELS deactivated; MON-DIR/MON-ROUTED dead "Flex Face" rules removed +
+  their never-asked FLEX_FACE / FLEX_FRAME questions; **PAN-WALL** per-depth frame
+  questions (FACE_/MOUNT_FRAME_1/15/2/3) folded into FACE_FRAME_X / MOUNT_FRAME_X,
+  shown once Pan depth is answered, defaults by depth (1” → 1”x1.5” / 3/4”x1.5”,
+  1.5” → 1.5”x1.5” / 2”x1”, 2” → 2”x2” / 1.5”x1.5”, 3” → 3”x3” / 2”x2”).
+  Check Setup on the fixed file: **0 problems**, 8 warnings. ⏳ **Alex: re-import
+  the regenerated `_fixed.json` in the deployed app** (needs this deploy first).
+- **Open — BC Items:** Alex wants materials in the descriptions linked to BC's
+  Item list (page 31 / table 27). Plan: BCSync_Items flow → new `crfdf_bcitem`
+  table (app never calls BC); each answer gets an optional Item No.; pick answers
+  from the item list. Waiting on Alex's answers (see chat Oct 15).
+- Remaining warnings (Field Description lines using questions the type doesn't
+  have — skipped): ADA {Q:EQUIPMENT}; WIREWAY, EMC-WALL-FRAME, FLAT-ALUM
+  {Q:MOUNTING}; EMC PS_LOC; CUT-VINYL REMOVE_EXIST / {LQ:REMOVE_DISPOSE}.
 
 **Earlier: real setup imported from BC + checked end to end.**
 
@@ -363,7 +372,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 - ✅ Monument / Wall Cabinet setup problems fixed (in the `_fixed` file).
 
 **Next (in order)**
-1. **Setup tools** (✅ Sign Types, ✅ Check Setup): Categories, Decision
+1. **Setup tools** (✅ Sign Types, ✅ Check Setup): **Decision Tree + Rule Matrix
+   with Default Rules editing (Alex asked)**, Categories, Decision
    Tree, Show Path, Spec Rule Matrix, Question Blocks, Copy/Paste, Undo &
    Versions, Test Category, Stage Checklist, Spec References
    (import images), Vinyl Colors — plus editing **per-answer print text / format**.
@@ -388,7 +398,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
-
+- **Oct 15, 2026 (default rules)** — Default Rules in the engine; setup round 2
+  (Tenant Panel off, Monument dead rules/questions out, Aluminum Pan frames default
+  by depth). Check Setup: 0 problems. Asked Alex about linking answers to BC Items.
 - **Oct 15, 2026 (setup tools 1)** — Setup tabs: Sign Types (edit, Selected When
   buttons, Duplicate, live check) + Check Setup (BC checks + reachability). Found
   open setup issues (empty Tenant Panel category, MON dead rules, PAN-WALL never-asked

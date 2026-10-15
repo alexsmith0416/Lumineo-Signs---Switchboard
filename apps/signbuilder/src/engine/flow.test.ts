@@ -73,6 +73,29 @@ describe("flow", () => {
     expect(ev.states.FACE_PLEX!.eligible).toBe(true);
   });
 
+  it("default rules follow their trigger until the person picks an answer", () => {
+    const withRule = new SetupIndex({
+      ...DEMO_SETUP,
+      defaultRules: [
+        { id: "d1", signTypeCode: "WALL-CAB-LIT", triggerQuestion: "FACE_TYPE", triggerAnswer: "Routed & Backed", targetQuestion: "LIGHTING", value: "RGB LED Modules" },
+      ],
+    });
+    const ans = (l: ReturnType<typeof newSignLine>, code: string, v: string) => answerQuestion(withRule, l, "full", code, v).evaluation.line;
+    let line = newSignLine(withRule, "s1", 10000, "WALLCAB", "full");
+    line = ans(line, "LIT", "Yes");
+    line = ans(line, "WORK", "New cabinet");
+    line = ans(line, "FACE_TYPE", "Plex Face");
+    expect(line.answers.LIGHTING!.v).toBe("White LED Modules"); // the question's own default
+    line = ans(line, "FACE_TYPE", "Routed & Backed");
+    expect(line.answers.LIGHTING!.v).toBe("RGB LED Modules"); // the rule's
+    line = ans(line, "FACE_TYPE", "Plex Face");
+    expect(line.answers.LIGHTING!.v).toBe("White LED Modules"); // follows back
+    line = ans(line, "LIGHTING", "RGB LED Modules"); // picked by the person…
+    line = ans(line, "FACE_TYPE", "Routed & Backed");
+    line = ans(line, "FACE_TYPE", "Plex Face");
+    expect(line.answers.LIGHTING!.v).toBe("RGB LED Modules"); // …so it stays
+  });
+
   it("only the opportunity questions at opportunity detail", () => {
     let line = newSignLine(idx, "s1", 10000, "WALLCAB", "opportunity");
     line = answerQuestion(idx, line, "opportunity", "LIT", "Yes").evaluation.line;

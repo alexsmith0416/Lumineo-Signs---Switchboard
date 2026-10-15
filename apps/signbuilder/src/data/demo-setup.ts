@@ -150,6 +150,7 @@ export const DEMO_SETUP: SetupData = {
   options,
   rules,
   templates,
+  defaultRules: [],
   blockUsages: [],
   references: [],
   referenceRules: [],

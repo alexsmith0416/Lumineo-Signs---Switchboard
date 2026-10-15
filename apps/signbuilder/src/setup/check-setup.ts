@@ -70,6 +70,23 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
           add("warning", t, q.code, `A rule offers the answer "${rule.targetAnswer}" of "${q.prompt}", which isn't one of its answers.`, "Untick it on the Rule Matrix.");
         }
       }
+      // APP: Default Rules.
+      for (const rule of idx.defaultRulesTo(t.code, q.code)) {
+        const trigger = idx.question(t.code, rule.triggerQuestion);
+        if (!trigger) {
+          add("error", t, q.code, `A default rule for "${q.prompt}" stands on question ${rule.triggerQuestion}, which this sign type doesn't have.`, "Remove or fix the default rule.");
+        } else {
+          if (rule.triggerAnswer && isList(trigger) && !optionExists(t.code, trigger.code, rule.triggerAnswer)) {
+            add(severityOf(trigger), t, q.code, `A default rule for "${q.prompt}" stands on the answer "${rule.triggerAnswer}" of "${trigger.prompt}", which isn't one of its answers.`, "Fix the default rule.");
+          }
+          if (trigger.sortOrder >= q.sortOrder) {
+            add("error", t, q.code, `"${q.prompt}" comes before "${trigger.prompt}", whose answer sets its default.`, "Give it a higher Sort Order than the question it depends on.");
+          }
+        }
+        if (rule.value && isList(q) && !q.allowFreeText && !optionExists(t.code, q.code, rule.value)) {
+          add("warning", t, q.code, `A default rule sets "${q.prompt}" to "${rule.value}", which isn't one of its answers.`, "Change the default rule or add it as an answer.");
+        }
+      }
       // "Also requires" (BC: And Show If).
       if (q.alsoRequiresQuestion && !t.isBlock) {
         const parent = idx.question(t.code, q.alsoRequiresQuestion);

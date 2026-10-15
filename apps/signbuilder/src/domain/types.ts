@@ -107,6 +107,19 @@ export interface SpecRule {
   targetAnswer: string;
 }
 
+/** APP: Default rule — when Trigger Question = Trigger Answer (blank = any
+ *  answer), Target Question starts as Value instead of its own Default Value
+ *  (e.g. Pan depth 2” → Face frame 2”x2” angle). Only fills in answers the
+ *  person hasn't picked themselves; the first matching rule wins. */
+export interface DefaultRule {
+  id: string;
+  signTypeCode: string;
+  triggerQuestion: string;
+  triggerAnswer: string;
+  targetQuestion: string;
+  value: string;
+}
+
 export interface TemplateLine {
   signTypeCode: string;
   outputType: OutputType;
@@ -180,6 +193,8 @@ export interface SetupData {
   questions: Question[];
   options: AnswerOption[];
   rules: SpecRule[];
+  /** APP (not in BC). */
+  defaultRules: DefaultRule[];
   templates: TemplateLine[];
   blockUsages: BlockUsage[];
   references: SpecReference[];

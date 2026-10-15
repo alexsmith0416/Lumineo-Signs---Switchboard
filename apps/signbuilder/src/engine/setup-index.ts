@@ -2,6 +2,7 @@
 import type {
   AnswerOption,
   Category,
+  DefaultRule,
   Question,
   ReferenceRule,
   Section,
@@ -25,6 +26,7 @@ export class SetupIndex {
   private optionsByQuestion = new Map<string, AnswerOption[]>();
   private rulesByTarget = new Map<string, SpecRule[]>();
   private rulesByTrigger = new Map<string, SpecRule[]>();
+  private defaultsByTarget = new Map<string, DefaultRule[]>();
   private referenceMap = new Map<string, SpecReference>();
   readonly sections: Section[];
 
@@ -51,6 +53,10 @@ export class SetupIndex {
       (this.rulesByTarget.get(kt) ?? this.rulesByTarget.set(kt, []).get(kt)!).push(r);
       const kg = key(r.signTypeCode, r.triggerQuestion);
       (this.rulesByTrigger.get(kg) ?? this.rulesByTrigger.set(kg, []).get(kg)!).push(r);
+    }
+    for (const r of data.defaultRules ?? []) {
+      const k = key(r.signTypeCode, r.targetQuestion);
+      (this.defaultsByTarget.get(k) ?? this.defaultsByTarget.set(k, []).get(k)!).push(r);
     }
     for (const ref of data.references) this.referenceMap.set(ref.code, ref);
     this.sections = [...data.sections].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -85,6 +91,10 @@ export class SetupIndex {
   }
   rulesFrom(signTypeCode: string, triggerQuestion: string): SpecRule[] {
     return this.rulesByTrigger.get(key(signTypeCode, triggerQuestion)) ?? [];
+  }
+  /** Default rules for a question, in setup order (the first matching one wins). */
+  defaultRulesTo(signTypeCode: string, targetQuestion: string): DefaultRule[] {
+    return this.defaultsByTarget.get(key(signTypeCode, targetQuestion)) ?? [];
   }
   hasQuestionRule(signTypeCode: string, targetQuestion: string): boolean {
     return this.rulesTo(signTypeCode, targetQuestion).some((r) => r.targetAnswer === "");

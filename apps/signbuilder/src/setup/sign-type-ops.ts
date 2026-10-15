@@ -41,5 +41,6 @@ export function duplicateSignType(setup: SetupData, fromCode: string, newCode: s
     templates: [...setup.templates, ...mine(setup.templates)],
     referenceRules: [...setup.referenceRules, ...mine(setup.referenceRules)],
     blockUsages: [...setup.blockUsages, ...mine(setup.blockUsages)],
+    defaultRules: [...setup.defaultRules, ...mine(setup.defaultRules).map((r) => ({ ...r, id: crypto.randomUUID() }))],
   };
 }
