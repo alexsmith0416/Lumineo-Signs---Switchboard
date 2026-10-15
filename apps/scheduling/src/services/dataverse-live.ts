@@ -834,9 +834,8 @@ function createLiveInstallDataSource(
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
       regionRead = null; // the next load must see this change
       let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
-      if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
-        // Newer columns may be missing — drop them and retry so the edit sticks.
-        installExtraColsAvailable = false;
+      if (!res.success && dropMissingInstallCols(res.error?.message ?? "")) {
+        // A newer column is missing — drop it and retry so the edit sticks.
         res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       }
       if (!res.success) throw new Error(res.error?.message ?? `UpdateInstallCard(${id}) failed`);
@@ -858,11 +857,10 @@ function createLiveInstallDataSource(
       const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(line.id) ? line.id : uuid();
       const rec = () => ({ crfdf_installcardid: id, ...cardToRecord(line, isNek, true) });
       let res = await dvCreate(SHIP.cards, rec());
-      if (!res.success && (installExtraColsAvailable || dropMissingCols(res.error?.message ?? ""))) {
-        // Newer columns may be missing — drop them and retry so the card saves.
+      if (!res.success && dropMissingInstallCols(res.error?.message ?? "")) {
+        // A newer column is missing — drop it and retry so the card saves.
         // The record is REBUILT here: the original payload still carried the
         // columns we just turned off, so resending it would fail identically.
-        installExtraColsAvailable = false;
         res = await dvCreate(SHIP.cards, rec());
       }
       if (!res.success) throw new Error(res.error?.message ?? "CreateInstallCard failed");
@@ -927,6 +925,23 @@ export const liveNekInstallDataSource = createLiveInstallDataSource(
 // Flipped off (for the session) if a write fails because the newer install-card
 // columns aren't provisioned yet — so cards keep saving. Reset on reload.
 let installExtraColsAvailable = true;
+const INSTALL_EXTRA_COL_RE =
+  /crfdf_(jobno|installzip|crewpersons|crewtrucks|crewtrips|crewcranes|crewlifts|finalinstall)/i;
+
+/**
+ * After a failed install-card write: turn off only the columns the error
+ * actually names, and say whether a retry is worth it. Any other failure (a
+ * lost reply, a connection blip) must NOT switch the extra columns off — that
+ * silently saved every later card in the session without its job number.
+ */
+function dropMissingInstallCols(msg: string): boolean {
+  let retry = dropMissingCols(msg);
+  if (installExtraColsAvailable && INSTALL_EXTRA_COL_RE.test(msg)) {
+    installExtraColsAvailable = false;
+    retry = true;
+  }
+  return retry;
+}
 
 function mapCardRecord(r: Row): ScheduleLine {
   const title = s(r.crfdf_name);
