@@ -63,6 +63,7 @@ export function setupToDocs(setup: SetupData): SetupDocs {
       settings: setup.settings,
       checklist: setup.checklist,
       vinylColors: setup.vinylColors,
+      items: setup.items ?? [],
       references: setup.references.map(({ thumbnail: _t, fullImage: _f, ...rest }) => rest),
     }),
   );
@@ -99,6 +100,7 @@ export function docsToSetup(docs: SetupDocs): SetupData {
     setup.settings = c.settings ?? setup.settings;
     setup.checklist = c.checklist ?? [];
     setup.vinylColors = c.vinylColors ?? [];
+    setup.items = c.items ?? [];
     setup.references = c.references ?? [];
   }
   for (const [key, json] of docs) {

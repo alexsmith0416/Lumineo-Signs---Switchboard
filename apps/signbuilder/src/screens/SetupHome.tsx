@@ -6,9 +6,10 @@ import { parseBcSetupExport, type ImportSummary } from "../setup/import-bc";
 import { useDemoStore } from "../store/demo-store";
 import { useSetupStore } from "../store/setup-store";
 import CheckSetup from "./setup/CheckSetup";
+import MaterialsItems from "./setup/MaterialsItems";
 import SignTypes from "./setup/SignTypes";
 
-type SetupTab = "overview" | "types" | "check";
+type SetupTab = "overview" | "types" | "materials" | "check";
 
 /** Setup hub: Overview (+ the one-time import from Business Central), Sign
  *  Types and Check Setup. More tools (Decision Tree, Show Path, Rule Matrix,
@@ -64,12 +65,16 @@ export default function SetupHome() {
         <button type="button" className={`sbp-tab${tab === "types" ? " sbp-tab--on" : ""}`} onClick={() => setTab("types")}>
           Sign Types
         </button>
+        <button type="button" className={`sbp-tab${tab === "materials" ? " sbp-tab--on" : ""}`} onClick={() => setTab("materials")}>
+          Materials &amp; Items
+        </button>
         <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
           Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
         </button>
       </div>
 
       {tab === "types" && <SignTypes key={openType ?? ""} initialCode={openType} />}
+      {tab === "materials" && <MaterialsItems />}
       {tab === "check" && (
         <CheckSetup
           onOpenType={(code) => {

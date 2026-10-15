@@ -73,7 +73,7 @@ const BUILDER_STEPS: TourStep[] = [
     view: "builder",
     target: '[data-tour="preview-descriptions"]',
     title: "The descriptions write themselves",
-    body: "Preview Descriptions shows the Production and Field Descriptions in the job-ticket format — exactly what will go into the BC job.",
+    body: "Preview Descriptions shows the Production and Field Descriptions in the job-ticket format — exactly what will go into the BC job. Tick Part #s there to show the BC part number after each material.",
     placement: "bottom",
   },
   {

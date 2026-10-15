@@ -754,3 +754,15 @@
   background: var(--status-red);
   color: var(--text-on-accent);
 }
+
+.sbp-item-cat {
+  border-top: 1px solid var(--border-soft);
+  padding: 6px 0;
+}
+
+.sbp-item-cat summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 0;
+}

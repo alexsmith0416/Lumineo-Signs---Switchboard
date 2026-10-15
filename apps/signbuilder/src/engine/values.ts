@@ -113,3 +113,10 @@ export function parseSizes(input: string, parts: number): number[] {
     return v;
   });
 }
+
+/** How a vinyl color reads in answers: "3630-20 White". BC codes may already
+ *  carry the series ("3630-005") — then it isn't added twice. */
+export function vinylLabel(c: { series: string; code: string; name: string }): string {
+  const code = c.series && !c.code.startsWith(`${c.series}-`) ? `${c.series}-${c.code}` : c.code;
+  return `${code} ${c.name}`.trim();
+}

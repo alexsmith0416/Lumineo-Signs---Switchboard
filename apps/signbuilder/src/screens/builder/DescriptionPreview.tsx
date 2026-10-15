@@ -10,10 +10,13 @@ type Tab = "production" | "field";
 export default function DescriptionPreview({ spec, lines, onClose }: { spec: Spec; lines: SignLine[]; onClose: () => void }) {
   const idx = useSetupStore((s) => s.idx);
   const [tab, setTab] = useState<Tab>("production");
+  // Part #s after linked materials: Setup's default, switchable here.
+  const [partNumbers, setPartNumbers] = useState(() => !!idx?.data.settings.showPartNumbers);
   const text = useMemo(() => {
     if (!idx) return { production: "", field: "" };
-    return { production: buildProduction(idx, spec, lines), field: buildFromTemplates(idx, spec, lines, "field") };
-  }, [idx, spec, lines]);
+    const opts = { partNumbers };
+    return { production: buildProduction(idx, spec, lines, opts), field: buildFromTemplates(idx, spec, lines, "field", opts) };
+  }, [idx, spec, lines, partNumbers]);
   const current = text[tab];
   const [copied, setCopied] = useState(false);
 
@@ -44,6 +47,10 @@ export default function DescriptionPreview({ spec, lines, onClose }: { spec: Spe
         <button type="button" className={`sbp-tab${tab === "field" ? " sbp-tab--on" : ""}`} onClick={() => setTab("field")}>
           Field Description
         </button>
+        <div className="sbp-spacer" />
+        <label className="sbp-check" data-tour="part-numbers" title="Print the BC part # after each linked material">
+          <input type="checkbox" checked={partNumbers} onChange={(e) => setPartNumbers(e.target.checked)} /> Part #s
+        </label>
       </div>
       <DescriptionText text={current} />
       <div className="sbp-muted" style={{ fontSize: 12, marginTop: 8 }}>

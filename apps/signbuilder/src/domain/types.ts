@@ -94,6 +94,17 @@ export interface AnswerOption {
   /** APP: a whole Production line just for this answer (overrides the
    *  question's format; same placeholders). Blank = use the question's. */
   productionFormat: string;
+  /** APP: the BC item (Item No., table 27) this answer's material is. Blank = none. */
+  itemNo?: string;
+}
+
+/** APP: a BC item (Item table 27) in the categories Sign Builder links to —
+ *  a snapshot until the BCSync_Items flow keeps it current. */
+export interface BcItem {
+  no: string;
+  name: string;
+  category: string;
+  uom: string;
 }
 
 /** Show / Allow rule: when Trigger Question = Trigger Answer (blank = any),
@@ -167,6 +178,8 @@ export interface VinylColor {
   notes: string;
   hex: string;
   sortOrder: number;
+  /** APP: the BC item for this color (the 48" roll unless set otherwise). */
+  itemNo?: string;
 }
 
 export interface ChecklistLine {
@@ -183,6 +196,8 @@ export interface ChecklistLine {
 export interface SetupSettings {
   specReferenceFolderUrl: string;
   checkSpecsOnRelease: boolean;
+  /** APP: print the BC part # after linked materials, e.g. "… Aluminum Angle (#20050)". */
+  showPartNumbers?: boolean;
 }
 
 /** Everything that shapes the Sign Builder. */
@@ -200,6 +215,8 @@ export interface SetupData {
   references: SpecReference[];
   referenceRules: ReferenceRule[];
   vinylColors: VinylColor[];
+  /** APP: BC items (sign material categories) answers can link to. */
+  items?: BcItem[];
   checklist: ChecklistLine[];
   settings: SetupSettings;
 }

@@ -167,7 +167,8 @@ generated/   Dataverse connector client (copied from Switchboard; same connector
 - **Import `SignBuilderSetup_20261015_fixed.json`**, not the raw export — it has
   the agreed setup fixes (`scripts/fix-bc-setup-export.mjs`). A fresh re-export
   from BC before go-live must go through the script again:
-  `node apps/signbuilder/scripts/fix-bc-setup-export.mjs <export.json> <fixed.json>`.
+  `node apps/signbuilder/scripts/fix-bc-setup-export.mjs <export.json> <fixed.json> <items.csv>`
+  (items.csv from `scripts/bc-items-probe.ps1 -OutDir …` — adds the item links).
 
 ## 4. Run it locally
 
@@ -288,7 +289,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — deployed; Setup tools started (Sign Types + Check Setup).**
+**Last session: Oct 15, 2026 — Setup tools (Sign Types, Check Setup, Materials & Items), Default Rules, BC item links.**
 
 **Recap (latest — Setup tools, step 1)**
 - **Setup → Sign Types**: edit a type (description, {TYPE} name, variant, Spec Code
@@ -317,10 +318,27 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   1.5” → 1.5”x1.5” / 2”x1”, 2” → 2”x2” / 1.5”x1.5”, 3” → 3”x3” / 2”x2”).
   Check Setup on the fixed file: **0 problems**, 8 warnings. ⏳ **Alex: re-import
   the regenerated `_fixed.json` in the deployed app** (needs this deploy first).
-- **Open — BC Items:** Alex wants materials in the descriptions linked to BC's
-  Item list (page 31 / table 27). Plan: BCSync_Items flow → new `crfdf_bcitem`
-  table (app never calls BC); each answer gets an optional Item No.; pick answers
-  from the item list. Waiting on Alex's answers (see chat Oct 15).
+- **BC Items (Alex: "only certain categories"; b + c; part # toggle):**
+  - `scripts/bc-items-probe.ps1` (READ-ONLY, UAT, app registration from the Postman
+    env like Switchboard's probes) → items.csv: 1,271 items / 61 categories.
+  - `src/setup/item-match.ts` — matcher (sizes, fractions, abbreviations; BC category
+    decides steel vs aluminum etc.); `SIGN_ITEM_CATEGORIES` (24 categories, 474
+    items) is the "certain categories" list — adjust there. Node scripts import it
+    directly (Node 24 strips types).
+  - Data: `AnswerOption.itemNo`, `VinylColor.itemNo` (48" roll), `SetupData.items`
+    (snapshot in the `core` doc), `settings.showPartNumbers`.
+  - Fix script round 3 (3rd arg = items.csv): snapshot + auto-links for clear
+    matches → 197 answers + 98/159 vinyl colors linked; 17 wordings (104 answers)
+    left as **Pick one** for Alex in Setup → **Materials & Items** (new tab: link
+    per wording across all types, part # setting, "BC items no answer offers yet"
+    → Add as answer with clean wording to ticked questions).
+  - Descriptions: `buildProduction/buildFromTemplates(…, { partNumbers })` print
+    "… (#20050)"; Preview Descriptions has a **Part #s** switch (default = setting).
+  - Not in BC at all (matcher finds nothing): e.g. 1”x1”x.187”, 3”x3”x.187”,
+    2”x1”x.187” aluminum angle, .375” matte clear plex, aluminum square tube.
+  - ⏳ Later: **BCSync_Items** flow → `crfdf_bcitem` (keeps the snapshot current);
+    **(c)** item numbers into the BC job (planning lines / BOM) with Generate to
+    Project.
 - Remaining warnings (Field Description lines using questions the type doesn't
   have — skipped): ADA {Q:EQUIPMENT}; WIREWAY, EMC-WALL-FRAME, FLAT-ALUM
   {Q:MOUNTING}; EMC PS_LOC; CUT-VINYL REMOVE_EXIST / {LQ:REMOVE_DISPOSE}.
@@ -398,6 +416,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (BC items)** — Read BC items (probe), matcher, answers + vinyl
+  colors linked to items (197 + 98 auto; 17 wordings to pick), Setup → Materials &
+  Items, part # toggle (setting + Preview). Vinyl label double-series bug fixed.
+  Guide v0.3.
 - **Oct 15, 2026 (default rules)** — Default Rules in the engine; setup round 2
   (Tenant Panel off, Monument dead rules/questions out, Aluminum Pan frames default
   by depth). Check Setup: 0 problems. Asked Alex about linking answers to BC Items.

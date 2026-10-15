@@ -10,12 +10,40 @@
 import type { OutputType, Question, SignLine, Spec } from "../domain/types";
 import type { SetupIndex } from "./setup-index";
 import { evaluate, printedAnswer } from "./flow";
-import { conditionMet, isOpenDesignValue, isPendingValue, isSurveyValue } from "./values";
+import { conditionMet, isOpenDesignValue, isPendingValue, isSurveyValue, vinylLabel } from "./values";
 
 const NL = "\n";
 const SUB_NOTE_INDENT = "      - ";
 
-export function buildProduction(idx: SetupIndex, spec: Spec, lines: SignLine[]): string {
+export interface DescriptionOptions {
+  /** Print the BC part # after linked materials — "… Aluminum Angle (#20050)".
+   *  Default: Setup's "Show part numbers". */
+  partNumbers?: boolean;
+}
+
+const partsOn = (idx: SetupIndex, opts?: DescriptionOptions) => opts?.partNumbers ?? idx.data.settings.showPartNumbers ?? false;
+
+/** The answer as printed, plus "(#item)" for linked materials when part #s are on.
+ *  Vinyl answers ("3630-20 White, 3630-33 Red") get one per color. */
+function withPartNo(idx: SetupIndex, line: SignLine, q: Question, value: string, printed: string, pn: boolean): string {
+  if (!pn) return printed;
+  if (q.answerType === "vinyl") {
+    const byLabel = new Map(idx.data.vinylColors.filter((c) => c.itemNo).map((c) => [vinylLabel(c).toLowerCase(), c.itemNo!]));
+    return printed
+      .split(",")
+      .map((part) => {
+        const p = part.trim();
+        const no = byLabel.get(p.toLowerCase());
+        return no ? `${p} (#${no})` : p;
+      })
+      .join(", ");
+  }
+  const no = idx.option(line.signTypeCode, q.code, value)?.itemNo;
+  return no ? `${printed} (#${no})` : printed;
+}
+
+export function buildProduction(idx: SetupIndex, spec: Spec, lines: SignLine[], opts?: DescriptionOptions): string {
+  const pn = partsOn(idx, opts);
   let out = "";
   const sorted = sortLines(lines);
   sorted.forEach((raw, i) => {
@@ -25,18 +53,19 @@ export function buildProduction(idx: SetupIndex, spec: Spec, lines: SignLine[]):
       out += signHeading(idx, line, i + 1, sorted.length) + NL + NL;
     }
     out += pendingBlock(idx, line, true);
-    out += productionForSign(idx, spec, line);
+    out += productionForSign(idx, spec, line, pn);
   });
   if (spec.jobDetailNotes.trim() !== "") out += "JOB DETAIL NOTES" + NL + spec.jobDetailNotes.trim() + NL;
   return trimEnd(out);
 }
 
-export function buildFromTemplates(idx: SetupIndex, spec: Spec, lines: SignLine[], outputType: OutputType): string {
+export function buildFromTemplates(idx: SetupIndex, spec: Spec, lines: SignLine[], outputType: OutputType, opts?: DescriptionOptions): string {
+  const pn = partsOn(idx, opts);
   let out = "";
   const sorted = sortLines(lines);
   sorted.forEach((raw, i) => {
     const line = evaluate(idx, raw, spec.detailLevel).line;
-    const text = templateForSign(idx, spec, line, outputType);
+    const text = templateForSign(idx, spec, line, outputType, pn);
     if (text === "") return;
     if (out !== "") out += NL + NL;
     if (sorted.length > 1) out += signHeading(idx, line, i + 1, sorted.length) + NL;
@@ -81,7 +110,7 @@ function pendingBlock(idx: SetupIndex, line: SignLine, productionStyle: boolean)
   return parts.join(" ");
 }
 
-function productionForSign(idx: SetupIndex, spec: Spec, line: SignLine): string {
+function productionForSign(idx: SetupIndex, spec: Spec, line: SignLine, pn: boolean): string {
   let out = "";
   const questions = idx.questions(line.signTypeCode);
   for (const section of idx.sections) {
@@ -90,7 +119,7 @@ function productionForSign(idx: SetupIndex, spec: Spec, line: SignLine): string 
       if (q.sectionCode !== section.code || !q.inProduction) continue;
       const a = line.answers[q.code];
       if (!a?.e || a.v === "" || isPendingValue(a.v)) continue;
-      const text = productionLine(idx, spec, line, q, printedAnswer(line, q.code));
+      const text = productionLine(idx, spec, line, q, printedAnswer(line, q.code), pn);
       if (text !== "") sectionText += text + NL;
     }
     if (sectionText !== "") {
@@ -101,10 +130,10 @@ function productionForSign(idx: SetupIndex, spec: Spec, line: SignLine): string 
   return out;
 }
 
-function productionLine(idx: SetupIndex, spec: Spec, line: SignLine, q: Question, value: string): string {
+function productionLine(idx: SetupIndex, spec: Spec, line: SignLine, q: Question, value: string, pn: boolean): string {
   const option = idx.option(line.signTypeCode, q.code, value);
   // How the answer itself prints (an answer can have its own print text).
-  const printed = option?.outputText ? option.outputText : value;
+  const printed = withPartNo(idx, line, q, value, option?.outputText ? option.outputText : value, pn);
   let format: string;
   if (option?.productionFormat) {
     format = option.productionFormat;
@@ -122,12 +151,12 @@ function productionLine(idx: SetupIndex, spec: Spec, line: SignLine, q: Question
   return text;
 }
 
-function templateForSign(idx: SetupIndex, spec: Spec, line: SignLine, outputType: OutputType): string {
+function templateForSign(idx: SetupIndex, spec: Spec, line: SignLine, outputType: OutputType, pn: boolean): string {
   let out = outputType === "field" ? pendingBlock(idx, line, false) : "";
   for (const t of idx.templates(line.signTypeCode, outputType)) {
     if (t.conditionQuestion && !conditionMet(printedAnswer(line, t.conditionQuestion), t.conditionValues)) continue;
     if (t.andConditionQuestion && !conditionMet(printedAnswer(line, t.andConditionQuestion), t.andConditionValues)) continue;
-    const sentence = resolveTemplate(idx, spec, line, t.text);
+    const sentence = resolveTemplate(idx, spec, line, t.text, pn);
     if (sentence === null) continue;
     if (out !== "") out += t.newParagraph ? NL + NL : " ";
     out += sentence;
@@ -136,10 +165,10 @@ function templateForSign(idx: SetupIndex, spec: Spec, line: SignLine, outputType
 }
 
 /** Replaces every {TOKEN}; null (skip the sentence) when any token is empty. */
-function resolveTemplate(idx: SetupIndex, spec: Spec, line: SignLine, template: string): string | null {
+function resolveTemplate(idx: SetupIndex, spec: Spec, line: SignLine, template: string, pn: boolean): string | null {
   let ok = true;
   const text = template.replace(/\{([^}]*)\}/g, (_m, token: string) => {
-    const v = tokenText(idx, spec, line, token);
+    const v = tokenText(idx, spec, line, token, pn);
     if (v === "") ok = false;
     return v;
   });
@@ -148,17 +177,19 @@ function resolveTemplate(idx: SetupIndex, spec: Spec, line: SignLine, template: 
   return out.trim() === "" ? null : out;
 }
 
-function answerForTemplate(idx: SetupIndex, line: SignLine, code: string): string {
+function answerForTemplate(idx: SetupIndex, line: SignLine, code: string, pn: boolean): string {
   const value = printedAnswer(line, code);
   if (value === "") return "";
   const option = idx.option(line.signTypeCode, code, value);
-  return option?.outputText ? option.outputText : value;
+  const printed = option?.outputText ? option.outputText : value;
+  const q = idx.question(line.signTypeCode, code);
+  return q ? withPartNo(idx, line, q, value, printed, pn) : printed;
 }
 
-function tokenText(idx: SetupIndex, spec: Spec, line: SignLine, token: string): string {
+function tokenText(idx: SetupIndex, spec: Spec, line: SignLine, token: string, pn = false): string {
   const upper = token.toUpperCase();
-  if (upper.startsWith("Q:")) return answerForTemplate(idx, line, upper.slice(2));
-  if (upper.startsWith("LQ:")) return answerForTemplate(idx, line, upper.slice(3)).toLowerCase();
+  if (upper.startsWith("Q:")) return answerForTemplate(idx, line, upper.slice(2), pn);
+  if (upper.startsWith("LQ:")) return answerForTemplate(idx, line, upper.slice(3), pn).toLowerCase();
   switch (upper) {
     case "QTY":
       return String(line.quantity);

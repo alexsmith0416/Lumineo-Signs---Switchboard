@@ -108,6 +108,7 @@ export function parseBcSetupExport(text: string): { setup: SetupData; summary: I
       codeSegment: str(r, "Code Segment"),
       outputText: "",
       productionFormat: "",
+      itemNo: str(r, "Item No.") || undefined, // APP (fix script)
     })),
     rules: rows(root, "rules").map((r) => ({
       id: crypto.randomUUID(),
@@ -168,6 +169,14 @@ export function parseBcSetupExport(text: string): { setup: SetupData; summary: I
       notes: str(r, "Notes"),
       hex: str(r, "Hex"),
       sortOrder: num(r, "Sort Order"),
+      itemNo: str(r, "Item No.") || undefined, // APP (fix script)
+    })),
+    // APP: BC item snapshot (fix script, from scripts/bc-items-probe.ps1).
+    items: rows(root, "items").map((r) => ({
+      no: str(r, "No."),
+      name: str(r, "Description"),
+      category: str(r, "Item Category Code"),
+      uom: str(r, "Base Unit of Measure"),
     })),
     checklist: rows(root, "checklist").map((r) => ({
       lineNo: num(r, "Line No."),
@@ -182,6 +191,7 @@ export function parseBcSetupExport(text: string): { setup: SetupData; summary: I
     settings: {
       specReferenceFolderUrl: str(settingsRow, "Spec Reference Folder URL"),
       checkSpecsOnRelease: settingsRow["Check Specs on Release"] === undefined ? true : bool(settingsRow, "Check Specs on Release"),
+      showPartNumbers: bool(settingsRow, "Show Part Numbers"),
     },
   };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AnswerState, Question, VinylColor } from "../../domain/types";
 import type { SetupIndex } from "../../engine/setup-index";
-import { formatLength, isOpenDesignValue, isPendingValue, isSurveyValue, sameAnswer } from "../../engine/values";
+import { formatLength, isOpenDesignValue, isPendingValue, isSurveyValue, sameAnswer, vinylLabel } from "../../engine/values";
 import { isRequired } from "../../engine/flow";
 import { Modal } from "../../components/ui";
 
@@ -222,9 +222,7 @@ function VinylInput({ idx, q, state, readOnly, onAnswer }: { idx: SetupIndex; q:
   );
 }
 
-function colorLabel(c: VinylColor): string {
-  return `${c.series}-${c.code} ${c.name}`.trim();
-}
+const colorLabel = (c: VinylColor): string => vinylLabel(c);
 
 function VinylPicker({ colors, value, series, onClose, onDone }: { colors: VinylColor[]; value: string; series: string; onClose: () => void; onDone: (v: string) => void }) {
   const [picked, setPicked] = useState<string[]>(() => value.split(",").map((s) => s.trim()).filter(Boolean));

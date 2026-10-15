@@ -342,7 +342,7 @@
   <p><strong>Preview Descriptions</strong> shows the <strong>Production Description</strong> (section by section: SIGN
   OVERVIEW, ROUTING, FABRICATION, PAINT, VINYL &amp; GRAPHICS, ASSEMBLY…) and the <strong>Field Description</strong>
   (install sentences). With several signs each gets a <em>SIGN n OF m</em> heading. <strong>Job Detail Notes</strong>
-  (under the questions) print at the end of the Production Description. <em>Copy text</em> copies the description shown.</p>
+  (under the questions) print at the end of the Production Description. <em>Copy text</em> copies the description shown. Tick <strong>Part #s</strong> to print the BC part number after each linked material — e.g. <em>2”x2”x.187” Aluminum Angle (#20050)</em> (it starts the way Setup → Materials &amp; Items is set).</p>
 
   <h3>5.6 Spec reference page</h3>
   <p>The panel on the right shows the <strong>Sign Specification Reference</strong> page that matches the sign once its
@@ -382,6 +382,7 @@
     <strong>Problems</strong> stop something working (a sign type nobody can pick, a question that's never asked);
     <strong>Warnings</strong> are worth a look (a Field Description line that gets skipped). The red number on the tab is
     the problem count. <strong>Open sign type</strong> jumps to the sign type to fix it.</li>
+    <li><strong>Materials &amp; Items</strong> — links each material answer to its <strong>BC item</strong> (Item List). The same wording is the same part, so one link covers every sign type that uses it. <strong>Pick one</strong> rows have several equally good items (sheet sizes, or an angle whose answer doesn't give the wall thickness) — choose from the list. <strong>Show part numbers in the descriptions</strong> turns the <em>(#20050)</em> part numbers on for everyone. <strong>BC items no answer offers yet</strong> lists items of the kinds of material the answers use; <strong>Add as answer…</strong> words it like the existing answers (edit it if you like) and adds it, linked, to the questions you tick.</li>
   </ul>
   <p>Still to come: Categories, the Decision Tree (questions and answers, including how each answer prints),
   Show Path, Spec Rule Matrix, Question Blocks, Undo &amp; Versions and the rest — see What's New.</p>
@@ -493,6 +494,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Materials linked to BC items</strong> — material answers now know their BC part (Item List), and the descriptions can show it: <em>2”x2”x.187” Aluminum Angle (#20050)</em>. Turn part numbers on for everyone in Setup → Materials &amp; Items, or per spec with <strong>Part #s</strong> in Preview Descriptions. Setup → Materials &amp; Items also lists BC items no answer offers yet, and adds them as answers worded like the rest.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Answers that set other answers' defaults</strong> — on an Aluminum Pan (wall mounted), the Face frame and Mounting frame now fill in from the Pan depth (2” → 2”x2” face frame, 1.5”x1.5” mounting frame, and so on) and follow it if the depth changes — until you pick a frame yourself. Also: the empty “Tenant Panel” category is gone from the category list, and two Monument questions that could never be asked were removed.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Sign Types &amp; Check Setup</strong> — edit sign types and what picks them (Selected When, as answer buttons), Duplicate a sign type with everything under it, and Check Setup lists every problem in the setup — including any sign type nobody can pick — with a live check while you edit.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Clearer outlines</strong> — darker borders around question cards, inputs and panels (same as the Switchboard calendar grid), so each question stands apart.</td></tr>
@@ -509,7 +511,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v0.2 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v0.3 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>

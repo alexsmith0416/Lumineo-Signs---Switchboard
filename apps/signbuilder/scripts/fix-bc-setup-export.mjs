@@ -2,14 +2,14 @@
 // (agreed with Alex Oct 15, 2026 — found by src/engine/real-setup.test.ts).
 // Safe to run again, and on a fresh re-export from BC:
 //
-//   node apps/signbuilder/scripts/fix-bc-setup-export.mjs <export.json> <fixed.json>
+//   node apps/signbuilder/scripts/fix-bc-setup-export.mjs <export.json> <fixed.json> [items.csv]
 //
 // Once the app's setup tools exist, fix the setup there instead of adding here.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const [input, output] = process.argv.slice(2);
+const [input, output, itemsCsv] = process.argv.slice(2);
 if (!input || !output) {
-  console.error("usage: node fix-bc-setup-export.mjs <export.json> <fixed.json>");
+  console.error("usage: node fix-bc-setup-export.mjs <export.json> <fixed.json> [items.csv]");
   process.exit(1);
 }
 const setup = JSON.parse(readFileSync(input, "utf8"));
@@ -138,6 +138,48 @@ for (const [general, prefix] of [["FACE_FRAME_X", "FACE_FRAME_"], ["MOUNT_FRAME_
   }
 }
 
-setup.fixesApplied = "fix-bc-setup-export.mjs (Oct 15, 2026, round 2)";
+// --- Round 3 (Alex, Oct 15): link materials to BC items ------------------------
+// Optional 3rd argument: items.csv from scripts/bc-items-probe.ps1. Adds the
+// item snapshot (sign material categories only) and links every answer whose
+// best item is clear (high / medium). "Pick" answers (several equally good —
+// sheet sizes, angle wall thickness) are left for Setup → Materials & Items.
+if (itemsCsv) {
+  const { readItemsCsv } = await import("./items-csv.mjs");
+  const { SIGN_ITEM_CATEGORIES, describeItems, matchConfidence, suggestItems } = await import("../src/setup/item-match.ts");
+  const items = readItemsCsv(readFileSync(itemsCsv, "utf8")).filter((i) => SIGN_ITEM_CATEGORIES.includes(i.category));
+  setup.items = items.map((i) => ({ "No.": i.no, Description: i.name, "Item Category Code": i.category, "Base Unit of Measure": i.uom }));
+  log(`items: ${items.length} BC items in ${SIGN_ITEM_CATEGORIES.length} sign material categories`);
+  const described = describeItems(items);
+  const cache = new Map();
+  let linked = 0;
+  let toPick = 0;
+  for (const o of setup.options) {
+    if (o["Item No."]) continue;
+    const v = String(o.Value);
+    if (!cache.has(v)) {
+      const s = suggestItems(v, items, described);
+      cache.set(v, { s, c: matchConfidence(s) });
+    }
+    const { s, c } = cache.get(v);
+    if (c === "high" || c === "medium") {
+      o["Item No."] = s[0].item.no;
+      linked++;
+    } else if (c === "pick") toPick++;
+  }
+  log(`answers linked to an item: ${linked} (${toPick} answers have several equally good items — pick in Setup → Materials & Items)`);
+  let vinylLinked = 0;
+  for (const c of setup.vinylColors ?? []) {
+    if (c["Item No."]) continue;
+    const code = String(c.Code).startsWith(`${c.Series}-`) ? c.Code : `${c.Series}-${c.Code}`;
+    const s = suggestItems(`${code} ${c.Name} vinyl`, items, described);
+    if (s.length) {
+      c["Item No."] = s[0].item.no;
+      vinylLinked++;
+    }
+  }
+  log(`vinyl colors linked: ${vinylLinked} of ${(setup.vinylColors ?? []).length}`);
+}
+
+setup.fixesApplied = "fix-bc-setup-export.mjs (Oct 15, 2026, round 3)";
 writeFileSync(output, JSON.stringify(setup));
 console.log(`Wrote ${output}`);
