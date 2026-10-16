@@ -11,6 +11,9 @@ import { Progress, StatusPill, formatDate } from "../components/ui";
 import { printHtml } from "../services/print";
 import QuestionCard from "./builder/QuestionCard";
 import ReferencePanel from "./builder/ReferencePanel";
+import { JobPicker, OpportunityPicker } from "./builder/BcPickers";
+import GenerateToProject from "./builder/GenerateToProject";
+import { jobFields, opportunityFields } from "../services/bc-fill";
 import DescriptionPreview from "./builder/DescriptionPreview";
 
 interface Props {
@@ -90,6 +93,8 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
   const lines = useMemo(() => allLines.filter((l) => l.specId === spec.id).sort((a, b) => a.lineNo - b.lineNo), [allLines, spec.id]);
   const readOnly = !user.permissions.editSpecs;
   const [preview, setPreview] = useState(false);
+  const [picking, setPicking] = useState<"opportunity" | "job" | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Keep a sign selected.
@@ -118,6 +123,21 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
     </div>
   );
 
+  // A spec field with a "pick from BC" button.
+  const pickField = (label: string, key: "opportunityNo" | "jobNo", onPick: () => void) => (
+    <div className="sbp-field">
+      <label>{label}</label>
+      <div className="sbp-row" style={{ gap: 4 }}>
+        <input className="sbp-input" style={{ flex: 1, minWidth: 0 }} value={spec[key]} disabled={readOnly} onChange={(e) => updateSpec(spec.id, { [key]: e.target.value } as Partial<Spec>)} />
+        {!readOnly && (
+          <button type="button" className="btn-secondary" title={`Pick from Business Central`} onClick={onPick}>
+            Pick…
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div style={{ minWidth: 0 }}>
@@ -136,8 +156,8 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
             {field("Description", "description")}
             {field("Customer", "customerName")}
             {field("Contact", "contactName")}
-            {field("Opportunity No.", "opportunityNo")}
-            {field("Job No.", "jobNo")}
+            {pickField("Opportunity No.", "opportunityNo", () => setPicking("opportunity"))}
+            {pickField("Job No.", "jobNo", () => setPicking("job"))}
             {field("Design Reference", "designReference")}
             <div className="sbp-field">
               <label>Project</label>
@@ -160,6 +180,11 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
             <button type="button" className="btn-secondary" onClick={() => printSpec(idx, spec, lines)}>
               Print Spec
             </button>
+            {user.permissions.generateToProject && (
+              <button type="button" className="btn-secondary" data-tour="generate-to-project" title="Write the descriptions to the BC project" onClick={() => setGenerating(true)}>
+                Generate to Project…
+              </button>
+            )}
             {!readOnly && spec.status === "draft" && (
               <button type="button" className="btn-secondary" onClick={() => updateSpec(spec.id, { status: "submitted" })}>
                 Submit
@@ -181,9 +206,10 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
               </button>
             )}
           </div>
-          {spec.approvedBy && (
+          {(spec.approvedBy || spec.lastGeneratedAt) && (
             <div className="sbp-muted" style={{ fontSize: 12, marginTop: 6 }}>
-              Approved by {spec.approvedBy} {formatDate(spec.approvedAt)}
+              {spec.approvedBy && <>Approved by {spec.approvedBy} {formatDate(spec.approvedAt)}. </>}
+              {spec.lastGeneratedAt && <>Descriptions last sent to BC {new Date(spec.lastGeneratedAt).toLocaleString()}.</>}
             </div>
           )}
         </div>
@@ -225,6 +251,35 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
       </div>
 
       {preview && <DescriptionPreview spec={spec} lines={lines} onClose={() => setPreview(false)} />}
+      {generating && (
+        <GenerateToProject
+          spec={spec}
+          lines={lines}
+          userName={user.fullName || user.email}
+          onSent={() => updateSpec(spec.id, { lastGeneratedAt: new Date().toISOString() })}
+          onPickJob={() => setPicking("job")}
+          onClose={() => setGenerating(false)}
+        />
+      )}
+      {picking === "opportunity" && (
+        <OpportunityPicker
+          userName={user.fullName || user.email}
+          onClose={() => setPicking(null)}
+          onPick={(o) => {
+            updateSpec(spec.id, opportunityFields(spec, o));
+            setPicking(null);
+          }}
+        />
+      )}
+      {picking === "job" && (
+        <JobPicker
+          onClose={() => setPicking(null)}
+          onPick={(j) => {
+            updateSpec(spec.id, jobFields(spec, j));
+            setPicking(null);
+          }}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={`Delete ${spec.number}?`}

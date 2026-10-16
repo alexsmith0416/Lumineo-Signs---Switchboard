@@ -315,6 +315,58 @@ export interface Spec {
   approvedAt: string;
 }
 
+// ---------------------------------------------------------------------------
+// Business Central (read from Dataverse staging tables; written through flows)
+// ---------------------------------------------------------------------------
+
+/** A BC opportunity (crfdf_bcopportunity, filled by BCSync_SBOpportunities). */
+export interface BcOpportunity {
+  no: string;
+  description: string;
+  contactNo: string;
+  contactName: string;
+  companyName: string;
+  salespersonCode: string;
+  status: string;
+  closed: boolean;
+  creationDate: string;
+  /** The BC project made from it ("" until then). */
+  projectNo: string;
+}
+
+/** A BC project / job (Switchboard's crfdf_bcjob). */
+export interface BcJob {
+  no: string;
+  name: string;
+  customerName: string;
+  description: string;
+  salespersonCode: string;
+  status: string;
+}
+
+/** A project's descriptions as BC has them now (Switchboard's crfdf_jobdesc, hourly). */
+export interface JobDescriptions {
+  jobNo: string;
+  production: string;
+  field: string;
+  bcModified: string;
+}
+
+export type DescPushStatus = "pending" | "synced" | "failed";
+
+/** Generate to Project: one write of descriptions to a BC project (crfdf_sbdescpush). */
+export interface DescPush {
+  id: string;
+  jobNo: string;
+  specId: string;
+  sendProduction: boolean;
+  sendField: boolean;
+  status: DescPushStatus;
+  message: string;
+  createdAt: string;
+  requestedBy: string;
+}
+
 export interface Project {
   id: string;
   name: string;

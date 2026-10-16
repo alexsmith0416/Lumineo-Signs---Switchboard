@@ -1111,3 +1111,52 @@
   border: none;
   padding: 0;
 }
+
+/* ---- BC link: pickers, Generate to Project ---------------------------------- */
+
+.sbp-picker-list {
+  max-height: 55vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sbp-picker-row {
+  font: inherit;
+  text-align: left;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.sbp-picker-row:hover {
+  border-color: var(--accent-brand);
+  background: var(--accent-brand-soft);
+}
+
+.sbp-text-error {
+  color: var(--status-red);
+}
+
+.sbp-gen-pair {
+  margin-bottom: 14px;
+}
+
+.sbp-gen-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sbp-gen-cols .sbp-desc {
+  max-height: 32vh;
+}
+
+.modal-card.sbp-modal-wide .modal-card__body {
+  max-height: 75vh;
+  overflow: auto;
+}

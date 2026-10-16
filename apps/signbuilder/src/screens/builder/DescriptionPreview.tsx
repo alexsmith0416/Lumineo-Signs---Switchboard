@@ -54,7 +54,7 @@ export default function DescriptionPreview({ spec, lines, onClose }: { spec: Spe
       </div>
       <DescriptionText text={current} />
       <div className="sbp-muted" style={{ fontSize: 12, marginTop: 8 }}>
-        Generate to Project (writes these to the BC job, after a side-by-side review) comes with the Business Central link.
+        To write these to the BC project, use Generate to Project on the spec (it shows them next to what BC has now).
       </div>
     </Modal>
   );

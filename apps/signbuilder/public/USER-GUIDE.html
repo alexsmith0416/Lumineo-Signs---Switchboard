@@ -309,6 +309,12 @@
   <p>A spec holds every sign of one opportunity or job. Its header has the description, customer, contact, opportunity
   and job numbers, design reference and project. The bar at the top right shows how complete the whole spec is; open
   site surveys are counted next to it.</p>
+  <p><strong>Pick… from Business Central</strong> — next to Opportunity No. and Job No. <strong>Pick…</strong> lists BC's
+  opportunities (open ones newest first; type to search by number, description, company or contact) or projects. Picking
+  one fills in the number and any blank description, customer and contact; an opportunity that already has a project
+  fills in the Job No. too. The opportunity list asks BC for fresh opportunities when it opens (the line under the search
+  box says what it found); <strong>Refresh from BC</strong> asks again. In BC, <strong>Open in Sign Builder</strong> on
+  the Opportunity and Project cards opens the app on that spec — or starts one, filled in from BC.</p>
   <p><strong>Opportunity details / Job details</strong> — Opportunity details asks only the core questions sales needs
   (category, type, size, colors, install basics…). Job details asks everything the shop needs before the order is
   released. Switch any time; answers are kept. Specs started on a job open at Job details.</p>
@@ -343,6 +349,12 @@
   OVERVIEW, ROUTING, FABRICATION, PAINT, VINYL &amp; GRAPHICS, ASSEMBLY…) and the <strong>Field Description</strong>
   (install sentences). With several signs each gets a <em>SIGN n OF m</em> heading. <strong>Job Detail Notes</strong>
   (under the questions) print at the end of the Production Description. <em>Copy text</em> copies the description shown. Tick <strong>Part #s</strong> to print the BC part number after each linked material — e.g. <em>2”x2”x.187” Aluminum Angle (#20050)</em> (it starts the way Setup → Materials &amp; Items is set).</p>
+  <p><strong>Generate to Project…</strong> (ops, PMs and admins) writes the descriptions to the spec's BC project. It
+  shows each description <em>In BC now</em> next to <em>From this spec</em>; tick the ones to replace (one with no
+  change is unticked for you) and <strong>Send to BC</strong>. The status line follows it — <em>Sending to BC…</em>
+  then <em>Written to project … in BC</em> — and the spec remembers when its descriptions were last sent. Blank
+  required answers and open surveys are flagged first, but don't stop you. No Job No. yet? It offers <strong>Pick the
+  project…</strong>.</p>
 
   <h3>5.6 Spec reference page</h3>
   <p>The panel on the right shows the <strong>Sign Specification Reference</strong> page that matches the sign once its
@@ -585,6 +597,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Business Central link</strong> — pick the opportunity or project from BC on the spec; Generate to Project writes the Production and Field Descriptions to the BC project after a side-by-side with what BC has now; Open in Sign Builder on BC's Opportunity and Project cards. (Works once the BC extension v0.12 and the two flows are in place.)</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Test &amp; Path: right-click to edit</strong> — right-click a question or an answer during a test to rename, add, remove, reorder, set the default or open the full question editor without leaving the test.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Spec References, Vinyl Colors, Stage Checklist</strong> — edit reference pages (and replace their images) and which page each sign type shows; edit vinyl colors with swatches and BC items; edit the stage checklist. Check Setup flags reference rules that point to a missing page.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Copy questions</strong> — copy questions (with answers, rules, defaults and optionally their follow-ups) to any number of sign types; Share first questions with the category on Sign Types.</td></tr>
@@ -611,7 +624,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v1.1 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v1.2 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>

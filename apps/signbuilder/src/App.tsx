@@ -12,6 +12,8 @@ import DemoBanner from "./components/DemoBanner";
 import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useCurrentUser } from "./services/current-user";
+import { bcLink } from "./services/bc-link";
+import { jobFields, opportunityFields } from "./services/bc-fill";
 import { useSetupStore } from "./store/setup-store";
 import { useSpecStore } from "./store/spec-store";
 
@@ -56,6 +58,7 @@ export default function App() {
   const specs = useSpecStore((s) => s.specs);
   const lines = useSpecStore((s) => s.lines);
   const createSpec = useSpecStore((s) => s.createSpec);
+  const updateSpec = useSpecStore((s) => s.updateSpec);
 
   useEffect(() => {
     void loadSetup();
@@ -74,11 +77,22 @@ export default function App() {
       (jobNo ? specs.find((s) => s.jobNo === jobNo) : undefined) ??
       (opportunityNo ? specs.find((s) => s.opportunityNo === opportunityNo) : undefined);
     const spec = found ?? (user.permissions.editSpecs && (jobNo || opportunityNo) ? createSpec({ jobNo, opportunityNo }, user.fullName) : undefined);
+    // A spec just started from BC: fill in the customer etc. from the opportunity / project.
+    if (spec && !found) {
+      const fill = async () => {
+        const o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;
+        if (o) updateSpec(spec.id, opportunityFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, o));
+        const no = jobNo || o?.projectNo;
+        const j = no ? await bcLink().getJob(no) : null;
+        if (j) updateSpec(spec.id, jobFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, j));
+      };
+      void fill().catch(() => undefined);
+    }
     if (spec) {
       setCurrentSpecId(spec.id);
       setView("builder");
     }
-  }, [launched, specsLoaded, user.loading, user.permissions.editSpecs, user.fullName, specs, createSpec]);
+  }, [launched, specsLoaded, user.loading, user.permissions.editSpecs, user.fullName, specs, createSpec, updateSpec]);
 
   // Demo sandbox: Demo-type logins boot locked into it (tour offered).
   const demoMode = useDemoStore((s) => s.demoMode);

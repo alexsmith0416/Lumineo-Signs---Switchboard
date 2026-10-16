@@ -304,7 +304,36 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 **Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest — Test & Path right-click editing, Alex's idea from testing)**
+**Recap (latest — BC link, built; ⏳ turning it on = Alex's steps in flows/BC-LINK.md)**
+- Design = Switchboard's (research of lumineo-scheduling-port): app never calls BC;
+  flows over HTTP with the "PowerApps Permissions" app registration; Dataverse
+  connection reference `new_sharedcommondataserviceforapps_4a52d`; UAT.
+- **BC extension v0.12.0** (in `C:\Users\Alex\SignBuilderPro\bc\lumineo-signbuilder-ext`,
+  NOT in git; 0.11.1 source backed up in the session scratchpad): page 58487
+  `LSB Opportunities API`, page 58488 `LSB Job Descriptions API` (writable, via
+  `LSB Job Description Mgt.`), codeunit 58472 `LSB App Link` + **Open in Sign
+  Builder** on Opportunity / Job Card, Setup field 4 "Sign Builder App (link)".
+  Compiles clean with alc 18.1. ⏳ Alex publishes to UAT.
+- **Tables** `scripts/create-signbuilder-bc-tables.ps1`: `crfdf_bcopportunity`,
+  `crfdf_sbdescpush` (own outbox — Switchboard's `crfdf_bcpushqueue` flows
+  untouched). ⏳ Alex runs it.
+- **Flows** `flows/build-bc-flows.mjs` (Node — no Python here; own zip writer):
+  BCSync_SBOpportunities (on `crfdf_syncrequest` kind `sbopportunities`; open +
+  last-year opportunities; stamp-compare upsert; stale delete; Done/Failed on the
+  request), BCPush_SBDescriptions (on `crfdf_sbdescpush` status → pending; GET the
+  project by number, PATCH the ticked descriptions with If-Match *, synced / failed
+  + message ≤ 300). `--zip` → Downloads\SignBuilderBCLink_1_0_0_1.zip (secret from
+  `$env:BC_CLIENT_SECRET` only). ⏳ Alex imports + turns On.
+- **App**: `services/bc-link.ts` (live Dataverse / mock sample data for dev +
+  demo), `bc-fill.ts` (fills blanks only), spec header **Pick…** for Opportunity
+  No. / Job No. (`BcPickers.tsx`; the picker requests a sync on open at most every
+  10 min + Refresh), **Generate to Project…** (`GenerateToProject.tsx`: In BC now
+  vs From this spec, unticks unchanged, send + poll, history, stamps
+  `lastGeneratedAt`); launch with `?opportunityId=` / `?jobId=` fills a new spec
+  from BC. Permission `generateToProject` (admin, developer, ops, pm).
+- Tests: `services/bc-link.test.ts` (3). 87 pass. Guide v1.2.
+
+**Earlier the same day: Test & Path right-click editing (Alex's idea from testing)**
 - Alex: "right click a question or answer and change the wording, delete, etc. so I
   can make modifications on the fly … during a test build".
 - `components/ContextMenu.tsx`: `ContextMenu` (portal, clamps to the viewport,
@@ -565,7 +594,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
    ✅ Descriptions (template editor), ✅ Categories, ✅ Versions, ✅ Test & Path, ✅ Copy questions (Blocks skipped — none in
    the real setup), ✅ Spec References, ✅ Vinyl Colors, ✅ Stage Checklist. **Setup tools done.**
-2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
+2. **BC link** (✅ built — ⏳ turn on per flows/BC-LINK.md; next (c) item numbers into the job): opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
    → BCPush flow → writable API page in the BC extension writes 60214 / 60215
    MSDos + spec completeness for the Order Released check), Job Card button →
@@ -586,6 +615,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (BC link)** — BC extension v0.12.0 (opportunities + writable job
+  descriptions API pages, Open in Sign Builder), BC tables script, two flows
+  (generator + solution zip), app pickers + Generate to Project. Guide v1.2.
 - **Oct 15, 2026 (quick edit)** — Test & Path: right-click a question / answer to
   edit it on the spot. Guide v1.1.
 - **Oct 15, 2026 (references etc.)** — Setup → Spec References (pages + images +
