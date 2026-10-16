@@ -170,7 +170,7 @@
                       },
                       "inputs": {
                         "parameters": {
-                          "entityName": "crfdf_sbdescpushes",
+                          "entityName": "crfdf_sbdescpushs",
                           "recordId": "@triggerOutputs()?['body/crfdf_sbdescpushid']",
                           "item/crfdf_status": "synced",
                           "item/crfdf_statusmessage": "@concat('Written to project ', trim(coalesce(triggerOutputs()?['body/crfdf_jobno'], '')), ' in BC.')"
@@ -190,7 +190,7 @@
                         "runAfter": {},
                         "inputs": {
                           "parameters": {
-                            "entityName": "crfdf_sbdescpushes",
+                            "entityName": "crfdf_sbdescpushs",
                             "recordId": "@triggerOutputs()?['body/crfdf_sbdescpushid']",
                             "item/crfdf_status": "failed",
                             "item/crfdf_statusmessage": "@concat('Project ', trim(coalesce(triggerOutputs()?['body/crfdf_jobno'], '')), ' was not found in BC.')"
@@ -226,7 +226,7 @@
               },
               "inputs": {
                 "parameters": {
-                  "entityName": "crfdf_sbdescpushes",
+                  "entityName": "crfdf_sbdescpushs",
                   "recordId": "@triggerOutputs()?['body/crfdf_sbdescpushid']",
                   "item/crfdf_status": "failed",
                   "item/crfdf_statusmessage": "@if(greater(length(outputs('Error_Text')), 300), substring(outputs('Error_Text'), 0, 300), outputs('Error_Text'))"

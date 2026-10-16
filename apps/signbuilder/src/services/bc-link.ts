@@ -60,7 +60,7 @@ const matches = (q: string, ...fields: string[]) => {
 // Live
 // ---------------------------------------------------------------------------
 
-const SET = { opp: "crfdf_bcopportunities", job: "crfdf_bcjobs", desc: "crfdf_jobdescs", push: "crfdf_sbdescpushes", request: "crfdf_syncrequests" };
+const SET = { opp: "crfdf_bcopportunities", job: "crfdf_bcjobs", desc: "crfdf_jobdescs", push: "crfdf_sbdescpushs", request: "crfdf_syncrequests" };
 
 const oppFrom = (r: Row): BcOpportunity => ({
   no: s(r.crfdf_opportunityno).trim(),

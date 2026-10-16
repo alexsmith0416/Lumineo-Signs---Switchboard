@@ -234,7 +234,7 @@ const opportunitiesFlow = wrapFlow(
 // BCPush_SBDescriptions
 // ---------------------------------------------------------------------------
 
-const PUSH_SET = "crfdf_sbdescpushes";
+const PUSH_SET = "crfdf_sbdescpushs";
 const T = (name) => `triggerOutputs()?['body/crfdf_${name}']`;
 const PUSH_ID = `@${T("sbdescpushid")}`;
 const markPush = (status, message, runAfter) =>
