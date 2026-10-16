@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 import type { SignLine, Spec } from "../domain/types";
 import { docsToSetup, setupToDocs } from "../services/repo";
 import { checkSetup } from "../setup/check-setup";
+import { seedPath } from "../setup/path-ops";
 import { diffSetups, isSameSetup } from "../setup/version-ops";
 import { parseBcSetupExport } from "../setup/import-bc";
 import { buildFromTemplates, buildProduction } from "./descriptions";
@@ -92,6 +93,24 @@ describe.skipIf(!setup)("real BC setup", () => {
     const biggest = Math.max(...[...docs.values()].map((j) => j.length));
     expect(biggest).toBeLessThan(1_048_576);
     expect(isSameSetup(diffSetups(setup!, docsToSetup(docs)))).toBe(true);
+  });
+
+  // Show path: for every question that can be asked, the seeded test sign
+  // brings it up. Reports the ones it can't (rules that need more than the
+  // first showing rule) to SB_SETUP_OUT/_show-path.txt; fails above 5%.
+  it("show path reaches the questions", () => {
+    const misses: string[] = [];
+    let total = 0;
+    for (const t of setup!.signTypes.filter((x) => x.active && !x.isBlock && setup!.categories.find((c) => c.code === x.categoryCode)?.active)) {
+      for (const q of idx.questions(t.code)) {
+        if (q.stage === "notAsked" || (q.scope === "conditional" && !idx.hasQuestionRule(t.code, q.code))) continue;
+        total++;
+        const line = seedPath(idx, t.code, q.code);
+        if (line.signTypeCode !== t.code || !evaluate(idx, line, "full").states[q.code]?.eligible) misses.push(`${t.code} ${q.code}: ${q.prompt}`);
+      }
+    }
+    if (outDir) writeFileSync(join(outDir, "_show-path.txt"), `${misses.length} of ${total} not reached\n${misses.join("\n")}\n`);
+    expect(misses.length / total).toBeLessThan(0.05);
   });
 
   // Reports everything (SB_SETUP_OUT/_check-setup.txt); fails only when a sign

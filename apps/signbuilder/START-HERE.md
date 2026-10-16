@@ -78,6 +78,7 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             path-ops.ts — Test & Path: test sign, seed the path to a question, hidden reasons
              version-ops.ts — saved versions: stats, header, diff between two setups
              category-ops.ts — categories: add / edit / move / delete, new type from a copy
              template-ops.ts — Field / Extended template lines: edits, line problems,
@@ -88,8 +89,8 @@ services/    repo.ts (mock localStorage | live Dataverse), dataverse-core.ts (dv
 store/       Zustand: setup-store, spec-store, write-status-store (from Switchboard), demo-store
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
              Projects, Library, SetupHome (tabs: Overview, Categories, Sign Types, Questions, Rules,
-             Descriptions, Materials & Items, Check Setup, Versions + ↶ Undo —
-             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup, Versions,
+             Descriptions, Materials & Items, Check Setup, Test & Path, Versions + ↶ Undo —
+             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup, TestPath, Versions,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -298,9 +299,25 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Versions (after Descriptions, Categories).**
+**Last session: Oct 15, 2026 — Setup: Test & Path (after Descriptions, Categories, Versions).**
 
-**Recap (latest — Versions)**
+**Recap (latest — Test & Path)**
+- `setup/path-ops.ts` (port of BC LSB Path Mgt.): `testSign` (category's first
+  type, never saved), `signOfType` (answers Selected When; forces the type if it
+  can't), `seedPath` (follows the first showing rule + Also requires recursively,
+  then optional answer), `hiddenReason` (Not asked / no rule shows it — with the
+  shown-when text / parent blank or wrong value / after a blank required one /
+  Job details only), `firstAllowed`.
+- **Test & Path tab** (`screens/setup/TestPath.tsx`): real `QuestionCard`s +
+  `answerQuestion` on a local line; category, Opportunity/Job details, Show
+  hidden questions, Start over; bar with sign type / Spec Code / reference /
+  required left; Production / Field preview. Questions tab → **Show path** opens it
+  seeded (new `key` per open; the question outlined + scrolled to).
+- Tests: `setup/path-ops.test.ts` (3); real-setup: **show path reaches all 1,276
+  askable questions** (report `_show-path.txt`). 75 pass. Guide v0.8.
+- ⚠️ Not browser-tested (dev server not restarted).
+
+**Earlier the same day: Versions**
 - **Storage** (`services/repo.ts`): `crfdf_sbversion` rows with Scope `v:<id>` —
   Kind 1 = one setup document (Name = doc key, JSON = the doc), Kind 0 = header
   (Name = label, JSON = `SetupVersion`), **header written last** (a half-saved
@@ -495,7 +512,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Next (in order)**
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
-   ✅ Descriptions (template editor), ✅ Categories, ✅ Versions; next Show Path / Test Category, Question Blocks,
+   ✅ Descriptions (template editor), ✅ Categories, ✅ Versions, ✅ Test & Path; next Question Blocks,
    Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
@@ -518,6 +535,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (test & path)** — Setup → Test & Path (test sign, hidden reasons,
+  Show path from a question). Guide v0.8.
 - **Oct 15, 2026 (versions)** — Setup → Versions (save / changes since / restore /
   delete; automatic before import + restore), stored per document in
   crfdf_sbversion. Guide v0.7.

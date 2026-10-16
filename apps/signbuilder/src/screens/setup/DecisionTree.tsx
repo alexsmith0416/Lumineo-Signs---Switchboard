@@ -42,7 +42,17 @@ const isList = (q: Question) => q.answerType === "option" || q.answerType === "y
 /** Setup → Questions: a sign type's questions in order, each with when it's
  *  asked; click one to edit it, its answers (with how each prints and its BC
  *  item) and its rules (shown when / answers offered / defaults). */
-export default function DecisionTree({ typeCode, setTypeCode, onOpenMatrix }: { typeCode: string; setTypeCode: (c: string) => void; onOpenMatrix: (trigger: string, target?: string) => void }) {
+export default function DecisionTree({
+  typeCode,
+  setTypeCode,
+  onOpenMatrix,
+  onShowPath,
+}: {
+  typeCode: string;
+  setTypeCode: (c: string) => void;
+  onOpenMatrix: (trigger: string, target?: string) => void;
+  onShowPath: (typeCode: string, questionCode: string) => void;
+}) {
   const setup = useSetupStore((s) => s.setup);
   const idx = useMemo(() => (setup ? new SetupIndex(setup) : null), [setup]);
   const [code, setCode] = useState("");
@@ -128,7 +138,7 @@ export default function DecisionTree({ typeCode, setTypeCode, onOpenMatrix }: { 
       </div>
 
       {current ? (
-        <QuestionEditor key={`${typeCode}|${current.code}`} idx={idx} q={current} onDeleted={() => setCode("")} onOpenMatrix={onOpenMatrix} />
+        <QuestionEditor key={`${typeCode}|${current.code}`} idx={idx} q={current} onDeleted={() => setCode("")} onOpenMatrix={onOpenMatrix} onShowPath={onShowPath} />
       ) : (
         <div className="sbp-card sbp-muted">No questions on this sign type yet.</div>
       )}
@@ -136,7 +146,19 @@ export default function DecisionTree({ typeCode, setTypeCode, onOpenMatrix }: { 
   );
 }
 
-function QuestionEditor({ idx, q, onDeleted, onOpenMatrix }: { idx: SetupIndex; q: Question; onDeleted: () => void; onOpenMatrix: (trigger: string, target?: string) => void }) {
+function QuestionEditor({
+  idx,
+  q,
+  onDeleted,
+  onOpenMatrix,
+  onShowPath,
+}: {
+  idx: SetupIndex;
+  q: Question;
+  onDeleted: () => void;
+  onOpenMatrix: (trigger: string, target?: string) => void;
+  onShowPath: (typeCode: string, questionCode: string) => void;
+}) {
   const setup = idx.data;
   const replace = useSetupStore((s) => s.replace);
   const type = q.signTypeCode;
@@ -157,6 +179,9 @@ function QuestionEditor({ idx, q, onDeleted, onOpenMatrix }: { idx: SetupIndex; 
           <div className="sbp-muted" style={{ fontSize: 12 }}>Shown: {shownWhen(idx, q)}</div>
         </div>
         <div className="sbp-spacer" />
+        <button type="button" className="btn-secondary" onClick={() => onShowPath(type, q.code)} title="Try it: a test sign with the answers that bring this question up">
+          Show path
+        </button>
         {isList(q) && (
           <button type="button" className="btn-secondary" onClick={() => onOpenMatrix(q.code)} title="What each answer brings up, and the defaults it sets">
             Rule Matrix

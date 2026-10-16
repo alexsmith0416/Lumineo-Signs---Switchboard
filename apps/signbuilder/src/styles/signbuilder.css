@@ -992,3 +992,19 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px 10px;
 }
+
+/* ---- Test & Path ------------------------------------------------------------ */
+
+.sbp-path-hidden {
+  border: 1px dashed var(--border-default);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  color: var(--text-dim);
+  background: var(--bg-tertiary);
+}
+
+.sbp-path-hidden--focus {
+  border: 2px solid var(--status-amber);
+  color: var(--text-primary);
+}

@@ -12,18 +12,21 @@ import Descriptions from "./setup/Descriptions";
 import MaterialsItems from "./setup/MaterialsItems";
 import RuleMatrix from "./setup/RuleMatrix";
 import SignTypes from "./setup/SignTypes";
+import TestPath, { type PathStart } from "./setup/TestPath";
 import Versions from "./setup/Versions";
 
-type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check" | "versions";
+type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check" | "test" | "versions";
 
 /** Setup hub: Overview (+ the one-time import from Business Central),
  *  Categories, Sign Types, Questions (decision tree), Rules (matrix),
  *  Descriptions (Field / Extended templates), Materials & Items, Check
- *  Setup and Versions. Undo steps back through this session's changes. */
+ *  Setup, Test & Path and Versions. Undo steps back through this session's changes. */
 export default function SetupHome({ userName }: { userName: string }) {
   const [tab, setTab] = useState<SetupTab>("overview");
   const [openType, setOpenType] = useState<string | undefined>();
   const [openCategory, setOpenCategory] = useState<string | undefined>();
+  // Test & Path restarts (new key) each time it's opened from a question.
+  const [path, setPath] = useState<{ key: number; start?: PathStart }>({ key: 0 });
   // Shared by Questions and Rules, so switching tabs keeps your place.
   const [typeCode, setTypeCode] = useState("");
   const [trigger, setTrigger] = useState("");
@@ -97,6 +100,9 @@ export default function SetupHome({ userName }: { userName: string }) {
         <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
           Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
         </button>
+        <button type="button" className={`sbp-tab${tab === "test" ? " sbp-tab--on" : ""}`} onClick={() => setTab("test")}>
+          Test &amp; Path
+        </button>
         <button type="button" className={`sbp-tab${tab === "versions" ? " sbp-tab--on" : ""}`} onClick={() => setTab("versions")}>
           Versions
         </button>
@@ -128,6 +134,10 @@ export default function SetupHome({ userName }: { userName: string }) {
         <DecisionTree
           typeCode={typeCode}
           setTypeCode={setTypeCode}
+          onShowPath={(type, question) => {
+            setPath({ key: path.key + 1, start: { typeCode: type, questionCode: question } });
+            setTab("test");
+          }}
           onOpenMatrix={(trig, tgt) => {
             setTrigger(trig);
             if (tgt) {
@@ -152,6 +162,7 @@ export default function SetupHome({ userName }: { userName: string }) {
       )}
       {tab === "descriptions" && <Descriptions typeCode={typeCode} setTypeCode={setTypeCode} />}
       {tab === "materials" && <MaterialsItems />}
+      {tab === "test" && <TestPath key={path.key} start={path.start} />}
       {tab === "versions" && <Versions userName={userName} />}
       {tab === "check" && (
         <CheckSetup
@@ -246,7 +257,7 @@ export default function SetupHome({ userName }: { userName: string }) {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b>, <b>Check Setup</b> and <b>Versions</b> are ready (tabs above).
+          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b>, <b>Check Setup</b>, <b>Test &amp; Path</b> and <b>Versions</b> are ready (tabs above).
           Coming next: Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
         </p>
       </div>
