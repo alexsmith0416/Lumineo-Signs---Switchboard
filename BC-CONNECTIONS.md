@@ -113,7 +113,7 @@ Dataverse side (all consumers so far): env **"Alex Smith's Environment"** `484cd
 | Infotech Sign365 API | `…/api/infotechConsultingGroup/sign365/v1.0/companies(<id>)/…` (JobCompletion flow uses the domain form `v2.0/luminousneon.com/UAT/…`) |
 | Microsoft analytics | `…/api/microsoft/analytics/v1.0/…` (`jobs`, `jobPlanningLines`, `salesLines`) |
 | Microsoft standard v2.0 | `…/api/v2.0/…` (`customers`, `salesOrders`) |
-| BC web client deep links | page 88 Job Card, page 50 Purchase Order, page 9347 PO archive (`services/job-links.ts`, `services/job-pos.ts`) |
+| BC web client deep links | `https://businesscentral.dynamics.com/<tenant>/Production/?company=Luminous Neon&page=…` (tenant + env pinned — no default-env redirect; `BC_ORIGIN` in `services/job-links.ts`). Page 88 Job Card, page 50 Purchase Order, page 9347 PO archive (`services/job-links.ts`, `services/job-pos.ts`). Open Project only for a real job no. (`isBcJobNo`) |
 
 ### 3.2 Auth methods
 
@@ -543,4 +543,5 @@ Scripts fetch the clientdata, back it up to `flows/*-backup-<stamp>.json`, edit,
 
 ## 15. Changelog (newest first)
 
+- **2026-10-15** — Switchboard BC deep links pinned to `/<tenant>/Production/` (faster open; never lands in UAT). Open Project hidden unless the card has a real job no. (BC rejects a No. filter over 20 chars). Install cards: 43 that lost `crfdf_jobno` restored (`scripts/repair-installcard-jobno.ps1`).
 - **2026-10-14** — File created. Baseline: `lumineo-planning-ext` v1.0.0.18 in UAT only; nothing in Production; flows as in §8.

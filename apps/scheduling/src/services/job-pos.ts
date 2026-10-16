@@ -3,6 +3,8 @@
 // for open orders + LumineoJobPOArchive for orders BC has archived once fully
 // received / invoiced). Pure — no I/O.
 
+import { BC_ORIGIN } from "./job-links";
+
 export interface JobPO {
   poNo: string;
   vendorNo: string;
@@ -15,7 +17,6 @@ export interface JobPO {
 
 export const ARCHIVED = "Archived";
 
-const BC_ORIGIN = "https://businesscentral.dynamics.com";
 const BC_COMPANY = "Luminous Neon";
 const BC_PURCHASE_ORDER_PAGE = 50; // Purchase Order card
 const BC_PURCHASE_ORDER_ARCHIVES_PAGE = 9347; // Purchase Order Archives list (every version)

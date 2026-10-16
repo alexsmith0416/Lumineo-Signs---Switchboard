@@ -1,7 +1,10 @@
 // Deep links from a job card to Business Central and the SharePoint job folder.
 // Tweak these constants if BC's company/page id or the SharePoint site changes.
 
-const BC_ORIGIN = "https://businesscentral.dynamics.com";
+// Tenant + environment in the path: without them BC first looks up the
+// user's default environment and redirects (slower, and can land in UAT).
+export const BC_ORIGIN =
+  "https://businesscentral.dynamics.com/fe0182fa-d183-46ab-8493-9e8ea9c3d0b8/Production";
 const BC_COMPANY = "Luminous Neon";
 const BC_JOB_PAGE = 88; // Job / Project card
 
