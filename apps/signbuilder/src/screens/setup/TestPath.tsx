@@ -6,6 +6,8 @@ import { hiddenReason, seedPath, testSign } from "../../setup/path-ops";
 import { useSetupStore } from "../../store/setup-store";
 import { DescriptionText } from "../builder/DescriptionPreview";
 import QuestionCard from "../builder/QuestionCard";
+import { sameAnswer } from "../../engine/values";
+import QuickEdit, { type QuickTarget } from "./QuickEdit";
 
 const TEST_SPEC: Spec = {
   id: "test", number: "TEST", description: "", purpose: "walkIn", status: "draft", detailLevel: "full", opportunityNo: "", jobNo: "J-TEST",
@@ -24,7 +26,7 @@ export interface PathStart {
  *  pick a category and answer as a salesperson would, with the sign type the
  *  answers land on, its Spec Code and the descriptions alongside. "Show hidden
  *  questions" lists the rest greyed out with why each one isn't asked. */
-export default function TestPath({ start }: { start?: PathStart }) {
+export default function TestPath({ start, onOpenQuestion }: { start?: PathStart; onOpenQuestion: (typeCode: string, questionCode: string) => void }) {
   const setup = useSetupStore((s) => s.setup);
   const idx = useSetupStore((s) => s.idx);
   const categories = useMemo(() => idx?.activeCategories() ?? [], [idx]);
@@ -37,6 +39,7 @@ export default function TestPath({ start }: { start?: PathStart }) {
   const [focus, setFocus] = useState(start?.questionCode ?? "");
   const [out, setOut] = useState<"production" | "field">("production");
   const seeded = useRef(false);
+  const [quick, setQuick] = useState<QuickTarget | null>(null);
 
   // Opened from a question: the path to it; else a fresh sign of the category.
   useEffect(() => {
@@ -88,6 +91,15 @@ export default function TestPath({ start }: { start?: PathStart }) {
   };
 
   const spec = { ...TEST_SPEC, detailLevel: detail };
+  // Right-click a question (or one of its answer buttons) to change it here.
+  const onMenu = (e: React.MouseEvent, code: string) => {
+    if (!shownLine) return;
+    e.preventDefault();
+    const btn = (e.target as HTMLElement).closest("[data-answer]");
+    setQuick({ x: e.clientX, y: e.clientY, typeCode: shownLine.signTypeCode, questionCode: code, answer: btn?.getAttribute("data-answer") ?? undefined });
+  };
+  const renamedAnswer = (code: string, from: string, to: string) =>
+    setLine((l) => (l && l.answers[code] && sameAnswer(l.answers[code]!.v, from) ? { ...l, answers: { ...l.answers, [code]: { ...l.answers[code]!, v: to } } } : l));
   let n = 0;
   let lastSection = "";
   return (
@@ -128,7 +140,8 @@ export default function TestPath({ start }: { start?: PathStart }) {
           </button>
         </div>
         <p className="sbp-muted" style={{ fontSize: 12, margin: "8px 0" }}>
-          A test sign that's never saved, using the setup as it is right now — edits on the other tabs show here straight away. Answer as a salesperson would.
+          A test sign that's never saved, using the setup as it is right now. Answer as a salesperson would — and <b>right-click a question or an answer</b> to
+          change it on the spot (rename, add or remove answers, set the default, add a question after it, edit everything…). Undo (top right) steps back.
         </p>
         {shownLine && (
           <div className="sbp-banner" style={{ marginBottom: 8 }}>
@@ -168,7 +181,7 @@ export default function TestPath({ start }: { start?: PathStart }) {
             lastSection = section;
             if (visible) n++;
             return (
-              <div key={q.code}>
+              <div key={q.code} onContextMenu={(e) => onMenu(e, q.code)}>
                 {heading && <div className="sbp-section-heading">{heading}</div>}
                 {visible ? (
                   <QuestionCard idx={idx} number={n} question={q} state={st!} isNew={q.code === focus} readOnly={false} error={errors[q.code] ?? ""} onAnswer={(i, s) => onAnswer(q.code, i, s)} />
@@ -185,6 +198,7 @@ export default function TestPath({ start }: { start?: PathStart }) {
           })}
       </div>
 
+      <QuickEdit target={quick} onRenamedAnswer={renamedAnswer} onOpenInQuestions={onOpenQuestion} />
       <div className="sbp-card sbp-tpl-preview">
         <div className="sbp-tabs" style={{ marginTop: 0 }}>
           <button type="button" className={`sbp-tab${out === "production" ? " sbp-tab--on" : ""}`} onClick={() => setOut("production")}>

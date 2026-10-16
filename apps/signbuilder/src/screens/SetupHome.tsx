@@ -35,6 +35,8 @@ export default function SetupHome({ userName }: { userName: string }) {
   const [typeCode, setTypeCode] = useState("");
   const [trigger, setTrigger] = useState("");
   const [target, setTarget] = useState("");
+  // Questions tab opens on this question (from Test & Path's right-click menu).
+  const [openQuestion, setOpenQuestion] = useState<{ code: string; key: number } | null>(null);
   const [refMode, setRefMode] = useState<"pages" | "rules">("pages");
   const [ruleMode, setRuleMode] = useState<"show" | "defaults">("show");
   const undoStack = useSetupStore((s) => s.undoStack);
@@ -146,6 +148,8 @@ export default function SetupHome({ userName }: { userName: string }) {
       {tab === "types" && <SignTypes key={openType ?? ""} initialCode={openType} />}
       {tab === "questions" && (
         <DecisionTree
+          key={openQuestion?.key ?? 0}
+          initialCode={openQuestion?.code}
           typeCode={typeCode}
           setTypeCode={setTypeCode}
           onShowPath={(type, question) => {
@@ -179,7 +183,15 @@ export default function SetupHome({ userName }: { userName: string }) {
       {tab === "references" && <References typeCode={typeCode} setTypeCode={setTypeCode} mode={refMode} setMode={setRefMode} />}
       {tab === "vinyl" && <VinylColors />}
       {tab === "checklist" && <Checklist />}
-      {tab === "test" && <TestPath key={path.key} start={path.start} />}
+      {tab === "test" && <TestPath
+          key={path.key}
+          start={path.start}
+          onOpenQuestion={(type, code) => {
+            setTypeCode(type);
+            setOpenQuestion({ code, key: Date.now() });
+            setTab("questions");
+          }}
+        />}
       {tab === "versions" && <Versions userName={userName} />}
       {tab === "check" && (
         <CheckSetup

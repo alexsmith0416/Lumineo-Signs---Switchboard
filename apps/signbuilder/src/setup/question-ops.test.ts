@@ -4,6 +4,7 @@ import { answerQuestion, newSignLine } from "../engine/flow";
 import { SetupIndex } from "../engine/setup-index";
 import {
   addQuestion,
+  codeFromPrompt,
   copyDefaults,
   deleteQuestion,
   moveOption,
@@ -43,6 +44,13 @@ describe("answers", () => {
 });
 
 describe("questions", () => {
+  it("makes a free code from the wording", () => {
+    expect(codeFromPrompt(DEMO_SETUP, T, "Face frame material?")).toBe("FACE_FRAME_MATERIAL");
+    expect(codeFromPrompt(DEMO_SETUP, T, "3D letters")).toBe("Q_3D_LETTERS");
+    const taken = DEMO_SETUP.questions.find((q) => q.signTypeCode === T)!.code;
+    expect(codeFromPrompt(DEMO_SETUP, T, taken.replace(/_/g, " "))).toBe(`${taken}_2`);
+  });
+
   it("adds after the selected question and deletes with its rules", () => {
     const after = DEMO_SETUP.questions.find((q) => q.signTypeCode === T && q.code === "FACE_TYPE")!;
     expect(questionCodeError(DEMO_SETUP, T, "FACE_TYPE")).toContain("already");

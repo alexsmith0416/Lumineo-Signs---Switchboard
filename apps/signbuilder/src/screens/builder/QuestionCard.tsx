@@ -89,6 +89,7 @@ function Choices({ idx, q, state, readOnly, onAnswer }: { idx: SetupIndex; q: Qu
         <button
           key={v}
           type="button"
+          data-answer={v}
           disabled={readOnly}
           className={`sbp-choice${sameAnswer(v, state.value) ? " sbp-choice--on" : ""}${isPendingValue(v) ? " sbp-choice--special" : ""}`}
           onClick={() => onAnswer(sameAnswer(v, state.value) && !q.required ? "" : v)}

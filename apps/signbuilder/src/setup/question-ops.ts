@@ -22,6 +22,20 @@ export function questionCodeError(setup: SetupData, type: string, code: string):
   return "";
 }
 
+/** A free code made from the wording: "Face frame material" → FACE_FRAME_MATERIAL (…_2 when taken). */
+export function codeFromPrompt(setup: SetupData, type: string, prompt: string): string {
+  const base =
+    prompt
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/^([0-9])/, "Q_$1")
+      .slice(0, 26) || "QUESTION";
+  let code = base;
+  for (let n = 2; questionCodeError(setup, type, code); n++) code = `${base}_${n}`;
+  return code;
+}
+
 export function addQuestion(setup: SetupData, type: string, code: string, prompt: string, after?: Question): SetupData {
   const c = code.trim().toUpperCase();
   const err = questionCodeError(setup, type, c);

@@ -44,11 +44,13 @@ const isList = (q: Question) => q.answerType === "option" || q.answerType === "y
  *  asked; click one to edit it, its answers (with how each prints and its BC
  *  item) and its rules (shown when / answers offered / defaults). */
 export default function DecisionTree({
+  initialCode,
   typeCode,
   setTypeCode,
   onOpenMatrix,
   onShowPath,
 }: {
+  initialCode?: string;
   typeCode: string;
   setTypeCode: (c: string) => void;
   onOpenMatrix: (trigger: string, target?: string) => void;
@@ -56,7 +58,7 @@ export default function DecisionTree({
 }) {
   const setup = useSetupStore((s) => s.setup);
   const idx = useMemo(() => (setup ? new SetupIndex(setup) : null), [setup]);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
   const [adding, setAdding] = useState<{ code: string; prompt: string; error: string } | null>(null);
   const replace = useSetupStore((s) => s.replace);
   // Copy mode: tick questions, then copy them to other sign types.
@@ -198,7 +200,9 @@ export default function DecisionTree({
   );
 }
 
-function QuestionEditor({
+/** Everything about one question: details, answers, rules. Also opened from
+ *  Test & Path (without the Show path / Rule Matrix buttons). */
+export function QuestionEditor({
   idx,
   q,
   onDeleted,
@@ -208,8 +212,8 @@ function QuestionEditor({
   idx: SetupIndex;
   q: Question;
   onDeleted: () => void;
-  onOpenMatrix: (trigger: string, target?: string) => void;
-  onShowPath: (typeCode: string, questionCode: string) => void;
+  onOpenMatrix?: (trigger: string, target?: string) => void;
+  onShowPath?: (typeCode: string, questionCode: string) => void;
 }) {
   const setup = idx.data;
   const replace = useSetupStore((s) => s.replace);
@@ -231,10 +235,12 @@ function QuestionEditor({
           <div className="sbp-muted" style={{ fontSize: 12 }}>Shown: {shownWhen(idx, q)}</div>
         </div>
         <div className="sbp-spacer" />
-        <button type="button" className="btn-secondary" onClick={() => onShowPath(type, q.code)} title="Try it: a test sign with the answers that bring this question up">
-          Show path
-        </button>
-        {isList(q) && (
+        {onShowPath && (
+          <button type="button" className="btn-secondary" onClick={() => onShowPath(type, q.code)} title="Try it: a test sign with the answers that bring this question up">
+            Show path
+          </button>
+        )}
+        {isList(q) && onOpenMatrix && (
           <button type="button" className="btn-secondary" onClick={() => onOpenMatrix(q.code)} title="What each answer brings up, and the defaults it sets">
             Rule Matrix
           </button>
@@ -499,7 +505,7 @@ function AnswersEditor({ idx, q }: { idx: SetupIndex; q: Question }) {
   );
 }
 
-function RulesEditor({ idx, q, earlierLists, onOpenMatrix }: { idx: SetupIndex; q: Question; earlierLists: Question[]; onOpenMatrix: (trigger: string, target?: string) => void }) {
+function RulesEditor({ idx, q, earlierLists, onOpenMatrix }: { idx: SetupIndex; q: Question; earlierLists: Question[]; onOpenMatrix?: (trigger: string, target?: string) => void }) {
   const setup = idx.data;
   const replace = useSetupStore((s) => s.replace);
   const type = q.signTypeCode;
@@ -612,7 +618,7 @@ function RulesEditor({ idx, q, earlierLists, onOpenMatrix }: { idx: SetupIndex; 
           >
             Add
           </button>
-          {def.trigger && (
+          {def.trigger && onOpenMatrix && (
             <button type="button" className="btn-secondary" onClick={() => onOpenMatrix(def.trigger, q.code)}>
               Set all in the Defaults matrix
             </button>

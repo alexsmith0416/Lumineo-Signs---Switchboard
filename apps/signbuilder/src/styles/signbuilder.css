@@ -1043,3 +1043,71 @@
 .sbp-vinyl-table td {
   padding: 3px 4px;
 }
+
+/* ---- Right-click menu --------------------------------------------------------- */
+
+.sbp-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 230px;
+  max-width: 340px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 4px;
+}
+
+.sbp-menu__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 6px 10px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sbp-menu__divider {
+  border-top: 1px solid var(--border-soft);
+  margin: 4px 0;
+}
+
+.sbp-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.sbp-menu__item:hover:not(:disabled) {
+  background: var(--accent-brand-soft);
+}
+
+.sbp-menu__item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sbp-menu__item--danger {
+  color: var(--status-red);
+}
+
+.sbp-quick-editor {
+  max-height: 72vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.sbp-quick-editor .sbp-card {
+  box-shadow: none;
+  border: none;
+  padding: 0;
+}

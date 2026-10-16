@@ -304,7 +304,24 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 **Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest — References / Vinyl / Checklist)**
+**Recap (latest — Test & Path right-click editing, Alex's idea from testing)**
+- Alex: "right click a question or answer and change the wording, delete, etc. so I
+  can make modifications on the fly … during a test build".
+- `components/ContextMenu.tsx`: `ContextMenu` (portal, clamps to the viewport,
+  closes on outside click / Esc / scroll) + `PromptDialog` (one-line text, validate).
+- `screens/setup/QuickEdit.tsx`: menu for the question under the mouse (rename,
+  add answer, required/optional, hint, add a question after — code from
+  `codeFromPrompt` then the editor opens —, edit everything = `QuestionEditor`
+  (now exported from DecisionTree; Show path / Rule Matrix buttons optional) in a
+  modal, open on the Questions tab, delete) and for the answer button under it
+  (`data-answer` on choice buttons: rename — the test sign keeps its pick —, prints
+  as, default, move, remove). All via `replace` → Undo.
+- Questions tab can open on a question (`initialCode` + key from SetupHome).
+- Long answer lists (> 8, a dropdown) have no per-answer buttons: use "Edit
+  everything about it…" for those answers.
+- 84 tests pass. Guide v1.1.
+
+**Earlier the same day: References / Vinyl / Checklist**
 - `setup/reference-ops.ts`: reference code check / usage, reference rules (add,
   update, move, delete — first match wins), vinyl colors (key = series|code; add,
   update, delete), checklist lines (global line nos; add, move within category,
@@ -569,6 +586,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (quick edit)** — Test & Path: right-click a question / answer to
+  edit it on the spot. Guide v1.1.
 - **Oct 15, 2026 (references etc.)** — Setup → Spec References (pages + images +
   rules), Vinyl Colors, Stage Checklist. Setup tools complete. Guide v1.0.
 - **Oct 15, 2026 (copy questions)** — Copy questions to other sign types (with
