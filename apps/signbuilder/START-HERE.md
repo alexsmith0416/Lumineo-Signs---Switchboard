@@ -78,6 +78,7 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             copy-ops.ts — copy questions between sign types, share first questions
              path-ops.ts — Test & Path: test sign, seed the path to a question, hidden reasons
              version-ops.ts — saved versions: stats, header, diff between two setups
              category-ops.ts — categories: add / edit / move / delete, new type from a copy
@@ -90,7 +91,7 @@ store/       Zustand: setup-store, spec-store, write-status-store (from Switchbo
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
              Projects, Library, SetupHome (tabs: Overview, Categories, Sign Types, Questions, Rules,
              Descriptions, Materials & Items, Check Setup, Test & Path, Versions + ↶ Undo —
-             screens/setup/Categories, SignTypes, DecisionTree, RuleMatrix, Descriptions, MaterialsItems, CheckSetup, TestPath, Versions,
+             screens/setup/Categories, SignTypes, DecisionTree (+ CopyQuestions), RuleMatrix, Descriptions, MaterialsItems, CheckSetup, TestPath, Versions,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -299,9 +300,23 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Test & Path (after Descriptions, Categories, Versions).**
+**Last session: Oct 15, 2026 — Setup: Copy questions (after Descriptions, Categories, Versions, Test & Path).**
 
-**Recap (latest — Test & Path)**
+**Recap (latest — Copy questions)**
+- `setup/copy-ops.ts` (port of BC LSB Setup Copy Mgt.): `withFollowUps` (rule /
+  Also-requires closure), `pasteQuestions(from, codes, targets, replace)` (answers,
+  show/allow rules targeting them — no duplicates —, default rules; block code
+  kept only if the target uses the block; reports kept + missing parents),
+  `existingOn`, `sharePickingQuestions` (replaces + removes extra picking
+  questions on the category's other types).
+- Questions tab: **Copy to…** → tick questions → `CopyQuestions.tsx` modal
+  (follow-ups toggle, targets by category, keep / replace clash choice). Sign Types:
+  **Share first questions with the category…** (confirm). Check Setup's
+  "first question differs" fix text points at it.
+- Question Blocks skipped: the real setup has none (BC feature kept in the model).
+- Tests: `setup/copy-ops.test.ts` (4). 79 pass. Guide v0.9. Not browser-tested.
+
+**Earlier the same day: Test & Path**
 - `setup/path-ops.ts` (port of BC LSB Path Mgt.): `testSign` (category's first
   type, never saved), `signOfType` (answers Selected When; forces the type if it
   can't), `seedPath` (follows the first showing rule + Also requires recursively,
@@ -512,8 +527,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 **Next (in order)**
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
-   ✅ Descriptions (template editor), ✅ Categories, ✅ Versions, ✅ Test & Path; next Question Blocks,
-   Copy/Paste, Stage Checklist, Spec References (images), Vinyl Colors.
+   ✅ Descriptions (template editor), ✅ Categories, ✅ Versions, ✅ Test & Path, ✅ Copy questions (Blocks skipped — none in
+   the real setup); next Stage Checklist, Spec References (images), Vinyl Colors.
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
    → BCPush flow → writable API page in the BC extension writes 60214 / 60215
@@ -535,6 +550,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (copy questions)** — Copy questions to other sign types (with
+  follow-ups), Share first questions with the category. Guide v0.9.
 - **Oct 15, 2026 (test & path)** — Setup → Test & Path (test sign, hidden reasons,
   Show path from a question). Guide v0.8.
 - **Oct 15, 2026 (versions)** — Setup → Versions (save / changes since / restore /

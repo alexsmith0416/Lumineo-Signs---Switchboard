@@ -21,6 +21,7 @@ import {
   type QuestionPatch,
 } from "../../setup/question-ops";
 import { useSetupStore } from "../../store/setup-store";
+import CopyQuestions from "./CopyQuestions";
 import { CommitInput, TypePicker } from "./setup-ui";
 
 const ANSWER_TYPES: [AnswerType, string][] = [
@@ -58,6 +59,14 @@ export default function DecisionTree({
   const [code, setCode] = useState("");
   const [adding, setAdding] = useState<{ code: string; prompt: string; error: string } | null>(null);
   const replace = useSetupStore((s) => s.replace);
+  // Copy mode: tick questions, then copy them to other sign types.
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState("");
+  useEffect(() => {
+    setPicked(null);
+    setCopied("");
+  }, [typeCode]);
 
   const questions = idx?.questions(typeCode) ?? [];
   useEffect(() => {
@@ -89,10 +98,28 @@ export default function DecisionTree({
         <div className="sbp-row" style={{ margin: "10px 0 4px" }}>
           <div className="sbp-caption">{questions.length} questions</div>
           <div className="sbp-spacer" />
-          <button type="button" className="btn-secondary" onClick={() => setAdding({ code: "", prompt: "", error: "" })}>
-            + Add question
-          </button>
+          {picked ? (
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setPicked(null)}>
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" disabled={picked.size === 0} onClick={() => setCopying(true)}>
+                Copy {picked.size}…
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn-secondary" title="Copy questions to other sign types" onClick={() => setPicked(new Set(current ? [current.code] : []))}>
+                Copy to…
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setAdding({ code: "", prompt: "", error: "" })}>
+                + Add question
+              </button>
+            </>
+          )}
         </div>
+        {picked && <div className="sbp-muted" style={{ fontSize: 12, marginBottom: 4 }}>Tick the questions to copy, then <b>Copy</b>.</div>}
+        {copied && <div className="sbp-banner sbp-banner--ok" style={{ fontSize: 12 }}>{copied}</div>}
         {adding && (
           <div className="sbp-banner">
             <div className="sbp-field">
@@ -122,6 +149,19 @@ export default function DecisionTree({
               {qs.map((q) => (
                 <div key={q.code} className={`sbp-tree__q${q.code === code ? " sbp-tree__q--on" : ""}`} onClick={() => setCode(q.code)}>
                   <div className="sbp-row" style={{ gap: 6 }}>
+                    {picked && (
+                      <input
+                        type="checkbox"
+                        checked={picked.has(q.code)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const n = new Set(picked);
+                          if (e.target.checked) n.add(q.code);
+                          else n.delete(q.code);
+                          setPicked(n);
+                        }}
+                      />
+                    )}
                     <span style={{ fontWeight: 700, flex: 1 }}>{q.prompt}</span>
                     {q.scope === "conditional" && <span className="sbp-pill">if</span>}
                     {q.picksSignType && <span className="sbp-pill sbp-pill--submitted">type</span>}
@@ -137,6 +177,18 @@ export default function DecisionTree({
         </div>
       </div>
 
+      {copying && picked && (
+        <CopyQuestions
+          fromType={typeCode}
+          codes={questions.filter((q) => picked.has(q.code)).map((q) => q.code)}
+          onClose={() => setCopying(false)}
+          onDone={(msg) => {
+            setCopying(false);
+            setPicked(null);
+            setCopied(msg);
+          }}
+        />
+      )}
       {current ? (
         <QuestionEditor key={`${typeCode}|${current.code}`} idx={idx} q={current} onDeleted={() => setCode("")} onOpenMatrix={onOpenMatrix} onShowPath={onShowPath} />
       ) : (

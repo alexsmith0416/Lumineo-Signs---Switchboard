@@ -1008,3 +1008,22 @@
   border: 2px solid var(--status-amber);
   color: var(--text-primary);
 }
+
+/* ---- Copy questions --------------------------------------------------------- */
+
+.sbp-copy-targets {
+  max-height: 45vh;
+  overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px 18px;
+}
+
+.sbp-copy-targets__cat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}

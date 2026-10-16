@@ -155,7 +155,7 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
   const optionsText = (typeCode: string, questionCode: string) =>
     idx.options(typeCode, questionCode).map((o) => o.value.toLowerCase()).join("|");
   const comparePickingQuestions = (first: SignType, t: SignType) => {
-    const fix = "Open the sign type that is right and share its type-picking questions.";
+    const fix = "Open the sign type that is right on Sign Types and use Share first questions with the category.";
     for (const fq of idx.questions(first.code).filter((q) => q.picksSignType)) {
       const oq = idx.question(t.code, fq.code);
       if (!oq) add("error", t, fq.code, `First question "${fq.prompt}" (on ${first.code}) is missing here.`, fix);

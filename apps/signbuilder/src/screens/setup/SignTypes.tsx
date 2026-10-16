@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import type { SignType } from "../../domain/types";
 import { SetupIndex } from "../../engine/setup-index";
 import { checkSetup, parseSelectedWhen } from "../../setup/check-setup";
+import { sharePickingQuestions } from "../../setup/copy-ops";
 import { duplicateSignType, signTypeCodeError, updateSignType } from "../../setup/sign-type-ops";
 import { useSetupStore } from "../../store/setup-store";
 
@@ -34,6 +36,7 @@ export default function SignTypes({ initialCode }: { initialCode?: string }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dup, setDup] = useState<{ code: string; description: string; error: string } | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [saved, setSaved] = useState("");
 
   const types = useMemo(
@@ -224,8 +227,16 @@ export default function SignTypes({ initialCode }: { initialCode?: string }) {
             <input type="checkbox" checked={draft.active} onChange={(e) => set("active", e.target.checked)} /> Active — offered when someone specs a sign
           </label>
 
-          <div className="sbp-caption" data-tour="selected-when">
-            Selected when
+          <div className="sbp-row">
+            <div className="sbp-caption" data-tour="selected-when">
+              Selected when
+            </div>
+            <div className="sbp-spacer" />
+            {types.length > 1 && idx.questions(current.code).some((q) => q.picksSignType) && (
+              <button type="button" className="btn-secondary" title="Make the first questions on every sign type of the category the same as this one's" onClick={() => setSharing(true)}>
+                Share first questions with the category…
+              </button>
+            )}
           </div>
           <p className="sbp-muted" style={{ fontSize: 12, margin: "2px 0 8px" }}>
             The answers to the category's first questions that pick this sign type. Pick one or more answers per question (more than one = any of them).
@@ -264,6 +275,20 @@ export default function SignTypes({ initialCode }: { initialCode?: string }) {
             ))
           )}
         </div>
+      )}
+      {sharing && current && (
+        <ConfirmDialog
+          title="Share the first questions?"
+          message={`The type-picking questions of ${current.description} (${idx.questions(current.code).filter((q) => q.picksSignType).map((q) => q.prompt).join(", ")}) — with their answers and rules — replace those on the other ${types.length - 1} sign type${types.length === 2 ? "" : "s"} of the category. Their Selected When stays as it is. Undo steps back.`}
+          confirmLabel="Share"
+          onCancel={() => setSharing(false)}
+          onConfirm={() => {
+            const r = sharePickingQuestions(setup, current.code);
+            replace(r.setup, `Share ${current.code}'s first questions with ${r.types} sign types`);
+            setSharing(false);
+            setSaved(`First questions shared with ${r.types} sign type${r.types === 1 ? "" : "s"}.`);
+          }}
+        />
       )}
     </div>
   );
