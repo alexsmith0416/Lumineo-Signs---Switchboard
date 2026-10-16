@@ -21,6 +21,10 @@ interface SetupState {
   importSetup: (next: SetupData, by: string) => Promise<void>;
   /** Puts a saved version back (saving the current setup as a version first). Undo can step back. */
   restoreVersion: (id: string, label: string, by: string, onProgress?: (done: number, total: number) => void) => Promise<void>;
+  /** Adds or changes a reference page (and its images when given). Saved
+   *  straight away, outside Undo — the pages live in their own table. */
+  saveReference: (ref: SpecReference) => Promise<void>;
+  deleteReference: (code: string) => Promise<void>;
   /** Spec reference images are fetched on demand (they're big). */
   referenceImages: (code: string) => Promise<Pick<SpecReference, "thumbnail" | "fullImage">>;
 }
@@ -58,8 +62,10 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     const stack = get().undoStack;
     const last = stack[stack.length - 1];
     if (!last) return;
-    set({ setup: last.setup, idx: new SetupIndex(last.setup), undoStack: stack.slice(0, -1) });
-    void persistOrReport(`Undo: ${last.label}`, () => repo().saveSetup(last.setup));
+    // Reference pages aren't undone (they're saved straight to their own table).
+    const restored = { ...last.setup, references: get().setup?.references ?? last.setup.references };
+    set({ setup: restored, idx: new SetupIndex(restored), undoStack: stack.slice(0, -1) });
+    void persistOrReport(`Undo: ${last.label}`, () => repo().saveSetup(restored));
   },
 
   importSetup: async (next, by) => {
@@ -80,11 +86,33 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     const restored = await repo().loadVersion(id);
     if (current) {
       await repo().saveVersion(newVersionHeader(current, `Before restoring “${label}”`, "Saved automatically before a version was restored.", "auto", by), current, onProgress);
-      // Reference images aren't versioned — keep the ones already loaded.
-      const images = new Map(current.references.map((r) => [r.code, r]));
-      restored.references = restored.references.map((r) => ({ ...r, thumbnail: images.get(r.code)?.thumbnail, fullImage: images.get(r.code)?.fullImage }));
+      // Reference pages aren't versioned (they live in their own table) — keep today's.
+      restored.references = current.references;
     }
     get().replace(restored, `Restore version “${label}”`);
+  },
+
+  saveReference: async (ref) => {
+    const setup = get().setup;
+    if (!setup) return;
+    const { thumbnail, fullImage, ...meta } = ref;
+    const i = setup.references.findIndex((r) => r.code === ref.code);
+    const references = i >= 0 ? setup.references.map((r, n) => (n === i ? { ...r, ...meta } : r)) : [...setup.references, meta];
+    const next = { ...setup, references };
+    set({ setup: next, idx: new SetupIndex(next) });
+    if (thumbnail !== undefined || fullImage !== undefined) imageCache.set(ref.code, { thumbnail, fullImage });
+    await repo().saveReference(ref);
+    await repo().saveSetup(next);
+  },
+
+  deleteReference: async (code) => {
+    const setup = get().setup;
+    if (!setup) return;
+    const next = { ...setup, references: setup.references.filter((r) => r.code !== code) };
+    set({ setup: next, idx: new SetupIndex(next) });
+    imageCache.delete(code);
+    await repo().deleteReference(code);
+    await repo().saveSetup(next);
   },
 
   referenceImages: async (code) => {

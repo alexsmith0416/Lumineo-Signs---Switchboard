@@ -419,8 +419,9 @@ function LineEditor({
 }
 
 /** "When [question] is / is not [answers] / is answered" → Condition Question + Values ("a|b", "!a|b", "" = answered). */
-function ConditionEditor({
+export function ConditionEditor({
   label,
+  emptyLabel,
   idx,
   type,
   question,
@@ -428,6 +429,8 @@ function ConditionEditor({
   onChange,
 }: {
   label: string;
+  /** The "no condition" choice, e.g. "— always print —". */
+  emptyLabel?: string;
   idx: SetupIndex;
   type: string;
   question: string;
@@ -458,7 +461,7 @@ function ConditionEditor({
       <div className="sbp-row" style={{ flexWrap: "wrap", gap: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 13, minWidth: 110 }}>{label}</span>
         <select className="sbp-input" style={{ width: 280 }} value={question} onChange={(e) => onChange(e.target.value, "")}>
-          <option value="">{label === "Print only when" ? "— always print —" : "— no second condition —"}</option>
+          <option value="">{emptyLabel ?? (label === "Print only when" ? "— always print —" : "— no second condition —")}</option>
           {question && !q && <option value={question}>{question} (not on this sign type)</option>}
           {idx.questions(type).map((x) => (
             <option key={x.code} value={x.code}>
@@ -510,7 +513,7 @@ function ConditionEditor({
   );
 }
 
-function describeWhen(idx: SetupIndex, line: TemplateLine): string {
+export function describeWhen(idx: SetupIndex, line: Pick<TemplateLine, "signTypeCode" | "conditionQuestion" | "conditionValues" | "andConditionQuestion" | "andConditionValues">): string {
   const one = (code: string, values: string) => {
     const q = idx.question(line.signTypeCode, code);
     const name = q ? `“${q.outputLabel || q.prompt}”` : `${code} (missing)`;

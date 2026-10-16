@@ -18,7 +18,7 @@ export interface SetupIssue {
   text: string;
   fix: string;
   /** Which Setup tab fixes it (default: Sign Types). */
-  area?: "descriptions";
+  area?: "descriptions" | "references";
 }
 
 const isList = (q: Question) => q.answerType === "option" || q.answerType === "yesno";
@@ -122,8 +122,14 @@ export function checkSetup(setup: SetupData, only?: { categoryCode?: string; sig
       }
     }
     for (const rule of idx.referenceRules(t.code)) {
-      if (rule.conditionQuestion && !idx.question(t.code, rule.conditionQuestion)) {
-        add("warning", t, rule.conditionQuestion, `Spec reference rule for ${rule.referenceCode} depends on question ${rule.conditionQuestion}, which this sign type doesn't have.`, "Fix it in Spec Reference Rules.");
+      const fixRef = "Fix it on Spec References → Which page each sign type shows.";
+      for (const code of [rule.conditionQuestion, rule.andConditionQuestion]) {
+        if (code && !idx.question(t.code, code)) {
+          add("warning", t, code, `Spec reference rule for ${rule.referenceCode} depends on question ${code}, which this sign type doesn't have.`, fixRef, "references");
+        }
+      }
+      if (!idx.reference(rule.referenceCode)) {
+        add("warning", t, "", `A Spec reference rule shows page ${rule.referenceCode}, which isn't in the reference pages.`, fixRef, "references");
       }
     }
   };

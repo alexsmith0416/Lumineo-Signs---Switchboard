@@ -441,6 +441,18 @@
     <strong>Warnings</strong> are worth a look (a Field Description line that gets skipped). The red number on the tab is
     the problem count. <strong>Open sign type</strong> / <strong>Open category</strong> jump to it to fix it; <strong>Open its descriptions</strong> jumps to the
     Descriptions tab for description warnings.</li>
+    <li><strong>Spec References</strong> — <em>Reference pages</em>: each Sign Specification Reference page's name, file
+    name for downloads, SharePoint link and image. <strong>Replace image…</strong> takes a PNG or JPG (big ones are shrunk to
+    fit, and the small preview is made for you). <strong>+ Add</strong> makes a new page; <strong>Delete</strong> works once no
+    sign type shows it. Reference page changes save straight away — Undo doesn't cover them. <em>Which page each sign type
+    shows</em>: per sign type, the pages in order with when each one applies; the sign shows the page of the
+    <strong>first</strong> rule its answers meet, so put specific rules above general ones (↑ ↓).</li>
+    <li><strong>Vinyl Colors</strong> — the colors offered on vinyl questions, one tab per series (3630, 7725…): name,
+    color family, Pantone match, swatch color (#RRGGBB), BC item # (the 48" roll), notes and order. <strong>+ Add color</strong>
+    adds one; ✕ removes it. Renaming a color changes how new answers print; signs already spec'd keep the old wording.</li>
+    <li><strong>Stage Checklist</strong> — what has to be known about a sign by each stage, for every category or one:
+    group, detail, stage, whether the form asks it, the question codes that cover it (codes no sign type of the category
+    has are flagged) and notes.</li>
     <li><strong>Test &amp; Path</strong> — the real spec form on a <em>test sign that's never saved</em>, using the setup
     as it is right now (edits on the other tabs show straight away). Pick a category and answer as a salesperson would;
     the bar on top shows the <strong>sign type</strong> the answers land on, the <strong>Spec Code</strong> and the
@@ -458,7 +470,8 @@
     questions the next time they're opened. <strong>Delete</strong> removes a saved version.</li>
     <li><strong>Materials &amp; Items</strong> — links each material answer to its <strong>BC item</strong> (Item List). The same wording is the same part, so one link covers every sign type that uses it. <strong>Pick one</strong> rows have several equally good items (sheet sizes, or an angle whose answer doesn't give the wall thickness) — choose from the list. <strong>Show part numbers in the descriptions</strong> turns the <em>(#20050)</em> part numbers on for everyone. <strong>BC items no answer offers yet</strong> lists items of the kinds of material the answers use; <strong>Add as answer…</strong> words it like the existing answers (edit it if you like) and adds it, linked, to the questions you tick.</li>
   </ul>
-  <p>Still to come: Spec Reference images, Vinyl Colors, Stage Checklist and the rest — see What's New.</p>
+  <p>Every Setup tool from the Business Central extension is now in the app (Question Blocks aside — the setup doesn't use
+  them). Next comes the link to Business Central — see What's New.</p>
 
   <h3>5.12 Demo &amp; guided tour</h3>
   <p>Help → <strong>▶ Launch demo &amp; tutorial</strong> opens a practice copy with sample specs (the real questions)
@@ -567,6 +580,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 15, 2026</td><td><strong>Setup: Spec References, Vinyl Colors, Stage Checklist</strong> — edit reference pages (and replace their images) and which page each sign type shows; edit vinyl colors with swatches and BC items; edit the stage checklist. Check Setup flags reference rules that point to a missing page.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Copy questions</strong> — copy questions (with answers, rules, defaults and optionally their follow-ups) to any number of sign types; Share first questions with the category on Sign Types.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Test &amp; Path</strong> — try a category's questions on a test sign that's never saved, with the sign type, Spec Code and descriptions alongside; show hidden questions with the reason; Show path from any question.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Setup: Versions</strong> — save a named copy of the whole setup, see what changed since it, and restore it. Versions are also saved automatically before an import and before a restore.</td></tr>
@@ -591,7 +605,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v0.9 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v1.0 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>

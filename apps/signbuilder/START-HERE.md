@@ -78,6 +78,8 @@ setup/       import-bc.ts — one-time import of BC's Export Setup (JSON)
              sign-type-ops.ts — sign type edits (update, Duplicate, code rules)
              question-ops.ts — questions / answers / Spec Rules / Default Rules edits
                               (rename propagates within the type), Shown-when text
+             reference-ops.ts — reference pages / rules, vinyl colors, checklist lines
+             image-prep.ts — picked image → full JPEG (fits 1 MB) + thumbnail
              copy-ops.ts — copy questions between sign types, share first questions
              path-ops.ts — Test & Path: test sign, seed the path to a question, hidden reasons
              version-ops.ts — saved versions: stats, header, diff between two setups
@@ -91,7 +93,7 @@ store/       Zustand: setup-store, spec-store, write-status-store (from Switchbo
 screens/     Dashboard, Builder (+ builder/QuestionCard, ReferencePanel, DescriptionPreview),
              Projects, Library, SetupHome (tabs: Overview, Categories, Sign Types, Questions, Rules,
              Descriptions, Materials & Items, Check Setup, Test & Path, Versions + ↶ Undo —
-             screens/setup/Categories, SignTypes, DecisionTree (+ CopyQuestions), RuleMatrix, Descriptions, MaterialsItems, CheckSetup, TestPath, Versions,
+             screens/setup/Categories, SignTypes, DecisionTree (+ CopyQuestions), RuleMatrix, Descriptions, MaterialsItems, References, VinylColors, Checklist, CheckSetup, TestPath, Versions,
              setup-ui [TypePicker, CommitInput]), Help
 components/  shell (Sidebar, Topbar, SaveStatus, ConfirmDialog, logo — from Switchboard), ui.tsx,
              DemoBanner, DemoTutorial
@@ -300,9 +302,26 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 ### 🔖 Where we left off (keep this current — rewrite at the END of each session)
 
-**Last session: Oct 15, 2026 — Setup: Copy questions (after Descriptions, Categories, Versions, Test & Path).**
+**Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest — Copy questions)**
+**Recap (latest — References / Vinyl / Checklist)**
+- `setup/reference-ops.ts`: reference code check / usage, reference rules (add,
+  update, move, delete — first match wins), vinyl colors (key = series|code; add,
+  update, delete), checklist lines (global line nos; add, move within category,
+  delete). `setup/image-prep.ts`: picked image → JPEG ≤ 950K chars (shrinks
+  quality then size) + 480px thumbnail (white behind transparency).
+- Store: `saveReference` / `deleteReference` write straight to
+  `crfdf_sbreference` (+ core doc) **outside Undo**; `undo` and `restoreVersion`
+  keep today's reference list (the table is the truth in live mode).
+- Tabs: **Spec References** (`References.tsx`: pages + "Which page each sign type
+  shows" with the shared `ConditionEditor`/`describeWhen` exported from
+  Descriptions.tsx), **Vinyl Colors** (`VinylColors.tsx`), **Stage Checklist**
+  (`Checklist.tsx`). `.sbp-tabs` now wraps.
+- Check Setup: reference rules on missing questions (both conditions) or a missing
+  page → warning with **Open its reference rules**. Real setup: none.
+- Tests: `setup/reference-ops.test.ts` (4). 83 pass. Guide v1.0. Not browser-tested.
+
+**Earlier the same day: Copy questions**
 - `setup/copy-ops.ts` (port of BC LSB Setup Copy Mgt.): `withFollowUps` (rule /
   Also-requires closure), `pasteQuestions(from, codes, targets, replace)` (answers,
   show/allow rules targeting them — no duplicates —, default rules; block code
@@ -528,7 +547,7 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 1. **Setup tools** (✅ Sign Types, ✅ Check Setup, ✅ Materials & Items, ✅ Questions
    incl. per-answer print text / own line, ✅ Rules + Defaults, ✅ session Undo):
    ✅ Descriptions (template editor), ✅ Categories, ✅ Versions, ✅ Test & Path, ✅ Copy questions (Blocks skipped — none in
-   the real setup); next Stage Checklist, Spec References (images), Vinyl Colors.
+   the real setup), ✅ Spec References, ✅ Vinyl Colors, ✅ Stage Checklist. **Setup tools done.**
 2. **BC link**: opportunity sync flow (BC → Dataverse), job picker from
    `crfdf_bcjob`, **Generate to Project** (side-by-side review → push queue row
    → BCPush flow → writable API page in the BC extension writes 60214 / 60215
@@ -550,6 +569,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 15, 2026 (references etc.)** — Setup → Spec References (pages + images +
+  rules), Vinyl Colors, Stage Checklist. Setup tools complete. Guide v1.0.
 - **Oct 15, 2026 (copy questions)** — Copy questions to other sign types (with
   follow-ups), Share first questions with the category. Guide v0.9.
 - **Oct 15, 2026 (test & path)** — Setup → Test & Path (test sign, hidden reasons,

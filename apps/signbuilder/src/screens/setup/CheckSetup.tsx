@@ -90,6 +90,11 @@ export default function CheckSetup({
                   Open category
                 </button>
               )}
+              {type && list.some((i) => i.area === "references") && (
+                <button type="button" className="btn-secondary" onClick={() => onOpenType(type, "references")}>
+                  Open its reference rules
+                </button>
+              )}
               {type && list.some((i) => i.area === "descriptions") && (
                 <button type="button" className="btn-secondary" onClick={() => onOpenType(type, "descriptions")}>
                   Open its descriptions

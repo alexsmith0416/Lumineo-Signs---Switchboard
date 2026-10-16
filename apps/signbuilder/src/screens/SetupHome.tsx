@@ -11,15 +11,19 @@ import DecisionTree from "./setup/DecisionTree";
 import Descriptions from "./setup/Descriptions";
 import MaterialsItems from "./setup/MaterialsItems";
 import RuleMatrix from "./setup/RuleMatrix";
+import Checklist from "./setup/Checklist";
+import References from "./setup/References";
 import SignTypes from "./setup/SignTypes";
+import VinylColors from "./setup/VinylColors";
 import TestPath, { type PathStart } from "./setup/TestPath";
 import Versions from "./setup/Versions";
 
-type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "check" | "test" | "versions";
+type SetupTab = "overview" | "categories" | "types" | "questions" | "rules" | "descriptions" | "materials" | "references" | "vinyl" | "checklist" | "check" | "test" | "versions";
 
 /** Setup hub: Overview (+ the one-time import from Business Central),
  *  Categories, Sign Types, Questions (decision tree), Rules (matrix),
- *  Descriptions (Field / Extended templates), Materials & Items, Check
+ *  Descriptions (Field / Extended templates), Materials & Items, Spec
+ *  References, Vinyl Colors, Stage Checklist, Check
  *  Setup, Test & Path and Versions. Undo steps back through this session's changes. */
 export default function SetupHome({ userName }: { userName: string }) {
   const [tab, setTab] = useState<SetupTab>("overview");
@@ -31,6 +35,7 @@ export default function SetupHome({ userName }: { userName: string }) {
   const [typeCode, setTypeCode] = useState("");
   const [trigger, setTrigger] = useState("");
   const [target, setTarget] = useState("");
+  const [refMode, setRefMode] = useState<"pages" | "rules">("pages");
   const [ruleMode, setRuleMode] = useState<"show" | "defaults">("show");
   const undoStack = useSetupStore((s) => s.undoStack);
   const undo = useSetupStore((s) => s.undo);
@@ -97,6 +102,15 @@ export default function SetupHome({ userName }: { userName: string }) {
         <button type="button" className={`sbp-tab${tab === "materials" ? " sbp-tab--on" : ""}`} onClick={() => setTab("materials")}>
           Materials &amp; Items
         </button>
+        <button type="button" className={`sbp-tab${tab === "references" ? " sbp-tab--on" : ""}`} onClick={() => setTab("references")}>
+          Spec References
+        </button>
+        <button type="button" className={`sbp-tab${tab === "vinyl" ? " sbp-tab--on" : ""}`} onClick={() => setTab("vinyl")}>
+          Vinyl Colors
+        </button>
+        <button type="button" className={`sbp-tab${tab === "checklist" ? " sbp-tab--on" : ""}`} onClick={() => setTab("checklist")}>
+          Stage Checklist
+        </button>
         <button type="button" className={`sbp-tab${tab === "check" ? " sbp-tab--on" : ""}`} onClick={() => setTab("check")}>
           Check Setup{problemCount > 0 && <span className="sbp-tab__count">{problemCount}</span>}
         </button>
@@ -162,6 +176,9 @@ export default function SetupHome({ userName }: { userName: string }) {
       )}
       {tab === "descriptions" && <Descriptions typeCode={typeCode} setTypeCode={setTypeCode} />}
       {tab === "materials" && <MaterialsItems />}
+      {tab === "references" && <References typeCode={typeCode} setTypeCode={setTypeCode} mode={refMode} setMode={setRefMode} />}
+      {tab === "vinyl" && <VinylColors />}
+      {tab === "checklist" && <Checklist />}
       {tab === "test" && <TestPath key={path.key} start={path.start} />}
       {tab === "versions" && <Versions userName={userName} />}
       {tab === "check" && (
@@ -171,9 +188,10 @@ export default function SetupHome({ userName }: { userName: string }) {
             setTab("categories");
           }}
           onOpenType={(code, area) => {
-            if (area === "descriptions") {
+            if (area === "descriptions" || area === "references") {
               setTypeCode(code);
-              setTab("descriptions");
+              setRefMode(area === "references" ? "rules" : refMode);
+              setTab(area);
               return;
             }
             setOpenType(code);
@@ -257,8 +275,8 @@ export default function SetupHome({ userName }: { userName: string }) {
       <div className="sbp-card">
         <div className="sbp-caption">Setup tools</div>
         <p className="sbp-muted" style={{ fontSize: 13 }}>
-          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b>, <b>Check Setup</b>, <b>Test &amp; Path</b> and <b>Versions</b> are ready (tabs above).
-          Coming next: Show Path, Test Category, Question Blocks, Copy/Paste, Stage Checklist and Spec References.
+          <b>Categories</b>, <b>Sign Types</b>, <b>Questions</b>, <b>Rules</b>, <b>Descriptions</b>, <b>Materials &amp; Items</b>, <b>Spec References</b>, <b>Vinyl Colors</b>, <b>Stage Checklist</b>, <b>Check Setup</b>, <b>Test &amp; Path</b> and <b>Versions</b> are ready (tabs above).
+          Next: the Business Central link (opportunities in, descriptions out to the job).
         </p>
       </div>
       </>
