@@ -13,7 +13,7 @@ describe("filling a spec from BC", () => {
     expect(opportunityFields(spec, opp)).toEqual({ opportunityNo: "OP1", description: "Monument", customerName: "Riverbend", contactName: "Dana", jobNo: "J1" });
     const typed = { ...spec, customerName: "Riverbend Dental LLC", jobNo: "J9" };
     expect(opportunityFields(typed, opp)).toMatchObject({ customerName: "Riverbend Dental LLC", jobNo: "J9" });
-    expect(jobFields(spec, { no: "J2", name: "Harbor", customerName: "", description: "Letters", salespersonCode: "", status: "Open" })).toEqual({
+    expect(jobFields(spec, { no: "J2", name: "Harbor", customerName: "", description: "Letters", status: "Planning", personResponsible: "", creationDate: "" })).toEqual({
       jobNo: "J2", customerName: "Harbor", description: "Letters",
     });
   });
@@ -24,7 +24,9 @@ describe("mock BC link (dev / demo)", () => {
     const bc = bcLink();
     expect(bc.kind).toBe("mock");
     expect((await bc.searchOpportunities("riverbend")).map((o) => o.no)).toEqual(["OP000412"]);
-    const req = await bc.requestOpportunitySync("Alex");
+    // Projects before they're Open are listed too.
+    expect((await bc.searchJobs("")).some((j) => j.status === "Planning")).toBe(true);
+    const req = await bc.requestSync("sbopportunities", "Alex");
     await new Promise((r) => setTimeout(r, 1300));
     expect(syncMessage(await bc.readSyncRequest(req), 1300).phase).toBe("done");
 
@@ -42,6 +44,7 @@ describe("mock BC link (dev / demo)", () => {
 
   it("says when a flow never picked the request up", () => {
     expect(syncMessage({ status: "requested", result: "" }, 6 * 60_000).text).toContain("turned on");
+    expect(syncMessage({ status: "requested", result: "" }, 6 * 60_000, "sbjobs").text).toContain("BCSync_SBJobs");
     expect(pushMessage({ status: "pending" } as never, 6 * 60_000).text).toContain("turned on");
   });
 });

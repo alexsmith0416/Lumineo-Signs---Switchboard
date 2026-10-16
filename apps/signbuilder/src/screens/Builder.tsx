@@ -273,6 +273,7 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
       )}
       {picking === "job" && (
         <JobPicker
+          userName={user.fullName || user.email}
           onClose={() => setPicking(null)}
           onPick={(j) => {
             updateSpec(spec.id, jobFields(spec, j));

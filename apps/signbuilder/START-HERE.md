@@ -304,7 +304,27 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 **Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest — BC link, built; ⏳ turning it on = Alex's steps in flows/BC-LINK.md)**
+**Recap (latest, Oct 16 — job picker shows Planning / Quote projects)**
+- Alex: "the pick list is only showing open jobs … we would be working on jobs
+  before they are open, but occasionally would work on jobs that are open as well".
+  Switchboard's `crfdf_bcjob` only has Open projects (its BCSync_Jobs filter), so
+  the Sign Builder got its own list (Switchboard untouched):
+  - BC extension **v0.12.1**: page 58489 `LSB Projects API` (`projects`, every status).
+  - Table `crfdf_sbjob` (added to `create-signbuilder-bc-tables.ps1`; set name to
+    confirm when the script runs — app assumes `crfdf_sbjobs`).
+  - Flow **BCSync_SBJobs** (kind `sbjobs`, `status ne 'Completed'`); the generator's
+    sync flows now come from one `syncFlow()` (opportunities flow unchanged apart
+    from its failure text). Solution **1.0.0.2**.
+  - App: job picker reads `crfdf_sbjob`, shows status, auto-refresh on open + Refresh
+    (`useBcSync` shared with the opportunity picker); `BcJob` now has status /
+    personResponsible / creationDate (no salesperson).
+- Already done by Alex (Oct 15–16): tables created (`crfdf_bcopportunities`,
+  `crfdf_sbdescpushs` — fixed in app + flow), solution 1.0.0.1 imported, secret
+  copied into both flows; extension 0.12.0 built.
+- ⏳ Alex: publish 0.12.1, re-run the tables script (adds `crfdf_sbjob`), import
+  1.0.0.2, re-run copy-bc-secret for the three flows, turn BCSync_SBJobs On.
+
+**Earlier: BC link, built (Oct 15)**
 - Design = Switchboard's (research of lumineo-scheduling-port): app never calls BC;
   flows over HTTP with the "PowerApps Permissions" app registration; Dataverse
   connection reference `new_sharedcommondataserviceforapps_4a52d`; UAT.
@@ -615,6 +635,8 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 16, 2026 (job picker)** — Planning / Quote projects in the job picker:
+  extension v0.12.1 projects API, crfdf_sbjob, BCSync_SBJobs. Guide v1.3.
 - **Oct 15, 2026 (BC link)** — BC extension v0.12.0 (opportunities + writable job
   descriptions API pages, Open in Sign Builder), BC tables script, two flows
   (generator + solution zip), app pickers + Generate to Project. Guide v1.2.

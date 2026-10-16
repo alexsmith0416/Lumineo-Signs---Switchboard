@@ -4,7 +4,10 @@
  *  - Opportunities: crfdf_bcopportunity, filled by the BCSync_SBOpportunities
  *    flow when the app adds a crfdf_syncrequest row of kind "sbopportunities"
  *    (the picker does, on open / Refresh) — the flow writes Status / Result back.
- *  - Jobs: Switchboard's crfdf_bcjob; BC's current descriptions: its crfdf_jobdesc.
+ *  - Projects: crfdf_sbjob — every status but Completed (Planning / Quote too),
+ *    filled by BCSync_SBJobs on a "sbjobs" request (the job picker asks the
+ *    same way). BC's current descriptions: Switchboard's crfdf_jobdesc (Open
+ *    projects only).
  *  - Generate to Project: a crfdf_sbdescpush row (Status "pending");
  *    BCPush_SBDescriptions writes it to the project through the Sign Builder
  *    extension's jobDescriptions API page and sets Status synced / failed.
@@ -15,6 +18,9 @@
 import type { BcJob, BcOpportunity, DescPush, DescPushStatus, JobDescriptions } from "../domain/types";
 import { dvCreate, listAll, odataLit, type Row } from "./dataverse-core";
 import { repo } from "./repo";
+
+export type SyncKind = "sbopportunities" | "sbjobs";
+export const SYNC_FLOW: Record<SyncKind, string> = { sbopportunities: "BCSync_SBOpportunities", sbjobs: "BCSync_SBJobs" };
 
 export interface SyncState {
   status: "requested" | "running" | "done" | "failed";
@@ -33,8 +39,8 @@ export interface BcLink {
   kind: "mock" | "live";
   searchOpportunities(query: string): Promise<BcOpportunity[]>;
   getOpportunity(no: string): Promise<BcOpportunity | null>;
-  /** Asks BCSync_SBOpportunities to copy BC's opportunities now; returns the request id. */
-  requestOpportunitySync(requestedBy: string): Promise<string>;
+  /** Asks the flow for the kind (BCSync_SBOpportunities / BCSync_SBJobs) to copy BC now; returns the request id. */
+  requestSync(kind: SyncKind, requestedBy: string): Promise<string>;
   readSyncRequest(id: string): Promise<SyncState | null>;
   searchJobs(query: string): Promise<BcJob[]>;
   getJob(no: string): Promise<BcJob | null>;
@@ -60,7 +66,7 @@ const matches = (q: string, ...fields: string[]) => {
 // Live
 // ---------------------------------------------------------------------------
 
-const SET = { opp: "crfdf_bcopportunities", job: "crfdf_bcjobs", desc: "crfdf_jobdescs", push: "crfdf_sbdescpushs", request: "crfdf_syncrequests" };
+const SET = { opp: "crfdf_bcopportunities", job: "crfdf_sbjobs", desc: "crfdf_jobdescs", push: "crfdf_sbdescpushs", request: "crfdf_syncrequests" };
 
 const oppFrom = (r: Row): BcOpportunity => ({
   no: s(r.crfdf_opportunityno).trim(),
@@ -77,15 +83,15 @@ const oppFrom = (r: Row): BcOpportunity => ({
 const OPP_SELECT = "crfdf_opportunityno,crfdf_description,crfdf_contactno,crfdf_contactname,crfdf_companyname,crfdf_salespersoncode,crfdf_status,crfdf_closed,crfdf_creationdate,crfdf_projectno";
 
 const jobFrom = (r: Row): BcJob => ({
-  no: s(r.crfdf_jobnumber).trim(),
-  // Switchboard: the ship-to / sales-order name is the job's name.
-  name: s(r.crfdf_appjobname) || s(r.crfdf_customername),
+  no: s(r.crfdf_jobno).trim(),
+  name: s(r.crfdf_customername) || s(r.crfdf_description),
   customerName: s(r.crfdf_customername),
   description: s(r.crfdf_description),
-  salespersonCode: s(r.crfdf_salespersoncode).trim().toUpperCase(),
   status: s(r.crfdf_status),
+  personResponsible: s(r.crfdf_personresponsible).trim().toUpperCase(),
+  creationDate: s(r.crfdf_creationdate),
 });
-const JOB_SELECT = "crfdf_jobnumber,crfdf_appjobname,crfdf_customername,crfdf_description,crfdf_salespersoncode,crfdf_status";
+const JOB_SELECT = "crfdf_jobno,crfdf_customername,crfdf_description,crfdf_status,crfdf_personresponsible,crfdf_creationdate";
 
 const STATUSES: DescPushStatus[] = ["pending", "synced", "failed"];
 const pushFrom = (r: Row): DescPush => {
@@ -121,9 +127,9 @@ const live: BcLink = {
     const rows = await listAll(SET.opp, { select: OPP_SELECT, filter: `crfdf_opportunityno eq '${odataLit(no)}'` });
     return rows[0] ? oppFrom(rows[0]) : null;
   },
-  async requestOpportunitySync(requestedBy) {
+  async requestSync(kind, requestedBy) {
     const id = crypto.randomUUID();
-    await dvCreate(SET.request, { crfdf_syncrequestid: id, crfdf_name: "sbopportunities", crfdf_kind: "sbopportunities", crfdf_status: "Requested", crfdf_requestedby: requestedBy || "Sign Builder" });
+    await dvCreate(SET.request, { crfdf_syncrequestid: id, crfdf_name: kind, crfdf_kind: kind, crfdf_status: "Requested", crfdf_requestedby: requestedBy || "Sign Builder" });
     return id;
   },
   async readSyncRequest(id) {
@@ -133,12 +139,12 @@ const live: BcLink = {
     return { status: st === "running" || st === "done" || st === "failed" ? st : "requested", result: s(rows[0].crfdf_result) };
   },
   async searchJobs(query) {
-    const filter = containsAny(query, ["crfdf_jobnumber", "crfdf_appjobname", "crfdf_customername", "crfdf_description"]);
-    const rows = await listAll(SET.job, { select: JOB_SELECT, filter, orderby: "crfdf_jobnumber desc" });
+    const filter = containsAny(query, ["crfdf_jobno", "crfdf_customername", "crfdf_description"]);
+    const rows = await listAll(SET.job, { select: JOB_SELECT, filter, orderby: "crfdf_creationdate desc" });
     return rows.slice(0, LIMIT).map(jobFrom);
   },
   async getJob(no) {
-    const rows = await listAll(SET.job, { select: JOB_SELECT, filter: `crfdf_jobnumber eq '${odataLit(no)}'` });
+    const rows = await listAll(SET.job, { select: JOB_SELECT, filter: `crfdf_jobno eq '${odataLit(no)}'` });
     return rows[0] ? jobFrom(rows[0]) : null;
   },
   async getJobDescriptions(jobNo) {
@@ -182,8 +188,9 @@ const MOCK_OPPS: BcOpportunity[] = [
   { no: "OP000421", description: "Pylon re-face and new EMC", contactNo: "CT1040", contactName: "Lee Morgan", companyName: "Prairie Fuel Stop", salespersonCode: "JM", status: "Not Started", closed: false, creationDate: "2026-10-06", projectNo: "" },
 ];
 const MOCK_JOBS: BcJob[] = [
-  { no: "J24-3105", name: "Northgate Credit Union", customerName: "Northgate Credit Union", description: "Wall cabinet faces", salespersonCode: "AS", status: "Open" },
-  { no: "J24-3110", name: "Harbor Coffee Co.", customerName: "Harbor Coffee Co.", description: "Halo-lit channel letters", salespersonCode: "JM", status: "Open" },
+  { no: "J24-3118", name: "Riverbend Dental", customerName: "Riverbend Dental", description: "Channel letters + monument", status: "Planning", personResponsible: "JM", creationDate: "2026-10-09" },
+  { no: "J24-3110", name: "Harbor Coffee Co.", customerName: "Harbor Coffee Co.", description: "Halo-lit channel letters", status: "Open", personResponsible: "JM", creationDate: "2026-09-30" },
+  { no: "J24-3105", name: "Northgate Credit Union", customerName: "Northgate Credit Union", description: "Wall cabinet faces", status: "Open", personResponsible: "AS", creationDate: "2026-09-12" },
 ];
 const mockDescs = new Map<string, JobDescriptions>([
   ["J24-3105", { jobNo: "J24-3105", production: "SIGN OVERVIEW\n• Work: Replacement faces\n", field: "Remove existing faces and install new faces.", bcModified: "2026-10-01T15:00:00Z" }],
@@ -196,7 +203,7 @@ const mock: BcLink = {
   kind: "mock",
   searchOpportunities: (q) => wait(MOCK_OPPS.filter((o) => matches(q, o.no, o.description, o.companyName, o.contactName))),
   getOpportunity: (no) => wait(MOCK_OPPS.find((o) => o.no === no) ?? null),
-  async requestOpportunitySync() {
+  async requestSync() {
     const id = crypto.randomUUID();
     mockRequests.set(id, { at: Date.now() });
     return wait(id);
@@ -205,7 +212,7 @@ const mock: BcLink = {
     const r = mockRequests.get(id);
     if (!r) return null;
     const t = Date.now() - r.at;
-    return wait(t < 1200 ? { status: "running", result: "" } : { status: "done", result: "Opportunities up to date (sample data)" });
+    return wait(t < 1200 ? { status: "running", result: "" } : { status: "done", result: "Up to date (sample data)" });
   },
   searchJobs: (q) => wait(MOCK_JOBS.filter((j) => matches(q, j.no, j.name, j.customerName, j.description))),
   getJob: (no) => wait(MOCK_JOBS.find((j) => j.no === no) ?? null),
@@ -250,12 +257,13 @@ export function bcLink(): BcLink {
 }
 
 /** What a sync request row means for the person waiting on it. */
-export function syncMessage(state: SyncState | null, waitedMs: number): { phase: "waiting" | "running" | "done" | "failed"; text: string } {
+export function syncMessage(state: SyncState | null, waitedMs: number, kind: SyncKind = "sbopportunities"): { phase: "waiting" | "running" | "done" | "failed"; text: string } {
+  const flow = SYNC_FLOW[kind];
   if (!state) return { phase: "failed", text: "The request was removed before it finished." };
   if (state.status === "done") return { phase: "done", text: state.result || "Up to date." };
-  if (state.status === "failed") return { phase: "failed", text: state.result || "BCSync_SBOpportunities couldn't read BC." };
+  if (state.status === "failed") return { phase: "failed", text: state.result || `${flow} couldn't read BC.` };
   if (state.status === "running") return { phase: "running", text: "Reading BC…" };
-  if (waitedMs > PICKUP_LIMIT_MS) return { phase: "failed", text: "BCSync_SBOpportunities didn't pick the request up — is it turned on in Power Automate?" };
+  if (waitedMs > PICKUP_LIMIT_MS) return { phase: "failed", text: `${flow} didn't pick the request up — is it turned on in Power Automate?` };
   return { phase: "waiting", text: "Asking BC…" };
 }
 

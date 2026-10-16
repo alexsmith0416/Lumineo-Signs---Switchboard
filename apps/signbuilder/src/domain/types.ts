@@ -334,14 +334,16 @@ export interface BcOpportunity {
   projectNo: string;
 }
 
-/** A BC project / job (Switchboard's crfdf_bcjob). */
+/** A BC project / job in any status but Completed (crfdf_sbjob, filled by BCSync_SBJobs). */
 export interface BcJob {
   no: string;
   name: string;
   customerName: string;
   description: string;
-  salespersonCode: string;
+  /** Planning / Quote / Open. */
   status: string;
+  personResponsible: string;
+  creationDate: string;
 }
 
 /** A project's descriptions as BC has them now (Switchboard's crfdf_jobdesc, hourly). */

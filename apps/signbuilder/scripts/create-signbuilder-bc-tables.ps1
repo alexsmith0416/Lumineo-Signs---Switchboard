@@ -5,14 +5,18 @@
                           flow from the Sign Builder extension's API page
                           (api/lumineo/signbuilder/v1.0 opportunities). The app
                           picks a spec's opportunity from here.
+    crfdf_sbjob         — BC projects in every status but Completed (Planning,
+                          Quote, Open), copied by BCSync_SBJobs from the
+                          extension's projects API page, for the job picker
+                          (Switchboard's crfdf_bcjob only has Open ones).
     crfdf_sbdescpush    — Generate to Project outbox: the Production / Field
                           Description the app wants written to a BC project.
                           BCPush_SBDescriptions fires on a new row, PATCHes the
                           extension's jobDescriptions API page and writes
                           Status (pending -> synced / failed) + a message back.
 
-  Jobs come from Switchboard's crfdf_bcjob, and BC's current descriptions from
-  its crfdf_jobdesc - both already filled by Switchboard's flows.
+  BC's current descriptions come from Switchboard's crfdf_jobdesc (Open
+  projects only).
 
   Device-code auth like the other scripts: run it, open the printed URL, enter
   the code, sign in as asmith@lumineosigns.com. Safe to re-run - tables and
@@ -155,6 +159,17 @@ New-Column 'crfdf_bcopportunity' 'crfdf_CreationDate' 'Creation Date' 20
 New-Column 'crfdf_bcopportunity' 'crfdf_ProjectNo' 'Project No.' 20
 New-Column 'crfdf_bcopportunity' 'crfdf_BcModified' 'BC Last Modified' 40
 
+Write-Host "BC projects (every status but Completed)…" -ForegroundColor Cyan
+New-Table 'crfdf_SbJob' 'Sign Builder BC Project' 'Sign Builder BC Projects'
+New-Column 'crfdf_sbjob' 'crfdf_JobNo' 'Job No.' 20
+New-Column 'crfdf_sbjob' 'crfdf_Description' 'Description' 300
+New-Column 'crfdf_sbjob' 'crfdf_CustomerNo' 'Bill-to Customer No.' 20
+New-Column 'crfdf_sbjob' 'crfdf_CustomerName' 'Bill-to Name' 200
+New-Column 'crfdf_sbjob' 'crfdf_Status' 'Status' 20
+New-Column 'crfdf_sbjob' 'crfdf_CreationDate' 'Creation Date' 20
+New-Column 'crfdf_sbjob' 'crfdf_PersonResponsible' 'Person Responsible' 20
+New-Column 'crfdf_sbjob' 'crfdf_BcModified' 'BC Last Modified' 40
+
 Write-Host "Description outbox…" -ForegroundColor Cyan
 New-Table 'crfdf_SbDescPush' 'Sign Builder Description Push' 'Sign Builder Description Pushes'
 New-Column 'crfdf_sbdescpush' 'crfdf_JobNo' 'Job No.' 20
@@ -173,7 +188,7 @@ try {
 } catch { Write-Host "Publish step skipped." -ForegroundColor Yellow }
 
 # Read-only check: the entity set names services/repo.ts uses.
-foreach ($t in 'crfdf_bcopportunity','crfdf_sbdescpush') {
+foreach ($t in 'crfdf_bcopportunity','crfdf_sbjob','crfdf_sbdescpush') {
   $set = (Invoke-RestMethod -Headers $headers -Uri "$base/EntityDefinitions(LogicalName='$t')?`$select=EntitySetName").EntitySetName
   Write-Host ("  {0} -> {1}" -f $t, $set)
 }

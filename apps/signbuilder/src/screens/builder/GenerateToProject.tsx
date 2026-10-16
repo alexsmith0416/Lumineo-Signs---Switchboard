@@ -159,7 +159,7 @@ export default function GenerateToProject({
             );
           })}
           <div className="sbp-muted" style={{ fontSize: 11 }}>
-            “In BC now” is the copy Switchboard keeps (refreshed hourly{current?.bcModified ? `; BC last changed it ${new Date(current.bcModified).toLocaleString()}` : ""}). Only the
+            “In BC now” is the copy Switchboard keeps of Open projects (refreshed hourly; a project still in Planning or Quote shows as empty here{current?.bcModified ? `; BC last changed it ${new Date(current.bcModified).toLocaleString()}` : ""}). Only the
             ticked descriptions are written; the others stay as they are in BC.
           </div>
           {status && (

@@ -1,6 +1,6 @@
 // Sign Builder ↔ Business Central flows — GENERATED here; edit this, not the JSON.
 //
-//   node flows/build-bc-flows.mjs          writes the two *-clientdata.json (placeholders, committed)
+//   node flows/build-bc-flows.mjs          writes the three *-clientdata.json (placeholders, committed)
 //   node flows/build-bc-flows.mjs --zip    also builds the importable solution
 //                                          C:\Users\Alex\Downloads\SignBuilderBCLink_<version>.zip
 //
@@ -13,7 +13,7 @@
 //     $env:BC_CLIENT_SECRET="<secret>"; node flows/build-bc-flows.mjs --zip
 // It goes into the zip in Downloads only (outside the repo) — delete the zip
 // after importing. Without it the flows import with the placeholder; run
-// apps/scheduling/scripts/copy-bc-secret-to-flows.ps1 -Targets BCSync_SBOpportunities,BCPush_SBDescriptions.
+// apps/scheduling/scripts/copy-bc-secret-to-flows.ps1 -Targets BCSync_SBOpportunities,BCSync_SBJobs,BCPush_SBDescriptions.
 //
 // The flows:
 //   BCSync_SBOpportunities — on a crfdf_syncrequest row of kind "sbopportunities"
@@ -21,6 +21,10 @@
 //     extension's opportunities API (open ones + anything created in the last
 //     year) into crfdf_bcopportunity, writing only changed rows, removing the
 //     ones BC no longer returns. Status / Result back on the request row.
+//   BCSync_SBJobs — the same for projects in every status but Completed
+//     (Planning / Quote too — Switchboard's crfdf_bcjob only has Open ones) from
+//     the extension's projects API (v0.12.1+) into crfdf_sbjob, on a "sbjobs"
+//     request (the job picker asks).
 //   BCPush_SBDescriptions — on a crfdf_sbdescpush row going to Status "pending"
 //     (Generate to Project): finds the project on the extension's
 //     jobDescriptions API page and PATCHes the descriptions it was asked to
@@ -31,7 +35,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const VERSION = "1.0.0.1";
+const VERSION = "1.0.0.2";
 const OUT_ZIP = `C:\\Users\\Alex\\Downloads\\SignBuilderBCLink_${VERSION.replace(/\./g, "_")}.zip`;
 const BC_CLIENT_ID = "34a4de23-4db0-48d9-a941-285c9c2f9b5d";
 const DV_CONN_REF = "new_sharedcommondataserviceforapps_4a52d";
@@ -101,134 +105,187 @@ const REQUESTS = "crfdf_syncrequests";
 const REQ_ID = "@triggerOutputs()?['body/crfdf_syncrequestid']";
 const markRequest = (status, result, runAfter) => dv("UpdateOnlyRecord", { entityName: REQUESTS, recordId: REQ_ID, "item/crfdf_status": status, "item/crfdf_result": result }, runAfter);
 
-const OPP_SET = "crfdf_bcopportunities";
-const OPP_SELECT = "number,description,contactNo,contactName,contactCompanyName,salespersonCode,status,closed,creationDate,projectNo,lastModified";
-// Open opportunities, plus closed ones from the last year (a won one is specced after it closes).
-const OPP_FILTER = "@{encodeUriComponent(concat('closed eq false or creationDate ge ', formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-dd')))}";
-const OPP_STAMP = `concat(trim(${c(it("number"))}), '~', ${c(it("lastModified"))})`;
-const ROW_STAMP = `concat(trim(${c(it("crfdf_opportunityno"))}), '~', ${c(it("crfdf_bcmodified"))})`;
 const wrapped = (v) => `concat('${SEP}', ${v}, '${SEP}')`;
 const joined = (action) => `@concat('${SEP}', join(body('${action}'), '${SEP}'), '${SEP}')`;
-const OPP = "items('For_each_changed_opportunity')";
-const OPP_FIELDS = {
-  "item/crfdf_name": `@trim(${OPP}?['number'])`,
-  "item/crfdf_opportunityno": `@trim(${OPP}?['number'])`,
-  "item/crfdf_description": `@${c(`${OPP}?['description']`)}`,
-  "item/crfdf_contactno": `@${c(`${OPP}?['contactNo']`)}`,
-  "item/crfdf_contactname": `@${c(`${OPP}?['contactName']`)}`,
-  "item/crfdf_companyname": `@${c(`${OPP}?['contactCompanyName']`)}`,
-  "item/crfdf_salespersoncode": `@${c(`${OPP}?['salespersonCode']`)}`,
-  "item/crfdf_status": `@${c(`${OPP}?['status']`)}`,
-  "item/crfdf_closed": `@equals(${OPP}?['closed'], true)`,
-  "item/crfdf_creationdate": `@${c(`${OPP}?['creationDate']`)}`,
-  "item/crfdf_projectno": `@trim(${c(`${OPP}?['projectNo']`)})`,
-  "item/crfdf_bcmodified": `@${c(`${OPP}?['lastModified']`)}`,
-};
 
-const oppWork = {
-  Get_Opportunities: {
-    type: "Http",
-    runAfter: {},
-    inputs: { method: "GET", uri: `${API}/opportunities?$filter=${OPP_FILTER}&$select=${OPP_SELECT}`, headers: { Accept: "application/json" }, authentication: AUTH },
-  },
-  List_Existing: dv("ListRecords", { entityName: OPP_SET, $select: "crfdf_bcopportunityid,crfdf_opportunityno,crfdf_bcmodified" }, {}, true),
-  // Fail loudly rather than treat the opportunities on a missing page as gone.
-  Check_Single_Page: {
-    type: "If",
-    runAfter: after("Get_Opportunities"),
-    expression: { not: { equals: ["@empty(coalesce(body('Get_Opportunities')?['@odata.nextLink'], ''))", true] } },
-    actions: {
-      Stop_Paged: {
-        type: "Terminate",
-        runAfter: {},
-        inputs: { runStatus: "Failed", runError: { code: "Paged", message: "BC returned more than one page - add paging to BCSync_SBOpportunities." } },
-      },
+/**
+ * A BC → Dataverse copy that runs on a crfdf_syncrequest of its kind: GET the
+ * API set (one page), write only rows whose number~lastModified stamp changed,
+ * delete rows BC no longer returns, report on the request.
+ *   cfg.Plural / cfg.single — action names ("Opportunities" / "opportunity")
+ *   cfg.fields — Dataverse column → expression on the BC row (ROW below)
+ */
+function syncFlow(cfg) {
+  const { flow, kind, set, idCol, keyCol, apiSet, select, filter, Plural, single, fields, done, what } = cfg;
+  const Get = `Get_${Plural}`;
+  const Changed = `Changed_${Plural}`;
+  const Each = `For_each_changed_${single}`;
+  const ROW = `items('${Each}')`;
+  const STAMP = `concat(trim(${c(it("number"))}), '~', ${c(it("lastModified"))})`;
+  const ROW_STAMP = `concat(trim(${c(it(keyCol))}), '~', ${c(it("crfdf_bcmodified"))})`;
+  const Cap = single.charAt(0).toUpperCase() + single.slice(1);
+  const item = Object.fromEntries(Object.entries(fields(ROW)).map(([k, v]) => [`item/${k}`, v]));
+  const work = {
+    [Get]: {
+      type: "Http",
+      runAfter: {},
+      inputs: { method: "GET", uri: `${API}/${apiSet}?$filter=${filter}&$select=${select}`, headers: { Accept: "application/json" }, authentication: AUTH },
     },
-    else: { actions: {} },
-  },
-  Opportunities: {
-    type: "Query",
-    runAfter: after("Check_Single_Page"),
-    inputs: { from: "@body('Get_Opportunities')?['value']", where: `@not(empty(trim(${c(it("number"))})))` },
-  },
-  Existing_Stamps: { type: "Select", runAfter: after("List_Existing"), inputs: { from: "@body('List_Existing')?['value']", select: `@${ROW_STAMP}` } },
-  Existing_Stamp_Text: { type: "Compose", runAfter: after("Existing_Stamps"), inputs: joined("Existing_Stamps") },
-  Changed_Opportunities: {
-    type: "Query",
-    runAfter: after("Opportunities", "Existing_Stamp_Text"),
-    inputs: { from: "@body('Opportunities')", where: `@not(contains(outputs('Existing_Stamp_Text'), ${wrapped(OPP_STAMP)}))` },
-  },
-  For_each_changed_opportunity: {
-    type: "Foreach",
-    foreach: "@body('Changed_Opportunities')",
-    runAfter: after("Changed_Opportunities"),
-    runtimeConfiguration: { concurrency: { repetitions: 10 } },
-    actions: {
-      Existing_Row: {
-        type: "Query",
-        runAfter: {},
-        inputs: { from: "@body('List_Existing')?['value']", where: `@equals(trim(${c(it("crfdf_opportunityno"))}), trim(${OPP}?['number']))` },
-      },
-      Row_Exists: {
-        type: "If",
-        runAfter: after("Existing_Row"),
-        expression: { greater: ["@length(body('Existing_Row'))", 0] },
-        actions: { Update_Opportunity: dv("UpdateOnlyRecord", { entityName: OPP_SET, recordId: "@first(body('Existing_Row'))?['crfdf_bcopportunityid']", ...OPP_FIELDS }) },
-        else: { actions: { Create_Opportunity: dv("CreateRecord", { entityName: OPP_SET, ...OPP_FIELDS }) } },
-      },
-    },
-  },
-  Current_Numbers: { type: "Select", runAfter: after("Opportunities"), inputs: { from: "@body('Opportunities')", select: `@trim(${c(it("number"))})` } },
-  Current_Number_Text: { type: "Compose", runAfter: after("Current_Numbers"), inputs: joined("Current_Numbers") },
-  Stale_Rows: {
-    type: "Query",
-    runAfter: after("Current_Number_Text", "List_Existing"),
-    inputs: { from: "@body('List_Existing')?['value']", where: `@not(contains(outputs('Current_Number_Text'), ${wrapped(`trim(${c(it("crfdf_opportunityno"))})`)}))` },
-  },
-  Any_Opportunities: {
-    type: "If",
-    runAfter: after("Stale_Rows", "For_each_changed_opportunity"),
-    expression: { greater: ["@length(body('Opportunities'))", 0] },
-    actions: {
-      For_each_stale_row: {
-        type: "Foreach",
-        foreach: "@body('Stale_Rows')",
-        runAfter: {},
-        runtimeConfiguration: { concurrency: { repetitions: 10 } },
-        actions: { Delete_Opportunity: dv("DeleteRecord", { entityName: OPP_SET, recordId: "@items('For_each_stale_row')?['crfdf_bcopportunityid']" }) },
-      },
-    },
-    else: { actions: {} },
-  },
-};
-
-const OPP_DONE = countText("length(coalesce(body('Changed_Opportunities'), json('[]')))", "opportunity updated", "opportunities updated", "Opportunities up to date");
-
-const opportunitiesFlow = wrapFlow(
-  "BCSync_SBOpportunities - GENERATED by apps/signbuilder/flows/build-bc-flows.mjs; edit that, not this. On a crfdf_syncrequest of kind sbopportunities: BC opportunities (Sign Builder extension API) into crfdf_bcopportunity.",
-  {
-    When_a_check_is_requested: {
-      type: "OpenApiConnectionWebhook",
-      inputs: {
-        parameters: {
-          "subscriptionRequest/message": 1,
-          "subscriptionRequest/entityname": "crfdf_syncrequest",
-          "subscriptionRequest/scope": 4,
-          "subscriptionRequest/filterexpression": "crfdf_kind eq 'sbopportunities'",
+    List_Existing: dv("ListRecords", { entityName: set, $select: `${idCol},${keyCol},crfdf_bcmodified` }, {}, true),
+    // Fail loudly rather than treat the rows on a missing page as gone.
+    Check_Single_Page: {
+      type: "If",
+      runAfter: after(Get),
+      expression: { not: { equals: [`@empty(coalesce(body('${Get}')?['@odata.nextLink'], ''))`, true] } },
+      actions: {
+        Stop_Paged: {
+          type: "Terminate",
+          runAfter: {},
+          inputs: { runStatus: "Failed", runError: { code: "Paged", message: `BC returned more than one page - add paging to ${flow}.` } },
         },
-        host: { ...DV, operationId: "SubscribeWebhookTrigger" },
-        authentication: "@parameters('$authentication')",
       },
-      runtimeConfiguration: { concurrency: { runs: 1 } },
+      else: { actions: {} },
     },
-  },
-  {
-    Mark_Running: markRequest("Running", "", {}),
-    Check_BC: { type: "Scope", runAfter: after("Mark_Running"), actions: oppWork },
-    Mark_Done: markRequest("Done", `@${OPP_DONE}`, after("Check_BC")),
-    Mark_Failed: markRequest("Failed", "@'Could not read the opportunities from BC - see the BCSync_SBOpportunities run history.'", { Check_BC: ["Failed", "TimedOut"] }),
-  },
-);
+    [Plural]: {
+      type: "Query",
+      runAfter: after("Check_Single_Page"),
+      inputs: { from: `@body('${Get}')?['value']`, where: `@not(empty(trim(${c(it("number"))})))` },
+    },
+    Existing_Stamps: { type: "Select", runAfter: after("List_Existing"), inputs: { from: "@body('List_Existing')?['value']", select: `@${ROW_STAMP}` } },
+    Existing_Stamp_Text: { type: "Compose", runAfter: after("Existing_Stamps"), inputs: joined("Existing_Stamps") },
+    [Changed]: {
+      type: "Query",
+      runAfter: after(Plural, "Existing_Stamp_Text"),
+      inputs: { from: `@body('${Plural}')`, where: `@not(contains(outputs('Existing_Stamp_Text'), ${wrapped(STAMP)}))` },
+    },
+    [Each]: {
+      type: "Foreach",
+      foreach: `@body('${Changed}')`,
+      runAfter: after(Changed),
+      runtimeConfiguration: { concurrency: { repetitions: 10 } },
+      actions: {
+        Existing_Row: {
+          type: "Query",
+          runAfter: {},
+          inputs: { from: "@body('List_Existing')?['value']", where: `@equals(trim(${c(it(keyCol))}), trim(${ROW}?['number']))` },
+        },
+        Row_Exists: {
+          type: "If",
+          runAfter: after("Existing_Row"),
+          expression: { greater: ["@length(body('Existing_Row'))", 0] },
+          actions: { [`Update_${Cap}`]: dv("UpdateOnlyRecord", { entityName: set, recordId: `@first(body('Existing_Row'))?['${idCol}']`, ...item }) },
+          else: { actions: { [`Create_${Cap}`]: dv("CreateRecord", { entityName: set, ...item }) } },
+        },
+      },
+    },
+    Current_Numbers: { type: "Select", runAfter: after(Plural), inputs: { from: `@body('${Plural}')`, select: `@trim(${c(it("number"))})` } },
+    Current_Number_Text: { type: "Compose", runAfter: after("Current_Numbers"), inputs: joined("Current_Numbers") },
+    Stale_Rows: {
+      type: "Query",
+      runAfter: after("Current_Number_Text", "List_Existing"),
+      inputs: { from: "@body('List_Existing')?['value']", where: `@not(contains(outputs('Current_Number_Text'), ${wrapped(`trim(${c(it(keyCol))})`)}))` },
+    },
+    [`Any_${Plural}`]: {
+      type: "If",
+      runAfter: after("Stale_Rows", Each),
+      expression: { greater: [`@length(body('${Plural}'))`, 0] },
+      actions: {
+        For_each_stale_row: {
+          type: "Foreach",
+          foreach: "@body('Stale_Rows')",
+          runAfter: {},
+          runtimeConfiguration: { concurrency: { repetitions: 10 } },
+          actions: { [`Delete_${Cap}`]: dv("DeleteRecord", { entityName: set, recordId: `@items('For_each_stale_row')?['${idCol}']` }) },
+        },
+      },
+      else: { actions: {} },
+    },
+  };
+  const DONE = countText(`length(coalesce(body('${Changed}'), json('[]')))`, done[0], done[1], done[2]);
+  return wrapFlow(
+    `${flow} - GENERATED by apps/signbuilder/flows/build-bc-flows.mjs; edit that, not this. On a crfdf_syncrequest of kind ${kind}: ${what}.`,
+    {
+      When_a_check_is_requested: {
+        type: "OpenApiConnectionWebhook",
+        inputs: {
+          parameters: {
+            "subscriptionRequest/message": 1,
+            "subscriptionRequest/entityname": "crfdf_syncrequest",
+            "subscriptionRequest/scope": 4,
+            "subscriptionRequest/filterexpression": `crfdf_kind eq '${kind}'`,
+          },
+          host: { ...DV, operationId: "SubscribeWebhookTrigger" },
+          authentication: "@parameters('$authentication')",
+        },
+        runtimeConfiguration: { concurrency: { runs: 1 } },
+      },
+    },
+    {
+      Mark_Running: markRequest("Running", "", {}),
+      Check_BC: { type: "Scope", runAfter: after("Mark_Running"), actions: work },
+      Mark_Done: markRequest("Done", `@${DONE}`, after("Check_BC")),
+      Mark_Failed: markRequest("Failed", `@'Could not read BC - see the ${flow} run history.'`, { Check_BC: ["Failed", "TimedOut"] }),
+    },
+  );
+}
+
+const opportunitiesFlow = syncFlow({
+  flow: "BCSync_SBOpportunities",
+  kind: "sbopportunities",
+  what: "BC opportunities (Sign Builder extension API) into crfdf_bcopportunity",
+  set: "crfdf_bcopportunities",
+  idCol: "crfdf_bcopportunityid",
+  keyCol: "crfdf_opportunityno",
+  apiSet: "opportunities",
+  select: "number,description,contactNo,contactName,contactCompanyName,salespersonCode,status,closed,creationDate,projectNo,lastModified",
+  // Open opportunities, plus closed ones from the last year (a won one is specced after it closes).
+  filter: "@{encodeUriComponent(concat('closed eq false or creationDate ge ', formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-dd')))}",
+  Plural: "Opportunities",
+  single: "opportunity",
+  done: ["opportunity updated", "opportunities updated", "Opportunities up to date"],
+  fields: (R) => ({
+    crfdf_name: `@trim(${R}?['number'])`,
+    crfdf_opportunityno: `@trim(${R}?['number'])`,
+    crfdf_description: `@${c(`${R}?['description']`)}`,
+    crfdf_contactno: `@${c(`${R}?['contactNo']`)}`,
+    crfdf_contactname: `@${c(`${R}?['contactName']`)}`,
+    crfdf_companyname: `@${c(`${R}?['contactCompanyName']`)}`,
+    crfdf_salespersoncode: `@${c(`${R}?['salespersonCode']`)}`,
+    crfdf_status: `@${c(`${R}?['status']`)}`,
+    crfdf_closed: `@equals(${R}?['closed'], true)`,
+    crfdf_creationdate: `@${c(`${R}?['creationDate']`)}`,
+    crfdf_projectno: `@trim(${c(`${R}?['projectNo']`)})`,
+    crfdf_bcmodified: `@${c(`${R}?['lastModified']`)}`,
+  }),
+});
+
+// Every project that isn't Completed — Planning / Quote ones too (Switchboard's
+// crfdf_bcjob only has Open). Extension v0.12.1+ (page 58489).
+const projectsFlow = syncFlow({
+  flow: "BCSync_SBJobs",
+  kind: "sbjobs",
+  what: "BC projects in every status but Completed (Sign Builder extension API) into crfdf_sbjob",
+  set: "crfdf_sbjobs",
+  idCol: "crfdf_sbjobid",
+  keyCol: "crfdf_jobno",
+  apiSet: "projects",
+  select: "number,description,description2,billToCustomerNo,billToName,status,creationDate,personResponsible,lastModified",
+  filter: "@{encodeUriComponent('status ne ''Completed''')}",
+  Plural: "Projects",
+  single: "project",
+  done: ["project updated", "projects updated", "Projects up to date"],
+  fields: (R) => ({
+    crfdf_name: `@trim(${R}?['number'])`,
+    crfdf_jobno: `@trim(${R}?['number'])`,
+    crfdf_description: `@trim(concat(${c(`${R}?['description']`)}, ' ', ${c(`${R}?['description2']`)}))`,
+    crfdf_customerno: `@${c(`${R}?['billToCustomerNo']`)}`,
+    crfdf_customername: `@${c(`${R}?['billToName']`)}`,
+    crfdf_status: `@${c(`${R}?['status']`)}`,
+    crfdf_creationdate: `@${c(`${R}?['creationDate']`)}`,
+    crfdf_personresponsible: `@${c(`${R}?['personResponsible']`)}`,
+    crfdf_bcmodified: `@${c(`${R}?['lastModified']`)}`,
+  }),
+});
 
 // ---------------------------------------------------------------------------
 // BCPush_SBDescriptions
@@ -333,6 +390,8 @@ const descriptionsFlow = wrapFlow(
 const FLOWS = [
   { name: "BCSync_SBOpportunities", guid: "6f0f6f3a-2b6e-4a49-9c55-5b8d1c0e7a01", doc: opportunitiesFlow,
     desc: "On request: BC opportunities (Sign Builder extension API) into crfdf_bcopportunity for the Sign Builder app's opportunity picker." },
+  { name: "BCSync_SBJobs", guid: "6f0f6f3a-2b6e-4a49-9c55-5b8d1c0e7a03", doc: projectsFlow,
+    desc: "On request: BC projects in every status but Completed (Sign Builder extension API) into crfdf_sbjob for the Sign Builder app's job picker." },
   { name: "BCPush_SBDescriptions", guid: "6f0f6f3a-2b6e-4a49-9c55-5b8d1c0e7a02", doc: descriptionsFlow,
     desc: "Generate to Project: writes the Sign Builder's Production / Field Description to the BC project (crfdf_sbdescpush outbox)." },
 ];

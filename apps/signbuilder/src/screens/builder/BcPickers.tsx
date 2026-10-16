@@ -1,12 +1,47 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "../../components/ui";
 import type { BcJob, BcOpportunity } from "../../domain/types";
-import { bcLink, POLL_MS, syncMessage } from "../../services/bc-link";
+import { bcLink, POLL_MS, syncMessage, type SyncKind } from "../../services/bc-link";
 
-// One opportunity copy from BC per app session (or after 10 minutes) — the
-// picker asks when it opens; Refresh asks again.
-let lastOppSync = 0;
+// One copy from BC per list per app session (or after 10 minutes) — a picker
+// asks when it opens; Refresh asks again.
+const lastSync: Partial<Record<SyncKind, number>> = {};
 const SYNC_AGAIN_MS = 10 * 60_000;
+
+/** Asks the kind's flow to copy BC now, follows the request, then bumps the list. */
+function useBcSync(kind: SyncKind, userName: string) {
+  const [state, setState] = useState<{ phase: string; text: string } | null>(null);
+  const [bump, setBump] = useState(0);
+  const alive = useRef(true);
+  const refresh = async () => {
+    setState({ phase: "waiting", text: "Asking BC…" });
+    try {
+      const id = await bcLink().requestSync(kind, userName);
+      const started = Date.now();
+      lastSync[kind] = started;
+      for (;;) {
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        if (!alive.current) return;
+        const m = syncMessage(await bcLink().readSyncRequest(id), Date.now() - started, kind);
+        setState(m);
+        if (m.phase === "done" || m.phase === "failed") break;
+      }
+      setBump((b) => b + 1);
+    } catch (e) {
+      setState({ phase: "failed", text: e instanceof Error ? e.message : String(e) });
+    }
+  };
+  useEffect(() => {
+    alive.current = true;
+    if (Date.now() - (lastSync[kind] ?? 0) > SYNC_AGAIN_MS) void refresh();
+    return () => {
+      alive.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const busy = state?.phase === "waiting" || state?.phase === "running";
+  return { state, bump, refresh, busy };
+}
 
 function useSearch<T>(search: (q: string) => Promise<T[]>, query: string, bump: number) {
   const [rows, setRows] = useState<T[] | null>(null);
@@ -27,50 +62,33 @@ function useSearch<T>(search: (q: string) => Promise<T[]>, query: string, bump: 
   return { rows, error };
 }
 
-/** Pick the spec's BC opportunity. Asks BC for fresh opportunities when it opens. */
-export function OpportunityPicker({ userName, onPick, onClose }: { userName: string; onPick: (o: BcOpportunity) => void; onClose: () => void }) {
-  const [query, setQuery] = useState("");
-  const [bump, setBump] = useState(0);
-  const [sync, setSync] = useState<{ phase: string; text: string } | null>(null);
-  const alive = useRef(true);
-  const { rows, error } = useSearch((q) => bcLink().searchOpportunities(q), query, bump);
-
-  const refresh = async () => {
-    setSync({ phase: "waiting", text: "Asking BC…" });
-    try {
-      const id = await bcLink().requestOpportunitySync(userName);
-      const started = Date.now();
-      lastOppSync = started;
-      for (;;) {
-        await new Promise((r) => setTimeout(r, POLL_MS));
-        if (!alive.current) return;
-        const m = syncMessage(await bcLink().readSyncRequest(id), Date.now() - started);
-        setSync(m);
-        if (m.phase === "done" || m.phase === "failed") break;
-      }
-      setBump((b) => b + 1);
-    } catch (e) {
-      setSync({ phase: "failed", text: e instanceof Error ? e.message : String(e) });
-    }
-  };
-  useEffect(() => {
-    alive.current = true;
-    if (Date.now() - lastOppSync > SYNC_AGAIN_MS) void refresh();
-    return () => {
-      alive.current = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+function SearchBar({ query, setQuery, placeholder, sync }: { query: string; setQuery: (q: string) => void; placeholder: string; sync: ReturnType<typeof useBcSync> }) {
   return (
-    <Modal title="Pick the opportunity" onClose={onClose} wide>
+    <>
       <div className="sbp-row" style={{ gap: 8, marginBottom: 8 }}>
-        <input className="sbp-input" autoFocus style={{ flex: 1 }} placeholder="Opportunity no., description, company or contact…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button type="button" className="btn-secondary" disabled={sync?.phase === "waiting" || sync?.phase === "running"} onClick={() => void refresh()}>
+        <input className="sbp-input" autoFocus style={{ flex: 1 }} placeholder={placeholder} value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button type="button" className="btn-secondary" disabled={sync.busy} onClick={() => void sync.refresh()}>
           Refresh from BC
         </button>
       </div>
-      {sync && <div className={`sbp-muted${sync.phase === "failed" ? " sbp-text-error" : ""}`} style={{ fontSize: 12, marginBottom: 6 }}>{sync.text}</div>}
+      {sync.state && (
+        <div className={`sbp-muted${sync.state.phase === "failed" ? " sbp-text-error" : ""}`} style={{ fontSize: 12, marginBottom: 6 }}>
+          {sync.state.text}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Pick the spec's BC opportunity. Asks BC for fresh opportunities when it opens. */
+export function OpportunityPicker({ userName, onPick, onClose }: { userName: string; onPick: (o: BcOpportunity) => void; onClose: () => void }) {
+  const [query, setQuery] = useState("");
+  const sync = useBcSync("sbopportunities", userName);
+  const { rows, error } = useSearch((q) => bcLink().searchOpportunities(q), query, sync.bump);
+
+  return (
+    <Modal title="Pick the opportunity" onClose={onClose} wide>
+      <SearchBar query={query} setQuery={setQuery} placeholder="Opportunity no., description, company or contact…" sync={sync} />
       {error && <div className="sbp-banner sbp-banner--error">{error}</div>}
       {!query && <div className="sbp-muted" style={{ fontSize: 12, marginBottom: 6 }}>Open opportunities, newest first — type to search all of them.</div>}
       <div className="sbp-picker-list">
@@ -94,14 +112,16 @@ export function OpportunityPicker({ userName, onPick, onClose }: { userName: str
   );
 }
 
-/** Pick the spec's BC project (job). */
-export function JobPicker({ onPick, onClose }: { onPick: (j: BcJob) => void; onClose: () => void }) {
+/** Pick the spec's BC project — Planning and Quote ones too, not just Open. */
+export function JobPicker({ userName, onPick, onClose }: { userName: string; onPick: (j: BcJob) => void; onClose: () => void }) {
   const [query, setQuery] = useState("");
-  const { rows, error } = useSearch((q) => bcLink().searchJobs(q), query, 0);
+  const sync = useBcSync("sbjobs", userName);
+  const { rows, error } = useSearch((q) => bcLink().searchJobs(q), query, sync.bump);
   return (
     <Modal title="Pick the project (job)" onClose={onClose} wide>
-      <input className="sbp-input" autoFocus style={{ width: "100%", marginBottom: 8 }} placeholder="Job no., name, customer or description…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <SearchBar query={query} setQuery={setQuery} placeholder="Job no., customer or description…" sync={sync} />
       {error && <div className="sbp-banner sbp-banner--error">{error}</div>}
+      {!query && <div className="sbp-muted" style={{ fontSize: 12, marginBottom: 6 }}>Projects that aren't completed — Planning, Quote and Open — newest first.</div>}
       <div className="sbp-picker-list">
         {rows === null && !error && <div className="sbp-muted">Loading…</div>}
         {rows?.length === 0 && <div className="sbp-muted">No projects found.</div>}
@@ -110,9 +130,11 @@ export function JobPicker({ onPick, onClose }: { onPick: (j: BcJob) => void; onC
             <div className="sbp-row" style={{ gap: 8 }}>
               <b>{j.no}</b>
               <span style={{ flex: 1 }}>{j.name}</span>
-              {j.status && <span className="sbp-pill">{j.status}</span>}
+              {j.status && <span className={`sbp-pill${j.status.toLowerCase() === "open" ? " sbp-pill--approved" : ""}`}>{j.status}</span>}
             </div>
-            <div className="sbp-muted" style={{ fontSize: 12 }}>{[j.description, j.salespersonCode && `Salesperson ${j.salespersonCode}`].filter(Boolean).join(" · ")}</div>
+            <div className="sbp-muted" style={{ fontSize: 12 }}>
+              {[j.description, j.personResponsible && `Responsible ${j.personResponsible}`, j.creationDate].filter(Boolean).join(" · ")}
+            </div>
           </button>
         ))}
       </div>

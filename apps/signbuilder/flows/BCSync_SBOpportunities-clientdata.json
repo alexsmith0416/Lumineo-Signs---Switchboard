@@ -436,7 +436,7 @@
               "entityName": "crfdf_syncrequests",
               "recordId": "@triggerOutputs()?['body/crfdf_syncrequestid']",
               "item/crfdf_status": "Failed",
-              "item/crfdf_result": "@'Could not read the opportunities from BC - see the BCSync_SBOpportunities run history.'"
+              "item/crfdf_result": "@'Could not read BC - see the BCSync_SBOpportunities run history.'"
             },
             "host": {
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
