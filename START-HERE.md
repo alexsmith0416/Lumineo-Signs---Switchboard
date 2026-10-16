@@ -109,13 +109,16 @@ The rules now, in force:
   attempt landed but the bridge lost the reply — `dvCreate` updates that row
   instead of reporting a failure (`isDuplicateKeyError` / `primaryIdOf` in
   `dv-write.ts`). New creates should send their own GUID id so they get this.
-- **Missing-column fallbacks must match the column name (Oct 15):** an install
-  card write used to switch ALL newer columns (jobno, zip, crew…) off for the
-  session on ANY failure, so later cards saved without a job number and Open
-  Project sent the card title to BC. `dropMissingInstallCols` now drops columns
-  only when the error names one. Cards hit before the fix:
-  `scripts/repair-installcard-jobno.ps1` (dry run, then `-Apply`) restores the
-  job number from the card's BC push row.
+- **No silent column fallbacks on install cards (Oct 16):** an install-card
+  write used to switch the newer columns (jobno, zip, crew…) off for the session
+  after a failure, so every later card saved without its job number. The Oct 15
+  "only when the error names the column" fix wasn't enough: a card with no job
+  no. carries its title in `jobNo`, writing it back overflowed crfdf_jobno (max
+  40) — an error that NAMES jobno. Now `cardToRecord` always sends those columns
+  and writes crfdf_jobno only for a real number (`isBcJobNo`). A failed save
+  shows in SaveStatus instead of dropping data. Repair:
+  `scripts/repair-installcard-jobno.ps1` (dry run, then `-Apply`) — push row,
+  else BC job name + job description + task.
 - When adding a NEW editable action, persist via `persistOrReport` and add a case
   to `optimistic-edit.test.ts`.
 

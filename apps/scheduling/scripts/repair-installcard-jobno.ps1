@@ -51,7 +51,7 @@ while (-not $token -and (Get-Date) -lt $deadline) {
 if (-not $token) { throw "Device-code login timed out." }
 Write-Host "Authenticated." -ForegroundColor Green
 
-$headers = @{ Authorization="Bearer $token"; 'Content-Type'='application/json'; 'OData-MaxVersion'='4.0'; 'OData-Version'='4.0'; Accept='application/json' }
+$headers = @{ Authorization="Bearer $token"; 'Content-Type'='application/json'; 'OData-MaxVersion'='4.0'; 'OData-Version'='4.0'; Accept='application/json'; Prefer='odata.include-annotations="OData.Community.Display.V1.FormattedValue"' }
 $base = "$org/api/data/v9.2"
 
 function Get-All([string]$url) {
@@ -75,7 +75,7 @@ function Split-Notes([string]$raw) {
 }
 
 # Install cards with no job number that aren't custom cards or delivery runs.
-$cards = Get-All ("$base/crfdf_installcards?`$select=crfdf_installcardid,crfdf_name,crfdf_notes,crfdf_region,crfdf_iscustom,createdon" +
+$cards = Get-All ("$base/crfdf_installcards?`$select=crfdf_installcardid,crfdf_name,crfdf_notes,crfdf_region,crfdf_iscustom,createdon,_createdby_value" +
   "&`$filter=crfdf_jobno eq null and _crfdf_shipmentload_value eq null")
 $cards = @($cards | Where-Object { -not $_.crfdf_iscustom })
 Write-Host ("{0} non-custom card(s) have no job number." -f $cards.Count)
@@ -120,7 +120,8 @@ $fixed = 0; $unknown = @(); $ambiguous = @()
 foreach ($c in $cards) {
   $id = $c.crfdf_installcardid
   $region = if ($c.crfdf_region) { 'NEK' } else { 'WK' }
-  $label = "$region  $($c.crfdf_name)  (created $($c.createdon))"
+  $by = $c.'_createdby_value@OData.Community.Display.V1.FormattedValue'
+  $label = "$region  $($c.crfdf_name)  (created $($c.createdon) by $by)"
   $how = 'push row'
   $jobNo = $jobByCard["$id".ToLower()]
   if (-not $jobNo) {

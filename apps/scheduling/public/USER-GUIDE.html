@@ -1572,6 +1572,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 16, 2026</td><td><strong>Job numbers stay on install cards (for good)</strong> &mdash; cards on the NEK / WK schedule could still lose their J number after certain saves. Fixed at the cause, and the affected cards are restored. If a save ever fails now, you&rsquo;ll see it in the save status instead of the card quietly losing its job number. Refresh Switchboard to get the fix.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Open Project only for real BC jobs</strong> &mdash; a calendar card with no BC job number (one named only by its title, like <em>EDUCATION CENTER-Olathe Schools</em>) no longer offers <em>Open Project</em> in its right-click menu. Before, it sent the title to BC as a project number: long titles hit BC's 20-character error, and short ones opened a blank new project. <em>Open SharePoint Folder</em> still works on those cards.<br><strong>Job numbers stay on install cards</strong> &mdash; a hiccup while saving one install card could make every card added after it (in that session) save without its job number, zip or crew counts, so the card showed only its name. Fixed; cards it already hit are being restored.</td></tr>
       <tr><td>Oct 13, 2026</td><td><strong>Check BC now is quicker</strong> &mdash; it no longer checks for sketches (that took far too long). Sketches still come in nightly; for a new sketch on one job, right-click its Sketch cell and choose the file. See &sect;5.17.</td></tr>
       <tr><td>Oct 12, 2026</td><td><strong>Check BC now</strong> &mdash; a new button on the Jobs list toolbar brings in what's new in BC right away instead of at the next scheduled check: shop-floor and install task completions (applied at once), jobs just released (<em>New Order This Week</em> Started), descriptions, POs and sketches. Each one says what it found, and the list reloads. See &sect;5.17.</td></tr>
@@ -1705,7 +1706,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.48 · Oct 15, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.49 · Oct 16, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

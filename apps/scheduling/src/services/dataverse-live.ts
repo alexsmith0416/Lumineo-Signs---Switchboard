@@ -26,6 +26,7 @@ import {
   writeRetryDelay,
 } from "./dv-write";
 import { overlapsWindow, scheduleLineWindowFilter } from "./week-window";
+import { isBcJobNo } from "./job-links";
 import {
   INSTALL_LOCATIONS,
   INSTALL_LOCATION_COLORS,
@@ -834,7 +835,7 @@ function createLiveInstallDataSource(
     async updateScheduleLine(id: string, changes: Partial<ScheduleLine>): Promise<ScheduleLine> {
       regionRead = null; // the next load must see this change
       let res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
-      if (!res.success && dropMissingInstallCols(res.error?.message ?? "")) {
+      if (!res.success && dropMissingCols(res.error?.message ?? "")) {
         // A newer column is missing — drop it and retry so the edit sticks.
         res = await dvUpdate(SHIP.cards, id, cardToRecord(changes, isNek, false));
       }
@@ -857,7 +858,7 @@ function createLiveInstallDataSource(
       const id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(line.id) ? line.id : uuid();
       const rec = () => ({ crfdf_installcardid: id, ...cardToRecord(line, isNek, true) });
       let res = await dvCreate(SHIP.cards, rec());
-      if (!res.success && dropMissingInstallCols(res.error?.message ?? "")) {
+      if (!res.success && dropMissingCols(res.error?.message ?? "")) {
         // A newer column is missing — drop it and retry so the card saves.
         // The record is REBUILT here: the original payload still carried the
         // columns we just turned off, so resending it would fail identically.
@@ -922,27 +923,6 @@ export const liveNekInstallDataSource = createLiveInstallDataSource(
 // ---------------------------------------------------------------------------
 // Install cards (crfdf_installcard) — map / payload
 // ---------------------------------------------------------------------------
-// Flipped off (for the session) if a write fails because the newer install-card
-// columns aren't provisioned yet — so cards keep saving. Reset on reload.
-let installExtraColsAvailable = true;
-const INSTALL_EXTRA_COL_RE =
-  /crfdf_(jobno|installzip|crewpersons|crewtrucks|crewtrips|crewcranes|crewlifts|finalinstall)/i;
-
-/**
- * After a failed install-card write: turn off only the columns the error
- * actually names, and say whether a retry is worth it. Any other failure (a
- * lost reply, a connection blip) must NOT switch the extra columns off — that
- * silently saved every later card in the session without its job number.
- */
-function dropMissingInstallCols(msg: string): boolean {
-  let retry = dropMissingCols(msg);
-  if (installExtraColsAvailable && INSTALL_EXTRA_COL_RE.test(msg)) {
-    installExtraColsAvailable = false;
-    retry = true;
-  }
-  return retry;
-}
-
 function mapCardRecord(r: Row): ScheduleLine {
   const title = s(r.crfdf_name);
   const desc = decodeDesc(s(r.crfdf_notes));
@@ -994,18 +974,19 @@ function cardToRecord(line: Partial<ScheduleLine>, isNek: boolean, forCreate: bo
   if (line.isCustom !== undefined) rec.crfdf_iscustom = line.isCustom;
   if (line.customColor !== undefined) rec.crfdf_customcolor = line.customColor;
   if (line.customTextColor !== undefined) rec.crfdf_customtextcolor = line.customTextColor;
-  // The jobno/zip/crew/trips columns are newer; only include them while they're
-  // known to be provisioned, so a card still saves if the schema lags behind.
-  if (installExtraColsAvailable) {
-    if (line.jobNo !== undefined && !line.isCustom) rec.crfdf_jobno = line.jobNo;
-    if (line.installZip !== undefined) rec.crfdf_installzip = line.installZip;
-    if (line.crewPersons !== undefined) rec.crfdf_crewpersons = line.crewPersons;
-    if (line.crewTrucks !== undefined) rec.crfdf_crewtrucks = line.crewTrucks;
-    if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
-    if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
-    if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
-    if (line.finalInstall !== undefined) rec.crfdf_finalinstall = line.finalInstall;
-  }
+  // Always sent — these columns are provisioned. (Until Oct 16 a failed write
+  // switched them off for the session, so every later card saved without its
+  // job number.) Only a real BC number goes in crfdf_jobno (max 40): a card
+  // with none carries its title in jobNo (mapCardRecord), and writing that
+  // back overflowed the column on long titles.
+  if (line.jobNo !== undefined && !line.isCustom && isBcJobNo(line.jobNo)) rec.crfdf_jobno = line.jobNo.trim();
+  if (line.installZip !== undefined) rec.crfdf_installzip = line.installZip;
+  if (line.crewPersons !== undefined) rec.crfdf_crewpersons = line.crewPersons;
+  if (line.crewTrucks !== undefined) rec.crfdf_crewtrucks = line.crewTrucks;
+  if (line.crewTrips !== undefined) rec.crfdf_crewtrips = line.crewTrips;
+  if (line.crewCranes !== undefined) rec.crfdf_crewcranes = line.crewCranes;
+  if (line.crewLifts !== undefined) rec.crfdf_crewlifts = line.crewLifts;
+  if (line.finalInstall !== undefined) rec.crfdf_finalinstall = line.finalInstall;
   if (forCreate) rec.crfdf_region = isNek;
   if (line.employeeId) rec["crfdf_employee@odata.bind"] = `/${INSTALL_SET}(${line.employeeId})`;
   if (line.shipmentLoadId) rec["crfdf_shipmentload@odata.bind"] = `/${SHIP.loads}(${line.shipmentLoadId})`;
