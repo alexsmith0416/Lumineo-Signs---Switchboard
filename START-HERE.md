@@ -309,6 +309,14 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     flags (job geo → ZIP center); JobCard draws outline/fill in the job
     location's board colours + right-click "Work-radius colour ▸";
     `WorkRadiusDialog` from the banner; mode toggle in ModifyColorsPanel.
+  - ✅ Guide search (v3.56): sticky search bar inside `public/USER-GUIDE.html`
+    (script at the end: indexes p / li / tr / .box under their headings, drops
+    question words, folds word endings + small synonym map, FAQ headings weigh
+    more; `?q=` opens with a search; "/" focuses). When adding guide text,
+    phrase how-tos the way people ask ("How do I …?" FAQs rank first).
+  - ⏳ Bucket Lists: `scripts/create-bucket-tables.ps1` written (crfdf_bucketlist
+    + crfdf_bucketitem, privileges mirror crfdf_jobqueueitem). **Alex runs it**,
+    then build the feature.
   - **Next, in order:** #2/#3/#4
     Bucket Lists (own tables; drop off when that department's step completes;
     filter builder on Dataverse-mirrored BC data; released-date order + drag;

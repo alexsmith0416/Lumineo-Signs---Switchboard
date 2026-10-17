@@ -179,6 +179,33 @@
     .topbar__right{align-items:flex-start}
     .cta{flex-direction:column;align-items:flex-start}
   }
+  /* ---- Search the guide (sticky bar under the cover) ---- */
+  .gsearch{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);
+    border-bottom:1px solid var(--border);backdrop-filter:blur(6px)}
+  .gsearch__inner{max-width:920px;margin:0 auto;padding:12px 26px;position:relative}
+  .gsearch__box{display:flex;align-items:center;gap:10px;border:1.5px solid var(--grid);border-radius:10px;
+    padding:8px 12px;background:#fff}
+  .gsearch__box:focus-within{border-color:var(--hero);box-shadow:0 0 0 3px rgba(23,26,99,.12)}
+  .gsearch__icon{color:var(--taupe);font-size:1rem;flex:none}
+  .gsearch__input{flex:1;min-width:0;border:0;outline:0;font:inherit;font-size:.98rem;color:var(--ink);background:transparent}
+  .gsearch__input::-webkit-search-cancel-button{display:none}
+  .gsearch__clear{border:0;background:none;color:var(--mid);font-size:1.1rem;cursor:pointer;padding:0 2px;line-height:1}
+  .gsearch__hint{font-size:.72rem;color:var(--taupe);flex:none}
+  .gsearch__results{position:absolute;left:26px;right:26px;top:calc(100% - 4px);background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 14px 34px rgba(0,18,56,.16);max-height:min(62vh,520px);overflow:auto;padding:6px}
+  .gsearch__results[hidden]{display:none}
+  .gsearch__count{font-size:.74rem;color:var(--taupe);padding:6px 10px 4px;font-family:var(--display);
+    text-transform:uppercase;letter-spacing:.12em}
+  .gsearch__item{display:block;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:9px 10px;
+    cursor:pointer;font:inherit;color:var(--body)}
+  .gsearch__item:hover,.gsearch__item[aria-selected="true"]{background:#f1f2fa}
+  .gsearch__where{font-size:.74rem;color:var(--hero);font-weight:700;margin-bottom:2px}
+  .gsearch__snip{font-size:.88rem;line-height:1.45;color:var(--body)}
+  .gsearch__snip mark,.gs-hit mark{background:#ffe08a;color:inherit;padding:0 1px;border-radius:2px}
+  .gsearch__none{padding:12px 10px;font-size:.9rem;color:var(--mid)}
+  .gs-flash{animation:gsflash 2.4s ease-out 1;border-radius:6px}
+  @keyframes gsflash{0%,35%{background:#fff3c4;box-shadow:0 0 0 6px #fff3c4}100%{background:transparent;box-shadow:0 0 0 6px transparent}}
+  @media (max-width:640px){.gsearch__inner{padding:10px 16px}.gsearch__results{left:16px;right:16px}.gsearch__hint{display:none}}
   @media print{
     body{font-size:12.5px}
     .hero{background:var(--hero)!important}
@@ -188,6 +215,7 @@
     a{border:none;color:var(--navy)}
     .cta a{border:1px solid #fff}
     .dl{display:none!important}
+    .gsearch{display:none!important}
     /* Print the whole log, not just the on-screen scroll window. */
     .changelog{max-height:none!important;overflow:visible!important;border:none}
   }
@@ -221,6 +249,21 @@
     </div>
   </div>
 </header>
+
+<!-- Search the guide: type a question or a few words (script at the end). -->
+<div class="gsearch" role="search">
+  <div class="gsearch__inner">
+    <div class="gsearch__box">
+      <span class="gsearch__icon" aria-hidden="true">&#128269;</span>
+      <input id="gsearch" class="gsearch__input" type="search" autocomplete="off" spellcheck="false"
+        placeholder="Search the guide — e.g. how do I split a card?" aria-label="Search the user guide"
+        aria-controls="gsearch-results" aria-expanded="false">
+      <button type="button" class="gsearch__clear" id="gsearch-clear" aria-label="Clear search" hidden>&times;</button>
+      <span class="gsearch__hint">Press / to search</span>
+    </div>
+    <div class="gsearch__results" id="gsearch-results" role="listbox" hidden></div>
+  </div>
+</div>
 
 <div class="wrap">
 
@@ -1513,6 +1556,14 @@
 
   <!-- ============================================================ -->
   <h2 id="faq"><span class="num">11</span>FAQs &amp; Tips</h2><div class="rule"></div>
+  <h4>How do I delete a job card?</h4>
+  <p>Right-click the card → <strong>Delete</strong>, or click it and use <strong>Delete</strong> at the bottom of its panel. To delete several, Ctrl+click them and press <strong>Delete</strong> on the bar (5.2). Ctrl+Z undoes it.</p>
+  <h4>How do I copy or move a card to another person or day?</h4>
+  <p>Drag it to the day / person. To copy, right-click it → <strong>Copy</strong> (or hover it and Ctrl+C), then right-click a day cell → <strong>Paste</strong> (or hover it and Ctrl+V). Ctrl+click several cards to move or copy them together (5.2).</p>
+  <h4>How do I change how long a card is?</h4>
+  <p>Drag its <strong>right edge</strong>, or click it and set <strong>Modified labor hours</strong> / the End date in its panel (5.2, 5.3).</p>
+  <h4>How do I find a job?</h4>
+  <p>Use the <strong>Jobs</strong> list (search box at the top, 5.17), or open the Job Queue on a board (5.8). On a board, hover any card for its details.</p>
   <h4>Do my changes save automatically?</h4>
   <p>Yes. Every move, resize, add, edit, and delete saves to the shared database in the background — there's no "Save" button for the board.</p>
   <h4>What if a change doesn't save?</h4>
@@ -1582,6 +1633,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Search the guide</strong> &mdash; a search bar at the top of this guide (Help &amp; User Guide). Type a question or a few words (e.g. <em>how do I split a card?</em>); the best matching spots are listed with your words highlighted       <tr><th>Date</th><th>Change</th></tr>mdash; click one (or ↑↓ and Enter) to jump straight to it. Press <strong>/</strong> anywhere to start searching. New FAQs for deleting, copying / moving, resizing and finding jobs.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Work radius</strong> &mdash; set a normal work radius per install location (banner right-click → <em>Add work radius…</em>). Cards for jobs outside their crew&rsquo;s radius show the colours of the location the job is in, as an outline or the whole card (Modify colors), and can be set by hand from the card&rsquo;s right-click menu. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Select several cards</strong> &mdash; Ctrl+click cards on Production or Installation to select them, then drag them together, copy / cut / paste them as a set, delete them, or turn them into one <strong>group card</strong>. See &sect;5.2.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Production WK / NEK</strong> &mdash; the Production board has a WK / NEK toggle like Installation. Set a person&rsquo;s region by right-clicking their name (Region). NEK cards for jobs built in Hutchinson show a <strong>→ HUT</strong> chip. See &sect;5.9.</td></tr>
@@ -1722,7 +1774,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.55 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.56 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
@@ -1737,6 +1789,196 @@
   if (/[?&]print=1/.test(location.search)) {
     window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 450); });
   }
+  // ---- Search the guide -----------------------------------------------------
+  // Every paragraph / list item / table row / FAQ answer is indexed with the
+  // section headings above it. A question is reduced to its key words (question
+  // words dropped, simple word endings folded, a few synonyms), scored against
+  // each block (heading words count more), and the best few are listed with a
+  // highlighted snippet; picking one scrolls to it and flashes it.
+  (function(){
+    var input = document.getElementById('gsearch');
+    var list = document.getElementById('gsearch-results');
+    var clearBtn = document.getElementById('gsearch-clear');
+    if (!input || !list) return;
+
+    var STOP = ('a an and are as at be been but by can could did do does doing for from get got had has have how i if in ' +
+      'into is it its just me my of on or our so than that the their them then there these they this to too up us was we ' +
+      'were what when where which while who why will with would you your yours am any some about after before need want ' +
+      'way please help tell show make made using use used able also all only out over off here want wanted im ive dont cant').split(' ');
+    var stop = {}; STOP.forEach(function(w){ stop[w] = 1; });
+    // Words people type → the words the guide uses.
+    var SYN = {
+      remove:['delete'], erase:['delete'], colour:['color'], colours:['color'], schedule:['scheduled'],
+      crew:['crew','installer'], installer:['crew'], truck:['shipment','load'], pdf:['pdf','print'],
+      reorder:['reorder','drag'], move:['move','drag'], change:['change','edit'], fix:['troubleshoot','fix'],
+      job:['job','card'], card:['card','job'], bc:['business','central','bc'], late:['past','red'],
+      deadline:['red','date'], dropdead:['red','date'], priority:['priority','red'], copy:['copy','paste'],
+      paste:['paste','copy'], select:['select','ctrl'], multiple:['several','select'], radius:['radius'],
+      queue:['queue'], bucket:['bucket','queue'], sketch:['sketch','drawing'], drawing:['sketch'],
+      po:['po','purchase'], materials:['materials','po'], status:['status'], hold:['hold'], undo:['undo'],
+      password:['sign','login'], login:['sign'], signin:['sign']
+    };
+    function stem(w){
+      if (w.length > 5 && /ing$/.test(w)) return w.slice(0, -3);
+      if (w.length > 4 && /ied$/.test(w)) return w.slice(0, -3) + 'y';
+      if (w.length > 4 && /ed$/.test(w)) return w.slice(0, -2);
+      if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + 'y';
+      if (w.length > 3 && /es$/.test(w) && !/ses$/.test(w)) return w.slice(0, -1);
+      if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+      return w;
+    }
+    function words(text){ return (text.toLowerCase().match(/[a-z0-9]+/g) || []); }
+    function terms(q){
+      var out = [];
+      words(q.replace(/[’']/g, '')).forEach(function(w){
+        if (stop[w] || w.length < 2) return;
+        var group = [stem(w)];
+        (SYN[w] || []).forEach(function(s){ if (group.indexOf(stem(s)) < 0) group.push(stem(s)); });
+        out.push(group);
+      });
+      return out;
+    }
+
+    // --- Index -----------------------------------------------------------------
+    var docs = [];
+    var BLOCKS = 'p, li, tr, .box, .fcard';
+    function headingText(el){ return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+    (function build(){
+      var h2 = '', h3 = '', h4 = '', anchor = null;
+      var walker = document.querySelectorAll('.wrap h2, .wrap h3, .wrap h4, .wrap ' + BLOCKS.split(', ').join(', .wrap '));
+      for (var i = 0; i < walker.length; i++) {
+        var el = walker[i];
+        var tag = el.tagName;
+        if (el.closest('.toc') || el.closest('.gsearch')) continue;
+        if (tag === 'H2') { h2 = headingText(el).replace(/^\d+/, '').trim(); h3 = ''; h4 = ''; anchor = el; continue; }
+        if (tag === 'H3') { h3 = headingText(el); h4 = ''; anchor = el; continue; }
+        if (tag === 'H4') { h4 = headingText(el); anchor = el; continue; }
+        // Skip a block nested in another indexed block (an li inside a .box etc.) — the inner one wins.
+        if (el.querySelector(BLOCKS)) continue;
+        var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text.length < 12) continue;
+        var where = [h2, h3, h4].filter(Boolean);
+        var changelog = !!el.closest('.changelog');
+        docs.push({
+          el: el, text: text, where: where.join(' › '),
+          body: words(text).map(stem),
+          head: words(where.join(' ')).map(stem),
+          faq: h2 === 'FAQs & Tips' && !!h4,
+          weight: changelog ? 0.45 : 1
+        });
+      }
+    })();
+
+    function score(doc, qt){
+      var s = 0, hit = 0;
+      for (var i = 0; i < qt.length; i++) {
+        var group = qt[i], best = 0;
+        for (var g = 0; g < group.length; g++) {
+          var t = group[g], b = 0, h = 0;
+          for (var k = 0; k < doc.body.length; k++) if (doc.body[k] === t || (t.length > 3 && doc.body[k].indexOf(t) === 0)) b++;
+          for (var j = 0; j < doc.head.length; j++) if (doc.head[j] === t) h++;
+          var v = Math.min(b, 4) + h * 3 * (doc.faq ? 1.6 : 1);
+          if (g > 0) v *= 0.6; // a synonym counts a bit less than the word itself
+          if (v > best) best = v;
+        }
+        if (best > 0) hit++;
+        s += best;
+      }
+      if (!hit) return 0;
+      // Blocks that cover more of the question rank first.
+      return s * (hit / qt.length) * (hit / qt.length) * doc.weight;
+    }
+
+    function esc(s){ return s.replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+    function snippet(text, qt){
+      var flat = []; qt.forEach(function(g){ g.forEach(function(t){ flat.push(t); }); });
+      var lower = text.toLowerCase(), at = -1;
+      for (var i = 0; i < flat.length && at < 0; i++) at = lower.search(new RegExp('\\b' + flat[i]));
+      var start = Math.max(0, at - 70), end = Math.min(text.length, start + 220);
+      var cut = (start > 0 ? '… ' : '') + text.slice(start, end) + (end < text.length ? ' …' : '');
+      var html = esc(cut);
+      flat.sort(function(a, b){ return b.length - a.length; }).forEach(function(t){
+        html = html.replace(new RegExp('\\b(' + t.replace(/[^a-z0-9]/g, '') + '[a-z]*)', 'gi'), '<mark>$1</mark>');
+      });
+      return html;
+    }
+
+    var shown = [], active = -1;
+    function render(){
+      var q = input.value.trim();
+      clearBtn.hidden = !q;
+      if (q.length < 2) { close(); return; }
+      var qt = terms(q);
+      if (!qt.length) { close(); return; }
+      var ranked = [];
+      for (var i = 0; i < docs.length; i++) { var s = score(docs[i], qt); if (s > 0) ranked.push({ d: docs[i], s: s }); }
+      ranked.sort(function(a, b){ return b.s - a.s; });
+      // One result per spot: skip a block whose section is already listed with a better block.
+      var seen = {}; shown = [];
+      for (var r = 0; r < ranked.length && shown.length < 8; r++) {
+        var key = ranked[r].d.where + '|' + ranked[r].d.text.slice(0, 40);
+        if (seen[key]) continue; seen[key] = 1; shown.push(ranked[r].d);
+      }
+      active = shown.length ? 0 : -1;
+      var html = '';
+      if (!shown.length) {
+        html = '<div class="gsearch__none">Nothing found for “' + esc(q) + '”. Try fewer or different words — or ask your Admin / Ops lead (see Contact &amp; Support).</div>';
+      } else {
+        html = '<div class="gsearch__count">' + (shown.length === 1 ? 'Best match' : 'Best matches') + ' · ↑↓ Enter</div>';
+        shown.forEach(function(d, i){
+          html += '<button type="button" class="gsearch__item" role="option" data-i="' + i + '" aria-selected="' + (i === 0) + '">' +
+            '<div class="gsearch__where">' + esc(d.where || 'User Guide') + '</div>' +
+            '<div class="gsearch__snip">' + snippet(d.text, qt) + '</div></button>';
+        });
+      }
+      list.innerHTML = html;
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+    function close(){ list.hidden = true; list.innerHTML = ''; shown = []; active = -1; input.setAttribute('aria-expanded', 'false'); }
+    function setActive(i){
+      var items = list.querySelectorAll('.gsearch__item');
+      if (!items.length) return;
+      active = (i + items.length) % items.length;
+      for (var k = 0; k < items.length; k++) items[k].setAttribute('aria-selected', String(k === active));
+      items[active].scrollIntoView({ block: 'nearest' });
+    }
+    function go(i){
+      var d = shown[i]; if (!d) return;
+      close();
+      // Open a collapsed scroll box (What's New) to its row.
+      var top = d.el.getBoundingClientRect().top + window.pageYOffset - 110;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      if (d.el.closest('.changelog')) d.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      d.el.classList.remove('gs-flash'); void d.el.offsetWidth; d.el.classList.add('gs-flash');
+    }
+
+    var timer = null;
+    input.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(render, 120); });
+    input.addEventListener('focus', function(){ if (input.value.trim().length >= 2) render(); });
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) render(); else setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (list.hidden) render(); if (active >= 0) go(active); }
+      else if (e.key === 'Escape') { if (!list.hidden) close(); else { input.value = ''; clearBtn.hidden = true; } }
+    });
+    list.addEventListener('mousedown', function(e){
+      var b = e.target.closest('.gsearch__item'); if (!b) return;
+      e.preventDefault(); go(Number(b.getAttribute('data-i')));
+    });
+    clearBtn.addEventListener('click', function(){ input.value = ''; close(); clearBtn.hidden = true; input.focus(); });
+    document.addEventListener('click', function(e){ if (!e.target.closest('.gsearch')) close(); });
+    // "/" anywhere focuses the search (unless typing in a field).
+    document.addEventListener('keydown', function(e){
+      var t = e.target;
+      if (e.key === '/' && !(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable))) {
+        e.preventDefault(); input.focus(); input.select();
+      }
+    });
+    // ?q=… opens with a search (the app's Help screen passes it on).
+    var m = /[?&]q=([^&]+)/.exec(location.search);
+    if (m) { input.value = decodeURIComponent(m[1].replace(/\+/g, ' ')); render(); }
+  })();
 </script>
 </body>
 </html>
