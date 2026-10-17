@@ -5,7 +5,7 @@ import type { Region } from "../services/geo";
 /**
  * Which region each PRODUCTION employee works in (Oct 17, 2026) — the
  * Production board's WK / NEK toggle shows one region's people. Everyone is WK
- * unless set to NEK here (Aaron Waters, Olathe). Production employees have no
+ * unless set to NEK here (Aaron Waters, Lawrence). Production employees have no
  * region column in Dataverse, so this is one shared entry in the Jobs views
  * config table (key "production-regions": { employeeId: "NEK" }). Set in the
  * employee's edit panel (right-click a name).

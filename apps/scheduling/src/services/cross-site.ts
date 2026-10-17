@@ -1,5 +1,5 @@
 // "→ HUT" on the Production board (Oct 17, 2026): a card on an NEK production
-// person (Aaron Waters, Olathe — vinyl) whose job also goes through Hutchinson
+// person (Aaron Waters, Lawrence — vinyl) whose job also goes through Hutchinson
 // production — it has cards on WK production people, or its Jobs list Mfg
 // Region is WK — so the vinyl he makes is for a job built in Hutchinson. Pure.
 

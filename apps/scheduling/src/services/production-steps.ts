@@ -137,8 +137,18 @@ export function buildDepartmentSteps(
 /** The stepper department key for a department name (for completion writes). */
 export function deptKeyForName(name: string | null | undefined): string | null {
   if (!name) return null;
+  const location = LOCATION_STEPS[name.trim().toLowerCase()];
+  if (location) return location;
   return DEPT_FLOW.find((d) => d.match.test(name))?.key ?? null;
 }
+
+/**
+ * Production lanes named for a LOCATION that does one department's work
+ * (exact name, so a city in task text never matches). Lawrence (NEK) is vinyl
+ * only — Aaron Waters, vinyl technician (Alex, Oct 17): its cards complete /
+ * recede with the Vinyl / Graphics step and push BC's Vinyl schedule.
+ */
+const LOCATION_STEPS: Readonly<Record<string, string>> = { lawrence: "V" };
 
 /** The stepper step a card completes: install cards complete the Install step;
  *  production cards complete their department. */

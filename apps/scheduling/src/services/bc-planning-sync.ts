@@ -22,7 +22,7 @@
  * Dataverse (not the loaded week), which also makes each push idempotent.
  */
 import type { ScheduleLine } from "../engine/types";
-import { DEPT_FLOW, INSTALL_STEP, isDeptKey } from "./production-steps";
+import { INSTALL_STEP, deptKeyForName, isDeptKey } from "./production-steps";
 import { SERVICE_COMPLETE_TO_ADMIN } from "./service-steps";
 
 /** `"schedule"` = a step's dates/assignee; `"state"` = a step's Started /
@@ -96,7 +96,7 @@ export function bcStepForKey(key: string | null | undefined): string | null {
 export function bcStepForDepartmentName(name: string | null | undefined): string | null {
   if (!name) return null;
   if (/fabricat/i.test(name)) return "Fabrication";
-  return bcStepForKey(DEPT_FLOW.find((d) => d.match.test(name))?.key);
+  return bcStepForKey(deptKeyForName(name));
 }
 
 /**

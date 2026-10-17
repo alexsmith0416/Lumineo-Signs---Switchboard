@@ -5,6 +5,7 @@
 
 import type { Department } from "../engine/types";
 import { contrastText } from "./custom-fields";
+import { deptKeyForName } from "./production-steps";
 
 /** One department's / location's colours. */
 export interface ColorScheme {
@@ -59,6 +60,8 @@ const BY_NAME: Array<[RegExp, string]> = [
   [/crat|ship|pack/i, "#F8D5B7"],
 ];
 
+const STEP_COLOR: Record<string, string> = { MF: "#BED7FF", P: "#FAC775", A: "#CECBF6", V: "#C8E6D4", R: "#D6DCE5", CR: "#F8D5B7" };
+
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 
 /** Text colour that reads on `bg`: the palette's own, else black/white by contrast. */
@@ -69,7 +72,8 @@ export function textFor(bg: string): string {
 /** A department's colours before anyone edits them. */
 export function defaultScheme(dept: Pick<Department, "name" | "color">): ColorScheme {
   let bg = dept.color && dept.color.toLowerCase() !== GRAY ? dept.color : "";
-  if (!bg) bg = BY_NAME.find(([re]) => re.test(dept.name))?.[1] ?? GRAY;
+  // A location lane that does one department's work (Lawrence = vinyl) takes that department's colour.
+  if (!bg) bg = BY_NAME.find(([re]) => re.test(dept.name))?.[1] ?? STEP_COLOR[deptKeyForName(dept.name) ?? ""] ?? GRAY;
   const text = bg === GRAY ? "#222222" : textFor(bg);
   return { bg, text, header: bg, headerText: text };
 }
