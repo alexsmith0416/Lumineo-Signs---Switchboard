@@ -304,7 +304,9 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 **Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest, Oct 16 evening — Open in Sign Builder + design files)**
+**Oct 17:** Builder vinyl color picker fixed (swatches back, no overlapping names) — deployed.
+
+**Recap (Oct 16 evening — Open in Sign Builder + design files)**
 - Open in Sign Builder: the app reads launch params from `getContext().app.queryParams`
   (it runs in a frame); BC ext **v0.12.2** puts desc/company/contact/projectNo in the link
   so the header fills at once. ✅ Alex published 0.12.2, header fills.
@@ -642,6 +644,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 17, 2026 (vinyl picker fix)** — Alex: "broken vinyl picker page. overlapping wording and
+  no vinyl color swatches". Cause: the Vinyl Colors tab redefined `.sbp-swatch` (22px square)
+  later in signbuilder.css, shrinking the Builder picker's tiles. Table square renamed
+  `.sbp-vinyl-chip`; picker names wrap. Deployed. Lesson: grep a class name before reusing it.
 - **Oct 16, 2026 (design reference from SharePoint)** — Alex: "On the Design reference, add a
   way to click and access the sharepoint folder of the Job and select the reference file or
   files". Design Reference → **Browse…** (needs Job No.): `services/sharepoint.ts` (connector

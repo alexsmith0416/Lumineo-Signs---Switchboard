@@ -99,7 +99,7 @@ export default function VinylColors() {
               return (
                 <tr key={key}>
                   <td>
-                    <span className="sbp-swatch" style={{ background: c.hex || "transparent" }} />
+                    <span className="sbp-vinyl-chip" style={{ background: c.hex || "transparent" }} />
                   </td>
                   <td style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{c.code}</td>
                   <td>

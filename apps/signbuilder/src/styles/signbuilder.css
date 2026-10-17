@@ -528,6 +528,13 @@
   background: var(--surface-raised);
   color: var(--text-primary);
   text-align: left;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.sbp-swatch > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .sbp-swatch--on {
@@ -1031,7 +1038,8 @@
 
 /* ---- Vinyl colors ----------------------------------------------------------- */
 
-.sbp-swatch {
+/* Own class — .sbp-swatch is the Builder picker's button (above). */
+.sbp-vinyl-chip {
   display: inline-block;
   width: 22px;
   height: 22px;
