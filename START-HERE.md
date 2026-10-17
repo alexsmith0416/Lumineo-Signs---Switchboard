@@ -297,7 +297,7 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     NO Dataverse column — set in EmployeeAdminPanel → Region); WK/NEK toggle in
     ProductionCalendar (`summaryLeading`, hides the other region via
     hiddenEmployeeIds); "→ HUT" chip = `services/cross-site.ts` (tested) →
-    `store/card-badges-store.ts` → JobCard. **Alex: set Aaron Waters → NEK.**
+    `store/card-badges-store.ts` → JobCard. ✅ Oct 17: Aaron Waters moved to a new **Lawrence** production dept + NEK (`scripts/add-lawrence-production.ps1`); the Lawrence lane counts as Vinyl / Graphics (`LOCATION_STEPS` in production-steps.ts).
   - ✅ #5 multi-select (guide v3.54): Ctrl+click via `onClickCapture` on the
     grid → `store/selection-store.ts` (JobCard `job-card--selected`); rules in
     `services/multi-select.ts` (tested): group move (tryShiftWithConfirm, no
