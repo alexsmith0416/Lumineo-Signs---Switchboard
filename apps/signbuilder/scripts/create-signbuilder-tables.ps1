@@ -180,6 +180,7 @@ New-Column 'crfdf_sbspec' 'crfdf_CustomerName' 'Customer Name' 200
 New-Column 'crfdf_sbspec' 'crfdf_ContactName' 'Contact Name' 200
 New-Column 'crfdf_sbspec' 'crfdf_DesignReference' 'Design Reference' 200
 New-MemoColumn 'crfdf_sbspec' 'crfdf_JobDetailNotes' 'Job Detail Notes' 4000
+New-MemoColumn 'crfdf_sbspec' 'crfdf_DesignFiles' 'Design Files' 20000
 New-Column 'crfdf_sbspec' 'crfdf_CreatedByName' 'Created By' 200
 New-Column 'crfdf_sbspec' 'crfdf_LastGeneratedAt' 'Last Generated At' 40
 New-Column 'crfdf_sbspec' 'crfdf_ApprovedBy' 'Approved By' 200

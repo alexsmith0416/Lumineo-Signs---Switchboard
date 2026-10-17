@@ -306,6 +306,8 @@ export interface Spec {
   customerName: string;
   contactName: string;
   designReference: string;
+  /** The reference files picked from the job's SharePoint folder (Design Reference → Browse…). */
+  designFiles?: DesignFile[];
   jobDetailNotes: string;
   createdAt: string;
   createdBy: string;
@@ -313,6 +315,12 @@ export interface Spec {
   lastGeneratedAt: string;
   approvedBy: string;
   approvedAt: string;
+}
+
+/** A file in the job's SharePoint folder; `ref` is its server-relative path. */
+export interface DesignFile {
+  name: string;
+  ref: string;
 }
 
 // ---------------------------------------------------------------------------

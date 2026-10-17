@@ -13,6 +13,8 @@ import QuestionCard from "./builder/QuestionCard";
 import ReferencePanel from "./builder/ReferencePanel";
 import { JobPicker, OpportunityPicker } from "./builder/BcPickers";
 import GenerateToProject from "./builder/GenerateToProject";
+import DesignFilesPicker, { designRefText } from "./builder/DesignFilesPicker";
+import { spUrlOf } from "../services/sharepoint";
 import { jobFields, opportunityFields } from "../services/bc-fill";
 import DescriptionPreview from "./builder/DescriptionPreview";
 
@@ -93,7 +95,7 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
   const lines = useMemo(() => allLines.filter((l) => l.specId === spec.id).sort((a, b) => a.lineNo - b.lineNo), [allLines, spec.id]);
   const readOnly = !user.permissions.editSpecs;
   const [preview, setPreview] = useState(false);
-  const [picking, setPicking] = useState<"opportunity" | "job" | null>(null);
+  const [picking, setPicking] = useState<"opportunity" | "job" | "design" | null>(null);
   const [generating, setGenerating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -158,7 +160,32 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
             {field("Contact", "contactName")}
             {pickField("Opportunity No.", "opportunityNo", () => setPicking("opportunity"))}
             {pickField("Job No.", "jobNo", () => setPicking("job"))}
-            {field("Design Reference", "designReference")}
+            <div className="sbp-field" data-tour="design-reference">
+              <label>Design Reference</label>
+              <div className="sbp-row" style={{ gap: 4 }}>
+                <input className="sbp-input" style={{ flex: 1, minWidth: 0 }} value={spec.designReference} disabled={readOnly} onChange={(e) => updateSpec(spec.id, { designReference: e.target.value })} />
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={!spec.jobNo}
+                    title={spec.jobNo ? "Pick the reference file(s) from the job's SharePoint folder" : "Fill in the Job No. first — the files come from the job's SharePoint folder"}
+                    onClick={() => setPicking("design")}
+                  >
+                    Browse…
+                  </button>
+                )}
+              </div>
+              {(spec.designFiles?.length ?? 0) > 0 && (
+                <div className="sbp-design-files">
+                  {spec.designFiles!.map((f) => (
+                    <a key={f.ref} className="sbp-pill" href={spUrlOf(f.ref)} target="_blank" rel="noreferrer" title={`Open ${f.name} in SharePoint`}>
+                      {f.name}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="sbp-field">
               <label>Project</label>
               <select className="sbp-select" value={spec.projectId} disabled={readOnly} onChange={(e) => updateSpec(spec.id, { projectId: e.target.value })}>
@@ -267,6 +294,19 @@ function SpecWorkspace({ idx, spec, user, selectedSignId, onSelectSign }: { idx:
           onClose={() => setPicking(null)}
           onPick={(o) => {
             updateSpec(spec.id, opportunityFields(spec, o));
+            setPicking(null);
+          }}
+        />
+      )}
+      {picking === "design" && (
+        <DesignFilesPicker
+          jobNo={spec.jobNo}
+          initial={spec.designFiles ?? []}
+          onClose={() => setPicking(null)}
+          onPick={(files) => {
+            // Design Reference follows the picked files unless someone typed their own.
+            const auto = !spec.designReference || spec.designReference === designRefText(spec.designFiles ?? []);
+            updateSpec(spec.id, { designFiles: files, ...(auto ? { designReference: designRefText(files) } : {}) });
             setPicking(null);
           }}
         />

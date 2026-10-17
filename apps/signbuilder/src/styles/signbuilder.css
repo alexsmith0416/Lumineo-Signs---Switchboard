@@ -1138,6 +1138,33 @@
   background: var(--accent-brand-soft);
 }
 
+.sbp-design-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sbp-design-row.is-picked {
+  border-color: var(--accent-brand);
+  background: var(--accent-brand-soft);
+}
+
+.sbp-design-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sbp-design-files a {
+  text-decoration: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sbp-text-error {
   color: var(--status-red);
 }

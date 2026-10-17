@@ -304,7 +304,14 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
 
 **Last session: Oct 15, 2026 — Setup tools complete: Spec References, Vinyl Colors, Stage Checklist (after Descriptions, Categories, Versions, Test & Path, Copy).**
 
-**Recap (latest, Oct 16 — job picker shows Planning / Quote projects)**
+**Recap (latest, Oct 16 evening — Open in Sign Builder + design files)**
+- Open in Sign Builder: the app reads launch params from `getContext().app.queryParams`
+  (it runs in a frame); BC ext **v0.12.2** puts desc/company/contact/projectNo in the link
+  so the header fills at once. ✅ Alex published 0.12.2, header fills.
+- Design Reference → **Browse…** picks file(s) from the job SharePoint folder (see Session
+  log). ⏳ Alex: re-run `scripts/create-signbuilder-tables.ps1` for `crfdf_designfiles`.
+
+**Earlier, Oct 16 — job picker shows Planning / Quote projects**
 - Alex: "the pick list is only showing open jobs … we would be working on jobs
   before they are open, but occasionally would work on jobs that are open as well".
   Switchboard's `crfdf_bcjob` only has Open projects (its BCSync_Jobs filter), so
@@ -635,6 +642,15 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 16, 2026 (design reference from SharePoint)** — Alex: "On the Design reference, add a
+  way to click and access the sharepoint folder of the Job and select the reference file or
+  files". Design Reference → **Browse…** (needs Job No.): `services/sharepoint.ts` (connector
+  HttpRequest like Switchboard's; folder = crfdf_bcjob.crfdf_sharepointurl, else the same
+  SharePoint search BCSync_SharePoint uses — `J… IsContainer:true`, folder named the number),
+  `screens/builder/DesignFilesPicker.tsx` (recursive list, multi-select). Spec gets
+  `designFiles` → new column **crfdf_sbspec.crfdf_designfiles** (memo; written only once files
+  are picked). Names go into Design Reference unless typed by hand; chips link to the files.
+  Tour step added. Guide v1.5. ⏳ Alex: re-run `create-signbuilder-tables.ps1` (adds the column).
 - **Oct 16, 2026 (Open in Sign Builder fills at once)** — Alex: header details didn't come
   over and shouldn't need a wait. BC extension **v0.12.2**: `LSB App Link.OpenForOpportunity` /
   `OpenForJob` add `desc`, `company`, `contact`, `projectNo` / `desc`, `customer` to the link;

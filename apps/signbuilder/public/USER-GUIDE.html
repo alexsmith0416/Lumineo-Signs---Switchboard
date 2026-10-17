@@ -316,7 +316,14 @@
   one fills in the number and any blank description, customer and contact; an opportunity that already has a project
   fills in the Job No. too. Each list asks BC for fresh data when it opens (the line under the search box says what it
   found); <strong>Refresh from BC</strong> asks again. In BC, <strong>Open in Sign Builder</strong> on
-  the Opportunity and Project cards opens the app on that spec — or starts one, filled in from BC.</p>
+  the Opportunity and Project cards opens the app on that spec — or starts one, with its description, company and
+  contact already filled in from BC.</p>
+  <p><strong>Design Reference → Browse…</strong> — once the spec has a Job No., <strong>Browse…</strong> finds the job's
+  folder in SharePoint (JobFiles — Planning and Quote jobs too) and lists every file in it and its subfolders, newest
+  first, grouped by subfolder. Search by name, tick one or more reference files (<strong>Open</strong> previews one in
+  SharePoint) and click <strong>Use … files</strong>. Their names (without the extension) go into Design Reference —
+  unless you typed your own there — and each file shows under the field as a link that opens it. Browse again to change
+  the selection. If SharePoint has no folder for the job yet, a link searches SharePoint for the number instead.</p>
   <p><strong>Opportunity details / Job details</strong> — Opportunity details asks only the core questions sales needs
   (category, type, size, colors, install basics…). Job details asks everything the shop needs before the order is
   released. Switch any time; answers are kept. Specs started on a job open at Job details.</p>
@@ -599,6 +606,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>What changed</th></tr>
+      <tr><td>Oct 16, 2026</td><td><strong>Design reference from SharePoint</strong> — Design Reference has a <strong>Browse…</strong> button that opens the job's SharePoint folder; tick the reference file(s) and they're linked on the spec.</td></tr>
       <tr><td>Oct 16, 2026</td><td><strong>Open in Sign Builder fixed</strong> — the button on a BC Opportunity or Project Card now opens a new spec with its description, company and contact already filled in (or the spec already linked to it, filling any blanks) instead of the dashboard.</td></tr>
       <tr><td>Oct 16, 2026</td><td><strong>Job picker: Planning and Quote projects too</strong> — the project list shows every project that isn't completed, with its status, and refreshes from BC like the opportunity list.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Business Central link</strong> — pick the opportunity or project from BC on the spec; Generate to Project writes the Production and Field Descriptions to the BC project after a side-by-side with what BC has now; Open in Sign Builder on BC's Opportunity and Project cards. (Works once the BC extension v0.12 and the two flows are in place.)</td></tr>
@@ -628,7 +636,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Sign Builder — User Guide v1.4 · Oct 16, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Sign Builder — User Guide v1.5 · Oct 16, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in <code>apps/signbuilder/START-HERE.md</code>.</p>
   </div>

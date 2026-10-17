@@ -15,6 +15,7 @@ import { DEMO_SETUP } from "../data/demo-setup";
 import type {
   DetailLevel,
   Project,
+  DesignFile,
   SetupData,
   SetupVersion,
   SignLine,
@@ -367,6 +368,15 @@ function createLiveRepo(): SignBuilderRepo {
     }
   };
 
+  const parseDesignFiles = (json: string): DesignFile[] => {
+    try {
+      const v = JSON.parse(json) as unknown;
+      return Array.isArray(v) ? v.filter((f): f is DesignFile => !!f && typeof f.name === "string" && typeof f.ref === "string") : [];
+    } catch {
+      return [];
+    }
+  };
+
   const specFromRow = (r: Row): Spec => {
     known.add(s(r.crfdf_sbspecid));
     return {
@@ -383,6 +393,7 @@ function createLiveRepo(): SignBuilderRepo {
       customerName: s(r.crfdf_customername),
       contactName: s(r.crfdf_contactname),
       designReference: s(r.crfdf_designreference),
+      ...(r.crfdf_designfiles ? { designFiles: parseDesignFiles(s(r.crfdf_designfiles)) } : {}),
       jobDetailNotes: s(r.crfdf_jobdetailnotes),
       createdAt: s(r.createdon),
       createdBy: s(r.crfdf_createdbyname),
@@ -406,6 +417,8 @@ function createLiveRepo(): SignBuilderRepo {
     crfdf_customername: sp.customerName,
     crfdf_contactname: sp.contactName,
     crfdf_designreference: sp.designReference,
+    // Only once files were picked — a spec saved before the column exists still saves.
+    ...(sp.designFiles ? { crfdf_designfiles: JSON.stringify(sp.designFiles) } : {}),
     crfdf_jobdetailnotes: sp.jobDetailNotes,
     crfdf_createdbyname: sp.createdBy,
     crfdf_lastgeneratedat: sp.lastGeneratedAt,

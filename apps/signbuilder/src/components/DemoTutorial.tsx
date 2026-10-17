@@ -43,6 +43,13 @@ const BUILDER_STEPS: TourStep[] = [
   },
   {
     view: "builder",
+    target: '[data-tour="design-reference"]',
+    title: "Design reference files",
+    body: "Browse… opens the job's SharePoint folder — tick the art or drawing file(s) the signs are built from. Their names go into Design Reference and each one stays a link here. (It needs the Job No.)",
+    placement: "bottom",
+  },
+  {
+    view: "builder",
     target: '[data-tour="detail-toggle"]',
     title: "Opportunity or Job details",
     body: "Opportunity details asks only the core questions sales needs. Job details asks everything the shop needs before the order is released. Switch any time — answers are kept.",
