@@ -298,10 +298,12 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     ProductionCalendar (`summaryLeading`, hides the other region via
     hiddenEmployeeIds); "→ HUT" chip = `services/cross-site.ts` (tested) →
     `store/card-badges-store.ts` → JobCard. **Alex: set Aaron Waters → NEK.**
-  - **Next, in order:** (#1 done)
-    production (Region column on crfdf_employee1; Aaron Waters; "→ HUT"
-    cross-site chip via jobPlacements) → #5 multi-select (Ctrl+click only; move /
-    copy / cut / paste / delete / make group card) → #7 work radius (per
+  - ✅ #5 multi-select (guide v3.54): Ctrl+click via `onClickCapture` on the
+    grid → `store/selection-store.ts` (JobCard `job-card--selected`); rules in
+    `services/multi-select.ts` (tested): group move (tryShiftWithConfirm, no
+    cascade), multi paste (clipboard `cards`), make group card; selection bar +
+    Delete-key confirm. Bulk lock not built (not asked for).
+  - **Next, in order:** #7 work radius (per
     location; out-of-radius outline in nearest location's color; manual
     override; full-card option; named color schemes; Admin + Ops) → #2/#3/#4
     Bucket Lists (own tables; drop off when that department's step completes;

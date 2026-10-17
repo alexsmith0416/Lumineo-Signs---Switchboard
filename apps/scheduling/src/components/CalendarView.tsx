@@ -20,7 +20,10 @@ import JobQueuePanel, { DND_QUEUE_ITEM } from "./JobQueuePanel";
 import { findStepQueueItem } from "../store/step-queue-store";
 import AddJobPanel from "./AddJobPanel";
 import GroupPanel from "./GroupPanel";
-import { isGroupCard } from "../services/group-card";
+import { groupColorFor, isGroupCard } from "../services/group-card";
+import { useSelectionStore } from "../store/selection-store";
+import { encodeGroup, groupFromSelection, groupMoveTargets, pasteStarts } from "../services/multi-select";
+import { showNotice } from "../store/notice-store";
 import { isSplittable, splitPartLabels } from "../services/split-hours";
 import SplitCardPanel from "./SplitCardPanel";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
@@ -35,6 +38,7 @@ import { useJobScheduleStore } from "../store/job-schedule-store";
 import { useBoardColorsStore } from "../store/board-colors-store";
 import { applyBoardColors, type ColorScope } from "../services/board-colors";
 import ModifyColorsPanel from "./ModifyColorsPanel";
+import ConfirmDialog from "./ConfirmDialog";
 import { canEditBoardLook, useCurrentUser } from "../services/current-user";
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { cardStepKey } from "../services/production-steps";
@@ -191,6 +195,8 @@ function getDayIndex(date: Date, weekStart: Date): number {
 // hidden). We size each row's lanes to the max content-line count among its
 // cards instead of a single constant, so adding lines (e.g. the BC job
 // description) never truncates a card.
+/** Shared empty selection (a stable reference for the selector). */
+const NO_IDS: ReadonlySet<string> = new Set();
 const CARD_LINE_PX = 15; // per text row (matches .job-card line-height: 1.3)
 const CARD_LINE_GAP = 2; // .job-card gap between rows
 const CARD_V_CHROME = 16; // .job-card padding (8) + .gantt-card top/bottom inset (8)
@@ -574,6 +580,28 @@ export default function CalendarView({
   const copyCard = useClipboardStore((s) => s.copy);
   const clipboardCard = useClipboardStore((s) => s.card);
   const handlePasteToCell = (employeeId: string, day: Date) => {
+    const many = useClipboardStore.getState().cards;
+    if (many.length > 1) {
+      // Several copied cards: the earliest lands on this day, the rest keep
+      // their day gaps (services/multi-select.ts), all on this person.
+      const ctx = getContext();
+      const emp = ctx.employees.get(employeeId);
+      for (const { card: c, start } of pasteStarts(many, day)) {
+        const copy: ScheduleLine = {
+          ...c,
+          id: `line-${c.jobNo || "job"}-paste-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          employeeId,
+          departmentId: emp?.departmentId ?? c.departmentId,
+          departmentWide: isLaneEmployeeId(employeeId) || undefined,
+          startDateTime: start,
+          preferredStart: start,
+          isLocked: false,
+        };
+        const end = emp ? calculateEndTime(start, effectiveHours(copy, emp), emp, ctx, copy.id) : new Date(start);
+        void addScheduleLine({ ...copy, endDateTime: end });
+      }
+      return;
+    }
     const card = useClipboardStore.getState().card;
     if (!card) return;
     const ctx = getContext();
@@ -620,7 +648,12 @@ export default function CalendarView({
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
-      if (k === "c" && hoveredLineRef.current) {
+      if (k === "c" && selectedRef.current.length) {
+        copySelected();
+      } else if (k === "x" && selectedRef.current.length) {
+        e.preventDefault();
+        cutSelected();
+      } else if (k === "c" && hoveredLineRef.current) {
         copyCard(hoveredLineRef.current);
       } else if (k === "v" && hoveredCellRef.current) {
         handlePasteToCell(hoveredCellRef.current.employeeId, hoveredCellRef.current.day);
@@ -671,6 +704,99 @@ export default function CalendarView({
   const redoLabel = boardHistory?.redo[boardHistory.redo.length - 1]?.label;
   const doUndo = () => void useHistoryStore.getState().undo(boardId);
   const doRedo = () => void useHistoryStore.getState().redo(boardId);
+
+  // --- Multi-select (Ctrl+click) — services/multi-select.ts ----------------
+  const selectedIds = useSelectionStore((s) => (s.boardId === boardId ? s.ids : NO_IDS));
+  const toggleSelected = useSelectionStore((s) => s.toggle);
+  const clearSelection = useSelectionStore((s) => s.clear);
+  const selectedLines = useMemo(
+    () => schedule.filter((l) => selectedIds.has(l.id)),
+    [schedule, selectedIds],
+  );
+  const selectedRef = useRef(selectedLines);
+  selectedRef.current = selectedLines;
+  // Leaving the board (or its week) drops the selection.
+  useEffect(() => () => clearSelection(), [clearSelection, weekStart]);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
+  const onBoardClickCapture = (e: React.MouseEvent) => {
+    if (readOnly) return;
+    const cardEl = (e.target as HTMLElement).closest<HTMLElement>("[data-line-id]");
+    if (e.ctrlKey || e.metaKey) {
+      if (!cardEl?.dataset.lineId) return;
+      const line = scheduleRef.current.find((l) => l.id === cardEl.dataset.lineId);
+      if (!line || line.mirrorOf) return;
+      // Ctrl+click selects instead of opening the card.
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSelected(boardId, line.id);
+      return;
+    }
+    // A plain click anywhere on the board ends the selection.
+    clearSelection();
+  };
+  const deleteSelected = () => {
+    for (const l of selectedRef.current) void deleteScheduleLine(l.id);
+    clearSelection();
+  };
+  const copySelected = () => useClipboardStore.getState().copyMany(selectedRef.current);
+  const cutSelected = () => {
+    copySelected();
+    deleteSelected();
+  };
+  const makeGroupFromSelected = () => {
+    const g = groupFromSelection(selectedRef.current, `Group · ${selectedRef.current.length} jobs`);
+    if (!g) {
+      showNotice({
+        title: "Can't make a group card",
+        message: "Select at least one job card (custom cards can't join a group), and not so many that their text won't fit.",
+      });
+      return;
+    }
+    const ctx = getContext();
+    const emp = ctx.employees.get(g.first.employeeId);
+    const color = groupColorFor(departments.get(g.first.departmentId));
+    const start = new Date(g.first.startDateTime);
+    const groupLine: ScheduleLine = {
+      id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      jobNo: g.data.title,
+      customerName: g.data.title,
+      planningLineDescription: encodeGroup(g.data),
+      startDateTime: start,
+      endDateTime: start,
+      estimatedHours: 8,
+      overrideHours: null,
+      employeeId: g.first.employeeId,
+      departmentId: g.first.departmentId,
+      departmentWide: g.first.departmentWide,
+      customerDueDate: null,
+      isLocked: false,
+      jobSequence: 0,
+      isCustom: true,
+      customColor: color.bg,
+      customTextColor: color.text,
+    };
+    const end = emp ? calculateEndTime(start, effectiveHours(groupLine, emp), emp, ctx, groupLine.id) : start;
+    const members = new Set(g.data.members.map((m) => m.jobNo));
+    void addScheduleLine({ ...groupLine, endDateTime: end }).then(() => {
+      for (const l of selectedRef.current) if (!l.isCustom && members.has(l.jobNo)) void deleteScheduleLine(l.id);
+      clearSelection();
+    });
+  };
+  useEffect(() => {
+    if (readOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (!selectedRef.current.length) return;
+      if (e.key === "Escape") clearSelection();
+      else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        setConfirmDeleteSelected(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [readOnly, clearSelection]);
 
   // Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or Ctrl+Y = redo. Ignored while typing
   // in a field or on read-only boards.
@@ -931,6 +1057,15 @@ export default function CalendarView({
     newStart: Date,
     newEmployeeId?: string,
   ) => {
+    // Dragging one of several selected cards moves them all by the same amount
+    // (no cascade prompt — "move only these"; services/multi-select.ts).
+    const sel = selectedRef.current;
+    if (sel.length > 1 && sel.some((l) => l.id === lineId)) {
+      for (const t of groupMoveTargets(sel, lineId, newStart, newEmployeeId)) {
+        await shiftTaskAndCommit(t.id, t.start, t.employeeId, false);
+      }
+      return;
+    }
     const ctx = getContext();
     const current = ctx.schedule.find((l) => l.id === lineId);
     // No-op guard: dropping a card back on its own day + resource changes
@@ -1171,6 +1306,7 @@ export default function CalendarView({
         ref={gridRef}
         style={{ "--cal-days": dayCount } as React.CSSProperties}
         onMouseOver={onBoardMouseOver}
+        onClickCapture={onBoardClickCapture}
         onMouseLeave={() => {
           hoveredLineRef.current = null;
           hoveredCellRef.current = null;
@@ -1557,6 +1693,39 @@ export default function CalendarView({
             )}
           </div>
         </>
+      )}
+      {selectedLines.length > 0 && !readOnly && (
+        <div className="selection-bar" role="toolbar" aria-label="Selected cards">
+          <span className="selection-bar__count">{selectedLines.length} selected</span>
+          <button type="button" onClick={copySelected} title="Copy (Ctrl+C) — then right-click a day or Ctrl+V to paste">
+            Copy
+          </button>
+          <button type="button" onClick={cutSelected} title="Cut (Ctrl+X) — removes them; paste them anywhere">
+            Cut
+          </button>
+          <button type="button" onClick={makeGroupFromSelected} title="Replace the selected job cards with one group card">
+            Make group card
+          </button>
+          <button type="button" className="selection-bar__danger" onClick={() => setConfirmDeleteSelected(true)}>
+            Delete
+          </button>
+          <button type="button" onClick={clearSelection} title="Clear the selection (Esc)">
+            ✕
+          </button>
+        </div>
+      )}
+      {confirmDeleteSelected && (
+        <ConfirmDialog
+          title={`Delete ${selectedLines.length} card${selectedLines.length === 1 ? "" : "s"}?`}
+          message="They're removed from the board. Undo (Ctrl+Z) brings them back one at a time."
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => {
+            setConfirmDeleteSelected(false);
+            deleteSelected();
+          }}
+          onCancel={() => setConfirmDeleteSelected(false)}
+        />
       )}
       {colorsFor && colorScope && (
         <ModifyColorsPanel

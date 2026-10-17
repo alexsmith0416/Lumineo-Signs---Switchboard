@@ -14,6 +14,7 @@ import { bcJobUrl, isBcJobNo, sharepointJobUrl } from "../services/job-links";
 import { MaterialsReadyChip } from "./MaterialsReadyChip";
 import { SketchThumb } from "./jobs/JobSketch";
 import { useCardBadge } from "../store/card-badges-store";
+import { useIsSelected } from "../store/selection-store";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
@@ -202,6 +203,7 @@ export default function JobCard({
   // Right-click links are only meaningful for a real BC job card.
   // A board's chip on this card (Production: "→ HUT" — store/card-badges-store.ts).
   const xsite = useCardBadge(line.id);
+  const selected = useIsSelected(line.id);
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
   // Open Project only for a real BC number — a card with no job number carries its title.
   const canOpenProject = canOpenLinks && isBcJobNo(line.jobNo);
@@ -235,7 +237,7 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}${selected ? " job-card--selected" : ""}`}
         style={{ background: style.bg, color: style.text }}
         onMouseEnter={group ? undefined : open}
         onMouseLeave={group ? undefined : close}

@@ -7513,3 +7513,36 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   color: #fff;
   white-space: nowrap;
 }
+
+/* Multi-select (Ctrl+click): selected cards + the action bar. */
+.job-card--selected { outline: 2px solid var(--lumineo-navy); outline-offset: -2px; box-shadow: 0 0 0 2px #fff inset; }
+.selection-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  background: var(--lumineo-navy);
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+}
+.selection-bar__count { font-weight: 700; padding: 0 6px; }
+.selection-bar button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.selection-bar button:hover { background: rgba(255, 255, 255, 0.24); }
+.selection-bar .selection-bar__danger { background: var(--lumineo-red); }

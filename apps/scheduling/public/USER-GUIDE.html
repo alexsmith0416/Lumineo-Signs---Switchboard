@@ -472,6 +472,7 @@
     <li><strong>Resize</strong> — drag the <strong>right edge</strong> of a card to set how many days it spans — <strong>longer or shorter</strong>. Whatever length you drag it to <strong>sticks</strong> (you can even make a card shorter than its hours would normally fill). This is a <strong>visual span only</strong> — it does <em>not</em> change the labor hours and does <em>not</em> pop up a dialog, so you can lay out the week quickly. The days it spans aren't reserved (other jobs can still use that person). Set the actual hours in <strong>Modified labor hours</strong> when you're ready.</li>
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
     <li><strong>Reorder same-day jobs (set priority)</strong> — when a person has more than one job on the same day, drag a card <strong>up or down</strong> within that day to set the order they work them, <strong>top = first</strong>. A blue insertion line shows where the card will land. The card you move takes the earlier start and the others shift later that day; if the day is already full, the job that no longer fits rolls to the next day. On Production &amp; Installation boards.</li>
+    <li><strong>Select several cards</strong> — <strong>Ctrl+click</strong> (⌘+click on a Mac) cards to select them; they get a navy outline and a bar appears at the bottom. <strong>Drag any one</strong> and they all move by the same amount (cards on the dragged card&rsquo;s person follow it to a new person; the others stay on theirs; nothing else auto-moves). <strong>Copy</strong> (Ctrl+C) or <strong>Cut</strong> (Ctrl+X), then paste on a day (right-click it, or hover it and Ctrl+V): the earliest card lands on that day and the rest keep their spacing, all on that person. <strong>Make group card</strong> replaces the selected job cards with one group card (5.8). <strong>Delete</strong> (or the Delete key) asks first. A plain click or <strong>Esc</strong> clears the selection.</li>
   </ul>
   <div class="note box"><span class="box__label">A change only affects the card you change</span>
   By <strong>default nothing auto-moves</strong>: editing, moving, or resizing a card changes <em>only that card</em> —
@@ -1580,6 +1581,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Select several cards</strong> &mdash; Ctrl+click cards on Production or Installation to select them, then drag them together, copy / cut / paste them as a set, delete them, or turn them into one <strong>group card</strong>. See &sect;5.2.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Production WK / NEK</strong> &mdash; the Production board has a WK / NEK toggle like Installation. Set a person&rsquo;s region by right-clicking their name (Region). NEK cards for jobs built in Hutchinson show a <strong>→ HUT</strong> chip. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Modify colors</strong> &mdash; Admin / Ops / Developer: right-click a department or location banner on Production or Installation → <em>Modify colors…</em> to change its card and banner colours for everyone, and save named colour schemes to reuse. Production departments now show their standard colours (Metal Fab blue, Paint amber, Assembly lavender, Vinyl green, …) instead of gray. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Red Date does the scheduling</strong> &mdash; setting a Red date (Jobs list, Install Dates or the job panel) sets Priority to RED DATE and, if the job has no install card, <strong>places one ending on the Red date</strong>, locked, on the top person of the location nearest the ship-to within the job&rsquo;s Install Region. And no card of the job can be dragged, resized or pasted <strong>past its Red date</strong>       <tr><th>Date</th><th>Change</th></tr>mdash; you&rsquo;ll get a note instead. See &sect;5.5 Install dates &amp; the Red date.</td></tr>
@@ -1718,7 +1720,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.53 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.54 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
