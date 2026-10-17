@@ -314,14 +314,18 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     question words, folds word endings + small synonym map, FAQ headings weigh
     more; `?q=` opens with a search; "/" focuses). When adding guide text,
     phrase how-tos the way people ask ("How do I …?" FAQs rank first).
-  - ⏳ Bucket Lists: `scripts/create-bucket-tables.ps1` written (crfdf_bucketlist
-    + crfdf_bucketitem, privileges mirror crfdf_jobqueueitem). **Alex runs it**,
-    then build the feature.
-  - **Next, in order:** #2/#3/#4
-    Bucket Lists (own tables; drop off when that department's step completes;
-    filter builder on Dataverse-mirrored BC data; released-date order + drag;
-    sort menu shared with the Job Queue; default bucket per employee fills
-    free time as ONE PIECE PER DAY, scheduled job on top, bucket below) → #13
+  - ✅ #2/#3/#4 Bucket Lists BUILT (guide v3.57, tour step "Job Queue & Bucket
+    Lists"; DEPLOYED Oct 17). `services/buckets.ts` (pure, tested:
+    filter match/sync, drop-offs, released-date order + hand order,
+    `bucketFillLines`), `store/bucket-store.ts` (per board kind, optimistic,
+    failing-save case in optimistic-edit.test), `hooks/useBucketSync.ts`
+    (drop-offs from job-dept completions + filter re-run on Jobs rows),
+    `BucketListsTab` / `BucketDialog` in the Job Queue (tabs + view Sort menu),
+    fill cards = `mirrorOf: "bucket"` (read-only, click opens the list).
+    Browser-tested in dev. **Go-live:** (1) ✅ tables + role access confirmed
+    (`scripts/create-bucket-tables.ps1` re-run Oct 17: everything already
+    there, published); (2) ✅ deployed + committed Oct 17.
+  - **Next:** #13
     connections (Monthly Plan commit placing cards, status from scheduling,
     delivery/production-before-install warnings, group-member completion,
     stale apps/scheduling/CLAUDE.md).

@@ -459,3 +459,54 @@ describe("Check BC now when the request can't be saved", () => {
     expect(useBcCheckStore.getState().phase).toBe("idle");
   });
 });
+
+describe("editing a bucket list when the save fails", () => {
+  afterEach(() => {
+    vi.doUnmock("../services/dataverse-live");
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the new list, its job and a hand reorder on screen and reports each failure", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_DATA_SOURCE", "live");
+    const fail = async () => {
+      throw new Error("Failed to fetch");
+    };
+    vi.doMock("../services/dataverse-live", () => ({
+      createBucketList: fail,
+      createBucketItem: fail,
+      updateBucketItem: fail,
+    }));
+    const { useWriteStatusStore: status } = await import("./write-status-store");
+    const { bucketStoreFor } = await import("./bucket-store");
+    status.getState().clear();
+    const store = bucketStoreFor("production");
+    store.setState({ lists: [], items: [], loaded: true });
+
+    const id = store.getState().addList({
+      name: "Vinyl to cut",
+      color: "#C8E6D4",
+      textColor: "#04342C",
+      description: "",
+      mode: "manual",
+      filter: null,
+      deptKey: "V",
+      defaultEmployees: [],
+    });
+    store.getState().addJob(id, { jobNo: "J1", customerName: "A", task: "", estimatedHours: 2, releasedDate: "2026-10-01" });
+    store.getState().addJob(id, { jobNo: "J2", customerName: "B", task: "", estimatedHours: 2, releasedDate: "2026-10-02" });
+    const j2 = store.getState().itemsOf(id)[1]!;
+    store.getState().moveItem(j2.id, 0);
+    await flush();
+
+    expect(store.getState().lists.map((l) => l.name)).toEqual(["Vinyl to cut"]);
+    expect(store.getState().itemsOf(id).map((i) => i.jobNo)).toEqual(["J2", "J1"]);
+    // The store loads dataverse-live lazily, so each write lands a few ticks later.
+    await vi.waitFor(() => expect(status.getState().failed.length).toBeGreaterThanOrEqual(4));
+    const labels = status.getState().failed.map((f) => f.label);
+    expect(labels).toContain("Add a bucket list");
+    expect(labels).toContain("Add a job to a bucket");
+    expect(labels).toContain("Reorder a bucket");
+  });
+});

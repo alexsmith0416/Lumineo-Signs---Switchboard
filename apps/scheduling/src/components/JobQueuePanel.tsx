@@ -11,6 +11,10 @@ import QueueGroupDialog from "./QueueGroupDialog";
 import { useStepQueue } from "../store/step-queue-store";
 import { useStepColorsStore } from "../store/step-colors-store";
 import type { StepQueueGroup } from "../services/step-queue";
+import type { Employee } from "../engine/types";
+import BucketListsTab from "./BucketListsTab";
+import { useJobRows } from "../hooks/useJobRows";
+import { VIEW_SORTS, viewSort, type ViewSort } from "../services/buckets";
 
 /** Build a queue item from the draft the unified Add panel produces. */
 function queueItemFromDraft(draft: ScheduleLine, group: QueueGroup): QueueItem {
@@ -57,6 +61,13 @@ interface JobQueuePanelProps {
   departments: Department[];
   /** A calendar job card was dropped into a group — store it + remove the line. */
   onCalendarCardDrop: (lineId: string, groupId: string) => void;
+  /** "queue" = the Job Queue, "buckets" = Bucket Lists. */
+  tab?: "queue" | "buckets";
+  onTabChange?: (tab: "queue" | "buckets") => void;
+  /** The board's people (a bucket's "fills the free time of"). */
+  employees?: readonly Employee[];
+  /** Scroll to this bucket (opened from its card on the board). */
+  focusBucketId?: string | null;
 }
 
 export default function JobQueuePanel({
@@ -67,7 +78,15 @@ export default function JobQueuePanel({
   canEdit,
   departments,
   onCalendarCardDrop,
+  tab = "queue",
+  onTabChange,
+  employees = [],
+  focusBucketId,
 }: JobQueuePanelProps) {
+  // View sort for the queue items and bucket jobs (#3) — never saved.
+  const [sort, setSort] = useState<ViewSort>("list");
+  const jobRows = useJobRows();
+  const rowByJob = useMemo(() => new Map(jobRows.map((r) => [r.jobNo, r])), [jobRows]);
   const groups = useQueueStore((s) => s.groups);
   const load = useQueueStore((s) => s.load);
   const addGroup = useQueueStore((s) => s.addGroup);
@@ -111,7 +130,26 @@ export default function JobQueuePanel({
     <>
       <aside className={"job-queue" + (open ? " job-queue--open" : "")} aria-hidden={!open}>
         <div className="job-queue__head">
-          <span className="job-queue__title">Job Queue</span>
+          <div className="job-queue__tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "queue"}
+              className={"job-queue__tab" + (tab === "queue" ? " job-queue__tab--on" : "")}
+              onClick={() => onTabChange?.("queue")}
+            >
+              Job Queue
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "buckets"}
+              className={"job-queue__tab" + (tab === "buckets" ? " job-queue__tab--on" : "")}
+              onClick={() => onTabChange?.("buckets")}
+            >
+              Bucket Lists
+            </button>
+          </div>
           <div className="job-queue__head-actions">
             {canEdit && (
               <button
@@ -130,6 +168,32 @@ export default function JobQueuePanel({
           </div>
         </div>
 
+        <div className="job-queue__sortbar">
+          <label>
+            Sort
+            <select value={sort} onChange={(e) => setSort(e.target.value as ViewSort)}>
+              {VIEW_SORTS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {tab === "buckets" ? (
+          <div className="job-queue__body">
+            <BucketListsTab
+              kind={kind}
+              scheduleStore={scheduleStore}
+              canEdit={canEdit}
+              employees={employees}
+              departments={departments}
+              sort={sort}
+              focusBucketId={focusBucketId}
+            />
+          </div>
+        ) : (
         <div className="job-queue__body">
           {steps.groups.length > 0 && (
             <StepGroupsSection groups={steps.groups} loading={steps.loading} deptMap={deptMap} canEdit={canEdit} />
@@ -144,7 +208,7 @@ export default function JobQueuePanel({
           {groups.map((group) => (
             <GroupBlock
               key={group.id}
-              group={group}
+              group={sort === "list" ? group : { ...group, items: viewSort(group.items, sort, (j) => rowByJob.get(j)) }}
               deptMap={deptMap}
               editing={editing}
               canEdit={canEdit}
@@ -155,7 +219,7 @@ export default function JobQueuePanel({
               onDeleteGroup={() => deleteGroup(group.id)}
               onOpenItem={setEditItem}
               onRemoveItem={removeItem}
-              onMoveItem={moveItem}
+              onMoveItem={sort === "list" ? moveItem : () => {}}
               onCalendarCardDrop={onCalendarCardDrop}
               groupDragId={groupDragId}
               onGroupDragStart={() => setGroupDragId(group.id)}
@@ -170,6 +234,7 @@ export default function JobQueuePanel({
             </button>
           )}
         </div>
+        )}
       </aside>
 
       {dialog && (

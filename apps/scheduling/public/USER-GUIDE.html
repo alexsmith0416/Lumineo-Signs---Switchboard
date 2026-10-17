@@ -823,6 +823,32 @@
     <li>These groups are read-only &mdash; they come from the steppers, so you can't rename them or park jobs in
     them. Your own groups below work as before.</li>
   </ul>
+  <h4>Sorting the queue</h4>
+  <p>The <strong>Sort</strong> menu at the top of the queue changes how jobs are listed: <em>List order</em> (the order you
+  set), <em>Released</em> (oldest first), <em>Red date</em>, <em>Target date</em>, <em>Job #</em>, <em>Customer</em> or
+  <em>Hours</em>. Sorting only changes what you see &mdash; it doesn't change the saved order. To drag jobs into a new
+  order, switch back to <em>List order</em>. The same menu sorts the Bucket Lists tab.</p>
+  <h4>Bucket Lists &mdash; ongoing lists of work</h4>
+  <p>The queue's second tab, <strong>Bucket Lists</strong>, holds lists of jobs that stay open over time &mdash; e.g.
+  &ldquo;Vinyl to cut&rdquo; or &ldquo;Fill-in fabrication&rdquo;. Each board (Production, Installation WK, Installation
+  NEK) has its own buckets.</p>
+  <ul>
+    <li><strong>Make one</strong> &mdash; editors click <strong>+ New bucket list</strong>: give it a name and card / text
+    colours, and pick the <strong>step that finishes a job</strong> (e.g. Vinyl). When that step is completed on a job's
+    stepper, the job <strong>drops off the list by itself</strong>.</li>
+    <li><strong>Added by hand</strong> &mdash; click <strong>+ Add job</strong> under a bucket; it opens the same Add Job
+    panel as everywhere else. Click &times; to take a job off.</li>
+    <li><strong>From a filter</strong> &mdash; build a filter from the Jobs list fields (Current Status, Priority, Mfg /
+    Install Region, customer, salesperson, released from / to). The dialog shows how many jobs match right now. Matching
+    jobs join the list automatically, and leave when they stop matching. You can still add others by hand; hand-added
+    jobs stay until you remove them.</li>
+    <li><strong>Order</strong> &mdash; jobs are listed <strong>oldest released first</strong>. Drag a job up or down to set
+    your own order. New jobs still slot in by released date. <strong>Reset to released-date order</strong> puts it back.</li>
+    <li><strong>Default bucket (fills free time)</strong> &mdash; under <em>Fills the free time of</em>, tick the people
+    who work from this bucket. On each workday, whatever hours they have left after their scheduled jobs show as
+    <strong>one 🪣 Bucket card</strong>, below that day's jobs, listing the first few jobs on the list. A full day shows
+    no bucket card. Bucket cards can't be dragged or edited; click one to open its list.</li>
+  </ul>
   <h4>Grouped job cards</h4>
   <p>A <strong>group card</strong> is a container you drop on the board to hold a list of BC jobs — handy for
   "waiting on parts", a punch-list, or any set of jobs a crew can pick up together. It has a <strong>title</strong>,
@@ -1564,6 +1590,10 @@
   <p>Drag its <strong>right edge</strong>, or click it and set <strong>Modified labor hours</strong> / the End date in its panel (5.2, 5.3).</p>
   <h4>How do I find a job?</h4>
   <p>Use the <strong>Jobs</strong> list (search box at the top, 5.17), or open the Job Queue on a board (5.8). On a board, hover any card for its details.</p>
+  <h4>How do I give someone a list of work for their free time?</h4>
+  <p>Open the <strong>Job Queue</strong> → <strong>Bucket Lists</strong> → <strong>+ New bucket list</strong>. Add jobs (by hand
+  or with a filter) and tick the person under <em>Fills the free time of</em>. Their open hours each day show the bucket
+  as a card under their scheduled jobs, and finished jobs drop off by themselves (5.8).</p>
   <h4>Do my changes save automatically?</h4>
   <p>Yes. Every move, resize, add, edit, and delete saves to the shared database in the background — there's no "Save" button for the board.</p>
   <h4>What if a change doesn't save?</h4>
@@ -1633,7 +1663,8 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
-      <tr><td>Oct 17, 2026</td><td><strong>Search the guide</strong> &mdash; a search bar at the top of this guide (Help &amp; User Guide). Type a question or a few words (e.g. <em>how do I split a card?</em>); the best matching spots are listed with your words highlighted       <tr><th>Date</th><th>Change</th></tr>mdash; click one (or ↑↓ and Enter) to jump straight to it. Press <strong>/</strong> anywhere to start searching. New FAQs for deleting, copying / moving, resizing and finding jobs.</td></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Bucket Lists</strong> &mdash; a new <em>Bucket Lists</em> tab in the Job Queue (Production and Installation) for ongoing lists of work: add jobs by hand, or by a <strong>filter</strong> on the Jobs list (status, priority, region, customer, salesperson, released dates). Jobs are listed oldest-released first (drag to set your own order), and a job <strong>drops off</strong> when its department&rsquo;s step is completed. Pick people a bucket <strong>fills the free time of</strong>, and each day&rsquo;s open hours show it as one card under their scheduled jobs. The Job Queue also gained a <strong>Sort</strong> menu. See &sect;5.8. (Added to the demo tour.)</td></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Search the guide</strong> &mdash; a search bar at the top of this guide (Help &amp; User Guide). Type a question or a few words (e.g. <em>how do I split a card?</em>); the best matching spots are listed with your words highlighted &mdash; click one (or ↑↓ and Enter) to jump straight to it. Press <strong>/</strong> anywhere to start searching. New FAQs for deleting, copying / moving, resizing and finding jobs.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Work radius</strong> &mdash; set a normal work radius per install location (banner right-click → <em>Add work radius…</em>). Cards for jobs outside their crew&rsquo;s radius show the colours of the location the job is in, as an outline or the whole card (Modify colors), and can be set by hand from the card&rsquo;s right-click menu. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Select several cards</strong> &mdash; Ctrl+click cards on Production or Installation to select them, then drag them together, copy / cut / paste them as a set, delete them, or turn them into one <strong>group card</strong>. See &sect;5.2.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Production WK / NEK</strong> &mdash; the Production board has a WK / NEK toggle like Installation. Set a person&rsquo;s region by right-clicking their name (Region). NEK cards for jobs built in Hutchinson show a <strong>→ HUT</strong> chip. See &sect;5.9.</td></tr>
@@ -1774,7 +1805,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.56 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.57 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

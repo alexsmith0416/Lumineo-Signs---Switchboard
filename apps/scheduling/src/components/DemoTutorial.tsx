@@ -92,6 +92,13 @@ const SCHEDULING_STEPS: TourStep[] = [
 const FULL_STEPS: TourStep[] = [
   ...SCHEDULING_STEPS.slice(0, 7),
   {
+    view: "production",
+    target: '[data-tour="job-queue-toggle"]',
+    title: "Job Queue & Bucket Lists",
+    body: "The Job Queue holds jobs waiting for a slot. Its Bucket Lists tab keeps ongoing lists of work (added by hand, or by a filter on the Jobs list); a job drops off when its department is done. Give a person a default bucket and their free time each day shows it as a card under their scheduled jobs.",
+    placement: "bottom",
+  },
+  {
     view: "installation",
     target: '[data-tour="nav-installation"]',
     title: "Installation & Service",

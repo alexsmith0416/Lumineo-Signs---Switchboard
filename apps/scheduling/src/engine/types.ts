@@ -126,7 +126,10 @@ export interface ScheduleLine {
   // with `mirrorOf` set: they are read-only there, and are NOT part of the
   // production schedule the engine reasons about (the assist day already blocks
   // capacity, so counting them again would double-book the day).
-  mirrorOf?: "installation";
+  // "bucket" = a default Bucket List's daily fill card (services/buckets.ts).
+  mirrorOf?: "installation" | "bucket";
+  /** The Bucket List a "bucket" mirror card shows. */
+  bucketId?: string;
   /** Which part of the day they're lent for — drives the Day/AM/PM badge. */
   mirrorHalf?: "full" | "am" | "pm";
 

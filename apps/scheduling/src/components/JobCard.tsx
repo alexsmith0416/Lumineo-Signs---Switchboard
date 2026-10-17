@@ -263,7 +263,7 @@ export default function JobCard({
     <>
       <div
         ref={cardRef}
-        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}${selected ? " job-card--selected" : ""}`}
+        className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}${line.mirrorOf === "bucket" ? " job-card--bucket" : ""}${selected ? " job-card--selected" : ""}`}
         style={
           radiusScheme && radiusMode === "fill"
             ? { background: radiusScheme.bg, color: radiusScheme.text }
@@ -288,13 +288,20 @@ export default function JobCard({
             blue truck card, which reads as shipping on its own — badging it
             "Install" as well would be misleading, so only real install work
             gets the badge. */}
-        {line.mirrorOf && !line.shipmentLoadId && (
-          <span
-            className="job-card__mirror"
-            title="Scheduled on the Installation board — open it there to change it"
-          >
-            {mirrorBadgeLabel(line.mirrorHalf)}
+        {line.mirrorOf === "bucket" ? (
+          <span className="job-card__mirror" title="Bucket list — fills this person's free time. Click to open the list.">
+            🪣
           </span>
+        ) : (
+          line.mirrorOf &&
+          !line.shipmentLoadId && (
+            <span
+              className="job-card__mirror"
+              title="Scheduled on the Installation board — open it there to change it"
+            >
+              {mirrorBadgeLabel(line.mirrorHalf)}
+            </span>
+          )
         )}
         {group ? (
           <>

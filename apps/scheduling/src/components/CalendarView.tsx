@@ -24,6 +24,9 @@ import { groupColorFor, isGroupCard } from "../services/group-card";
 import { useSelectionStore } from "../store/selection-store";
 import { encodeGroup, groupFromSelection, groupMoveTargets, pasteStarts } from "../services/multi-select";
 import { showNotice } from "../store/notice-store";
+import { useBucketSync } from "../hooks/useBucketSync";
+import { bucketStoreFor } from "../store/bucket-store";
+import { bucketFillLines } from "../services/buckets";
 import { isSplittable, splitPartLabels } from "../services/split-hours";
 import SplitCardPanel from "./SplitCardPanel";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
@@ -875,6 +878,15 @@ export default function CalendarView({
         : useInstallQueueStoreWK
       : useProductionQueueStore;
   const [queueOpen, setQueueOpen] = useState(false);
+  // Job Queue tab + the bucket a board card opened it on.
+  const [queueTab, setQueueTab] = useState<"queue" | "buckets">("queue");
+  const [focusBucketId, setFocusBucketId] = useState<string | null>(null);
+  // Bucket Lists (services/buckets.ts): kept current while the board is open.
+  const queueKind = queueStore((s) => s.kind);
+  useBucketSync(enableJobQueue ? queueKind : null);
+  const bucketStore = bucketStoreFor(queueKind);
+  const bucketLists = bucketStore((s) => s.lists);
+  const bucketItems = bucketStore((s) => s.items);
 
   // The Job Queue store still backs the slide-out queue (below); load it when on.
   const loadQueue = queueStore((s) => s.load);
@@ -943,6 +955,22 @@ export default function CalendarView({
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [weekStart]);
+  // Default buckets: one read-only card per day in each person's free time,
+  // after that day's jobs — drawn with the mirrored (other-board) cards.
+  const rowMirrors = useMemo(() => {
+    if (!enableJobQueue || !bucketLists.some((b) => b.defaultEmployees.length)) return mirroredLinesByEmployee;
+    const fills = bucketFillLines({
+      buckets: bucketLists,
+      itemsOf: (id) => bucketItems.filter((i) => i.bucketId === id),
+      employees: [...employees.values()],
+      schedule,
+      days,
+    });
+    if (!mirroredLinesByEmployee) return fills;
+    const merged = new Map(mirroredLinesByEmployee);
+    for (const [id, lines] of fills) merged.set(id, [...(merged.get(id) ?? []), ...lines]);
+    return merged;
+  }, [enableJobQueue, bucketLists, bucketItems, employees, schedule, days, mirroredLinesByEmployee]);
   // The columns on screen: Mon–Sun, or Mon–Fri with the weekend hidden.
   const visibleDays = useMemo(() => {
     return hideWeekend ? days.slice(0, 5) : days;
@@ -1221,6 +1249,7 @@ export default function CalendarView({
                     onClick={() => setQueueOpen((v) => !v)}
                     title="Toggle the Job Queue"
                     aria-pressed={queueOpen}
+                    data-tour="job-queue-toggle"
                   >
                     <QueueToggleIcon size={16} />
                     <span>Job Queue</span>
@@ -1453,7 +1482,7 @@ export default function CalendarView({
               return (laneRow ? [laneRow, ...emps] : emps);
             })().map((emp) => {
               const empLines = schedule.filter((l) => l.employeeId === emp.id);
-              const mirrored = mirroredLinesByEmployee?.get(emp.id) ?? [];
+              const mirrored = rowMirrors?.get(emp.id) ?? [];
               const cards = computeRowCards(
                 mirrored.length ? [...empLines, ...mirrored] : empLines,
                 days[0]!,
@@ -1530,6 +1559,13 @@ export default function CalendarView({
                     onEmptyCellClick({ start, employeeId: emp.id });
                   }}
                   onJobClick={(line) => {
+                    // A default bucket's card opens its list in the Job Queue.
+                    if (line.mirrorOf === "bucket") {
+                      setQueueTab("buckets");
+                      setFocusBucketId(line.bucketId ?? null);
+                      setQueueOpen(true);
+                      return;
+                    }
                     if (onJobClick) onJobClick(line);
                     else if (line.shipmentLoadId && loads.some((l) => l.id === line.shipmentLoadId))
                       setShipmentLine(line);
@@ -1867,6 +1903,10 @@ export default function CalendarView({
           canEdit={!readOnly}
           departments={[...departments.values()]}
           onCalendarCardDrop={handleCalendarCardToQueue}
+          tab={queueTab}
+          onTabChange={setQueueTab}
+          employees={[...employees.values()]}
+          focusBucketId={focusBucketId}
         />
       )}
 
@@ -2081,7 +2121,7 @@ function EmployeeRow({
   const mirroredDayIdx = useMemo(() => {
     const out = new Set<number>();
     for (const c of cards) {
-      if (!c.line.mirrorOf) continue;
+      if (c.line.mirrorOf !== "installation") continue; // not bucket fill cards
       for (let d = 0; d < c.spanDays; d++) out.add(c.startIdx + d);
     }
     return out;

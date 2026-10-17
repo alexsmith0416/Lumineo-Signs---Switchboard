@@ -48,6 +48,7 @@ import type {
 } from "../engine/types";
 import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/types";
 import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
+import { EMPTY_FILTER, type BucketFilter, type BucketItem, type BucketList } from "./buckets";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
@@ -1905,6 +1906,131 @@ export async function updateQueueItem(id: string, changes: Partial<QueueItem>): 
 export async function deleteQueueItem(id: string): Promise<void> {
   const res = await dvDelete(QUEUE.items, id);
   if (!res.success) throw new Error(res.error?.message ?? `deleteQueueItem(${id}) failed`);
+}
+
+// ---------------------------------------------------------------------------
+// Bucket Lists (crfdf_bucketlist / crfdf_bucketitem) — services/buckets.ts
+// ---------------------------------------------------------------------------
+// Per-board (crfdf_kind) ongoing lists of jobs. Items point at their list by a
+// plain GUID string (crfdf_bucketid), like the Job Queue. Filter + default
+// employees are JSON in memo columns (scripts/create-bucket-tables.ps1).
+const BUCKET = {
+  lists: "crfdf_bucketlists",
+  items: "crfdf_bucketitems",
+} as const;
+
+function parseJson<T>(raw: unknown, fallback: T): T {
+  if (typeof raw !== "string" || !raw.trim()) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function mapBucketList(r: Row): BucketList {
+  const filter = parseJson<Partial<BucketFilter> | null>(r.crfdf_filter, null);
+  return {
+    id: s(r.crfdf_bucketlistid),
+    kind: (s(r.crfdf_kind) || "production") as QueueKind,
+    name: s(r.crfdf_name, "Bucket"),
+    color: s(r.crfdf_color) || "#141464",
+    textColor: s(r.crfdf_textcolor) || "#ffffff",
+    description: s(r.crfdf_description),
+    mode: s(r.crfdf_mode) === "filter" ? "filter" : "manual",
+    filter: filter ? { ...EMPTY_FILTER, ...filter } : null,
+    deptKey: s(r.crfdf_deptkey),
+    defaultEmployees: parseJson<string[]>(r.crfdf_defaultemployees, []).filter((x) => typeof x === "string"),
+    sortOrder: n(r.crfdf_sortorder),
+    collapsed: n(r.crfdf_collapsed) === 1,
+  };
+}
+
+function mapBucketItem(r: Row): BucketItem {
+  return {
+    id: s(r.crfdf_bucketitemid),
+    bucketId: s(r.crfdf_bucketid),
+    jobNo: s(r.crfdf_jobno),
+    customerName: s(r.crfdf_customername),
+    task: s(r.crfdf_task),
+    estimatedHours: n(r.crfdf_estimatedhours, 0),
+    releasedDate: s(r.crfdf_releaseddate),
+    sortOrder: n(r.crfdf_sortorder),
+    pinned: n(r.crfdf_pinned) === 1,
+    source: s(r.crfdf_source) === "filter" ? "filter" : "manual",
+  };
+}
+
+function bucketListToRecord(b: Partial<BucketList>): Row {
+  const rec: Row = {};
+  if (b.name !== undefined) rec.crfdf_name = b.name || "Bucket";
+  if (b.kind !== undefined) rec.crfdf_kind = b.kind;
+  if (b.color !== undefined) rec.crfdf_color = b.color;
+  if (b.textColor !== undefined) rec.crfdf_textcolor = b.textColor;
+  if (b.description !== undefined) rec.crfdf_description = b.description.slice(0, 2000);
+  if (b.mode !== undefined) rec.crfdf_mode = b.mode;
+  if (b.filter !== undefined) rec.crfdf_filter = b.filter ? JSON.stringify(b.filter) : null;
+  if (b.deptKey !== undefined) rec.crfdf_deptkey = b.deptKey;
+  if (b.defaultEmployees !== undefined) rec.crfdf_defaultemployees = JSON.stringify(b.defaultEmployees);
+  if (b.sortOrder !== undefined) rec.crfdf_sortorder = b.sortOrder;
+  if (b.collapsed !== undefined) rec.crfdf_collapsed = b.collapsed ? 1 : 0;
+  return rec;
+}
+
+function bucketItemToRecord(it: Partial<BucketItem>): Row {
+  const rec: Row = {};
+  if (it.customerName !== undefined || it.jobNo !== undefined) rec.crfdf_name = it.customerName || it.jobNo || "Job";
+  if (it.bucketId !== undefined) rec.crfdf_bucketid = it.bucketId;
+  if (it.jobNo !== undefined) rec.crfdf_jobno = it.jobNo;
+  if (it.customerName !== undefined) rec.crfdf_customername = it.customerName.slice(0, 200);
+  if (it.task !== undefined) rec.crfdf_task = it.task.slice(0, 2000);
+  if (it.estimatedHours !== undefined) rec.crfdf_estimatedhours = it.estimatedHours;
+  if (it.releasedDate !== undefined) rec.crfdf_releaseddate = it.releasedDate;
+  if (it.sortOrder !== undefined) rec.crfdf_sortorder = it.sortOrder;
+  if (it.pinned !== undefined) rec.crfdf_pinned = it.pinned ? 1 : 0;
+  if (it.source !== undefined) rec.crfdf_source = it.source;
+  return rec;
+}
+
+/** One board's bucket lists and all their jobs. */
+export async function fetchBuckets(kind: QueueKind): Promise<{ lists: BucketList[]; items: BucketItem[] }> {
+  const lists = (await list(BUCKET.lists, { filter: `crfdf_kind eq '${odataLit(kind)}'`, orderby: "crfdf_sortorder asc" })).map(mapBucketList);
+  if (!lists.length) return { lists, items: [] };
+  const ids = new Set(lists.map((l) => l.id));
+  const items = (await list(BUCKET.items, { orderby: "crfdf_sortorder asc" })).map(mapBucketItem).filter((i) => ids.has(i.bucketId));
+  return { lists, items };
+}
+
+export async function createBucketList(b: BucketList): Promise<void> {
+  const res = await dvCreate(BUCKET.lists, { crfdf_bucketlistid: b.id, ...bucketListToRecord(b) });
+  if (!res.success) throw new Error(res.error?.message ?? "createBucketList failed");
+}
+
+export async function updateBucketList(id: string, changes: Partial<BucketList>): Promise<void> {
+  const res = await dvUpdate(BUCKET.lists, id, bucketListToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateBucketList(${id}) failed`);
+}
+
+/** Delete a bucket list and its jobs. */
+export async function deleteBucketList(id: string, itemIds: string[]): Promise<void> {
+  await Promise.all(itemIds.map((iid) => dvDelete(BUCKET.items, iid)));
+  const res = await dvDelete(BUCKET.lists, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteBucketList(${id}) failed`);
+}
+
+export async function createBucketItem(it: BucketItem): Promise<void> {
+  const res = await dvCreate(BUCKET.items, { crfdf_bucketitemid: it.id, ...bucketItemToRecord(it) });
+  if (!res.success) throw new Error(res.error?.message ?? "createBucketItem failed");
+}
+
+export async function updateBucketItem(id: string, changes: Partial<BucketItem>): Promise<void> {
+  const res = await dvUpdate(BUCKET.items, id, bucketItemToRecord(changes));
+  if (!res.success) throw new Error(res.error?.message ?? `updateBucketItem(${id}) failed`);
+}
+
+export async function deleteBucketItem(id: string): Promise<void> {
+  const res = await dvDelete(BUCKET.items, id);
+  if (!res.success) throw new Error(res.error?.message ?? `deleteBucketItem(${id}) failed`);
 }
 
 // ---------------------------------------------------------------------------
