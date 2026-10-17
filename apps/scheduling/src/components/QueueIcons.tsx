@@ -6,20 +6,33 @@ interface IconProps {
   className?: string;
 }
 
-/** Sidebar / panel toggle glyph (the "Sidebar Logo" mark). */
-export function QueueToggleIcon({ size = 18, className }: IconProps) {
+/** "Job Queue - Expand" — on the schedule screens: opens the Job Queue (arrow points left, into the board). */
+export function QueueExpandIcon({ size = 18, className }: IconProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 4.35 4.35"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
+    <svg width={size} height={size} viewBox="0 0 139.48 139.48" className={className} aria-hidden="true" focusable="false">
       <path
         fill="currentColor"
-        d="M1.47 0l1.63 0c0.69,0 1.25,0.56 1.25,1.25l0 1.84c0,0.69 -0.56,1.25 -1.25,1.25l-1.63 0 0 -4.35zm1.24 1.5c0.06,-0.06 0.17,-0.06 0.23,0 0.06,0.06 0.06,0.17 0,0.23l-0.44 0.44 0.44 0.44c0.06,0.06 0.06,0.17 0,0.23 -0.06,0.06 -0.17,0.06 -0.23,0l-0.56 -0.56c-0.06,-0.06 -0.06,-0.17 0,-0.23l0.56 -0.56zm-1.57 2.84c-0.64,-0.06 -1.14,-0.6 -1.14,-1.25l0 -1.84c0,-0.65 0.5,-1.19 1.14,-1.25l0 4.34z"
+        d="M36.41 68.2l20.88 -20.89c0.42,-0.41 0.97,-0.64 1.55,-0.64 1.2,0 2.18,0.97 2.18,2.18 0,0 0,0.01 0,0.01l0 41.77c0,0 0,0 0,0 0,1.2 -0.97,2.18 -2.18,2.18 -0.58,0 -1.13,-0.23 -1.54,-0.64l-20.89 -20.89c-0.41,-0.41 -0.64,-0.96 -0.64,-1.54 0,-0.58 0.23,-1.13 0.64,-1.54l-0 0z"
+      />
+      <path
+        fill="currentColor"
+        d="M-0 15.26c0,-8.42 6.84,-15.26 15.26,-15.26l108.97 0c8.42,0 15.26,6.84 15.26,15.26l0 108.97c-0,8.42 -6.83,15.25 -15.26,15.25l-108.97 0.01c-8.42,-0.01 -15.25,-6.84 -15.25,-15.26l-0.01 -108.96zm15.26 -2.18c-1.2,0 -2.17,0.98 -2.17,2.18l0 108.97c0,1.2 0.98,2.18 2.18,2.18l67.55 0 0 -113.33 -67.56 0zm108.97 113.33c1.2,-0.01 2.18,-0.98 2.18,-2.18l0 -108.96c-0,-1.2 -0.98,-2.18 -2.18,-2.18l-28.33 -0 0 113.33 28.33 0z"
+      />
+    </svg>
+  );
+}
+
+/** "Job Queue - Collapse" — in the Job Queue panel: closes it (arrow points right, back out). */
+export function QueueCollapseIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 141.58 141.58" className={className} aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M61.29 69.23l-21.2 -21.2c-0.42,-0.42 -0.98,-0.65 -1.57,-0.65 -1.22,0 -2.21,0.99 -2.21,2.21 0,0 0,0.01 0,0.01l0 42.4c0,0 0,0 0,0 0,1.22 0.99,2.21 2.21,2.21 0.59,0 1.15,-0.24 1.57,-0.65l21.21 -21.2c0.41,-0.42 0.65,-0.98 0.65,-1.56 0,-0.59 -0.24,-1.15 -0.65,-1.57l0 0z"
+      />
+      <path
+        fill="currentColor"
+        d="M-0 15.49c0,-8.55 6.94,-15.49 15.49,-15.49l110.61 0c8.55,0 15.49,6.94 15.49,15.49l0 110.61c-0,8.54 -6.94,15.48 -15.49,15.48l-110.61 0.01c-8.55,-0.01 -15.48,-6.94 -15.48,-15.49l-0.01 -110.6zm15.49 -2.21c-1.22,0 -2.21,0.99 -2.21,2.21l0 110.61c0,1.22 0.99,2.21 2.21,2.21l68.57 0 0 -115.03 -68.58 0zm110.61 115.03c1.22,-0.01 2.21,-1 2.21,-2.22l0 -110.6c-0,-1.22 -0.99,-2.21 -2.21,-2.21l-28.76 -0 0 115.03 28.76 0z"
       />
     </svg>
   );

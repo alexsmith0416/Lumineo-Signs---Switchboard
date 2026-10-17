@@ -32,7 +32,7 @@ import SplitCardPanel from "./SplitCardPanel";
 import ShipmentItemsPanel from "./ShipmentItemsPanel";
 import { useLoadsStore } from "../shipping/loads-store";
 import { useClipboardStore } from "../store/clipboard-store";
-import { QueueToggleIcon } from "./QueueIcons";
+import { QueueExpandIcon } from "./QueueIcons";
 import type { UseScheduleStore } from "../store/schedule-store";
 import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store";
 import { useSettingsStore } from "../store/settings-store";
@@ -1251,7 +1251,7 @@ export default function CalendarView({
                     aria-pressed={queueOpen}
                     data-tour="job-queue-toggle"
                   >
-                    <QueueToggleIcon size={16} />
+                    <QueueExpandIcon size={16} />
                     <span>Job Queue</span>
                   </button>
                 )}

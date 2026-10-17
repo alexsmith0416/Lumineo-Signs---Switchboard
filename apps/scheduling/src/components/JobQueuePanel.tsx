@@ -6,7 +6,7 @@ import type { UseScheduleStore } from "../store/schedule-store";
 import type { ScheduleLine } from "../engine/types";
 import AddJobPanel from "./AddJobPanel";
 import JobTaskPicker from "./JobTaskPicker";
-import { QueueEditIcon, QueueToggleIcon } from "./QueueIcons";
+import { QueueCollapseIcon, QueueEditIcon } from "./QueueIcons";
 import QueueGroupDialog from "./QueueGroupDialog";
 import { useStepQueue } from "../store/step-queue-store";
 import { useStepColorsStore } from "../store/step-colors-store";
@@ -163,7 +163,7 @@ export default function JobQueuePanel({
               </button>
             )}
             <button type="button" className="job-queue__icon-btn" title="Close Job Queue" onClick={onClose}>
-              <QueueToggleIcon size={18} />
+              <QueueCollapseIcon size={18} />
             </button>
           </div>
         </div>
