@@ -74,7 +74,11 @@ export async function commitWeekPlan(input: {
     await queue.getState().load();
     for (const g of queue.getState().groups) {
       if (!g.name.startsWith(PLANNED_GROUP_PREFIX)) continue;
-      for (const it of g.items) if (firstDay.has(it.jobNo)) queue.getState().removeItem(it.id);
+      const placed = g.items.filter((it) => firstDay.has(it.jobNo));
+      if (!placed.length) continue;
+      // Every job on the list is on the board now → the list goes too.
+      if (placed.length === g.items.length) queue.getState().deleteGroup(g.id);
+      else for (const it of placed) queue.getState().removeItem(it.id);
     }
   }
 
