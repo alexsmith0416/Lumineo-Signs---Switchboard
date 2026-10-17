@@ -806,6 +806,7 @@
   <ul>
     <li><strong>Add</strong> a person — right-click a department / location banner → <em>Add employee</em>.</li>
     <li><strong>Colors</strong> <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span> — right-click a department / location banner → <em>Modify colors…</em>. A panel opens on that one; click any other department / location at the top to switch. Set the <strong>card background &amp; text</strong> and the <strong>banner background &amp; text</strong> (picking a background suggests a readable text colour), watch the preview, then <strong>Save</strong> — it changes for everyone. <strong>Reset to default</strong> puts the standard colours back. Under <strong>Saved color schemes</strong>, name the colours to keep them, and <strong>Use</strong> a saved scheme on any department / location.</li>
+    <li><strong>Production WK / NEK</strong> — the Production board has the same <strong>WK / NEK</strong> toggle as Installation (left end of the stats bar; remembered on this device). Each person shows on one region: everyone is WK until you right-click their name → <strong>Region</strong> → NEK (e.g. Aaron Waters, Olathe). On NEK, a card whose job also goes through <strong>Hutchinson production</strong> carries a navy <strong>→ HUT</strong> chip mdash; hover it for the Hutchinson departments and days (or "Mfg Region WK" when Hutchinson hasn&rsquo;t scheduled it yet), so you know the vinyl is for a job built there.</li>
     <li><strong>Edit / delete</strong> — right-click a person's name.</li>
     <li><strong>Hours per day &amp; time efficiency</strong> (Production) — right-click a person's name to set their
     <strong>Hours / day</strong> and <strong>Time efficiency %</strong>. Efficiency scales their <strong>usable hours</strong>:
@@ -1579,6 +1580,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Production WK / NEK</strong> &mdash; the Production board has a WK / NEK toggle like Installation. Set a person&rsquo;s region by right-clicking their name (Region). NEK cards for jobs built in Hutchinson show a <strong>→ HUT</strong> chip. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Modify colors</strong> &mdash; Admin / Ops / Developer: right-click a department or location banner on Production or Installation → <em>Modify colors…</em> to change its card and banner colours for everyone, and save named colour schemes to reuse. Production departments now show their standard colours (Metal Fab blue, Paint amber, Assembly lavender, Vinyl green, …) instead of gray. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Red Date does the scheduling</strong> &mdash; setting a Red date (Jobs list, Install Dates or the job panel) sets Priority to RED DATE and, if the job has no install card, <strong>places one ending on the Red date</strong>, locked, on the top person of the location nearest the ship-to within the job&rsquo;s Install Region. And no card of the job can be dragged, resized or pasted <strong>past its Red date</strong>       <tr><th>Date</th><th>Change</th></tr>mdash; you&rsquo;ll get a note instead. See &sect;5.5 Install dates &amp; the Red date.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Job cards: Materials ready, sketch, shorter preview, status follows the stepper</strong> &mdash; the card hover preview and the card panel show a green <strong>📦 Materials ready</strong> chip at the top once every PO is received. The job&rsquo;s <strong>sketch</strong> appears in the card panel (between Task / card text and Target dates) with everything the Jobs list Sketch cell does       <tr><th>Date</th><th>Change</th></tr>mdash; hover to enlarge, click for full screen, right-click or drop a file to change it       <tr><th>Date</th><th>Change</th></tr>mdash; and as a small thumbnail in the hover preview. Long task text in the preview is cut to two lines. And <strong>completing a department on a stepper now moves Current Status to the next stage</strong> of the job&rsquo;s flow, just like a shop-floor tick.</td></tr>
@@ -1716,7 +1718,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.52 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.53 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

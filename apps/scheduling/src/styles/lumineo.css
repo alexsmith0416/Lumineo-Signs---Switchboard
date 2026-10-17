@@ -7498,3 +7498,18 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .modify-colors__save-as { display: flex; gap: 6px; }
 .modify-colors__save-as input { flex: 1; min-width: 0; }
 @media (max-width: 480px) { .modify-colors__grid { grid-template-columns: 1fr; } }
+
+/* "→ HUT" chip on an NEK production card whose job is built in Hutchinson. */
+.job-card__xsite {
+  display: inline-block;
+  margin: 0 3px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 14px;
+  background: var(--lumineo-navy);
+  color: #fff;
+  white-space: nowrap;
+}

@@ -292,7 +292,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     on `departments` (`applyBoardColors`); `ModifyColorsPanel`; banner menu
     item for `canEditBoardLook` (admin/dev/ops). Gray live production
     departments get house colours by name.
-  - **Next, in order:** #1 NEK
+  - ✅ #1 NEK production (guide v3.53): region per production employee in
+    `store/production-region-store.ts` (crfdf_jobsview key "production-regions",
+    NO Dataverse column — set in EmployeeAdminPanel → Region); WK/NEK toggle in
+    ProductionCalendar (`summaryLeading`, hides the other region via
+    hiddenEmployeeIds); "→ HUT" chip = `services/cross-site.ts` (tested) →
+    `store/card-badges-store.ts` → JobCard. **Alex: set Aaron Waters → NEK.**
+  - **Next, in order:** (#1 done)
     production (Region column on crfdf_employee1; Aaron Waters; "→ HUT"
     cross-site chip via jobPlacements) → #5 multi-select (Ctrl+click only; move /
     copy / cut / paste / delete / make group card) → #7 work radius (per

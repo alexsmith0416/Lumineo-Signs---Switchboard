@@ -13,6 +13,7 @@ import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { bcJobUrl, isBcJobNo, sharepointJobUrl } from "../services/job-links";
 import { MaterialsReadyChip } from "./MaterialsReadyChip";
 import { SketchThumb } from "./jobs/JobSketch";
+import { useCardBadge } from "../store/card-badges-store";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
@@ -199,6 +200,8 @@ export default function JobCard({
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   // Right-click links are only meaningful for a real BC job card.
+  // A board's chip on this card (Production: "→ HUT" — store/card-badges-store.ts).
+  const xsite = useCardBadge(line.id);
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
   // Open Project only for a real BC number — a card with no job number carries its title.
   const canOpenProject = canOpenLinks && isBcJobNo(line.jobNo);
@@ -310,6 +313,11 @@ export default function JobCard({
           // flex gap supplies the surrounding space).
           <div className="job-card__header job-card__header--inline">
             <span className="job-card__job-no">{line.jobNo}</span>
+            {xsite && (
+              <span className="job-card__xsite" title={xsite.title}>
+                {xsite.text}
+              </span>
+            )}
             {partLabel && (
               <span className="job-card__part" title={`Part ${partLabel.replace("/", " of ")}`}>
                 {partLabel}
@@ -328,6 +336,11 @@ export default function JobCard({
         ) : (
           <div className="job-card__header">
             <span className="job-card__job-no">{line.jobNo}</span>
+            {xsite && (
+              <span className="job-card__xsite" title={xsite.title}>
+                {xsite.text}
+              </span>
+            )}
             {partLabel && (
               <span className="job-card__part" title={`Part ${partLabel.replace("/", " of ")}`}>
                 {partLabel}

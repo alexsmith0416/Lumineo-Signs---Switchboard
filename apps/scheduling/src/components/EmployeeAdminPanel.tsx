@@ -1,3 +1,4 @@
+import { useProductionRegionStore } from "../store/production-region-store";
 import { useState } from "react";
 import { format, startOfWeek } from "date-fns";
 import type { Department, Employee } from "../engine/types";
@@ -77,6 +78,11 @@ export default function EmployeeAdminPanel({
   // usable hours per day).
   const [hoursPerDay, setHoursPerDay] = useState(String(emp?.standardHoursPerDay ?? 8));
   const [efficiencyPct, setEfficiencyPct] = useState(String(Math.round((emp?.productivityRate ?? 1) * 100)));
+
+  // Production: the WK / NEK board this person shows on (store/production-region-store.ts).
+  const prodRegionNow = useProductionRegionStore((s) => (emp && s.nek[emp.id] ? "NEK" : "WK"));
+  const setProdRegion = useProductionRegionStore((s) => s.setRegion);
+  const [prodRegion, setProdRegionDraft] = useState<"WK" | "NEK">(prodRegionNow);
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -247,6 +253,9 @@ export default function EmployeeAdminPanel({
       } else if (emp && Object.keys(input).length > 0) {
         await updateResource(emp.id, input);
       }
+      if (!isInstall && emp && prodRegion !== prodRegionNow) {
+        setProdRegion(emp.id, prodRegion);
+      }
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -306,6 +315,21 @@ export default function EmployeeAdminPanel({
               {deptList.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {!isInstall && emp && (
+          <div className="form-field">
+            <div className="form-field__label">Region</div>
+            <select
+              className="form-field__select"
+              value={prodRegion}
+              onChange={(e) => setProdRegionDraft(e.target.value as "WK" | "NEK")}
+              title="Which Production board (WK / NEK) this person shows on"
+            >
+              <option value="WK">WK</option>
+              <option value="NEK">NEK</option>
             </select>
           </div>
         )}

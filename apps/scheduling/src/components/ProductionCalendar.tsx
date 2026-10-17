@@ -19,6 +19,12 @@ import { useProductionQueueStore } from "../store/job-queue-store";
 import type { ScheduleLine } from "../engine/types";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
+import { useProductionRegionStore } from "../store/production-region-store";
+import { useCardBadgesStore } from "../store/card-badges-store";
+import { crossSiteBadges } from "../services/cross-site";
+import type { Region } from "../services/geo";
+
+const REGION_KEY = "lumineo.production.region";
 
 interface ProductionCalendarProps {
   readOnly?: boolean;
@@ -79,6 +85,72 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
   const [hiddenDeptIds, setHiddenDeptIds] = useState<Set<string>>(new Set());
   const [hiddenEmployeeIds, setHiddenEmployeeIds] = useState<Set<string>>(new Set());
 
+  // WK / NEK — which region's production people the board shows (each person's
+  // region: store/production-region-store.ts; everyone WK unless set to NEK).
+  // Remembered on this device.
+  const [region, setRegionState] = useState<Region>(() => {
+    try {
+      return localStorage.getItem(REGION_KEY) === "NEK" ? "NEK" : "WK";
+    } catch {
+      return "WK";
+    }
+  });
+  const setRegion = (r: Region) => {
+    setRegionState(r);
+    try {
+      localStorage.setItem(REGION_KEY, r);
+    } catch {
+      /* private window — fine */
+    }
+  };
+  const nekIds = useProductionRegionStore((s) => s.nek);
+  const loadRegions = useProductionRegionStore((s) => s.load);
+  useEffect(() => {
+    void loadRegions();
+  }, [loadRegions]);
+  const regionOf = useMemo(() => (id: string): Region => (nekIds[id] ? "NEK" : "WK"), [nekIds]);
+  const inRegion = (id: string) => isLaneEmployeeId(id) || regionOf(id) === region;
+  // The people of the other region are hidden, on top of the Show / hide menu.
+  const shownHiddenIds = useMemo(() => {
+    const out = new Set(hiddenEmployeeIds);
+    for (const id of employees.keys()) if (!inRegion(id)) out.add(id);
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hiddenEmployeeIds, employees, regionOf, region]);
+  const regionToggle = (
+    <div className="region-toggle" role="group" aria-label="Region">
+      {(["WK", "NEK"] as const).map((r) => (
+        <button
+          key={r}
+          type="button"
+          className={"region-toggle__btn" + (region === r ? " region-toggle__btn--active" : "")}
+          onClick={() => setRegion(r)}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+
+  // "→ HUT" on NEK cards whose job also goes through Hutchinson production.
+  const schedule = useScheduleStore((s) => s.schedule);
+  useEffect(() => {
+    void loadTracks();
+  }, [loadTracks]);
+  const setBadges = useCardBadgesStore((s) => s.setAll);
+  useEffect(() => {
+    const mfg = new Map(tracks.map((t) => [t.jobNo, t.mfgRegion]));
+    setBadges(
+      crossSiteBadges({
+        lines: schedule,
+        regionOf,
+        deptName: (id) => departments.get(id)?.name ?? "Production",
+        mfgRegionOf: (jobNo) => mfg.get(jobNo) ?? "",
+      }),
+    );
+  }, [schedule, regionOf, departments, tracks, setBadges]);
+  useEffect(() => () => setBadges(new Map()), [setBadges]);
+
   // "Assist installation" — grey the source employee's assigned days this week.
   const assistRows = useAssistStore((s) => s.rows);
   const refreshAssist = useAssistStore((s) => s.refresh);
@@ -132,7 +204,8 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
         enableDepartmentLane
         hideEmptyGroups
         hiddenDeptIds={hiddenDeptIds}
-        hiddenEmployeeIds={hiddenEmployeeIds}
+        hiddenEmployeeIds={shownHiddenIds}
+        summaryLeading={regionToggle}
         toolbarExtras={
           <>
             {canSeeMoney && (
@@ -145,7 +218,7 @@ export default function ProductionCalendar({ readOnly = false, bannerSlot, onNav
             )}
           <VisibilityMenu
             departments={[...departments.values()]}
-            employees={[...employees.values()]}
+            employees={[...employees.values()].filter((e) => inRegion(e.id))}
             hiddenDeptIds={hiddenDeptIds}
             hiddenEmployeeIds={hiddenEmployeeIds}
             onToggleDept={(id) =>
