@@ -808,6 +808,7 @@
     <li><strong>Add</strong> a person — right-click a department / location banner → <em>Add employee</em>.</li>
     <li><strong>Colors</strong> <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span> — right-click a department / location banner → <em>Modify colors…</em>. A panel opens on that one; click any other department / location at the top to switch. Set the <strong>card background &amp; text</strong> and the <strong>banner background &amp; text</strong> (picking a background suggests a readable text colour), watch the preview, then <strong>Save</strong> — it changes for everyone. <strong>Reset to default</strong> puts the standard colours back. Under <strong>Saved color schemes</strong>, name the colours to keep them, and <strong>Use</strong> a saved scheme on any department / location.</li>
     <li><strong>Production WK / NEK</strong> — the Production board has the same <strong>WK / NEK</strong> toggle as Installation (left end of the stats bar; remembered on this device). Each person shows on one region: everyone is WK until you right-click their name → <strong>Region</strong> → NEK (e.g. Aaron Waters, Olathe). On NEK, a card whose job also goes through <strong>Hutchinson production</strong> carries a navy <strong>→ HUT</strong> chip mdash; hover it for the Hutchinson departments and days (or "Mfg Region WK" when Hutchinson hasn&rsquo;t scheduled it yet), so you know the vinyl is for a job built there.</li>
+    <li><strong>Work radius</strong> <span class="chip" style="background:var(--sage);color:#001238">Admin / Ops / Developer</span> — on Installation, right-click a location banner → <em>Add work radius…</em> and enter how many miles that location&rsquo;s crews normally go. A card whose job is farther from its crew&rsquo;s home location gets the <strong>colours of the location the job is in</strong> (a Topeka crew on an Olathe job → Olathe&rsquo;s colours), and its hover preview says how far out it is. In <em>Modify colors…</em> choose <strong>Outline</strong> or <strong>Whole card</strong>, and set each location&rsquo;s colours (and saved schemes). If a card isn&rsquo;t marked right, right-click it → <em>Work-radius colour</em> → pick a location, <em>Not out of radius</em>, or <em>Automatic</em>. Distance uses the job&rsquo;s looked-up address when known, else its ZIP.</li>
     <li><strong>Edit / delete</strong> — right-click a person's name.</li>
     <li><strong>Hours per day &amp; time efficiency</strong> (Production) — right-click a person's name to set their
     <strong>Hours / day</strong> and <strong>Time efficiency %</strong>. Efficiency scales their <strong>usable hours</strong>:
@@ -1581,6 +1582,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Work radius</strong> &mdash; set a normal work radius per install location (banner right-click → <em>Add work radius…</em>). Cards for jobs outside their crew&rsquo;s radius show the colours of the location the job is in, as an outline or the whole card (Modify colors), and can be set by hand from the card&rsquo;s right-click menu. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Select several cards</strong> &mdash; Ctrl+click cards on Production or Installation to select them, then drag them together, copy / cut / paste them as a set, delete them, or turn them into one <strong>group card</strong>. See &sect;5.2.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Production WK / NEK</strong> &mdash; the Production board has a WK / NEK toggle like Installation. Set a person&rsquo;s region by right-clicking their name (Region). NEK cards for jobs built in Hutchinson show a <strong>→ HUT</strong> chip. See &sect;5.9.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Modify colors</strong> &mdash; Admin / Ops / Developer: right-click a department or location banner on Production or Installation → <em>Modify colors…</em> to change its card and banner colours for everyone, and save named colour schemes to reuse. Production departments now show their standard colours (Metal Fab blue, Paint amber, Assembly lavender, Vinyl green, …) instead of gray. See &sect;5.9.</td></tr>
@@ -1720,7 +1722,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.54 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.55 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

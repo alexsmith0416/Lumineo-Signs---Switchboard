@@ -23,6 +23,10 @@ import { useInstallQueueStoreWK, useInstallQueueStoreNEK } from "../store/job-qu
 import type { ScheduleLine } from "../engine/types";
 import VisibilityMenu from "./VisibilityMenu";
 import ToggleChip from "./ToggleChip";
+import { useWorkRadiusStore } from "../store/work-radius-store";
+import { useJobGeoStore } from "../store/job-geo-store";
+import { loadZipCentroids, zipCenter, type LatLng } from "../services/geo";
+import { radiusFlags } from "../services/work-radius";
 
 type Region = "WK" | "NEK";
 
@@ -84,6 +88,35 @@ export default function InstallationCalendar({
     setBatch((b) => [...b, ...g.items.map(batchItemFromQueueItem)]);
   };
   const weekStart = useStore((s) => s.weekStart);
+
+  // Work radius: flag cards whose job is outside their crew's home radius
+  // (services/work-radius.ts) — JobCard reads the flags from the store.
+  const boardLines = useStore((s) => s.schedule);
+  const boardEmployees = useStore((s) => s.employees);
+  const radiusConfig = useWorkRadiusStore((s) => s.config);
+  const loadRadius = useWorkRadiusStore((s) => s.load);
+  const setRadiusFlags = useWorkRadiusStore((s) => s.setFlags);
+  const jobGeos = useJobGeoStore((s) => s.geos);
+  const [zipTable, setZipTable] = useState<Map<string, LatLng> | null>(null);
+  useEffect(() => {
+    void loadRadius();
+    void useJobGeoStore.getState().load();
+    void loadZipCentroids().then(setZipTable);
+  }, [loadRadius]);
+  useEffect(() => {
+    const flags = radiusFlags({
+      lines: boardLines,
+      employees: boardEmployees,
+      config: radiusConfig,
+      positionOf: (l) => {
+        const g = jobGeos.get(l.jobNo);
+        if (g && g.lat != null && g.lng != null) return { lat: g.lat, lng: g.lng };
+        return zipTable && l.installZip ? zipCenter(zipTable, l.installZip) : null;
+      },
+    });
+    setRadiusFlags(flags, true);
+  }, [boardLines, boardEmployees, radiusConfig, jobGeos, zipTable, setRadiusFlags]);
+  useEffect(() => () => setRadiusFlags(new Map(), false), [setRadiusFlags]);
 
   // "Assist installation" INVERSE: on the install board, a lent production person
   // shows a "Production" filler on the days/halves they're in the shop (not lent),

@@ -303,9 +303,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     `services/multi-select.ts` (tested): group move (tryShiftWithConfirm, no
     cascade), multi paste (clipboard `cards`), make group card; selection bar +
     Delete-key confirm. Bulk lock not built (not asked for).
-  - **Next, in order:** #7 work radius (per
-    location; out-of-radius outline in nearest location's color; manual
-    override; full-card option; named color schemes; Admin + Ops) → #2/#3/#4
+  - ✅ #7 work radius (guide v3.55): `services/work-radius.ts` (tested) +
+    `store/work-radius-store.ts` (config key "work-radius": radius per location
+    id, mode outline|fill, per-card overrides); InstallationCalendar computes
+    flags (job geo → ZIP center); JobCard draws outline/fill in the job
+    location's board colours + right-click "Work-radius colour ▸";
+    `WorkRadiusDialog` from the banner; mode toggle in ModifyColorsPanel.
+  - **Next, in order:** #2/#3/#4
     Bucket Lists (own tables; drop off when that department's step completes;
     filter builder on Dataverse-mirrored BC data; released-date order + drag;
     sort menu shared with the Job Queue; default bucket per employee fills

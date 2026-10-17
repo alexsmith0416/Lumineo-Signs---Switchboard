@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Department } from "../engine/types";
 import { useBoardColorsStore } from "../store/board-colors-store";
+import { useWorkRadiusStore } from "../store/work-radius-store";
 import { defaultScheme, schemeFor, textFor, type ColorScheme, type ColorScope } from "../services/board-colors";
 
 /**
@@ -26,6 +27,8 @@ export default function ModifyColorsPanel({
   const setScheme = useBoardColorsStore((s) => s.setScheme);
   const saveNamed = useBoardColorsStore((s) => s.saveNamed);
   const deleteNamed = useBoardColorsStore((s) => s.deleteNamed);
+  const radiusMode = useWorkRadiusStore((s) => s.config.mode);
+  const setRadiusMode = useWorkRadiusStore((s) => s.setMode);
   const [id, setId] = useState(initialId);
   const dept = departments.find((d) => d.id === id) ?? departments[0];
   const saved = dept ? schemeFor(colors, scope, dept) : null;
@@ -111,6 +114,33 @@ export default function ModifyColorsPanel({
             </button>
           </div>
           <p className="billing-periods-panel__note">Saved colours apply for everyone, on every week.</p>
+
+          {scope === "installation" && (
+            <>
+              <div className="section-title" style={{ marginTop: 12 }}>Out-of-radius cards</div>
+              <p className="billing-periods-panel__note">
+                A card for a job outside its crew&rsquo;s work radius (banner → Add work radius…) shows in the colours
+                of the location the job is in — set those colours above.
+              </p>
+              <div className="region-toggle" role="group" aria-label="Out-of-radius look">
+                {(
+                  [
+                    ["outline", "Outline"],
+                    ["fill", "Whole card"],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={"region-toggle__btn" + (radiusMode === m ? " region-toggle__btn--active" : "")}
+                    onClick={() => setRadiusMode(m)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="section-title" style={{ marginTop: 12 }}>Saved color schemes</div>
           {colors.schemes.length === 0 && (

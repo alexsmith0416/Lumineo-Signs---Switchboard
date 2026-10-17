@@ -15,6 +15,14 @@ import { MaterialsReadyChip } from "./MaterialsReadyChip";
 import { SketchThumb } from "./jobs/JobSketch";
 import { useCardBadge } from "../store/card-badges-store";
 import { useIsSelected } from "../store/selection-store";
+import { useRadiusFlag, useWorkRadiusStore } from "../store/work-radius-store";
+import { useBoardColorsStore } from "../store/board-colors-store";
+import { schemeFor } from "../services/board-colors";
+import { INSTALL_LOCATION_COLORS } from "../services/install-meta";
+import { canEditBoardLook, useCurrentUser } from "../services/current-user";
+import { radiusFlagTitle } from "../services/work-radius";
+import { LUMINEO_LOCATIONS } from "../services/geo";
+import { locationIdOf } from "../services/red-date";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
@@ -204,12 +212,30 @@ export default function JobCard({
   // A board's chip on this card (Production: "→ HUT" — store/card-badges-store.ts).
   const xsite = useCardBadge(line.id);
   const selected = useIsSelected(line.id);
+  // Work radius (Installation): out-of-radius cards take the colours of the
+  // location the job is in — outline or whole card (services/work-radius.ts).
+  const radiusFlag = useRadiusFlag(line.id);
+  const radiusMode = useWorkRadiusStore((s) => s.config.mode);
+  const radiusActive = useWorkRadiusStore((s) => s.active);
+  const setRadiusOverride = useWorkRadiusStore((s) => s.setOverride);
+  const boardColors = useBoardColorsStore((s) => s.colors);
+  const { type: viewerType } = useCurrentUser();
+  const [radiusChoices, setRadiusChoices] = useState(false);
+  const radiusScheme = radiusFlag
+    ? schemeFor(boardColors, "installation", {
+        id: radiusFlag.locationId,
+        name: radiusFlag.locationName,
+        color: INSTALL_LOCATION_COLORS[Number(radiusFlag.locationId)] ?? "#cccccc",
+      })
+    : null;
+  const canSetRadius =
+    radiusActive && !!onDelete && !line.isCustom && !line.shipmentLoadId && canEditBoardLook(viewerType);
   const canOpenLinks = !!line.jobNo && !line.isCustom && !line.shipmentLoadId;
   // Open Project only for a real BC number — a card with no job number carries its title.
   const canOpenProject = canOpenLinks && isBcJobNo(line.jobNo);
   // The context menu opens if there's anything to show: BC links and/or the
   // duplicate/delete actions (present only on editable boards).
-  const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onSplit || !!onDelete;
+  const hasMenu = canOpenLinks || !!onCopy || !!onDuplicate || !!onSplit || !!onDelete || canSetRadius;
   // Warehouse: every open PO received → "Materials ready" marker (with where it's stored).
   const poSum = useJobPoSummary(canOpenLinks ? line.jobNo : undefined);
 
@@ -238,7 +264,13 @@ export default function JobCard({
       <div
         ref={cardRef}
         className={`job-card job-card--${layout}${line.isCustom ? " job-card--custom" : ""}${group ? " job-card--group" : ""}${multiDay ? " job-card--multiday" : ""}${unstacked ? " job-card--unstacked" : ""}${line.mirrorOf ? " job-card--mirror" : ""}${selected ? " job-card--selected" : ""}`}
-        style={{ background: style.bg, color: style.text }}
+        style={
+          radiusScheme && radiusMode === "fill"
+            ? { background: radiusScheme.bg, color: radiusScheme.text }
+            : radiusScheme
+              ? { background: style.bg, color: style.text, boxShadow: `inset 0 0 0 3px ${radiusScheme.header}` }
+              : { background: style.bg, color: style.text }
+        }
         onMouseEnter={group ? undefined : open}
         onMouseLeave={group ? undefined : close}
         onContextMenu={
@@ -569,6 +601,29 @@ export default function JobCard({
                   Split into sections…
                 </button>
               )}
+              {canSetRadius && (
+                <button type="button" onClick={() => setRadiusChoices((v) => !v)} aria-expanded={radiusChoices}>
+                  Work-radius colour {radiusChoices ? "▾" : "▸"}
+                </button>
+              )}
+              {canSetRadius && radiusChoices && (
+                <div className="job-context-menu__sub">
+                  <button type="button" onClick={() => (setRadiusOverride(line.id, null), setMenu(null))}>
+                    Automatic (by distance)
+                  </button>
+                  <button type="button" onClick={() => (setRadiusOverride(line.id, "none"), setMenu(null))}>
+                    Not out of radius
+                  </button>
+                  {LUMINEO_LOCATIONS.filter((l) => l.crewBase).map((l) => {
+                    const id = locationIdOf(l.name);
+                    return id == null ? null : (
+                      <button key={l.name} type="button" onClick={() => (setRadiusOverride(line.id, id), setMenu(null))}>
+                        {l.name} colours
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {onDelete && (
                 <button
                   type="button"
@@ -774,6 +829,7 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
           <MaterialsReadyChip jobNo={line.jobNo || undefined} style={{ marginTop: 4 }} />
         )}
         <TooltipTaskText text={line.planningLineDescription} />
+        <RadiusRow lineId={line.id} />
         {!line.isCustom && !line.shipmentLoadId && line.jobNo && <SketchThumb jobNo={line.jobNo} />}
 
         <Row label="Start" value={format(line.startDateTime, "EEE MMM d HH:mm")} />
@@ -996,6 +1052,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
         {label}
       </span>
       <span>{value}</span>
+    </div>
+  );
+}
+
+/** "Out of radius" line in the hover preview (Installation, work radius). */
+function RadiusRow({ lineId }: { lineId: string }) {
+  const flag = useRadiusFlag(lineId);
+  if (!flag) return null;
+  return (
+    <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600, color: "var(--text-secondary)" }}>
+      ◎ {radiusFlagTitle(flag)}
     </div>
   );
 }

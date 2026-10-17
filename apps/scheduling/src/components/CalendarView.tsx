@@ -39,6 +39,8 @@ import { useBoardColorsStore } from "../store/board-colors-store";
 import { applyBoardColors, type ColorScope } from "../services/board-colors";
 import ModifyColorsPanel from "./ModifyColorsPanel";
 import ConfirmDialog from "./ConfirmDialog";
+import WorkRadiusDialog from "./WorkRadiusDialog";
+import { useWorkRadiusStore } from "../store/work-radius-store";
 import { canEditBoardLook, useCurrentUser } from "../services/current-user";
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { cardStepKey } from "../services/production-steps";
@@ -888,6 +890,10 @@ export default function CalendarView({
   const [colorsFor, setColorsFor] = useState<string | null>(null);
   const { type: viewerType } = useCurrentUser();
   const canColor = !!colorScope && !readOnly && canEditBoardLook(viewerType);
+  // Work radius (Installation): "Add work radius…" on a location banner.
+  const [radiusFor, setRadiusFor] = useState<string | null>(null);
+  const workRadius = useWorkRadiusStore((s) => s.config);
+  const setWorkRadius = useWorkRadiusStore((s) => s.setRadius);
   const [groupPanelLineId, setGroupPanelLineId] = useState<string | null>(null);
 
   // A grouped shipment card opens a read-only "view all jobs" list of its load's
@@ -1691,8 +1697,31 @@ export default function CalendarView({
                 Modify colors…
               </button>
             )}
+            {canColor && colorScope === "installation" && (
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  setRadiusFor(bannerMenu.deptId);
+                  setBannerMenu(null);
+                }}
+              >
+                {workRadius.radius[bannerMenu.deptId] ? "Edit work radius…" : "Add work radius…"}
+              </button>
+            )}
           </div>
         </>
+      )}
+      {radiusFor && (
+        <WorkRadiusDialog
+          locationName={departments.get(radiusFor)?.name ?? "Location"}
+          miles={workRadius.radius[radiusFor] ?? null}
+          onSave={(miles) => {
+            setWorkRadius(radiusFor, miles);
+            setRadiusFor(null);
+          }}
+          onCancel={() => setRadiusFor(null)}
+        />
       )}
       {selectedLines.length > 0 && !readOnly && (
         <div className="selection-bar" role="toolbar" aria-label="Selected cards">
