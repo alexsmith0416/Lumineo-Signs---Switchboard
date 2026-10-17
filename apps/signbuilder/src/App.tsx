@@ -12,7 +12,7 @@ import DemoBanner from "./components/DemoBanner";
 import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useCurrentUser } from "./services/current-user";
-import { bcLink } from "./services/bc-link";
+import { bcLink, syncAndWait } from "./services/bc-link";
 import { jobFields, opportunityFields } from "./services/bc-fill";
 import { useSetupStore } from "./store/setup-store";
 import { useSpecStore } from "./store/spec-store";
@@ -93,10 +93,19 @@ export default function App() {
       // A spec just started from BC: fill in the customer etc. from the opportunity / project.
       if (spec && !found) {
         const fill = async () => {
-          const o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;
+          // Not in the app's copy yet (new in BC since the last refresh): ask BC, then look again.
+          let o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;
+          if (opportunityNo && !o) {
+            await syncAndWait("sbopportunities", user.fullName);
+            o = await bcLink().getOpportunity(opportunityNo);
+          }
           if (o) updateSpec(spec.id, opportunityFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, o));
           const no = jobNo || o?.projectNo;
-          const j = no ? await bcLink().getJob(no) : null;
+          let j = no ? await bcLink().getJob(no) : null;
+          if (no && !j) {
+            await syncAndWait("sbjobs", user.fullName);
+            j = await bcLink().getJob(no);
+          }
           if (j) updateSpec(spec.id, jobFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, j));
         };
         void fill().catch(() => undefined);

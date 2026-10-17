@@ -267,6 +267,17 @@ export function syncMessage(state: SyncState | null, waitedMs: number, kind: Syn
   return { phase: "waiting", text: "Asking BC…" };
 }
 
+/** Asks the kind's flow to copy BC now and waits until it's done (or gave up). */
+export async function syncAndWait(kind: SyncKind, requestedBy: string): Promise<void> {
+  const id = await bcLink().requestSync(kind, requestedBy);
+  const started = Date.now();
+  for (;;) {
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    const m = syncMessage(await bcLink().readSyncRequest(id), Date.now() - started, kind);
+    if (m.phase === "done" || m.phase === "failed") return;
+  }
+}
+
 /** What a description write means for the person waiting on it. */
 export function pushMessage(push: DescPush | null, waitedMs: number): { phase: "waiting" | "done" | "failed"; text: string } {
   if (!push) return { phase: "failed", text: "The request was removed before it finished." };
