@@ -19,6 +19,21 @@ describe("detectConflicts — past-due", () => {
     expect(conflicts.find((c) => c.type === "past-due" && c.lineId === "late")).toBeTruthy();
   });
 
+  it("does not flag a line that finishes during its due day", () => {
+    const ctx = buildContext([
+      line({
+        id: "sameday",
+        jobNo: "J1",
+        employeeId: "bob",
+        departmentId: "metal",
+        start: at(0, 8),
+        estimatedHours: 4, // ends day 0, 12:00
+        customerDueDate: at(0, 0), // the due DAY (a BC promised date, local midnight)
+      }),
+    ]);
+    expect(detectConflicts(ctx).filter((c) => c.type === "past-due")).toHaveLength(0);
+  });
+
   it("does not flag a line that ends before its due date", () => {
     const ctx = buildContext([
       line({

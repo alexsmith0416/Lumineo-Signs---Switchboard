@@ -301,20 +301,13 @@ export default function JobCard({
             blue truck card, which reads as shipping on its own — badging it
             "Install" as well would be misleading, so only real install work
             gets the badge. */}
-        {line.mirrorOf === "bucket" ? (
-          <span className="job-card__mirror" title="Bucket list — fills this person's free time. Click to open the list.">
-            🪣
+        {line.mirrorOf === "installation" && !line.shipmentLoadId && (
+          <span
+            className="job-card__mirror"
+            title="Scheduled on the Installation board — open it there to change it"
+          >
+            {mirrorBadgeLabel(line.mirrorHalf)}
           </span>
-        ) : (
-          line.mirrorOf &&
-          !line.shipmentLoadId && (
-            <span
-              className="job-card__mirror"
-              title="Scheduled on the Installation board — open it there to change it"
-            >
-              {mirrorBadgeLabel(line.mirrorHalf)}
-            </span>
-          )
         )}
         {group ? (
           <>

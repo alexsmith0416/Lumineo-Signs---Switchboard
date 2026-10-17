@@ -6051,7 +6051,9 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .jobs-sketch__file { font-size: 10px; font-weight: 700; color: var(--text-tertiary); letter-spacing: 0.04em; }
 .jobs-sketch-preview {
   position: fixed;
-  z-index: 70;
+  /* Top layer: it opens from the Jobs grid, the card panel and dialogs (above the
+     sticky day-header row, 80, and every slide-over / modal). Hover-only, no clicks. */
+  z-index: 3000;
   width: 330px;
   padding: 6px;
   background: var(--bg-primary);
@@ -7608,7 +7610,6 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 
 /* Default-bucket fill card: icon + name on one line, the list's jobs on the next. */
 .job-card--bucket { display: block; }
-.job-card--bucket .job-card__mirror { float: left; margin: 0 4px 0 0; }
 .job-card--bucket .job-card__custom-title,
 .job-card--bucket .job-card__desc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-card--bucket .job-card__icons { display: none; }
@@ -7628,3 +7629,23 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 /* Install card ⚠ — production runs past it or materials not all received. */
 .job-card__warn { color: #b45309; font-weight: 800; cursor: help; }
 .group-members__done--saving { opacity: 0.5; border-style: dashed; }
+
+/* Add Job: Back to the search results, and the job's details (hover + picked). */
+.add-job__picked-head { padding: 8px 12px 0; }
+.add-job__back { font-size: 12px; padding: 4px 10px; }
+.job-search-details { font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px; }
+.job-search-details__desc { color: var(--text-primary); }
+.job-search-details__meta { font-size: 11px; }
+.job-search-details__stepper { margin-top: 4px; }
+.job-search-details__tasks { margin-top: 6px; border-top: 1px solid var(--grid-line); padding-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.job-search-details__tasks-head { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-tertiary); }
+.job-search-details__task { display: flex; gap: 8px; justify-content: space-between; }
+.job-search-details__task-text { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.job-search-details__task-side { flex-shrink: 0; color: var(--text-tertiary); font-size: 11px; }
+.job-search-details__none { font-size: 11px; color: var(--text-tertiary); }
+.job-search-preview {
+  position: fixed; z-index: 1200; pointer-events: none;
+  background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); padding: 8px 10px;
+}
+.job-search-preview__head { font-size: 13px; margin-bottom: 4px; color: var(--text-primary); }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { useJobSearch, type JobSearchResult } from "../hooks/useJobSearch";
@@ -26,6 +26,7 @@ import { useLoadsStore } from "../shipping/loads-store";
 import { shipmentSummary } from "../shipping/types";
 import type { Employee, ScheduleLine } from "../engine/types";
 import GroupCardBody from "./GroupCardBody";
+import JobSearchPreview, { JobSearchDetails } from "./JobSearchPreview";
 import { encodeGroup, groupColorFor, type GroupMember } from "../services/group-card";
 
 const SHIPMENT_CARD_BG = "#2D6CDF";
@@ -37,7 +38,9 @@ const SHIPMENT_CARD_FG = "#ffffff";
  *  poisons the scheduling engine. Callers treat null as "no due date". */
 function safeDate(value: string | null | undefined): Date | null {
   if (!value) return null;
-  const d = new Date(value);
+  // A plain "yyyy-MM-dd" (BC promised date) is that calendar day HERE — new Date()
+  // would read it as UTC midnight, i.e. the evening before in Kansas.
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -113,6 +116,21 @@ export default function AddJobPanel({
 }: AddJobPanelProps) {
   const { query, setQuery, results, loading } = useJobSearch();
   const [selected, setSelected] = useState<JobSearchResult | null>(null);
+  // Hover preview of a search result (details + stepper + tasks), after a short delay.
+  const [preview, setPreview] = useState<{ result: JobSearchResult; rect: DOMRect } | null>(null);
+  const previewTimer = useRef<number | null>(null);
+  const showPreview = (result: JobSearchResult, el: HTMLElement) => {
+    if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(() => setPreview({ result, rect: el.getBoundingClientRect() }), 250);
+  };
+  const hidePreview = () => {
+    if (previewTimer.current) window.clearTimeout(previewTimer.current);
+    previewTimer.current = null;
+    setPreview(null);
+  };
+  useEffect(() => () => {
+    if (previewTimer.current) window.clearTimeout(previewTimer.current);
+  }, []);
   const [mode, setMode] = useState<Mode>("single");
   // Selection is tracked by ROW INDEX into visibleLines, NOT by lineNo: BC gives
   // several planning lines the same lineNo, so keying on lineNo would select /
@@ -779,7 +797,10 @@ export default function AddJobPanel({
                     <button
                       className="btn-secondary"
                       style={{ width: "100%", textAlign: "left" }}
+                      onMouseEnter={(e) => showPreview(r, e.currentTarget)}
+                      onMouseLeave={hidePreview}
                       onClick={() => {
+                        hidePreview();
                         setSelected(r);
                         setSingleIdx(null);
                         setCheckedIdx(new Set());
@@ -795,9 +816,30 @@ export default function AddJobPanel({
           )}
         </div>
 
+        {preview && !selected && (
+          <JobSearchPreview result={preview.result} rect={preview.rect} departments={departments} />
+        )}
+
         {selected && (
           <>
+            <div className="add-job__picked-head">
+              {/* Wrong job? Back to the same results — no need to cancel and search again. */}
+              <button
+                type="button"
+                className="btn-secondary add-job__back"
+                onClick={() => {
+                  setSelected(null);
+                  setSingleIdx(null);
+                  setCheckedIdx(new Set());
+                }}
+              >
+                ← Back to results
+              </button>
+            </div>
             <div className="section-title">{selected.job.jobNo} · {selected.job.customerName}</div>
+            <div style={{ padding: "0 12px" }}>
+              <JobSearchDetails result={selected} departments={departments} showTasks={false} />
+            </div>
             <div style={{ padding: 12 }}>
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                 <button

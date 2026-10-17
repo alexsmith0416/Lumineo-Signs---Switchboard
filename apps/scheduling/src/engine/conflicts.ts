@@ -1,10 +1,12 @@
+import { endOfDay } from "date-fns";
 import type { Conflict, ScheduleContext, ScheduleLine } from "./types";
 
 export function detectConflicts(ctx: ScheduleContext): Conflict[] {
   const conflicts: Conflict[] = [];
 
   for (const line of ctx.schedule) {
-    if (line.customerDueDate && line.endDateTime > line.customerDueDate) {
+    // The due date is a DAY: finishing any time that day is on time.
+    if (line.customerDueDate && line.endDateTime > endOfDay(line.customerDueDate)) {
       conflicts.push({
         type: "past-due",
         lineId: line.id,

@@ -49,6 +49,7 @@ import type {
 import type { ShipmentItem, ShipmentLoad, ShipmentStatus } from "../shipping/types";
 import type { QueueGroup, QueueItem, QueueKind } from "./job-queue-data";
 import { EMPTY_FILTER, type BucketFilter, type BucketItem, type BucketList } from "./buckets";
+import { dueDateOrNull } from "./due-date";
 import type { PresetKind, SavedCardPreset } from "./custom-card-data";
 import type { RosterOverride } from "./roster-overrides";
 import type { JobSchedule } from "./job-schedule-data";
@@ -362,7 +363,7 @@ function mapLine(r: Row): ScheduleLine {
       : s(r["_crfdf_employee_value"]),
     departmentId: s(r["_crfdf_department_value"]),
     departmentWide: Boolean(r.crfdf_departmentwide) || undefined,
-    customerDueDate: dtOrNull(r.crfdf_customerduedate),
+    customerDueDate: dueDateOrNull(r.crfdf_customerduedate),
     isLocked: Boolean(r.crfdf_islocked),
     jobSequence: n(r.crfdf_jobsequence),
     preferredStart: dtOrNull(r.crfdf_preferredstart),
