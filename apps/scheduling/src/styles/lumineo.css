@@ -7452,3 +7452,19 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 }
 .pl-key__checks { flex-basis: 100%; list-style: none; margin: 4px 0 0; padding: 0; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
 .pl-geostatus__retry { margin-left: 8px; }
+
+/* Sketch on the schedule card: larger in the card panel (same behaviour as the
+   Jobs list cell), a small read-only thumbnail in the hover preview. */
+.jobs-sketch-cell--panel { justify-content: flex-start; min-height: 0; }
+.jobs-sketch-cell--panel .jobs-sketch { width: 180px; height: 120px; padding: 3px; }
+.jobs-sketch-cell--panel .jobs-sketch__add { opacity: 1; font-size: 12px; padding: 6px 0; }
+.card-tooltip__sketch {
+  display: block;
+  max-width: 140px;
+  max-height: 80px;
+  margin-top: 6px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--grid-line);
+  border-radius: 3px;
+}

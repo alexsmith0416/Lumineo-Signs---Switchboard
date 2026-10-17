@@ -11,6 +11,8 @@ import CrewBadge from "./CrewBadge";
 import WeatherChip from "./WeatherChip";
 import { personByCode, pmForSalespersonCode } from "../services/sales-pm";
 import { bcJobUrl, isBcJobNo, sharepointJobUrl } from "../services/job-links";
+import { MaterialsReadyChip } from "./MaterialsReadyChip";
+import { SketchThumb } from "./jobs/JobSketch";
 import { parseGroup, type GroupMember } from "../services/group-card";
 import DepartmentStepper from "./DepartmentStepper";
 import { useJobSteps } from "../hooks/useJobSteps";
@@ -644,11 +646,44 @@ interface JobTooltipProps {
   showWeather: boolean;
 }
 
+/**
+ * Task / card text in the hover preview, clamped to two lines so a long task
+ * list doesn't stretch the preview. The preview ignores the pointer (it would
+ * vanish before a toggle could be clicked), so the rest is a hint — the card's
+ * click-open panel shows the full text.
+ */
+function TooltipTaskText({ text }: { text: string | undefined }) {
+  const lines = (text ?? "").split("\n").filter((l) => l.trim());
+  if (lines.length === 0) return null;
+  const clipped = lines.length > 2 || lines.slice(0, 2).some((l) => l.length > 90);
+  return (
+    <div style={{ color: "var(--text-secondary)", marginTop: 2 }}>
+      <div
+        style={{
+          whiteSpace: "pre-line",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {lines.join("\n")}
+      </div>
+      {clipped && (
+        <div style={{ fontSize: 10, fontStyle: "italic", opacity: 0.8, marginTop: 1 }}>
+          ▸ {lines.length > 2 ? `${lines.length - 2} more line${lines.length - 2 === 1 ? "" : "s"}` : "more"} · click
+          the card for all
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JobTooltip({ line, department, employee, conflicts, anchorRect, deptStyle, showWeather }: JobTooltipProps) {
   const salesperson = line.isCustom ? undefined : personByCode(line.salespersonCode);
   const pm = line.isCustom ? undefined : pmForSalespersonCode(line.salespersonCode);
   const TOOLTIP_W = 300;
-  const TOOLTIP_H_ESTIMATE = 360;
+  const TOOLTIP_H_ESTIMATE = 420; // incl. the sketch thumbnail
   const margin = 8;
   // Prefer above the card; fall back below if no room.
   const placeAbove = anchorRect.top > TOOLTIP_H_ESTIMATE + margin;
@@ -718,9 +753,11 @@ function JobTooltip({ line, department, employee, conflicts, anchorRect, deptSty
         {line.jobDescription && (
           <div style={{ fontWeight: 500, marginTop: 2 }}>{line.jobDescription}</div>
         )}
-        <div style={{ color: "var(--text-secondary)", marginTop: 2, whiteSpace: "pre-line" }}>
-          {line.planningLineDescription}
-        </div>
+        {!line.isCustom && !line.shipmentLoadId && (
+          <MaterialsReadyChip jobNo={line.jobNo || undefined} style={{ marginTop: 4 }} />
+        )}
+        <TooltipTaskText text={line.planningLineDescription} />
+        {!line.isCustom && !line.shipmentLoadId && line.jobNo && <SketchThumb jobNo={line.jobNo} />}
 
         <Row label="Start" value={format(line.startDateTime, "EEE MMM d HH:mm")} />
         <Row label="End" value={format(line.endDateTime, "EEE MMM d HH:mm")} />
@@ -913,18 +950,8 @@ function PoRows({ jobNo }: { jobNo: string | undefined }) {
   const text = summaryText(sum);
   return (
     <>
-      {text && (
-        <Row
-          label="POs"
-          value={
-            sum.materialsReady ? (
-              <span style={{ color: "var(--status-green)", fontWeight: 600 }}>Materials ready</span>
-            ) : (
-              text
-            )
-          }
-        />
-      )}
+      {/* Materials ready shows as the chip near the top instead. */}
+      {text && !sum.materialsReady && <Row label="POs" value={text} />}
       {sum.locations.length > 0 && <Row label="Stored at" value={sum.locations.join(", ")} />}
     </>
   );

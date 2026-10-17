@@ -18,7 +18,13 @@ interface SpFile {
  * a preview of the one selected. "Use this file" pins it as the job's sketch;
  * "Upload a file…" adds a new one to the job folder and pins that.
  */
-export default function SketchPicker({ row, onClose }: { row: JobRow; onClose: () => void }) {
+export default function SketchPicker({
+  row,
+  onClose,
+}: {
+  row: Pick<JobRow, "jobNo" | "sharepointUrl" | "job">;
+  onClose: () => void;
+}) {
   const sketch = useSketchStore((s) => s.byJob.get(row.jobNo));
   const chooseFile = useSketchStore((s) => s.chooseFile);
   const uploadFile = useSketchStore((s) => s.uploadFile);

@@ -9,6 +9,7 @@ import { isAdminLevel, useCurrentUser } from "../services/current-user";
 import { cachedJobStepInfo } from "../hooks/useJobSteps";
 import { useStepOrder } from "../store/job-flow-store";
 import { useIsServiceJob } from "../store/service-jobs-store";
+import { followFlowAfterStepComplete } from "../store/flow-follow";
 
 const LIVE = import.meta.env.PROD || import.meta.env.VITE_DATA_SOURCE === "live";
 
@@ -119,7 +120,11 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const actions = {
     canEdit,
     stamps: jobCompletions,
-    complete: (key: string) => void setComplete(jobNo, key, me, true, stepKeys),
+    // Completing a department moves Current Status on to the flow's next stage.
+    complete: (key: string) =>
+      void setComplete(jobNo, key, me, true, stepKeys).then(() =>
+        followFlowAfterStepComplete(jobNo, key, stepKeys, me),
+      ),
     reopen: (key: string) => void setComplete(jobNo, key, me, false, stepKeys),
     toggleActive: (key: string) => setActive(key, !overrides[key]?.active),
     isMarkedActive: (key: string) => !!overrides[key]?.active,

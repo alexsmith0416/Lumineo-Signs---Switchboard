@@ -271,6 +271,33 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
 > terminal knows exactly where to resume. Replace it with the current thread —
 > what's done, what's next, any half-finished work.
 
+- **📌 RESUME HERE (Oct 17, 2026) — Alex's 13-item roadmap. Phase 1 built
+  (guide v3.50); deploy status: see git log.**
+  - ✅ Phase 1: #12 hover task text clamped to 2 lines (`TooltipTaskText`,
+    JobCard.tsx — the preview has `pointerEvents: none`, so no click-toggle);
+    #10 `MaterialsReadyChip` at the top of the hover preview + card panel; #11
+    shared `components/jobs/JobSketch.tsx` (Jobs Sketch cell + card panel,
+    `size="panel"`) and `SketchThumb` in the preview; #9 `store/flow-follow.ts`
+    — stepper Complete moves Current Status to the flow's next stage (same rule
+    as shop-floor ticks; Install keeps Complete-need paperwork).
+  - **Next, in order:** #8 Red Date (Priority ↔ Red Date column linked; red
+    date auto-places the install card on the TOP employee of the location
+    nearest the ship-to, within the job's Jobs-list Region; block drops past the
+    red date in the engine) → #6 Modify Colors (banner menu; shared config;
+    Admin + Ops only; fixes gray live production departments) → #1 NEK
+    production (Region column on crfdf_employee1; Aaron Waters; "→ HUT"
+    cross-site chip via jobPlacements) → #5 multi-select (Ctrl+click only; move /
+    copy / cut / paste / delete / make group card) → #7 work radius (per
+    location; out-of-radius outline in nearest location's color; manual
+    override; full-card option; named color schemes; Admin + Ops) → #2/#3/#4
+    Bucket Lists (own tables; drop off when that department's step completes;
+    filter builder on Dataverse-mirrored BC data; released-date order + drag;
+    sort menu shared with the Job Queue; default bucket per employee fills
+    free time as ONE PIECE PER DAY, scheduled job on top, bucket below) → #13
+    connections (Monthly Plan commit placing cards, status from scheduling,
+    delivery/production-before-install warnings, group-member completion,
+    stale apps/scheduling/CLAUDE.md).
+
 - **📌 RESUME HERE (Oct 7, 2026, ~2 AM — paused by Alex) — Lifecycle + Service
   steppers: DEPLOYED (commit `2ce4a28`, guide v3.31), finishing touches open.**
   - **Where we stopped:**

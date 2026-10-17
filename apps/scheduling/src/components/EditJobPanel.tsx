@@ -16,6 +16,9 @@ import JobSchedulePanel from "./JobSchedulePanel";
 import ProductionStepperSection from "./ProductionStepperSection";
 import { JobTargetsSection, ProductionCompleteField } from "./JobTargets";
 import JobInfoSections from "./JobInfoSections";
+import JobSketch from "./jobs/JobSketch";
+import { MaterialsReadyChip } from "./MaterialsReadyChip";
+import { canEditJobField } from "../services/job-edit-access";
 import { useCurrentUser } from "../services/current-user";
 
 // Start/End are edited as dates only, but the engine schedules with times, so we
@@ -92,7 +95,7 @@ export default function EditJobPanel({
   // Trips/crew and Install ZIP are install-only widgets.
   const isInstall = dataSource.kind === "installation";
   // Install crews also get the scheduled day's weather in the job details.
-  const { type: userType } = useCurrentUser();
+  const { type: userType, jobEdit } = useCurrentUser();
   const isInstallUser = userType === "install-wk" || userType === "install-nek";
   // Respect the global cascade setting on save (matches drag/resize behavior);
   // cascade off = move/resize this task only, no downstream push.
@@ -404,6 +407,9 @@ export default function EditJobPanel({
 
         {/* Everything between the title and the buttons scrolls; the buttons stay put. */}
         <div className="slide-over__body">
+        {line.jobNo && !line.isCustom && !line.shipmentLoadId && !isCreate && (
+          <MaterialsReadyChip jobNo={line.jobNo} style={{ alignSelf: "flex-start", marginBottom: 6 }} />
+        )}
         <div className="form-field">
           <div className="form-field__label">Job description</div>
           <textarea
@@ -444,6 +450,19 @@ export default function EditJobPanel({
             disabled={readOnly}
           />
         </div>
+
+        {line.jobNo && !line.isCustom && !isCreate && (
+          <div className="form-field form-field--block">
+            <div className="form-field__label">Sketch</div>
+            <JobSketch
+              jobNo={line.jobNo}
+              sharepointUrl={line.sharepointUrl ?? ""}
+              label={line.customerName || line.jobNo}
+              canEdit={!readOnly && canEditJobField(jobEdit, "sketch")}
+              size="panel"
+            />
+          </div>
+        )}
 
         {line.jobNo && !line.isCustom && <JobTargetsSection jobNo={line.jobNo} />}
 

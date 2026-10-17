@@ -551,6 +551,7 @@
     <strong>Complete</strong> button that appears underneath. Each completion is stamped with <strong>who</strong> and
     <strong>when</strong>, listed under <strong>Completed</strong> below the stepper. Click a completed department to see
     its stamp; editors get a <strong>Reopen</strong> button there.</li>
+    <li><strong>Completing a department moves the job on.</strong> Current Status changes to the next stage in the job&rsquo;s flow (the same as a shop-floor <em>Task complete</em>), with an <em>Auto</em> tag saying who did it. A job on hold or a special status stays where it is.</li>
     <li>When a step completes, that card <strong>recedes</strong> on the board, and the department's tasks in the
     Job tasks list (5.6) grey out as done.</li>
     <li><strong>Completing Install finishes the production order.</strong> When Install is completed &mdash; on the
@@ -595,7 +596,7 @@
     they were. Changes reach BC within a minute or two.</li>
     <li><strong>At a glance</strong> — <strong>hover any job card</strong> (Production or Installation, and the job pills
     inside a group card) to see the stepper right in the preview, so you can read a job's production progress without
-    opening it.</li>
+    opening it. The preview also shows a green <strong>📦 Materials ready</strong> chip once every PO on the job is received, a small <strong>sketch</strong> thumbnail, and only the first two lines of the task text (click the card for the rest).</li>
     <li><strong>Editors</strong> (Admin / Ops / Developer) can tailor the stepper: click <strong>Edit</strong> to
     <strong>add a missing department</strong> (or Install), and with a department selected use the red
     <strong>Delete</strong> button to remove a node or <strong>Set active</strong> to flag extra departments as active
@@ -1572,6 +1573,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Job cards: Materials ready, sketch, shorter preview, status follows the stepper</strong> &mdash; the card hover preview and the card panel show a green <strong>📦 Materials ready</strong> chip at the top once every PO is received. The job&rsquo;s <strong>sketch</strong> appears in the card panel (between Task / card text and Target dates) with everything the Jobs list Sketch cell does       <tr><th>Date</th><th>Change</th></tr>mdash; hover to enlarge, click for full screen, right-click or drop a file to change it       <tr><th>Date</th><th>Change</th></tr>mdash; and as a small thumbnail in the hover preview. Long task text in the preview is cut to two lines. And <strong>completing a department on a stepper now moves Current Status to the next stage</strong> of the job&rsquo;s flow, just like a shop-floor tick.</td></tr>
       <tr><td>Oct 16, 2026</td><td><strong>Job numbers stay on install cards (for good)</strong> &mdash; cards on the NEK / WK schedule could still lose their J number after certain saves. Fixed at the cause, and the affected cards are restored. If a save ever fails now, you&rsquo;ll see it in the save status instead of the card quietly losing its job number. Refresh Switchboard to get the fix.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Open Project only for real BC jobs</strong> &mdash; a calendar card with no BC job number (one named only by its title, like <em>EDUCATION CENTER-Olathe Schools</em>) no longer offers <em>Open Project</em> in its right-click menu. Before, it sent the title to BC as a project number: long titles hit BC's 20-character error, and short ones opened a blank new project. <em>Open SharePoint Folder</em> still works on those cards.<br><strong>Job numbers stay on install cards</strong> &mdash; a hiccup while saving one install card could make every card added after it (in that session) save without its job number, zip or crew counts, so the card showed only its name. Fixed; cards it already hit are being restored.</td></tr>
       <tr><td>Oct 13, 2026</td><td><strong>Check BC now is quicker</strong> &mdash; it no longer checks for sketches (that took far too long). Sketches still come in nightly; for a new sketch on one job, right-click its Sketch cell and choose the file. See &sect;5.17.</td></tr>
@@ -1706,7 +1708,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.49 · Oct 16, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.50 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>
