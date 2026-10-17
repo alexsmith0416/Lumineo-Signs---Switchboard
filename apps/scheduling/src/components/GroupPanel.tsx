@@ -12,11 +12,14 @@ import GroupCardBody from "./GroupCardBody";
  */
 export default function GroupPanel({
   line,
+  stepKey,
   onClose,
   useStore = useScheduleStore,
   readOnly = false,
 }: {
   line: ScheduleLine;
+  /** The step this card's lane does — each member's ✓ completes it on that job. */
+  stepKey?: string | null;
   onClose: () => void;
   useStore?: UseScheduleStore;
   readOnly?: boolean;
@@ -86,6 +89,7 @@ export default function GroupPanel({
               onRemoveMember={(id) => setMembers((prev) => prev.filter((x) => x.id !== id))}
               readOnly={readOnly}
               useStore={useStore}
+              stepKey={stepKey}
             />
           </div>
 

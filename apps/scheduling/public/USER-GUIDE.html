@@ -394,6 +394,7 @@
     <tr><td><strong>Hours readout on hover</strong> (e.g. "6h of 8h · 2h open")</td><td><strong>Hover any day on a person's row</strong> to see how many hours are scheduled that day vs. their capacity, and how much is open. Turns <strong>red</strong> ("2h over") when the day is over capacity, and shows <strong>PTO / off</strong> for blocked days. Works on Production &amp; Installation. Don't want it? Switch it off in <em>Settings → Display → Day hours on hover</em>.</td></tr>
     <tr><td><span class="chip" style="background:#001238;color:#fff">1/2</span> (small badge after the job #)</td><td>This card is <strong>one section of a split task</strong> — part 1 of 2 here. The parts share the task's estimate rather than each booking it in full. See §5.1 <em>Splitting a job into sections</em>.</td></tr>
     <tr><td>📦 (box)</td><td><strong>Materials ready</strong> &mdash; every open PO on the job has been received. Hover the card to see where it's stored (&sect;5.18).</td></tr>
+    <tr><td>⚠ (amber, install cards)</td><td><strong>May not be ready to install</strong> &mdash; the job still has production scheduled after this install starts, or not all of its POs are received. Hover the ⚠ for the reasons (&sect;5.2).</td></tr>
     <tr><td>⚡ (red bolt)</td><td><strong>Conflict</strong> — two jobs overlap on the same resource, or capacity is exceeded. Cascade off lets these exist; hover to see the detail.</td></tr>
     <tr><td>🔒 (lock)</td><td>The card is <strong>locked/pinned</strong> — the scheduling engine flows other work <em>around</em> it instead of moving it. Great for PTO, holidays, and firm commitments. Set it with the <strong>lock icon</strong> in the Edit Job header (editors).</td></tr>
     <tr><td>Pulsing red outline</td><td>The job has a <strong>Red date</strong> — a fixed, drop-dead install date. The outline shows on every board the job appears on so the deadline is never missed.</td></tr>
@@ -516,6 +517,11 @@
     <li><strong>Change start date</strong> — drag the <strong>left edge</strong> of a card to slide its start to another day (snaps to whole days within the week; a live date badge shows the new start). The job keeps its length.</li>
     <li><strong>Reorder same-day jobs (set priority)</strong> — when a person has more than one job on the same day, drag a card <strong>up or down</strong> within that day to set the order they work them, <strong>top = first</strong>. A blue insertion line shows where the card will land. The card you move takes the earlier start and the others shift later that day; if the day is already full, the job that no longer fits rolls to the next day. On Production &amp; Installation boards.</li>
     <li><strong>Select several cards</strong> — <strong>Ctrl+click</strong> (⌘+click on a Mac) cards to select them; they get a navy outline and a bar appears at the bottom. <strong>Drag any one</strong> and they all move by the same amount (cards on the dragged card&rsquo;s person follow it to a new person; the others stay on theirs; nothing else auto-moves). <strong>Copy</strong> (Ctrl+C) or <strong>Cut</strong> (Ctrl+X), then paste on a day (right-click it, or hover it and Ctrl+V): the earliest card lands on that day and the rest keep their spacing, all on that person. <strong>Make group card</strong> replaces the selected job cards with one group card (5.8). <strong>Delete</strong> (or the Delete key) asks first. A plain click or <strong>Esc</strong> clears the selection.</li>
+    <li><strong>Install not ready yet?</strong> — when you add or move an install card, the app checks the job: if its
+    <strong>production</strong> is still scheduled after the install starts (for departments not yet completed on its
+    stepper), or <strong>not all of its POs</strong> are received, a notice says so (e.g. <em>Assembly is scheduled until
+    Fri 10/23, after this install starts (Wed 10/21)</em>). It's only a warning &mdash; the card stays where you put it
+    &mdash; and the card shows an amber <strong>⚠</strong> until it's resolved (hover for the reasons).</li>
   </ul>
   <div class="note box"><span class="box__label">A change only affects the card you change</span>
   By <strong>default nothing auto-moves</strong>: editing, moving, or resizing a card changes <em>only that card</em> —
@@ -595,7 +601,7 @@
     <strong>Complete</strong> button that appears underneath. Each completion is stamped with <strong>who</strong> and
     <strong>when</strong>, listed under <strong>Completed</strong> below the stepper. Click a completed department to see
     its stamp; editors get a <strong>Reopen</strong> button there.</li>
-    <li><strong>Completing a department moves the job on.</strong> Current Status changes to the next stage in the job&rsquo;s flow (the same as a shop-floor <em>Task complete</em>), with an <em>Auto</em> tag saying who did it. A job on hold or a special status stays where it is.</li>
+    <li><strong>Completing a department moves the job on.</strong> Current Status changes to the next stage in the job&rsquo;s flow (the same as a shop-floor <em>Task complete</em>), with an <em>Auto</em> tag saying who did it. <strong>Reopening</strong> a department moves it back to that stage, so the status always matches the stepper. A job on hold or a special status stays where it is. This works the same wherever you complete a step &mdash; the Jobs list, a job or card panel, or a group card&rsquo;s ✓ (5.8).</li>
     <li>When a step completes, that card <strong>recedes</strong> on the board, and the department's tasks in the
     Job tasks list (5.6) grey out as done.</li>
     <li><strong>Completing Install finishes the production order.</strong> When Install is completed &mdash; on the
@@ -866,6 +872,11 @@
     just like a regular job card.</li>
     <li><strong>Edit the group</strong> — <strong>click the card's background</strong> to open its list, where editors can
     rename it, edit the description, add / remove jobs, or delete the whole group.</li>
+    <li><strong>Mark a job done</strong> — in the group's list, click the <strong>✓</strong> circle next to a job. It
+    completes that job's step for the department (or Install, on the Installation board) the group card sits on, just
+    like completing it on the stepper: the job's Current Status follows its flow and BC is updated. Click again to
+    reopen it. Done jobs show <strong>✓</strong> and fade on the card. Anyone who can complete steps on a stepper can
+    use it.</li>
     <li><strong>Size limit</strong> — a group holds roughly <strong>15 jobs</strong>. If it's full, the editor stops you
     from adding more (with a note) — remove a job or start a second group card.</li>
   </ul>
@@ -960,8 +971,11 @@
     goes no earlier than the week after its <strong>Mfg Final</strong> date. Jobs it couldn't place are listed with the reason.</li>
     <li>In the proposal, untick anything you don't want and press <strong>Commit</strong>. Each job's
     <strong>Sched. Install</strong> is set to the Monday of its week (shown on the Jobs list and the job's Install Dates), and
-    it's added to a <strong>"Planned · week of …"</strong> group in that region's Install Job Queue, ready to drag onto the
-    board for the exact crew and day. Committing needs schedule edit access.</li>
+    it's added to a <strong>"Planned · week of …"</strong> group in that region's Install Job Queue. Then the
+    <strong>Install Planner opens on the first committed week's Auto-plan</strong> &mdash; review it and press its
+    Commit to put the cards on the board for the right crew and day (for the other weeks, use <strong>Plan this week
+    &rarr;</strong> on each week card). Jobs Auto-plan places come off the "Planned · week of …" list; anything left
+    there can still be dragged onto the board by hand. Committing needs schedule edit access.</li>
     <li><strong>It feeds the Install Planner.</strong> A job whose Sched. Install falls in a week is <strong>Planned this
     week</strong> there (an orange pin) &mdash; the customer is expecting us, so it <em>has</em> to be on that week's
     schedule, just like Must this week. The Planner's Auto-plan places these first and picks the trip, crew and day.</li>
@@ -1663,6 +1677,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Tools connected</strong> &mdash; <strong>Monthly Gameplanning&rsquo;s Commit</strong> now opens that week&rsquo;s Auto-plan in the Install Planner, whose Commit puts the cards on the board (and takes them off the "Planned · week of …" list). <strong>Install cards warn</strong> when the job&rsquo;s production is still scheduled after the install starts or its POs aren&rsquo;t all received &mdash; a notice when you add / move one, and an amber ⚠ on the card. <strong>Group cards</strong>: a ✓ next to each job completes its step for that lane, like the stepper. <strong>Reopening</strong> a step now moves Current Status back too, so the status always matches the stepper. See &sect;5.2, &sect;5.4, &sect;5.8 and &sect;5.12.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Bucket Lists</strong> &mdash; a new <em>Bucket Lists</em> tab in the Job Queue (Production and Installation) for ongoing lists of work: add jobs by hand, or by a <strong>filter</strong> on the Jobs list (status, priority, region, customer, salesperson, released dates). Jobs are listed oldest-released first (drag to set your own order), and a job <strong>drops off</strong> when its department&rsquo;s step is completed. Pick people a bucket <strong>fills the free time of</strong>, and each day&rsquo;s open hours show it as one card under their scheduled jobs. The Job Queue also gained a <strong>Sort</strong> menu. See &sect;5.8. (Added to the demo tour.)</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Search the guide</strong> &mdash; a search bar at the top of this guide (Help &amp; User Guide). Type a question or a few words (e.g. <em>how do I split a card?</em>); the best matching spots are listed with your words highlighted &mdash; click one (or ↑↓ and Enter) to jump straight to it. Press <strong>/</strong> anywhere to start searching. New FAQs for deleting, copying / moving, resizing and finding jobs.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Work radius</strong> &mdash; set a normal work radius per install location (banner right-click → <em>Add work radius…</em>). Cards for jobs outside their crew&rsquo;s radius show the colours of the location the job is in, as an outline or the whole card (Modify colors), and can be set by hand from the card&rsquo;s right-click menu. See &sect;5.9.</td></tr>
@@ -1805,7 +1820,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.57 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.58 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

@@ -7612,3 +7612,19 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
 .job-card--bucket .job-card__custom-title,
 .job-card--bucket .job-card__desc { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-card--bucket .job-card__icons { display: none; }
+
+/* Group card members: ✓ = that job's step for this lane is complete (stepper). */
+.group-chip--done { opacity: 0.6; text-decoration: line-through; }
+.group-members__row--done .group-members__main { opacity: 0.6; }
+.group-members__done {
+  flex-shrink: 0; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%;
+  border: 1.5px solid var(--grid-line); background: var(--bg-primary); color: transparent;
+  font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer;
+}
+.group-members__done:hover:not(:disabled) { border-color: var(--lumineo-navy); color: var(--text-tertiary); }
+.group-members__done--on { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
+.group-members__done:disabled { cursor: default; }
+
+/* Install card ⚠ — production runs past it or materials not all received. */
+.job-card__warn { color: #b45309; font-weight: 800; cursor: help; }
+.group-members__done--saving { opacity: 0.5; border-style: dashed; }

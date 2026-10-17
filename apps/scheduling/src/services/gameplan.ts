@@ -22,6 +22,10 @@ import { COMPLETE_STATUSES } from "./job-status";
 import { INSTALL_STEP, isDeptKey } from "./production-steps";
 
 export type Region = "WK" | "NEK";
+
+/** Commit's Install Job Queue groups ("Planned · week of Oct 20"); Auto-plan's
+ *  Commit takes the jobs it places off them. */
+export const PLANNED_GROUP_PREFIX = "Planned · week of ";
 export type Stage = "ready" | "near" | "other";
 
 export interface PlanJob {

@@ -1193,6 +1193,27 @@ function departmentNames(): Promise<Map<string, string>> {
   return departmentNamesP;
 }
 
+/** Every Production board card for some jobs (any week), with its department
+ *  name — the install-readiness check (services/install-readiness.ts). */
+export async function productionCardsForJobs(
+  jobNos: readonly string[],
+): Promise<Map<string, { deptName: string; end: Date }[]>> {
+  const out = new Map<string, { deptName: string; end: Date }[]>();
+  const jobs = [...new Set(jobNos.filter(Boolean))];
+  if (!jobs.length) return out;
+  const names = await departmentNames().catch(() => new Map<string, string>());
+  for (let i = 0; i < jobs.length; i += 25) {
+    const filter = jobs.slice(i, i + 25).map((j) => `crfdf_jobno eq '${odataLit(j)}'`).join(" or ");
+    for (const l of (await list(SET.lines, { filter })).map(mapLine)) {
+      if (l.isCustom) continue;
+      const list_ = out.get(l.jobNo) ?? [];
+      list_.push({ deptName: names.get(l.departmentId) ?? "", end: l.endDateTime });
+      out.set(l.jobNo, list_);
+    }
+  }
+  return out;
+}
+
 /** One row by id, mapped — null when it can't be read. Used before a delete. */
 async function lineById(
   set: string,

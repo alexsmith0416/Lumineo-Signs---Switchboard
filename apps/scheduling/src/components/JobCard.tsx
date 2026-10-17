@@ -29,11 +29,17 @@ import { useJobSteps } from "../hooks/useJobSteps";
 import { useJobTargets } from "../hooks/useJobTargets";
 import { useJobListTargets } from "./JobTargets";
 import { useJobPoSummary } from "../store/po-receiving-store";
+import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
+import { useInstallWarnings } from "../store/install-readiness-store";
+import { INSTALL_STEP } from "../services/production-steps";
 import { summaryText } from "../services/po-receiving";
 
 interface JobCardProps {
   line: ScheduleLine;
   department: Department | undefined;
+  /** The stepper step this card's lane does (dept, or Install) — a group card's
+   *  member pill shows ✓ once that step is complete on the member job. */
+  stepKey?: string | null;
   conflicts: Conflict[];
   employee?: Employee;
   showInvoice?: boolean;
@@ -138,6 +144,7 @@ const HOVER_DELAY_MS = 250;
 export default function JobCard({
   line,
   department,
+  stepKey,
   conflicts,
   employee,
   showInvoice = false,
@@ -157,6 +164,12 @@ export default function JobCard({
   // when moved). Everything else falls back to the normal card style.
   const group = parseGroup(line);
   const style = group ? deptStyle(department) : cardStyle(line, department);
+  // Install board: ⚠ when production runs past this install or materials aren't in.
+  const readiness = useInstallWarnings(line, stepKey === INSTALL_STEP.key);
+  // Member jobs whose step for this lane is complete (pill shows ✓, faded).
+  const memberDone = useJobDeptCompletionStore((s) =>
+    group && stepKey ? group.members.filter((m) => s.byJob[m.jobNo]?.[stepKey]).map((m) => m.jobNo).join("|") : "",
+  );
   // The member whose detail popover is open (click a chip to view a held job).
   const [memberView, setMemberView] = useState<{ m: GroupMember; rect: DOMRect } | null>(null);
   // The member being hovered (delayed preview, like a standard card's tooltip).
@@ -317,7 +330,7 @@ export default function JobCard({
                   <button
                     key={m.id}
                     type="button"
-                    className="group-chip"
+                    className={"group-chip" + (memberDone.split("|").includes(m.jobNo) ? " group-chip--done" : "")}
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       if (memberTimerRef.current) window.clearTimeout(memberTimerRef.current);
@@ -337,6 +350,7 @@ export default function JobCard({
                       setMemberView({ m, rect: e.currentTarget.getBoundingClientRect() });
                     }}
                   >
+                    {memberDone.split("|").includes(m.jobNo) && "✓ "}
                     {m.jobNo}
                   </button>
                 ))
@@ -412,6 +426,11 @@ export default function JobCard({
           </div>
         )}
         <div className="job-card__icons">
+          {readiness.length > 0 && (
+            <span className="job-card__warn" title={`May not be ready to install:\n• ${readiness.join("\n• ")}`}>
+              ⚠
+            </span>
+          )}
           {line.isLocked && <span title="Locked">🔒</span>}
           {poSum?.materialsReady && (
             <span

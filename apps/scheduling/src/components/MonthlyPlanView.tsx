@@ -15,6 +15,7 @@ import {
   autofill,
   bookedByWeek,
   buildPools,
+  PLANNED_GROUP_PREFIX,
   type AutofillResult,
   type BookedLine,
   type PlanCandidate,
@@ -372,7 +373,13 @@ export default function MonthlyPlanView({ canEdit, onNavigate }: { canEdit: bool
       </div>
 
       {proposal && (
-        <AutofillProposal proposal={proposal} canEdit={canEdit} onClose={() => setProposal(null)} onCommitted={() => void loadBooked()} />
+        <AutofillProposal
+          proposal={proposal}
+          canEdit={canEdit}
+          onClose={() => setProposal(null)}
+          onCommitted={() => void loadBooked()}
+          onPlanWeek={onNavigate ? planWeekInPlanner : undefined}
+        />
       )}
 
       <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
@@ -542,11 +549,14 @@ function AutofillProposal({
   canEdit,
   onClose,
   onCommitted,
+  onPlanWeek,
 }: {
   proposal: AutofillResult;
   canEdit: boolean;
   onClose: () => void;
   onCommitted: () => void;
+  /** After Commit: open the Install Planner's Auto-plan for this week. */
+  onPlanWeek?: (weekStart: Date) => void;
 }) {
   const [skip, setSkip] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -582,7 +592,7 @@ function AutofillProposal({
         const store = g.region === "NEK" ? useInstallQueueStoreNEK : useInstallQueueStoreWK;
         await store.getState().load();
         await store.getState().addToNamedGroup(
-          { name: `Planned · week of ${format(g.weekStart, "MMM d")}`, ...PLANNED_COLOR },
+          { name: `${PLANNED_GROUP_PREFIX}${format(g.weekStart, "MMM d")}`, ...PLANNED_COLOR },
           g.items.map((c) => ({
             jobNo: c.jobNo,
             customerName: c.name,
@@ -603,6 +613,10 @@ function AutofillProposal({
       }
       onCommitted();
       onClose();
+      // 3. On to the Install Planner's Auto-plan for the first committed week: the
+      //    jobs are "Planned this week" (firm) there; its Commit puts the cards on the board.
+      const first = [...groups.values()].map((g) => g.weekStart).sort((a, b) => a.getTime() - b.getTime())[0];
+      if (first) onPlanWeek?.(first);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -630,8 +644,9 @@ function AutofillProposal({
               </>
             )}
             <div style={{ marginTop: 4, fontSize: 11 }}>
-              Untick anything you don't want. Commit sets each job's Scheduled install to its week and adds it to a
-              "Planned · week of …" group in that region's Install Job Queue.
+              Untick anything you don't want. Commit sets each job's Scheduled install to its week, adds it to a
+              "Planned · week of …" group in that region's Install Job Queue, then opens the first week's Auto-plan
+              in the Install Planner — its Commit puts the cards on the board (other weeks: Plan this week →).
             </div>
           </div>
 

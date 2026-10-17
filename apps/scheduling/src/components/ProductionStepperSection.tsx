@@ -120,12 +120,16 @@ export default function ProductionStepperSection({ jobNo }: { jobNo: string }) {
   const actions = {
     canEdit,
     stamps: jobCompletions,
-    // Completing a department moves Current Status on to the flow's next stage.
+    // Completing a department moves Current Status on to the flow's next stage;
+    // re-opening one moves it back, so the status always matches the stepper.
     complete: (key: string) =>
       void setComplete(jobNo, key, me, true, stepKeys).then(() =>
         followFlowAfterStepComplete(jobNo, key, stepKeys, me),
       ),
-    reopen: (key: string) => void setComplete(jobNo, key, me, false, stepKeys),
+    reopen: (key: string) =>
+      void setComplete(jobNo, key, me, false, stepKeys).then(() =>
+        followFlowAfterStepComplete(jobNo, key, stepKeys, me),
+      ),
     toggleActive: (key: string) => setActive(key, !overrides[key]?.active),
     isMarkedActive: (key: string) => !!overrides[key]?.active,
     remove,

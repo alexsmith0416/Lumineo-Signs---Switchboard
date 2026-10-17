@@ -28,6 +28,7 @@ import { reportWriteFailure } from "./write-status-store";
 import { useJobScheduleStore } from "./job-schedule-store";
 import { showNotice } from "./notice-store";
 import { firstPastRedDate, redDateLabel } from "../services/red-date";
+import { installCardsToCheck } from "../services/install-readiness";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -159,6 +160,21 @@ function blockedByRedDate(changed: readonly ScheduleLine[], before: readonly Sch
     message: `Job ${hit.jobNo} can't be scheduled past its Red Date (${redDateLabel(hit.red)}). Put it on that day or earlier.`,
   });
   return true;
+}
+
+/**
+ * Install readiness (warn only): after an install card is added or its start
+ * moves, say so if the job's production runs past it or its materials aren't
+ * all received (store/install-readiness-store.ts). Never blocks the edit.
+ */
+function checkInstallReadiness(
+  ds: ScheduleDataSource,
+  changed: readonly ScheduleLine[],
+  before: readonly ScheduleLine[],
+): void {
+  if (ds.kind !== "installation") return;
+  const lines = installCardsToCheck(changed, before);
+  if (lines.length) void import("./install-readiness-store").then((m) => m.noticeInstallReadiness(lines));
 }
 
 function buildContext(state: ScheduleStoreState): ScheduleContext {
@@ -432,6 +448,7 @@ export function createScheduleStore(
         .filter((l): l is NonNullable<typeof l> => l != null)
         .map(applyConvert);
       if (blockedByRedDate(toPersist, state.schedule)) return;
+      checkInstallReadiness(state.dataSource, toPersist, state.schedule);
       const beforeSchedule = state.schedule;
       const afterSchedule = convert
         ? diff.committed.schedule.map(applyConvert)
@@ -603,6 +620,7 @@ export function createScheduleStore(
     addScheduleLine: async (line) => {
       if (blockedByRedDate([line], [])) return;
       const ds = get().dataSource;
+      checkInstallReadiness(ds, [line], []);
       // Optimistic: show the new card immediately, persist in the background.
       // Live createScheduleLine returns the same line (id preserved).
       const beforeSchedule = get().schedule;

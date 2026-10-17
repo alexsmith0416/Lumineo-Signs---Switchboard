@@ -1823,6 +1823,7 @@ export default function CalendarView({
         return (
           <GroupPanel
             line={gl}
+            stepKey={cardStepKey(kindMeta.kind, departments.get(gl.departmentId)?.name)}
             useStore={useStore}
             readOnly={readOnly}
             onClose={() => setGroupPanelLineId(null)}
@@ -2665,6 +2666,7 @@ function GanttCard({
       <JobCard
         line={line}
         department={department}
+        stepKey={cardStepKey(kind, department?.name)}
         employee={employee}
         conflicts={conflicts}
         layout={cardLayout}

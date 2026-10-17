@@ -3,6 +3,10 @@ import { type UseScheduleStore, useScheduleStore } from "../store/schedule-store
 import { groupPayloadFits, newMemberId, type GroupMember } from "../services/group-card";
 import type { ScheduleLine } from "../engine/types";
 import AddJobPanel from "./AddJobPanel";
+import { useCurrentUser, isAdminLevel } from "../services/current-user";
+import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
+import { setJobStep } from "../store/flow-follow";
+import { stepLabel } from "../services/production-steps";
 
 /**
  * Shared editor body for a grouped job card — title + optional description + a
@@ -20,6 +24,7 @@ export default function GroupCardBody({
   onRemoveMember,
   readOnly = false,
   useStore = useScheduleStore,
+  stepKey,
 }: {
   title: string;
   setTitle: (v: string) => void;
@@ -30,7 +35,31 @@ export default function GroupCardBody({
   onRemoveMember: (id: string) => void;
   readOnly?: boolean;
   useStore?: UseScheduleStore;
+  /** The step the group's lane does (dept, or Install). Given → each member gets
+   *  a ✓ that completes / re-opens that step on its job, like the stepper. */
+  stepKey?: string | null;
 }) {
+  const { fullName, upn, realType } = useCurrentUser();
+  // Same people who can tick a stepper.
+  const canComplete = !!stepKey && isAdminLevel(realType);
+  const me = fullName || upn || "Unknown";
+  const doneJobs = useJobDeptCompletionStore((s) =>
+    stepKey ? members.filter((m) => s.byJob[m.jobNo]?.[stepKey]).map((m) => m.jobNo).join("|") : "",
+  );
+  const isDone = (jobNo: string) => doneJobs.split("|").includes(jobNo);
+  // Jobs whose ✓ is saving (step info is read first, then the completion).
+  const [saving, setSaving] = useState<Set<string>>(new Set());
+  const toggleDone = (jobNo: string) => {
+    if (!stepKey || saving.has(jobNo)) return;
+    setSaving((s) => new Set(s).add(jobNo));
+    void setJobStep(jobNo, stepKey, me, !isDone(jobNo)).finally(() =>
+      setSaving((s) => {
+        const next = new Set(s);
+        next.delete(jobNo);
+        return next;
+      }),
+    );
+  };
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [full, setFull] = useState(false);
   // Open the shared Add Job panel to pick a job + tasks for this group.
@@ -95,7 +124,27 @@ export default function GroupCardBody({
             <div className="jtp__note">No jobs yet{readOnly ? "." : " — search below to add."}</div>
           ) : (
             members.map((m) => (
-              <div key={m.id} className="group-members__row">
+              <div key={m.id} className={"group-members__row" + (isDone(m.jobNo) ? " group-members__row--done" : "")}>
+                {stepKey && (canComplete || isDone(m.jobNo)) && (
+                  <button
+                    type="button"
+                    className={
+                      "group-members__done" +
+                      (isDone(m.jobNo) ? " group-members__done--on" : "") +
+                      (saving.has(m.jobNo) ? " group-members__done--saving" : "")
+                    }
+                    disabled={!canComplete || saving.has(m.jobNo)}
+                    aria-pressed={isDone(m.jobNo)}
+                    title={
+                      isDone(m.jobNo)
+                        ? `${stepLabel(stepKey)} is complete on ${m.jobNo}${canComplete ? " — click to re-open it" : ""}`
+                        : `Mark ${stepLabel(stepKey)} complete on ${m.jobNo} (its stepper + status follow)`
+                    }
+                    onClick={() => toggleDone(m.jobNo)}
+                  >
+                    ✓
+                  </button>
+                )}
                 <div className="group-members__main">
                   <span className="group-members__no">{m.jobNo}</span>
                   <span className="group-members__cust">{m.customerName}</span>

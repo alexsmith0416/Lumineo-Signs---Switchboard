@@ -15,7 +15,7 @@ export default function NoticeHost() {
     >
       <div className="modal-card" role="alertdialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-card__title">{notice.title}</div>
-        <div className="modal-card__body">{notice.message}</div>
+        <div className="modal-card__body" style={{ whiteSpace: "pre-line" }}>{notice.message}</div>
         <div className="modal-card__actions">
           <button className="btn-primary" autoFocus onClick={dismiss}>
             OK

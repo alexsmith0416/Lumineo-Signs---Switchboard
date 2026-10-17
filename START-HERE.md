@@ -325,10 +325,27 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     Browser-tested in dev. **Go-live:** (1) ✅ tables + role access confirmed
     (`scripts/create-bucket-tables.ps1` re-run Oct 17: everything already
     there, published); (2) ✅ deployed + committed Oct 17.
-  - **Next:** #13
-    connections (Monthly Plan commit placing cards, status from scheduling,
-    delivery/production-before-install warnings, group-member completion,
-    stale apps/scheduling/CLAUDE.md).
+  - ✅ #13 connections DEPLOYED Oct 17 (guide v3.58).
+    Alex's calls (Oct 17): Monthly → hand off to Auto-plan; status moves ONLY
+    from stepper completions (not from scheduling); install warnings = warn,
+    allow; group ✓ completes the lane's step.
+    - Status = stepper: `store/flow-follow.ts followFlow` (forward on complete,
+      BACK on reopen — ProductionStepperSection), `setJobStep` / `jobStepKeys`
+      for completing outside a stepper.
+    - Group card ✓: `GroupCardBody` (admin-level, like the stepper) →
+      `setJobStep(jobNo, cardStepKey(lane))`; pills ✓ + faded in JobCard
+      (`stepKey` prop). Done state = completion store (nothing in the payload).
+    - Install readiness: `services/install-readiness.ts` (pure, tested) +
+      `store/install-readiness-store.ts` (production cards of install jobs via
+      `productionCardsForJobs`, batched; PO roll-up; stepper-done depts skip).
+      Notice on add / move (`checkInstallReadiness` in schedule-store, batched
+      400 ms) + amber ⚠ chip on install cards.
+    - Monthly Commit → opens the first committed week's Auto-plan
+      (`onPlanWeek`); Auto-plan Commit removes placed jobs from "Planned · week
+      of …" queue groups (`PLANNED_GROUP_PREFIX`, services/gameplan.ts).
+    - apps/scheduling/CLAUDE.md refreshed (live app, tests, architecture).
+    Browser-tested in dev (group ✓, ⚠ chips, move notice).
+  - **Next:** the 13-item roadmap is done — ask Alex what's next.
 
 - **📌 RESUME HERE (Oct 7, 2026, ~2 AM — paused by Alex) — Lifecycle + Service
   steppers: DEPLOYED (commit `2ce4a28`, guide v3.31), finishing touches open.**

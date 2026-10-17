@@ -3,6 +3,8 @@ import type { ScheduleLine } from "../engine/types";
 import { useInstallationStoreNEK, useInstallationStoreWK } from "./schedule-store";
 import { useJobScheduleStore } from "./job-schedule-store";
 import { useTripStore } from "./trip-store";
+import { useInstallQueueStoreNEK, useInstallQueueStoreWK } from "./job-queue-store";
+import { PLANNED_GROUP_PREFIX } from "../services/gameplan";
 import { cardsFor, type Assignment } from "../services/week-plan";
 import { defaultTripName, type SavedTrip } from "../services/saved-trips";
 import type { WeekCrews } from "../services/week-plan-data";
@@ -64,6 +66,15 @@ export async function commitWeekPlan(input: {
       cards++;
       const prev = firstDay.get(c.jobNo);
       if (!prev || day < prev) firstDay.set(c.jobNo, day);
+    }
+  }
+
+  // Placed now → off the Install Job Queue's "Planned · week of …" lists (Monthly).
+  for (const queue of [useInstallQueueStoreWK, useInstallQueueStoreNEK]) {
+    await queue.getState().load();
+    for (const g of queue.getState().groups) {
+      if (!g.name.startsWith(PLANNED_GROUP_PREFIX)) continue;
+      for (const it of g.items) if (firstDay.has(it.jobNo)) queue.getState().removeItem(it.id);
     }
   }
 

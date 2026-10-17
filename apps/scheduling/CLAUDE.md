@@ -6,41 +6,42 @@ Working notes for Claude Code on this app. Read this before starting any task.
 - Issues are tagged `ALE-79` through `ALE-87`. Milestones M0-M8.
 - Branch convention: `claude/<slug>` for in-progress work; final branches map to the per-issue `gitBranchName` from Linear.
 
+> **Live status, deploy steps and "where we left off" live in `START-HERE.md`
+> at the repo root — read it first.** This file is the architecture / engine
+> reference. The app is LIVE in Power Apps (Dataverse via the Power SDK, BC via
+> flows — see `BC-CONNECTIONS.md`).
+
 ## What this app is
 
-A React + TypeScript Code App replacing the Canvas Production Scheduling app. Three calendars (Production, Installation, Shipping) share one scheduling engine, plus a Scenario Sandbox for what-if planning.
+A React + TypeScript Power Apps Code App that replaced the Canvas Production Scheduling app. Three boards (Production, Installation WK/NEK, Shipping) share one scheduling engine (`CalendarView` renders all three), plus the Jobs list (steppers, Current Status, job flow), Monthly Gameplanning, Install Planner / Install Trips, Warehouse Management, My Schedule, the Scenario Sandbox, Settings and Help (user guide + demo tour).
 
 ## Architecture
 
 ```
-App.tsx (sidebar nav)
-  ├── ProductionCalendar  ── shiftTaskAndCommit() ─┐
-  ├── InstallationCalendar (M6 stub)               │
-  ├── ShippingCalendar (M7 stub)                   │
-  └── ScenarioSandbox                              │
-        ├── ScenarioBanner / ChangeBuilder        │
-        ├── ImpactSummary / ScheduleDiff          │
-        └── runScenario() / commitScenario()      │
-                                                  │
-       Engine (pure TS, no React)  ◄──────────────┘
-         types · capacity · time-walker
-         cascade · conflicts · scenarios
+App.tsx (Sidebar.tsx nav)
+  ├── My Schedule · Jobs (components/jobs/) · Warehouse (components/warehouse/)
+  ├── Production / Installation / Shipping  → CalendarView (shared grid)
+  │     ├── JobCard · JobCardPanel · GroupPanel · JobQueuePanel (+ Bucket Lists)
+  │     └── store calls: shiftTaskAndCommit / addScheduleLine / … ─┐
+  ├── Monthly Gameplanning · Install Planner · Install Trips        │
+  ├── Scenario Sandbox (runScenario / commitScenario)               │
+  └── Settings · Help                                               │
+                                                                    │
+       Engine (pure TS, no React) ◄─────────────────────────────────┘
+         types · capacity · time-walker · cascade · conflicts · scenarios
                   │
-       Services  ◄┘
-         data-source.ts       ScheduleDataSource interface + factory
-         dataverse.ts         productionDataSource (Power SDK — stubbed)
-         installation-data.ts installationDataSource
-         shipping-data.ts     shippingDataSource
-         bc.ts                BC analytics (stubbed)
-         planning-line-mapping
-         auto-schedule
+       Services (pure rules + I/O boundary)
+         dataverse-live.ts   every Dataverse read/write (generated Power SDK);
+                             writes ONLY via dvCreate / dvUpdate / dvDelete
+         data-source.ts      ScheduleDataSource (mock in dev, live in prod)
+         bc*.ts / flows      BC sync + push (see BC-CONNECTIONS.md)
+         *.ts                pure, tested rules (job-flow, buckets, red-date,
+                             install-readiness, week-plan, gameplan, …)
                   │
-       Stores (Zustand)
-         createScheduleStore(dataSource) — factory
-         useScheduleStore       (production)
-         useInstallationStore   (installation)
-         useShippingStore       (shipping)
-         useScenarioStore       (sandbox — production-bound)
+       Stores (Zustand, ~45)
+         createScheduleStore(dataSource, boardId) — one per board
+         job-tracking / job-dept-completion (steppers) / job-flow / flow-follow
+         write-status-store — persistOrReport: a failed write never reverts the UI
 ```
 
 ## Tech stack
@@ -48,10 +49,12 @@ App.tsx (sidebar nav)
 - Vite + React 18 + TypeScript
 - Zustand for state (live store + scenario store kept separate)
 - date-fns for date math
-- react-big-calendar (installed; current calendar is a hand-rolled grid that
-  matches the Canvas styling pixel-for-pixel — swap in r-b-c in M2 if needed)
-- Power SDK for Dataverse (replace stubs in `services/dataverse.ts` for M1 final)
-- BC analytics connector for job search (replace stub in `services/bc.ts`)
+- Hand-rolled calendar grid (`CalendarView`) — permanent; react-big-calendar
+  is installed but unused
+- Power SDK (generated, `src/generated/`) for Dataverse — `services/dataverse-live.ts`
+- BC job search via `services/bc.ts` → `searchBcJobsLive`; other BC data is
+  mirrored into Dataverse by flows (`BC-CONNECTIONS.md`)
+- Vitest (`npm run test`) — engine, services and stores are covered
 
 ## Brand tokens (in `src/styles/lumineo.css`)
 
@@ -99,7 +102,9 @@ src/
 
 When adding code:
 - New engine logic → write a pure function, export from `engine/index.ts`, no React imports.
-- New Dataverse field → add to `engine/types.ts`, update `dataverseService` mapping, update mocks in `data/`.
+- New Dataverse field → add to `engine/types.ts`, update the mapping in `services/dataverse-live.ts`, update mocks in `data/`. New table → a `scripts/create-*.ps1` (privileges mirrored from an existing table).
+- New editable action → persist via `persistOrReport` and add a failing-save case to `store/optimistic-edit.test.ts`.
+- User-facing change → update `public/USER-GUIDE.html` body + What's New; significant feature → a `FULL_STEPS` tour step (`DemoTutorial.tsx`). See START-HERE.md §4.
 - New scenario change type → extend the `ScenarioChange` union in `engine/types.ts`, handle in `runScenario` switch, add a form under `components/scenario/forms/`, wire into `ChangeBuilder`.
 
 ## Setup
@@ -107,11 +112,12 @@ When adding code:
 ```bash
 npm install
 npm run dev          # vite, default port 5174
-npm run typecheck    # tsc --noEmit
-npm run build        # production build
+npm run typecheck    # tsc -b --noEmit
+npm run test         # vitest
+npm run build        # production build → dist/ (deploy: START-HERE.md §4)
 ```
 
-The dev server boots with mock data; everything is reactive but persists only in memory until M1 final wires real Power SDK.
+The dev server boots with mock data and an admin stand-in user; changes persist in memory only. `VITE_DATA_SOURCE=live` (or a production build) uses real Dataverse.
 
 ## Reference docs
 
@@ -122,15 +128,18 @@ The dev server boots with mock data; everything is reactive but persists only in
 
 ## Milestone status
 
-- M0 (ALE-87) — Onboarding · this file is the deliverable
-- M1 (ALE-79) — Foundation · scaffold written, stubs in place; **Power SDK still stubbed**
-- M2 (ALE-80) — Production Calendar · drag/drop works against in-memory state
-- M3 (ALE-81) — Engine live · cascade is implemented; calendar currently passes `cascade=false` per M2 acceptance — flip to `true` for M3
-- M4 (ALE-82) — Add Job Panel · all three modes (single / multi / auto) implemented against mocks
-- M5 (ALE-83) — Scenario Sandbox · workspace + diff + impact + commit implemented
-- M6 (ALE-84) — Installation · live calendar against real WK + NEK crew rosters w/ region toggle, weather chip, crew/truck badge, $ toggle, monthly goal stat
-- M7 (ALE-85) — Shipping · live calendar against mock trucks + shipping lines using the same engine
-- M8 (ALE-86) — Polish & rollout · not started
+M0–M7 are done and the app is live; work since then is tracked in
+START-HERE.md's "Next up" (not in Linear milestones).
+
+- M0 (ALE-87) — Onboarding · this file
+- M1 (ALE-79) — Foundation · live Dataverse via the Power SDK
+- M2 (ALE-80) — Production Calendar · live
+- M3 (ALE-81) — Engine live · cascade is a user setting (`useSettingsStore.cascadeEnabled`)
+- M4 (ALE-82) — Add Job Panel · single / multi / custom / group card, live BC search
+- M5 (ALE-83) — Scenario Sandbox · workspace + diff + impact + commit
+- M6 (ALE-84) — Installation · live WK + NEK boards (region toggle, weather, crew/truck, $, billing goal)
+- M7 (ALE-85) — Shipping · live loads board on the same engine
+- M8 (ALE-86) — Polish & rollout · ongoing (see START-HERE.md)
 
 ## Monthly install plan + AI auto-fill
 
@@ -164,7 +173,6 @@ Lane height in the row layout flexes from this prop.
 
 ## Known gaps to address
 
-- Power SDK is `declare`d but not actually called — `services/dataverse.ts` returns mock data with an in-memory mutation log so changes survive within a session but not across reloads.
-- The calendar uses a hand-rolled grid (close visual match to Canvas). M2 may swap to react-big-calendar; the package is already installed.
-- `useLivePreview` runs the engine on every render with a fresh context snapshot. Profile when wiring it into the Add Job preview pane.
-- No tests yet. Vitest is installed; engine modules are pure, so they're the natural first target.
+- Open items and go-live steps are kept in START-HERE.md "Next up" — check there first.
+- `useLivePreview` runs the engine on every render with a fresh context snapshot. Profile if the Add Job preview gets slow.
+- Mock data (`data/`) only covers what dev needs; some live-only paths (BC pushes, step info, Dataverse-only tables) do nothing in dev.
