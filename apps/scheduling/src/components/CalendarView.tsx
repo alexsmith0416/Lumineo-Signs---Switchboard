@@ -32,6 +32,10 @@ import { useScenarioStore, type UseScenarioStore } from "../store/scenario-store
 import { useSettingsStore } from "../store/settings-store";
 import { useHistoryStore } from "../store/history-store";
 import { useJobScheduleStore } from "../store/job-schedule-store";
+import { useBoardColorsStore } from "../store/board-colors-store";
+import { applyBoardColors, type ColorScope } from "../services/board-colors";
+import ModifyColorsPanel from "./ModifyColorsPanel";
+import { canEditBoardLook, useCurrentUser } from "../services/current-user";
 import { useJobDeptCompletionStore } from "../store/job-dept-completion-store";
 import { cardStepKey } from "../services/production-steps";
 import { CcoBadge } from "./CcoBadge";
@@ -433,7 +437,7 @@ export default function CalendarView({
     loading,
     error,
     employees,
-    departments,
+    departments: rawDepartments,
     schedule,
     conflicts,
     workHours,
@@ -449,6 +453,19 @@ export default function CalendarView({
     addScheduleLine,
     splitScheduleLine,
   } = useStore();
+  // Board colours (Modify colors…): each department / location shows its edited
+  // card + banner colours, else the defaults (services/board-colors.ts).
+  const colorScope: ColorScope | null =
+    kindMeta.kind === "production" ? "production" : kindMeta.kind === "installation" ? "installation" : null;
+  const boardColors = useBoardColorsStore((s) => s.colors);
+  const loadBoardColors = useBoardColorsStore((s) => s.load);
+  useEffect(() => {
+    void loadBoardColors();
+  }, [loadBoardColors]);
+  const departments = useMemo(
+    () => (colorScope ? applyBoardColors(rawDepartments, colorScope, boardColors) : rawDepartments),
+    [rawDepartments, colorScope, boardColors],
+  );
 
   // Tracks the line id currently being dragged so a same-day drop / drag-over
   // can tell a vertical reorder from a cross-day move — the HTML5 dataTransfer
@@ -741,6 +758,10 @@ export default function CalendarView({
   // need no holding store. Track only which department a new group card is being
   // added to (department-wide add) and which group card's list panel is open.
   const [groupAddDeptId, setGroupAddDeptId] = useState<string | null>(null);
+  // Modify colors panel: the department / location it opened on (Admin / Ops).
+  const [colorsFor, setColorsFor] = useState<string | null>(null);
+  const { type: viewerType } = useCurrentUser();
+  const canColor = !!colorScope && !readOnly && canEditBoardLook(viewerType);
   const [groupPanelLineId, setGroupPanelLineId] = useState<string | null>(null);
 
   // A grouped shipment card opens a read-only "view all jobs" list of its load's
@@ -1227,9 +1248,9 @@ export default function CalendarView({
           <div key={dept.id} className="dept-section">
             <div
               className={`dept-header${adminEditEnabled ? " dept-header--editable" : ""}${headerDropLoc === dept.id ? " dept-header--drop" : ""}`}
-              style={{ background: dept.color }}
+              style={{ background: dept.headerColor ?? dept.color, color: dept.headerTextColor }}
               onContextMenu={
-                adminEditEnabled
+                adminEditEnabled || canColor
                   ? (e) => {
                       e.preventDefault();
                       // Both boards open the banner menu (Add employee / Add team
@@ -1270,7 +1291,7 @@ export default function CalendarView({
                   : undefined
               }
             >
-              <div className="dept-header__label" style={{ background: dept.color }}>
+              <div className="dept-header__label" style={{ background: dept.headerColor ?? dept.color, color: dept.headerTextColor }}>
                 <span>{dept.name}</span>
                 <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
                   {peopleNoun(emps.length)}
@@ -1484,17 +1505,19 @@ export default function CalendarView({
             style={{ top: bannerMenu.y, left: bannerMenu.x }}
             role="menu"
           >
-            <button
-              type="button"
-              className="context-menu__item"
-              onClick={() => {
-                setAddGroupId(bannerMenu.deptId);
-                setBannerMenu(null);
-              }}
-            >
-              Add employee…
-            </button>
-            {!readOnly && onEmptyCellClick && enableDepartmentLane && (
+            {adminEditEnabled && (
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  setAddGroupId(bannerMenu.deptId);
+                  setBannerMenu(null);
+                }}
+              >
+                Add employee…
+              </button>
+            )}
+            {adminEditEnabled && !readOnly && onEmptyCellClick && enableDepartmentLane && (
               <button
                 type="button"
                 className="context-menu__item"
@@ -1508,7 +1531,7 @@ export default function CalendarView({
                 Add team job…
               </button>
             )}
-            {!readOnly && enableJobQueue && (
+            {adminEditEnabled && !readOnly && enableJobQueue && (
               <button
                 type="button"
                 className="context-menu__item"
@@ -1520,8 +1543,28 @@ export default function CalendarView({
                 Add group card…
               </button>
             )}
+            {canColor && (
+              <button
+                type="button"
+                className="context-menu__item"
+                onClick={() => {
+                  setColorsFor(bannerMenu.deptId);
+                  setBannerMenu(null);
+                }}
+              >
+                Modify colors…
+              </button>
+            )}
           </div>
         </>
+      )}
+      {colorsFor && colorScope && (
+        <ModifyColorsPanel
+          scope={colorScope}
+          departments={[...rawDepartments.values()].sort((a, b) => a.flowOrder - b.flowOrder)}
+          initialId={colorsFor}
+          onClose={() => setColorsFor(null)}
+        />
       )}
 
       {splitting && (() => {

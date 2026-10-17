@@ -99,6 +99,8 @@ export function cardHasAddons(
 function deptStyle(dept: Department | undefined): { bg: string; text: string } {
   if (!dept) return { bg: "#cccccc", text: "#222222" };
   const bg = dept.color;
+  // Board colours (Modify colors…) carry their own text colour.
+  if (dept.textColor) return { bg, text: dept.textColor };
   const textMap: Record<string, string> = {
     "#BED7FF": "#042c53",
     "#FAC775": "#633806",

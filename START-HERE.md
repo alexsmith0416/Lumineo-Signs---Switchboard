@@ -286,8 +286,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     in `services/red-date.ts`, tested). `blockedByRedDate` in schedule-store
     refuses move / resize / add that ends later and past the red date
     (`store/notice-store.ts` + `NoticeHost` = app-wide OK notice).
-  - **Next, in order:** #6 Modify Colors (banner menu; shared config;
-    Admin + Ops only; fixes gray live production departments) → #1 NEK
+  - ✅ #6 Modify Colors (guide v3.52): `services/board-colors.ts` (tested) +
+    `store/board-colors-store.ts` (crfdf_jobsview key "board-colors": per-scope
+    {bg,text,header,headerText} + named `schemes`); CalendarView overlays them
+    on `departments` (`applyBoardColors`); `ModifyColorsPanel`; banner menu
+    item for `canEditBoardLook` (admin/dev/ops). Gray live production
+    departments get house colours by name.
+  - **Next, in order:** #1 NEK
     production (Region column on crfdf_employee1; Aaron Waters; "→ HUT"
     cross-site chip via jobPlacements) → #5 multi-select (Ctrl+click only; move /
     copy / cut / paste / delete / make group card) → #7 work radius (per

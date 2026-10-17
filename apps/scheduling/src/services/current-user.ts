@@ -135,6 +135,10 @@ export const isAdminLevel = (t: UserType | undefined): boolean =>
 
 /** May edit Settings → Billing periods (cut-off dates + monthly goals). A
  *  high-level tool: Admin, Developer and Operations only. */
+/** May change board colours (Modify colors…) and work radius: Admin, Developer, Operations. */
+export const canEditBoardLook = (t: UserType | undefined): boolean =>
+  t === "admin" || t === "developer" || t === "ops";
+
 export const canEditBillingPeriods = (t: UserType | undefined): boolean =>
   t === "admin" || t === "developer" || t === "ops";
 

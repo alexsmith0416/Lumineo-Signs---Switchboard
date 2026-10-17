@@ -7,6 +7,10 @@ export interface Department {
   name: string;
   flowOrder: number;
   color: string;
+  /** Card text / banner colours (board colours, services/board-colors.ts). */
+  textColor?: string;
+  headerColor?: string;
+  headerTextColor?: string;
 }
 
 export interface Employee {

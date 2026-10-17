@@ -7468,3 +7468,33 @@ textarea.cf-edit__area { height: auto; min-height: 64px; resize: vertical; font-
   border: 1px solid var(--grid-line);
   border-radius: 3px;
 }
+
+/* Modify colors panel (banner right-click → Modify colors…). */
+.slide-over__panel.modify-colors { width: min(440px, 100vw); }
+.modify-colors__body { display: flex; flex-direction: column; gap: 10px; padding: 4px 16px 12px; }
+.modify-colors__list { display: flex; flex-wrap: wrap; gap: 6px; }
+.modify-colors__chip {
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modify-colors__chip--on { border-color: var(--lumineo-navy); box-shadow: 0 0 0 1px #fff inset; }
+.modify-colors__preview { border: 1px solid var(--grid-line); border-radius: 6px; overflow: hidden; }
+.modify-colors__banner { padding: 6px 10px; font-weight: 700; font-size: 12px; }
+.modify-colors__card { margin: 8px 10px 10px; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+.modify-colors__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modify-colors__field { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.modify-colors__field span { flex: 1; color: var(--text-secondary); }
+.modify-colors__field input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--grid-line); border-radius: 4px; background: none; }
+.modify-colors__field code { font-size: 10px; color: var(--text-tertiary); }
+.modify-colors__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.modify-colors__schemes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.modify-colors__schemes li { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.modify-colors__swatch { width: 28px; text-align: center; border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 0; border: 1px solid var(--grid-line); }
+.modify-colors__scheme-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modify-colors__save-as { display: flex; gap: 6px; }
+.modify-colors__save-as input { flex: 1; min-width: 0; }
+@media (max-width: 480px) { .modify-colors__grid { grid-template-columns: 1fr; } }
