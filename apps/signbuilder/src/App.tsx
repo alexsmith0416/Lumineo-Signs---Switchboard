@@ -16,6 +16,7 @@ import { bcLink, syncAndWait } from "./services/bc-link";
 import { jobFields, opportunityFields } from "./services/bc-fill";
 import { useSetupStore } from "./store/setup-store";
 import { useSpecStore } from "./store/spec-store";
+import type { Spec } from "./domain/types";
 
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
@@ -40,10 +41,13 @@ const ROLE_LABEL: Record<string, string> = {
 
 /** Launch parameters (from Switchboard, the BC Job Card or a link):
  *  ?specId=… | ?jobId=J… | ?opportunityId=OP…
+ *  BC's Open in Sign Builder (extension 0.12.2+) adds the header details too —
+ *  desc, company, contact, customer, projectNo — so a spec is filled at once.
  *  In Power Apps the app runs in a frame — the play link's parameters come
  *  from the SDK (getContext().app.queryParams), not window.location. Names
  *  are matched ignoring case. */
-async function launchParams(): Promise<{ specId: string; jobNo: string; opportunityNo: string }> {
+type Launch = { specId: string; jobNo: string; opportunityNo: string; header: Partial<Spec> };
+async function launchParams(): Promise<Launch> {
   const all: Record<string, string> = {};
   new URLSearchParams(window.location.search).forEach((v, k) => (all[k.toLowerCase()] = v));
   try {
@@ -54,7 +58,20 @@ async function launchParams(): Promise<{ specId: string; jobNo: string; opportun
     /* dev / outside Power Apps: window.location only */
   }
   const get = (k: string) => (all[k.toLowerCase()] ?? "").trim();
-  return { specId: get("specId"), jobNo: get("jobId"), opportunityNo: get("opportunityId") };
+  const header: Partial<Spec> = {};
+  if (get("desc")) header.description = get("desc");
+  const customer = get("company") || get("customer") || get("contact");
+  if (customer) header.customerName = customer;
+  if (get("contact")) header.contactName = get("contact");
+  if (get("projectNo")) header.jobNo = get("projectNo");
+  return { specId: get("specId"), jobNo: get("jobId"), opportunityNo: get("opportunityId"), header };
+}
+
+/** Blank fields only — what someone already typed is kept. */
+function blanksFrom(spec: Spec, header: Partial<Spec>): Partial<Spec> {
+  const patch: Partial<Spec> = {};
+  for (const [k, v] of Object.entries(header) as [keyof Spec, unknown][]) if (v && !spec[k]) (patch as Record<string, unknown>)[k] = v;
+  return patch;
 }
 
 export default function App() {
@@ -82,16 +99,21 @@ export default function App() {
   useEffect(() => {
     if (launched || !specsLoaded || user.loading) return;
     setLaunched(true);
-    void launchParams().then(({ specId, jobNo, opportunityNo }) => {
+    void launchParams().then(({ specId, jobNo, opportunityNo, header }) => {
       if (!specId && !jobNo && !opportunityNo) return;
       const specs = useSpecStore.getState().specs;
       const found =
         specs.find((s) => s.id === specId) ??
         (jobNo ? specs.find((s) => s.jobNo === jobNo) : undefined) ??
         (opportunityNo ? specs.find((s) => s.opportunityNo === opportunityNo) : undefined);
-      const spec = found ?? (user.permissions.editSpecs && (jobNo || opportunityNo) ? createSpec({ jobNo, opportunityNo }, user.fullName) : undefined);
-      // A spec just started from BC: fill in the customer etc. from the opportunity / project.
-      if (spec && !found) {
+      const spec = found ?? (user.permissions.editSpecs && (jobNo || opportunityNo) ? createSpec({ ...header, jobNo: jobNo || header.jobNo || "", opportunityNo, ...(opportunityNo && !jobNo ? { detailLevel: "opportunity" as const } : {}) }, user.fullName) : undefined);
+      // The details in the link fill an existing spec's blanks too.
+      if (spec && found && user.permissions.editSpecs) {
+        const patch = blanksFrom(found, header);
+        if (Object.keys(patch).length) updateSpec(found.id, patch);
+      }
+      // An older link (just the number): fill in the customer etc. from the app's copy of BC.
+      if (spec && !found && Object.keys(header).length === 0) {
         const fill = async () => {
           // Not in the app's copy yet (new in BC since the last refresh): ask BC, then look again.
           let o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;

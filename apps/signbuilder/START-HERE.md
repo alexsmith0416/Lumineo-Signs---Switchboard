@@ -635,6 +635,11 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 16, 2026 (Open in Sign Builder fills at once)** — Alex: header details didn't come
+  over and shouldn't need a wait. BC extension **v0.12.2**: `LSB App Link.OpenForOpportunity` /
+  `OpenForJob` add `desc`, `company`, `contact`, `projectNo` / `desc`, `customer` to the link;
+  the app fills a new spec from them at once (an existing spec's blanks too). Number-only
+  links still use the app's copy of BC. ⏳ Alex: publish 0.12.2.
 - **Oct 16, 2026 (Open in Sign Builder fix)** — BC's Open in Sign Builder landed on the
   dashboard: in Power Apps the app runs in a frame, so `?opportunityId=` / `?jobId=` are
   read from the SDK (`getContext().app.queryParams`, names case-insensitive), not
