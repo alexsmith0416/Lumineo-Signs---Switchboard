@@ -112,7 +112,14 @@ export const useJobTrackingStore = create<JobTrackingState>((set, get) => ({
 
   renameJob: (jobNo, name) => saveTrack(jobNo, { jobName: name.trim() }, "Rename job"),
 
-  updateTrack: (jobNo, patch) => saveTrack(jobNo, patch, "Edit job"),
+  updateTrack: async (jobNo, patch) => {
+    const was = get().tracks.find((t) => t.jobNo === jobNo)?.priority ?? "";
+    await saveTrack(jobNo, patch, "Edit job");
+    // Priority → RED DATE on a job that has a red date: place its install card.
+    if (patch.priority === "RED DATE" && was !== "RED DATE") {
+      void import("./red-date").then((m) => m.onRedPriority(jobNo));
+    }
+  },
 
   setCustomValue: async (jobNo, key, value) => {
     const apply = (p: Partial<JobTrack>) =>

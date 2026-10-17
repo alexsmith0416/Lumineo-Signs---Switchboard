@@ -15,6 +15,7 @@ import SettingsScreen from "./components/SettingsScreen";
 import HelpScreen from "./components/HelpScreen";
 import DemoBanner from "./components/DemoBanner";
 import SaveStatus from "./components/SaveStatus";
+import NoticeHost from "./components/NoticeHost";
 import DemoTutorial from "./components/DemoTutorial";
 import { useDemoStore } from "./store/demo-store";
 import { useLoadsStore } from "./shipping/loads-store";
@@ -217,6 +218,7 @@ export default function App() {
           minimal={presentationMode}
         />
         <SaveStatus />
+        <NoticeHost />
         {!presentationMode && <ImpersonationBanner />}
         {!presentationMode && <DemoBanner />}
         <div className="app-content">

@@ -25,6 +25,9 @@ import {
 import { useSettingsStore } from "./settings-store";
 import { useHistoryStore } from "./history-store";
 import { reportWriteFailure } from "./write-status-store";
+import { useJobScheduleStore } from "./job-schedule-store";
+import { showNotice } from "./notice-store";
+import { firstPastRedDate, redDateLabel } from "../services/red-date";
 import type {
   ResourceAdminInput,
   ScheduleDataSource,
@@ -135,6 +138,27 @@ function applyResourceInput(
     out.departmentId = input.departmentId;
   }
   return out;
+}
+
+/**
+ * Red Date guard: a change that makes a job's card end LATER and past that
+ * job's red date is refused with a notice (moving a late card earlier is always
+ * allowed). `before` = the board as it was, to tell what moved later.
+ */
+function blockedByRedDate(changed: readonly ScheduleLine[], before: readonly ScheduleLine[]): boolean {
+  const was = new Map(before.map((l) => [l.id, l.endDateTime.getTime()]));
+  const later = changed.filter((l) => {
+    const prev = was.get(l.id);
+    return prev === undefined || l.endDateTime.getTime() > prev;
+  });
+  const byJob = useJobScheduleStore.getState().byJob;
+  const hit = firstPastRedDate(later, (jobNo) => byJob[jobNo]?.redDate);
+  if (!hit) return false;
+  showNotice({
+    title: "Past the Red Date",
+    message: `Job ${hit.jobNo} can't be scheduled past its Red Date (${redDateLabel(hit.red)}). Put it on that day or earlier.`,
+  });
+  return true;
 }
 
 function buildContext(state: ScheduleStoreState): ScheduleContext {
@@ -407,6 +431,7 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed]
         .filter((l): l is NonNullable<typeof l> => l != null)
         .map(applyConvert);
+      if (blockedByRedDate(toPersist, state.schedule)) return;
       const beforeSchedule = state.schedule;
       const afterSchedule = convert
         ? diff.committed.schedule.map(applyConvert)
@@ -523,6 +548,7 @@ export function createScheduleStore(
       const toPersist = [diff.target, ...diff.changed].filter(
         (l): l is NonNullable<typeof l> => l != null,
       );
+      if (blockedByRedDate(toPersist, state.schedule)) return;
       const beforeSchedule = state.schedule;
       const afterSchedule = diff.committed.schedule;
       // Optimistic: resize on the board immediately, persist in the background.
@@ -575,6 +601,7 @@ export function createScheduleStore(
     },
 
     addScheduleLine: async (line) => {
+      if (blockedByRedDate([line], [])) return;
       const ds = get().dataSource;
       // Optimistic: show the new card immediately, persist in the background.
       // Live createScheduleLine returns the same line (id preserved).

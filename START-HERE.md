@@ -280,10 +280,13 @@ and BC analytics are stubbed; no test suite yet; calendar is a hand-rolled grid)
     `size="panel"`) and `SketchThumb` in the preview; #9 `store/flow-follow.ts`
     — stepper Complete moves Current Status to the flow's next stage (same rule
     as shop-floor ticks; Install keeps Complete-need paperwork).
-  - **Next, in order:** #8 Red Date (Priority ↔ Red Date column linked; red
-    date auto-places the install card on the TOP employee of the location
-    nearest the ship-to, within the job's Jobs-list Region; block drops past the
-    red date in the engine) → #6 Modify Colors (banner menu; shared config;
+  - ✅ #8 Red Date (guide v3.51): `job-schedule-store.update` → `store/red-date.ts`
+    (Priority ↔ red date; no install card → one ENDING on the red date, locked,
+    top crew of the base nearest the ship-to within Install Region; pure rules
+    in `services/red-date.ts`, tested). `blockedByRedDate` in schedule-store
+    refuses move / resize / add that ends later and past the red date
+    (`store/notice-store.ts` + `NoticeHost` = app-wide OK notice).
+  - **Next, in order:** #6 Modify Colors (banner menu; shared config;
     Admin + Ops only; fixes gray live production departments) → #1 NEK
     production (Region column on crfdf_employee1; Aaron Waters; "→ HUT"
     cross-site chip via jobPlacements) → #5 multi-select (Ctrl+click only; move /

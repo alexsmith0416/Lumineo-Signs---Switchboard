@@ -712,7 +712,12 @@
     target dates (5.5). Type to override per job; clear to fall back to the BC date.</li>
     <li><strong>Scheduled install</strong> — the job's committed install day.</li>
     <li><strong>Red date</strong> — a fixed, <em>drop-dead</em> install date. Setting it <strong>locks</strong> the
-    scheduled date to match and gives the job a <strong>pulsing red outline</strong> on every board it appears on.</li>
+    scheduled date to match and gives the job a <strong>pulsing red outline</strong> on every board it appears on. It works the same from here, the Jobs list <em>RED DATE</em> column or the job panel:</li>
+  </ul>
+  <ul>
+    <li><strong>Priority follows</strong> &mdash; setting a Red date sets the job&rsquo;s Priority to <strong>RED DATE</strong>; clearing it clears that Priority.</li>
+    <li><strong>The install card is placed for you</strong> &mdash; a job with no install card gets one that <strong>ends on the Red date</strong> (longer work starts enough days earlier to finish on it), <strong>locked</strong>, on the <strong>top person</strong> of the location nearest the job&rsquo;s ship-to, within the job&rsquo;s <strong>Install Region</strong> on the Jobs list (blank = whichever region is nearest; Sub-Installer / House jobs get no card). A note says where it went; drag it to another crew or an earlier day if needed. Choosing <em>RED DATE</em> in Priority on a job that already has a Red date does the same. A job that already has an install card keeps it (you&rsquo;re told if it&rsquo;s after the new Red date).</li>
+    <li><strong>Nothing goes past it</strong> &mdash; dragging, resizing, pasting or duplicating any card of the job so it would <strong>end after the Red date</strong> is refused, with a note saying so. Moving a late card <em>earlier</em> is always allowed.</li>
   </ul>
   <p>On an Installation card, tick <strong>Final install</strong> to make <em>that card's day</em> set the job's scheduled
   install date automatically — so the schedule and the install date stay in sync as you move the final card.</p>
@@ -1573,6 +1578,7 @@
   <div class="changelog">
     <table>
       <tr><th>Date</th><th>Change</th></tr>
+      <tr><td>Oct 17, 2026</td><td><strong>Red Date does the scheduling</strong> &mdash; setting a Red date (Jobs list, Install Dates or the job panel) sets Priority to RED DATE and, if the job has no install card, <strong>places one ending on the Red date</strong>, locked, on the top person of the location nearest the ship-to within the job&rsquo;s Install Region. And no card of the job can be dragged, resized or pasted <strong>past its Red date</strong>       <tr><th>Date</th><th>Change</th></tr>mdash; you&rsquo;ll get a note instead. See &sect;5.5 Install dates &amp; the Red date.</td></tr>
       <tr><td>Oct 17, 2026</td><td><strong>Job cards: Materials ready, sketch, shorter preview, status follows the stepper</strong> &mdash; the card hover preview and the card panel show a green <strong>📦 Materials ready</strong> chip at the top once every PO is received. The job&rsquo;s <strong>sketch</strong> appears in the card panel (between Task / card text and Target dates) with everything the Jobs list Sketch cell does       <tr><th>Date</th><th>Change</th></tr>mdash; hover to enlarge, click for full screen, right-click or drop a file to change it       <tr><th>Date</th><th>Change</th></tr>mdash; and as a small thumbnail in the hover preview. Long task text in the preview is cut to two lines. And <strong>completing a department on a stepper now moves Current Status to the next stage</strong> of the job&rsquo;s flow, just like a shop-floor tick.</td></tr>
       <tr><td>Oct 16, 2026</td><td><strong>Job numbers stay on install cards (for good)</strong> &mdash; cards on the NEK / WK schedule could still lose their J number after certain saves. Fixed at the cause, and the affected cards are restored. If a save ever fails now, you&rsquo;ll see it in the save status instead of the card quietly losing its job number. Refresh Switchboard to get the fix.</td></tr>
       <tr><td>Oct 15, 2026</td><td><strong>Open Project only for real BC jobs</strong> &mdash; a calendar card with no BC job number (one named only by its title, like <em>EDUCATION CENTER-Olathe Schools</em>) no longer offers <em>Open Project</em> in its right-click menu. Before, it sent the title to BC as a project number: long titles hit BC's 20-character error, and short ones opened a blank new project. <em>Open SharePoint Folder</em> still works on those cards.<br><strong>Job numbers stay on install cards</strong> &mdash; a hiccup while saving one install card could make every card added after it (in that session) save without its job number, zip or crew counts, so the card showed only its name. Fixed; cards it already hit are being restored.</td></tr>
@@ -1708,7 +1714,7 @@
 
   <div class="footer">
     <div class="wordmark" style="margin-bottom:8px"><b>LUMINEO</b><span>SIGNS</span></div>
-    <p><strong>Lumineo Switchboard — User Guide v3.50 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
+    <p><strong>Lumineo Switchboard — User Guide v3.51 · Oct 17, 2026.</strong> Built for the Lumineo Signs team ·
     <span class="heritage" style="color:var(--taupe)">Lumens for brightness. Lumineo for brilliance.</span><br>
     Maintained alongside the app; see the maintainer note in the project's <code>START-HERE.md</code>.</p>
   </div>

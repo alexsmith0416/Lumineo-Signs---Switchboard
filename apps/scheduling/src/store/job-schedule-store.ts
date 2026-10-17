@@ -56,7 +56,17 @@ export const useJobScheduleStore = create<JobScheduleState>((set, get) => ({
     if (!jobNo) return;
     const cur = get().byJob[jobNo] ?? emptyJobSchedule(jobNo);
     const next: JobSchedule = { ...cur, ...changes, jobNo };
+    const red = changes.redDate;
+    // A new red date is also the scheduled install unless one was given here
+    // or the job is already scheduled earlier.
+    if (red && changes.scheduledInstallDate === undefined && (!cur.scheduledInstallDate || cur.scheduledInstallDate > red)) {
+      next.scheduledInstallDate = red;
+    }
     set((s) => ({ byJob: { ...s.byJob, [jobNo]: next } }));
     void persistOrReport("Save job dates", () => ds.upsert(next));
+    // Priority + the install card follow the red date (store/red-date.ts).
+    if (red !== undefined && (red?.toDateString() ?? "") !== (cur.redDate?.toDateString() ?? "")) {
+      void import("./red-date").then((m) => m.onRedDateChanged(jobNo, red, cur.redDate ?? null));
+    }
   },
 }));
