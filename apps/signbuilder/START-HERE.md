@@ -635,6 +635,10 @@ Then read **Where we left off** below, audit the user guide (§6), and continue.
   there's one place to edit.
 
 ### Session log (newest first)
+- **Oct 16, 2026 (Open in Sign Builder fix)** — BC's Open in Sign Builder landed on the
+  dashboard: in Power Apps the app runs in a frame, so `?opportunityId=` / `?jobId=` are
+  read from the SDK (`getContext().app.queryParams`, names case-insensitive), not
+  window.location. Guide v1.4.
 - **Oct 16, 2026 (job picker)** — Planning / Quote projects in the job picker:
   extension v0.12.1 projects API, crfdf_sbjob, BCSync_SBJobs. Guide v1.3.
 - **Oct 15, 2026 (BC link)** — BC extension v0.12.0 (opportunities + writable job

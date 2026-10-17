@@ -39,10 +39,22 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /** Launch parameters (from Switchboard, the BC Job Card or a link):
- *  ?specId=… | ?jobId=J… | ?opportunityId=OP… */
-function launchParams(): { specId: string; jobNo: string; opportunityNo: string } {
-  const p = new URLSearchParams(window.location.search);
-  return { specId: p.get("specId") ?? "", jobNo: p.get("jobId") ?? "", opportunityNo: p.get("opportunityId") ?? "" };
+ *  ?specId=… | ?jobId=J… | ?opportunityId=OP…
+ *  In Power Apps the app runs in a frame — the play link's parameters come
+ *  from the SDK (getContext().app.queryParams), not window.location. Names
+ *  are matched ignoring case. */
+async function launchParams(): Promise<{ specId: string; jobNo: string; opportunityNo: string }> {
+  const all: Record<string, string> = {};
+  new URLSearchParams(window.location.search).forEach((v, k) => (all[k.toLowerCase()] = v));
+  try {
+    const { getContext } = await import("@microsoft/power-apps/app");
+    const ctx = await getContext();
+    for (const [k, v] of Object.entries(ctx.app.queryParams ?? {})) if (v) all[k.toLowerCase()] = String(v);
+  } catch {
+    /* dev / outside Power Apps: window.location only */
+  }
+  const get = (k: string) => (all[k.toLowerCase()] ?? "").trim();
+  return { specId: get("specId"), jobNo: get("jobId"), opportunityNo: get("opportunityId") };
 }
 
 export default function App() {
@@ -70,29 +82,31 @@ export default function App() {
   useEffect(() => {
     if (launched || !specsLoaded || user.loading) return;
     setLaunched(true);
-    const { specId, jobNo, opportunityNo } = launchParams();
-    if (!specId && !jobNo && !opportunityNo) return;
-    const found =
-      specs.find((s) => s.id === specId) ??
-      (jobNo ? specs.find((s) => s.jobNo === jobNo) : undefined) ??
-      (opportunityNo ? specs.find((s) => s.opportunityNo === opportunityNo) : undefined);
-    const spec = found ?? (user.permissions.editSpecs && (jobNo || opportunityNo) ? createSpec({ jobNo, opportunityNo }, user.fullName) : undefined);
-    // A spec just started from BC: fill in the customer etc. from the opportunity / project.
-    if (spec && !found) {
-      const fill = async () => {
-        const o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;
-        if (o) updateSpec(spec.id, opportunityFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, o));
-        const no = jobNo || o?.projectNo;
-        const j = no ? await bcLink().getJob(no) : null;
-        if (j) updateSpec(spec.id, jobFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, j));
-      };
-      void fill().catch(() => undefined);
-    }
-    if (spec) {
-      setCurrentSpecId(spec.id);
-      setView("builder");
-    }
-  }, [launched, specsLoaded, user.loading, user.permissions.editSpecs, user.fullName, specs, createSpec, updateSpec]);
+    void launchParams().then(({ specId, jobNo, opportunityNo }) => {
+      if (!specId && !jobNo && !opportunityNo) return;
+      const specs = useSpecStore.getState().specs;
+      const found =
+        specs.find((s) => s.id === specId) ??
+        (jobNo ? specs.find((s) => s.jobNo === jobNo) : undefined) ??
+        (opportunityNo ? specs.find((s) => s.opportunityNo === opportunityNo) : undefined);
+      const spec = found ?? (user.permissions.editSpecs && (jobNo || opportunityNo) ? createSpec({ jobNo, opportunityNo }, user.fullName) : undefined);
+      // A spec just started from BC: fill in the customer etc. from the opportunity / project.
+      if (spec && !found) {
+        const fill = async () => {
+          const o = opportunityNo ? await bcLink().getOpportunity(opportunityNo) : null;
+          if (o) updateSpec(spec.id, opportunityFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, o));
+          const no = jobNo || o?.projectNo;
+          const j = no ? await bcLink().getJob(no) : null;
+          if (j) updateSpec(spec.id, jobFields(useSpecStore.getState().specs.find((x) => x.id === spec.id) ?? spec, j));
+        };
+        void fill().catch(() => undefined);
+      }
+      if (spec) {
+        setCurrentSpecId(spec.id);
+        setView("builder");
+      }
+    });
+  }, [launched, specsLoaded, user.loading, user.permissions.editSpecs, user.fullName, createSpec, updateSpec]);
 
   // Demo sandbox: Demo-type logins boot locked into it (tour offered).
   const demoMode = useDemoStore((s) => s.demoMode);
